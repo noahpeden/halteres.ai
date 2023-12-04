@@ -19,12 +19,12 @@ export default function Whiteboard() {
   const handleSubmit = (e) => {
     e.preventDefault();
     addWhiteboardInfo({ cycleLength, workoutFormat, focus, exampleWorkout });
-    router.push('/metcon');
+    document.getElementById('metcon').scrollIntoView({ behavior: 'smooth' });
   };
 
   return (
     <div className="container mx-auto my-6">
-      <h1 className="text-2xl font-bold">Warmup</h1>
+      <h1 className="text-2xl font-bold">Whiteboard</h1>
 
       <div className="my-4">
         <h2 className="text-xl">Workout Format</h2>
@@ -54,7 +54,7 @@ export default function Whiteboard() {
       </div>
 
       <div className="my-4">
-        <h2 className="text-xl">Example Workouts</h2>
+        <h2 className="text-xl">Template Workouts</h2>
         <textarea
           className="textarea textarea-bordered w-full h-32"
           value={exampleWorkout}
@@ -63,7 +63,7 @@ export default function Whiteboard() {
       </div>
 
       <button className="btn btn-primary mt-4" onClick={handleSubmit}>
-        Submit
+        Next
       </button>
     </div>
   );

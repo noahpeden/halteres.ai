@@ -20,8 +20,8 @@ module.exports = {
       {
         mytheme: {
           primary: '#4b5563', // A dark slate gray
-          secondary: '#ADCCD8', // A light, airy blue
-          accent: '#f97316', // A bright, vibrant orange
+          accent: '#ADCCD8', // A light, airy blue
+          secondary: '#f97316', // A bright, vibrant orange
 
           neutral: '#F3F4F6', // A very light gray for a neutral look
           'base-100': '#ffffff', // Pure white for base elements

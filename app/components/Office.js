@@ -48,7 +48,9 @@ export default function Office() {
   const handleSubmit = (e) => {
     e.preventDefault();
     addOfficeInfo({ equipmentList, coachList, classSchedule, classDuration });
-    router.push('/whiteboard');
+    document
+      .getElementById('whiteboard')
+      .scrollIntoView({ behavior: 'smooth' });
   };
 
   return (
@@ -162,7 +164,7 @@ export default function Office() {
       </div>
 
       <button className="btn btn-primary mt-6" onClick={handleSubmit}>
-        Submit
+        Next
       </button>
     </div>
   );

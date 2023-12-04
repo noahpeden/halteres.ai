@@ -16,27 +16,13 @@ const PLACEHOLDER_LINKS = ['Settings', 'Support', 'Logout'];
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
+    <html className="scroll-smooth" lang="en">
       <body>
         <OfficeProvider>
           <div className="fixed top-0 z-50 w-full flex items-center bg-gray-700 text-blue-300 py-4 px-6">
             <h1 className="text-lg font-semibold truncate">Halteres.ai</h1>
           </div>
-          <div className="fixed top-15 left-0 top-14 h-screen w-60 bg-gray-700 text-blue-300">
-            <ul className="divide-y divide-gray-500">
-              {LINKS.map(({ text, href }) => (
-                <li key={href}>
-                  <a
-                    href={href}
-                    className="flex items-center p-2 hover:bg-gray-600"
-                  >
-                    <span className="ml-4">{text}</span>
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </div>
-          <main className={`ml-${DRAWER_WIDTH} mt-12 p-60  bg-gray-100`}>
+          <main className={`ml-${DRAWER_WIDTH} mt-12 p-32  bg-white-100`}>
             {children}
           </main>
         </OfficeProvider>

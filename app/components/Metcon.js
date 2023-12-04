@@ -49,16 +49,49 @@ export default function Metcon() {
   return (
     <div className="container mx-auto my-6">
       <h1 className="text-2xl font-bold">Metcon</h1>
-      <div>
-        <h2 className="text-xl">Office Details</h2>
-        <p>{JSON.stringify(office)}</p>
-      </div>
-      <div>
-        <h2 className="text-xl">Whiteboard Details</h2>
-        <p>{JSON.stringify(whiteboard)}</p>
+      <div className="review-details">
+        <h2 className="text-xl">Review Details</h2>
+
+        <div>
+          <h3 className="text-lg font-semibold">Office Details</h3>
+          <ul>
+            <li>
+              Equipment List:
+              <ul>
+                {office.equipmentList.map((item, index) => (
+                  <li key={index}>
+                    {item.quantity}x {item.name}
+                  </li>
+                ))}
+              </ul>
+            </li>
+            <li>
+              Coaching Staff:
+              <ul>
+                {office.coachList.map((coach, index) => (
+                  <li key={index}>
+                    {coach.name} - {coach.experience}
+                  </li>
+                ))}
+              </ul>
+            </li>
+            <li>Class Schedule: {office.classSchedule}</li>
+            <li>Class Duration: {office.classDuration}</li>
+          </ul>
+        </div>
+
+        <div>
+          <h3 className="text-lg font-semibold">Whiteboard Details</h3>
+          <ul>
+            <li>Cycle Length: {whiteboard.cycleLength}</li>
+            <li>Workout Format: {whiteboard.workoutFormat}</li>
+            <li>Focus: {whiteboard.focus}</li>
+            <li>Example Workout: {whiteboard.exampleWorkout}</li>
+          </ul>
+        </div>
       </div>
       <button
-        className="btn btn-primary mt-4"
+        className="btn btn-secondary mt-4"
         onClick={handleGenerateProgramming}
       >
         Generate Programming
