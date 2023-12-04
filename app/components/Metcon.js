@@ -58,7 +58,7 @@ export default function Metcon() {
             <li>
               Equipment List:
               <ul>
-                {office.equipmentList.map((item, index) => (
+                {office?.equipmentList?.map((item, index) => (
                   <li key={index}>
                     {item.quantity}x {item.name}
                   </li>
@@ -68,7 +68,7 @@ export default function Metcon() {
             <li>
               Coaching Staff:
               <ul>
-                {office.coachList.map((coach, index) => (
+                {office?.coachList?.map((coach, index) => (
                   <li key={index}>
                     {coach.name} - {coach.experience}
                   </li>

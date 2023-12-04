@@ -80,7 +80,7 @@ export default function Office() {
             </button>
           </div>
           <ul>
-            {equipmentList.map((item, index) => (
+            {equipmentList?.map((item, index) => (
               <div key={index} className="flex gap-2 mb-2">
                 <input
                   type="text"
