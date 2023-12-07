@@ -5,31 +5,9 @@ import Metcon from './components/Metcon';
 import Link from 'next/link';
 import img from './assets/logo.png';
 import Image from 'next/image';
-import { useState, useEffect } from 'react';
-import { createClient } from '@supabase/supabase-js';
-import { Auth } from '@supabase/auth-ui-react';
-import { ThemeSupa } from '@supabase/auth-ui-shared';
+import { useState } from 'react';
 
 export default function Home() {
-  const [session, setSession] = useState(null);
-
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  );
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-    });
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
   const [showComponents, setShowComponents] = useState(false);
   const handleGetStartedClick = () => {
     setShowComponents(true);
@@ -37,10 +15,6 @@ export default function Home() {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }, 100);
   };
-
-  if (!session) {
-    return <Auth supabaseClient={supabase} appearance={{ theme: ThemeSupa }} />;
-  }
 
   return (
     <main className="flex min-h-screen flex-col">
