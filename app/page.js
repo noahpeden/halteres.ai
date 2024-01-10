@@ -3,8 +3,7 @@ import Office from './components/Office';
 import Whiteboard from './components/Whiteboard';
 import Metcon from './components/Metcon';
 import Link from 'next/link';
-import img from './assets/logo.png';
-import Image from 'next/image';
+
 import { useState } from 'react';
 
 export default function Home() {
@@ -19,13 +18,6 @@ export default function Home() {
   return (
     <main className="flex min-h-screen flex-col">
       <div className="text-center">
-        <Image
-          src={img}
-          alt="Halteres.ai Logo"
-          height={250}
-          className="mx-auto"
-          width={250}
-        />
         {!showComponents && (
           <>
             <h1 className="text-4xl font-bold mt-4">Welcome to Halteres.ai</h1>
