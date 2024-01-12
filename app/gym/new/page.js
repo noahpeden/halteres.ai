@@ -1,9 +1,8 @@
 'use client';
 import { useState } from 'react';
-import { useOfficeContext } from '../contexts/OfficeContext';
-import { useRouter } from 'next/navigation';
+import { useOfficeContext } from '../../contexts/OfficeContext';
 
-export default function Office() {
+export default function NewGym() {
   const { addOfficeInfo } = useOfficeContext();
   const [equipmentList, setEquipmentList] = useState([]);
   const [newEquipmentName, setNewEquipmentName] = useState('');
@@ -14,7 +13,6 @@ export default function Office() {
   const [newCoachExperience, setNewCoachExperience] = useState('');
   const [classSchedule, setClassSchedule] = useState('');
   const [classDuration, setClassDuration] = useState('');
-  const router = useRouter();
 
   const equipmentQuantities = {
     small: 4,

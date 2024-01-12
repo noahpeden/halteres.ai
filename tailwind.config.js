@@ -1,10 +1,13 @@
 /** @type {import('tailwindcss').Config} */
+const defaultTheme = require('tailwindcss/defaultTheme');
+
 module.exports = {
   content: [
     './pages/**/*.{js,ts,jsx,tsx,mdx}',
     './components/**/*.{js,ts,jsx,tsx,mdx}',
     './app/**/*.{js,ts,jsx,tsx,mdx}',
   ],
+  plugins: [require('daisyui')],
   theme: {
     extend: {
       backgroundImage: {
@@ -12,26 +15,28 @@ module.exports = {
         'gradient-conic':
           'conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))',
       },
-    },
-  },
-  plugins: [require('daisyui')],
-  daisyui: {
-    themes: [
-      {
-        mytheme: {
-          primary: '#4b5563', // A dark slate gray
-          accent: '#ADCCD8', // A light, airy blue
-          secondary: '#f97316', // A bright, vibrant orange
+      colors: {
+        // Light Blue Shades
+        'lightblue-300': '#C4D8E2',
+        lightblue: '#ACCBD7',
+        'lightblue-600': '#7F9FB0',
+        'lightblue-900': '#527284',
 
-          neutral: '#F3F4F6', // A very light gray for a neutral look
-          'base-100': '#ffffff', // Pure white for base elements
+        // Dark Blue Shades
+        'darkblue-300': '#6E759F',
+        darkblue: '#424C5D',
+        'darkblue-600': '#303846',
+        'darkblue-900': '#1E242F',
 
-          info: '#3ABFF8', // A bright blue, good for informational elements
-          success: '#22C55E', // A crisp green, indicating success or completion
-          warning: '#EAB308', // A warm yellow, suitable for warnings
-          error: '#EF4444', // A strong red for error messages
-        },
+        // Orange Shades
+        'orange-300': '#E7A376',
+        orange: '#DA6E42',
+        'orange-600': '#B25636',
+        'orange-900': '#8A4229',
       },
-    ],
+      fontFamily: {
+        lato: ['Lato', ...defaultTheme.fontFamily.sans],
+      },
+    },
   },
 };

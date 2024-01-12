@@ -1,78 +1,86 @@
 'use client';
-import Office from './components/Office';
-import Whiteboard from './components/Whiteboard';
-import Metcon from './components/Metcon';
-import Link from 'next/link';
-
-import { useState } from 'react';
+import { Auth } from '@supabase/auth-ui-react';
+import { ThemeSupa } from '@supabase/auth-ui-shared';
+import { useState, useEffect } from 'react';
+import { supabase } from './layout';
 
 export default function Home() {
-  const [showComponents, setShowComponents] = useState(false);
-  const handleGetStartedClick = () => {
-    setShowComponents(true);
-    setTimeout(() => {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }, 100);
-  };
+  const [session, setSession] = useState(null);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   return (
     <main className="flex min-h-screen flex-col">
-      <div className="text-center">
-        {!showComponents && (
-          <>
-            <h1 className="text-4xl font-bold mt-4">Welcome to Halteres.ai</h1>
-            <p className="text-xl mt-4 mb-8 mx-auto leading-relaxed max-w-xl">
-              Halteres.ai is your digital assistant for gym management and
-              workout planning. Leveraging cutting-edge AI, we provide tailored
-              workout routines, equipment management, and coaching resources to
-              help you run your gym efficiently.
+      {' '}
+      {!session ? (
+        <Auth
+          supabaseClient={supabase}
+          appearance={{ theme: ThemeSupa }}
+          providers={['google']}
+        />
+      ) : (
+        // <div className="min-h-screen bg-lightblue text-gray-800">
+        <div className="container mx-auto px-4">
+          <div className="text-center py-10">
+            <h1 className="font-lato text-4xl text-darkblue">
+              Welcome to HalteresAI
+            </h1>
+            <p className="text-darkblue mt-2">
+              Create and manage your workout programming with ease.
             </p>
-            <div className="flex justify-center items-center mt-4">
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Gym Profile Section */}
+            <div className="bg-white border-darkblue border-2 p-6 rounded-lg shadow-2xl text-center  transition duration-300 ease-in-out">
+              <h2 className="font-lato text-xl text-darkblue">Gym Profiles</h2>
+              <p className="mt-2">
+                Create profiles with equipment details and coaching staff.
+              </p>
               <button
-                className="btn btn-secondary text-xl"
-                onClick={() => handleGetStartedClick()}
+                className="mt-4 bg-orange text-white py-2 px-4 rounded hover:bg-orange-900 transition duration-200"
+                onClick={() => (window.location.href = '/gym/new')}
               >
-                Get Started
+                Create Profile
               </button>
             </div>
-          </>
-        )}
-      </div>
 
-      {showComponents && (
-        <div className="ml-12">
-          <div id="office" className="h-screen">
-            <Office />
-          </div>
-          <div id="whiteboard" className="h-screen">
-            <Whiteboard />
-          </div>
-          <div id="metcon" className="h-screen">
-            <Metcon />
+            {/* Workout Programming Section */}
+            <div className="bg-white border-darkblue border-2 p-6 rounded-lg shadow-2xl text-center  transition duration-300 ease-in-out">
+              <h2 className="font-lato text-xl text-darkblue">
+                Workout Programming
+              </h2>
+              <p className="mt-2">
+                Define your workout programming and its influences.
+              </p>
+              <button className="mt-4 bg-orange text-white py-2 px-4 rounded hover:bg-orange-900 transition duration-200">
+                Set Preferences
+              </button>
+            </div>
+
+            {/* MetconLab Section */}
+            <div className="bg-white border-darkblue border-2 p-6 rounded-lg shadow-2xl text-center  transition duration-300 ease-in-out">
+              <h2 className="font-lato text-xl text-darkblue">MetconLab</h2>
+              <p className="mt-2">Generate workout programming using AI.</p>
+              <button className="mt-4 bg-orange text-white py-2 px-4 rounded hover:bg-orange-900 transition duration-200">
+                Go to MetconLab
+              </button>
+            </div>
           </div>
         </div>
-      )}
-
-      {showComponents && (
-        <nav className="fixed top-50 left-0 p-4">
-          <ul className="flex flex-col space-y-2 steps steps-vertical">
-            <li className="step step-primary">
-              <Link href="#office" className="smooth-scroll">
-                Office
-              </Link>
-            </li>
-            <li className="step step-primary">
-              <Link href="#whiteboard" className="smooth-scroll">
-                Whiteboard
-              </Link>
-            </li>
-            <li className="step step-primary">
-              <Link href="#metcon" className="smooth-scroll">
-                Metcon
-              </Link>
-            </li>
-          </ul>
-        </nav>
+        // </div>
       )}
     </main>
   );
