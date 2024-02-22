@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { useOfficeContext } from '../contexts/OfficeContext';
-import { useRouter } from 'next/navigation'; // Corrected from 'next/navigation'
+import { useRouter } from 'next/navigation';
 
 export default function Whiteboard() {
   const { addWhiteboardInfo } = useOfficeContext();
