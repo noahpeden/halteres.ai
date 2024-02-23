@@ -4,16 +4,15 @@ import React, { useState, useEffect } from 'react';
 import { useOfficeContext } from '../contexts/OfficeContext';
 import { useChatCompletion } from '../hooks/useOpenAiStream/chat-hook';
 
-const OPEN_AI_API_KEY = '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';
-
 export default function Metcon() {
   const { office, whiteboard } = useOfficeContext();
+  console.log(office, whiteboard);
   const [loading, setLoading] = useState(false);
   const userPrompt = `
   Based on the provided gym information, create a detailed ${whiteboard.cycleLength} CrossFit workout plan. Include workouts for each day, tailored to the available equipment and coaching expertise. Specify exact workouts, including scaled and RX weights for each exercise, without suggesting repetitions of previous workouts or scaling instructions. Focus solely on listing unique and specific workouts for each day of the ${whiteboard.cycleLength}.
   Here are the included details: 
-  - Gym Equipment: ${office.equipment}, 
-  - Coaching staff: ${office.coachInfo}, 
+  - Gym Equipment: ${office.equipmentList}, 
+  - Coaching staff: ${office.coachList}, 
   - Class Schedule: ${office.classSchedule}, 
   - Class duration: ${office.classDuration}, 
   - Workout format: ${whiteboard.workoutFormat}, 
@@ -30,8 +29,8 @@ export default function Metcon() {
   ];
 
   const { messages, submitPrompt } = useChatCompletion({
-    model: 'gpt-3.5-turbo',
-    apiKey: OPEN_AI_API_KEY,
+    model: 'gpt-4-0125-preview',
+    apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY,
     temperature: 0.9,
   });
 

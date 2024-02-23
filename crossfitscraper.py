@@ -4,7 +4,6 @@ from openai import OpenAI
 import os
 from dotenv import load_dotenv
 from supabase import create_client, Client
-import uuid
 
 # Load environment variables
 load_dotenv()
@@ -14,7 +13,7 @@ url: str = os.getenv("NEXT_PUBLIC_SUPABASE_URL")
 key: str = os.getenv("NEXT_PUBLIC_SUPABASE_ANON_KEY")
 supabase: Client = create_client(url, key)
 
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+client = OpenAI(api_key=os.getenv("NEXT_PUBLIC_OPENAI_API_KEY"))
 
 def get_embeddings(text):
     response = client.embeddings.create(
@@ -45,26 +44,27 @@ def insert_into_supabase(title, body, embedding):
         else:
             print("Failed to insert data, but no error information is available.")
 
-
-
-
-
-
 def scrape_and_process():
-    url = 'https://www.crossfit.com/workout'
-    response = requests.get(url)
-    soup = BeautifulSoup(response.content, 'html.parser')
-    
-    # Assuming each workout is contained within a parent element of 'content' class
-    # and the title is within a 'show' class inside it
-    workout_elements = soup.find_all(class_='content')
-    
-    for element in workout_elements:
-        title_element = element.find(class_='show')
-        if title_element:
-            title = title_element.get_text().strip()
-            body = element.get_text().strip()  # The entire content as body
-            embedding = get_embeddings(body)  # Generate embedding for the body
-            insert_into_supabase(title, body, embedding)  # Insert into Supabase
+    page = 1
+    while True:
+        url = f'https://www.crossfit.com/workout/2022?page={page}'
+        response = requests.get(url)
+        if response.status_code != 200:
+            break  # Break the loop if the page doesn't exist or there's an error
+
+        soup = BeautifulSoup(response.content, 'html.parser')
+        workout_elements = soup.find_all(class_='content')
+        if not workout_elements:
+            break  # Break the loop if no workouts are found on the page
+
+        for element in workout_elements:
+            title_element = element.find(class_='show')
+            if title_element:
+                title = title_element.get_text().strip()
+                body = element.get_text().strip()  # The entire content as body
+                embedding = get_embeddings(body)  # Generate embedding for the body
+                insert_into_supabase(title, body, embedding)  # Insert into Supabase
+
+        page += 1  # Move to the next page
 
 scrape_and_process()
