@@ -4,39 +4,67 @@ from openai import OpenAI
 import os
 from dotenv import load_dotenv
 from supabase import create_client, Client
+import uuid
 
-url: str = os.getenv("NEXT_PUBLIC_SUPABASE_URL") 
-key: str = os.getenv("NEXT_PUBLIC_SUPABASE_ANON_KEY")  
+# Load environment variables
+load_dotenv()
+
+# Supabase setup
+url: str = os.getenv("NEXT_PUBLIC_SUPABASE_URL")
+key: str = os.getenv("NEXT_PUBLIC_SUPABASE_ANON_KEY")
 supabase: Client = create_client(url, key)
 
-def insert_into_supabase(workout_text, embedding):
-    data = {"workout_text": workout_text, "embedding": embedding}
-    response = supabase.table("your_table_name").insert(data).execute()
-    if response.error:
-        print(f"Error inserting data: {response.error}")
-    else:
-        print("Data inserted successfully")
-
-
-load_dotenv()
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 def get_embeddings(text):
     response = client.embeddings.create(
         input=text,
-        model="text-embedding-3-small"  
+        model="text-embedding-3-small"
     )
-    embedding = response.data[0].embedding  # Access attributes directly
+    embedding = response.data[0].embedding  
     return embedding
 
-url = 'https://www.crossfit.com/workout'
-response = requests.get(url)
-soup = BeautifulSoup(response.content, 'html.parser')
-workout_elements = soup.find_all(class_='content')
-workouts = [element.get_text().strip() for element in workout_elements]
+def insert_into_supabase(title, body, embedding):
+    # Check if the workout already exists
+    exists = supabase.table("external_workouts").select("id").eq("title", title).execute()
+    
+    if exists.data and len(exists.data) > 0:
+        print("Workout already exists, skipping insert.")
+        return
+    
+    # Proceed with the insert if the workout does not exist
+    data = {"title": title, "body": body, "embedding": embedding}
+    response = supabase.table("external_workouts").insert(data).execute()
+    
+    if hasattr(response, 'status_code') and response.status_code == 200:
+        print("Data inserted successfully")
+    else:
+        if hasattr(response, 'error'):
+            error = response.error() if callable(response.error) else response.error
+            print(f"Error inserting data: {error}")
+        else:
+            print("Failed to insert data, but no error information is available.")
 
-for workout in workouts:
-    embedding = get_embeddings(workout)
-    insert_into_supabase(workout, embedding)
-    print(embedding)
 
+
+
+
+
+def scrape_and_process():
+    url = 'https://www.crossfit.com/workout'
+    response = requests.get(url)
+    soup = BeautifulSoup(response.content, 'html.parser')
+    
+    # Assuming each workout is contained within a parent element of 'content' class
+    # and the title is within a 'show' class inside it
+    workout_elements = soup.find_all(class_='content')
+    
+    for element in workout_elements:
+        title_element = element.find(class_='show')
+        if title_element:
+            title = title_element.get_text().strip()
+            body = element.get_text().strip()  # The entire content as body
+            embedding = get_embeddings(body)  # Generate embedding for the body
+            insert_into_supabase(title, body, embedding)  # Insert into Supabase
+
+scrape_and_process()
