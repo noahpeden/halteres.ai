@@ -3,11 +3,21 @@
 import React, { useState, useEffect } from 'react';
 import { useOfficeContext } from '../contexts/OfficeContext';
 import { useChatCompletion } from '../hooks/useOpenAiStream/chat-hook';
+import OpenAI from 'openai';
+import { createClient } from '@supabase/supabase-js';
 
 export default function Metcon() {
-  const { office, whiteboard } = useOfficeContext();
-  console.log(office, whiteboard);
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  );
+  const openai = new OpenAI({
+    apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY,
+    dangerouslyAllowBrowser: true,
+  });
+  const { office, whiteboard, readyForQuery } = useOfficeContext();
   const [loading, setLoading] = useState(false);
+  const [matchedWorkouts, setmatchedWorkouts] = useState([]);
   const userPrompt = `
   Based on the provided gym information, create a detailed ${whiteboard.cycleLength} CrossFit workout plan. Include workouts for each day, tailored to the available equipment and coaching expertise. Specify exact workouts, including scaled and RX weights for each exercise, without suggesting repetitions of previous workouts or scaling instructions. Focus solely on listing unique and specific workouts for each day of the ${whiteboard.cycleLength}.
   Here are the included details: 
@@ -19,7 +29,42 @@ export default function Metcon() {
   - Workout cycle length: ${whiteboard.cycleLength}, 
   - Workout focus: ${whiteboard.focus}, 
   - Template workout: ${whiteboard.exampleWorkout};
+  - Use these workouts as inspiration: ${matchedWorkouts}
   `;
+
+  const embeddingPrompt = whiteboard.exampleWorkout;
+
+  async function createEmbeddings() {
+    const openaiResponse = await openai.embeddings.create({
+      model: 'text-embedding-3-small',
+      input: embeddingPrompt,
+      encoding_format: 'float',
+    });
+
+    const embeddingVector = openaiResponse.data[0].embedding;
+    const searchedWorkoutsResult = await supabase.rpc(
+      'match_external_workouts',
+      {
+        query_embedding: embeddingVector,
+        match_threshold: 0.3, // Adjust threshold based on your matching criteria
+        match_count: 10,
+      }
+    );
+
+    console.log(searchedWorkoutsResult);
+    if (searchedWorkoutsResult.error) {
+      console.error('Error matching workouts:', searchedWorkoutsResult.error);
+    } else {
+      console.log('Matched Workouts:', searchedWorkoutsResult.data);
+      setmatchedWorkouts(searchedWorkoutsResult.data);
+    }
+  }
+
+  useEffect(() => {
+    if (readyForQuery) {
+      createEmbeddings();
+    }
+  }, [readyForQuery]);
 
   const prompt = [
     {
@@ -88,6 +133,17 @@ export default function Metcon() {
             <li>Example Workout: {whiteboard.exampleWorkout}</li>
           </ul>
         </div>
+      </div>
+
+      <div>
+        <h3 className="text-lg font-semibold">
+          Matched workouts we'll use for RAG
+        </h3>
+        <ul>
+          {matchedWorkouts?.map((workout, index) => (
+            <li key={index}>{workout.body}</li>
+          ))}
+        </ul>
       </div>
       <button
         className="btn btn-secondary mt-4"

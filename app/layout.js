@@ -10,27 +10,27 @@ import img from './assets/logo.png';
 import Image from 'next/image';
 
 const DRAWER_WIDTH = 240;
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-);
+// const supabase = createClient(
+//   process.env.NEXT_PUBLIC_SUPABASE_URL,
+//   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+// );
 
 export default function RootLayout({ children }) {
   const [session, setSession] = useState(null);
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-    });
+  // useEffect(() => {
+  //   supabase.auth.getSession().then(({ data: { session } }) => {
+  //     setSession(session);
+  //   });
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-    });
+  //   const {
+  //     data: { subscription },
+  //   } = supabase.auth.onAuthStateChange((_event, session) => {
+  //     setSession(session);
+  //   });
 
-    return () => subscription.unsubscribe();
-  }, []);
+  //   return () => subscription.unsubscribe();
+  // }, []);
 
   return (
     <html className="scroll-smooth" lang="en">
@@ -48,15 +48,15 @@ export default function RootLayout({ children }) {
             )}
           </div>
           <main className={`ml-${DRAWER_WIDTH} mt-12 p-32  bg-white-100`}>
-            {!session ? (
+            {/* {!session ? (
               <Auth
                 supabaseClient={supabase}
                 appearance={{ theme: ThemeSupa }}
                 providers={['google']}
               />
-            ) : (
-              children
-            )}
+            ) : ( */}
+            {children}
+            {/* )} */}
           </main>
         </OfficeProvider>
       </body>

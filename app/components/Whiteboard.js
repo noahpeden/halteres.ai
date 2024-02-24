@@ -4,14 +4,14 @@ import { useOfficeContext } from '../contexts/OfficeContext';
 import { useRouter } from 'next/navigation';
 
 export default function Whiteboard() {
-  const { addWhiteboardInfo } = useOfficeContext();
+  const { addWhiteboardInfo, setReadyForQuery } = useOfficeContext();
   const [workoutFormat, setWorkoutFormat] = useState(
     'Crossfit Classes: Warmup, Strength, Metcon, Cool Down, Mobility | Olympic Lifting: Warmup, Strength, Cool Down'
   );
   const [cycleLength, setCycleLength] = useState('Crossfit Classes: 1 week');
   const [focus, setFocus] = useState('Squat, Deadlift, Bench, outside cardio');
   const [exampleWorkout, setExampleWorkout] = useState(
-    'Warm up: Hip halo into goblet squat, Strength: 5x5 Back Squat, Metcon: 21-15-9 Wall Balls, Burpees, Cool Down: 5 min bike, Mobility: Couch Stretch'
+    "7 sets for load: 6 alternating front-rack reverse lunges (3/leg) Post heaviest load to comments. Scaling: Each set in today’s workout is meant to be heavy relative to each athlete's ability. Adjust the load as needed to maintain proper form and mechanics across all 7 sets. Intermediate option: Same as Rx’d Beginner option: Same as Rx’d'"
   );
 
   const router = useRouter();
@@ -19,6 +19,7 @@ export default function Whiteboard() {
   const handleSubmit = (e) => {
     e.preventDefault();
     addWhiteboardInfo({ cycleLength, workoutFormat, focus, exampleWorkout });
+    setReadyForQuery(true);
     document.getElementById('metcon').scrollIntoView({ behavior: 'smooth' });
   };
 
