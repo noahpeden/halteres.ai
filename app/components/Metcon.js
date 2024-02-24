@@ -16,9 +16,8 @@ export default function Metcon() {
     dangerouslyAllowBrowser: true,
   });
   const { office, whiteboard, readyForQuery } = useOfficeContext();
-  console.log(office, whiteboard);
   const [loading, setLoading] = useState(false);
-  const [embedding, setEmbedding] = useState(null);
+  const [matchedWorkouts, setmatchedWorkouts] = useState([]);
   const userPrompt = `
   Based on the provided gym information, create a detailed ${whiteboard.cycleLength} CrossFit workout plan. Include workouts for each day, tailored to the available equipment and coaching expertise. Specify exact workouts, including scaled and RX weights for each exercise, without suggesting repetitions of previous workouts or scaling instructions. Focus solely on listing unique and specific workouts for each day of the ${whiteboard.cycleLength}.
   Here are the included details: 
@@ -30,48 +29,35 @@ export default function Metcon() {
   - Workout cycle length: ${whiteboard.cycleLength}, 
   - Workout focus: ${whiteboard.focus}, 
   - Template workout: ${whiteboard.exampleWorkout};
+  - Use these workouts as inspiration: ${matchedWorkouts}
   `;
 
-  const embeddingPrompt = `
-    - Gym Equipment: ${office.equipmentList}, 
-  - Coaching staff: ${office.coachList}, 
-  - Class Schedule: ${office.classSchedule}, 
-  - Class duration: ${office.classDuration}, 
-  - Workout format: ${whiteboard.workoutFormat}, 
-  - Workout cycle length: ${whiteboard.cycleLength}, 
-  - Workout focus: ${whiteboard.focus}, 
-  - Template workout: ${whiteboard.exampleWorkout};
-  `;
+  const embeddingPrompt = whiteboard.exampleWorkout;
 
   async function createEmbeddings() {
-    // Assuming `embeddingPrompt` is correctly defined in your scope
     const openaiResponse = await openai.embeddings.create({
       model: 'text-embedding-3-small',
       input: embeddingPrompt,
-      encoding_format: 'float', // Confirm this matches what your DB expects
+      encoding_format: 'float',
     });
-    console.log({ openaiResponse });
 
-    // Extract the actual embedding vector from OpenAI's response
-    // This is a placeholder; adjust based on the actual response structure
-    const embeddingVector = openaiResponse.data[0].embedding; // Adjust according to actual response format
-
-    // Adjust the RPC call to match your PostgreSQL function's expected parameters
-    // Ensure parameters are correctly named and structured
-    const { error: matchError, data: matchedWorkouts } = await supabase.rpc(
-      'match_workouts',
+    const embeddingVector = openaiResponse.data[0].embedding;
+    const searchedWorkoutsResult = await supabase.rpc(
+      'match_external_workouts',
       {
-        query_embedding: embeddingVector, // Ensure this is the correct format (e.g., an array of floats)
-        match_threshold: 0.78, // Adjust threshold based on your matching criteria
+        query_embedding: embeddingVector,
+        match_threshold: 0.3, // Adjust threshold based on your matching criteria
+        match_count: 10,
       }
     );
 
-    if (matchError) {
-      console.error('Error matching workouts:', matchError);
+    console.log(searchedWorkoutsResult);
+    if (searchedWorkoutsResult.error) {
+      console.error('Error matching workouts:', searchedWorkoutsResult.error);
     } else {
-      console.log('Matched Workouts:', matchedWorkouts);
+      console.log('Matched Workouts:', searchedWorkoutsResult.data);
+      setmatchedWorkouts(searchedWorkoutsResult.data);
     }
-    setMatchedData(matchedWorkouts);
   }
 
   useEffect(() => {
@@ -147,6 +133,17 @@ export default function Metcon() {
             <li>Example Workout: {whiteboard.exampleWorkout}</li>
           </ul>
         </div>
+      </div>
+
+      <div>
+        <h3 className="text-lg font-semibold">
+          Matched workouts we'll use for RAG
+        </h3>
+        <ul>
+          {matchedWorkouts?.map((workout, index) => (
+            <li key={index}>{workout.body}</li>
+          ))}
+        </ul>
       </div>
       <button
         className="btn btn-secondary mt-4"
