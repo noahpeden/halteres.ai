@@ -3,11 +3,22 @@
 import React, { useState, useEffect } from 'react';
 import { useOfficeContext } from '../contexts/OfficeContext';
 import { useChatCompletion } from '../hooks/useOpenAiStream/chat-hook';
+import OpenAI from 'openai';
+import { createClient } from '@supabase/supabase-js';
 
 export default function Metcon() {
-  const { office, whiteboard } = useOfficeContext();
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  );
+  const openai = new OpenAI({
+    apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY,
+    dangerouslyAllowBrowser: true,
+  });
+  const { office, whiteboard, readyForQuery } = useOfficeContext();
   console.log(office, whiteboard);
   const [loading, setLoading] = useState(false);
+  const [embedding, setEmbedding] = useState(null);
   const userPrompt = `
   Based on the provided gym information, create a detailed ${whiteboard.cycleLength} CrossFit workout plan. Include workouts for each day, tailored to the available equipment and coaching expertise. Specify exact workouts, including scaled and RX weights for each exercise, without suggesting repetitions of previous workouts or scaling instructions. Focus solely on listing unique and specific workouts for each day of the ${whiteboard.cycleLength}.
   Here are the included details: 
@@ -20,6 +31,54 @@ export default function Metcon() {
   - Workout focus: ${whiteboard.focus}, 
   - Template workout: ${whiteboard.exampleWorkout};
   `;
+
+  const embeddingPrompt = `
+    - Gym Equipment: ${office.equipmentList}, 
+  - Coaching staff: ${office.coachList}, 
+  - Class Schedule: ${office.classSchedule}, 
+  - Class duration: ${office.classDuration}, 
+  - Workout format: ${whiteboard.workoutFormat}, 
+  - Workout cycle length: ${whiteboard.cycleLength}, 
+  - Workout focus: ${whiteboard.focus}, 
+  - Template workout: ${whiteboard.exampleWorkout};
+  `;
+
+  async function createEmbeddings() {
+    // Assuming `embeddingPrompt` is correctly defined in your scope
+    const openaiResponse = await openai.embeddings.create({
+      model: 'text-embedding-3-small',
+      input: embeddingPrompt,
+      encoding_format: 'float', // Confirm this matches what your DB expects
+    });
+    console.log({ openaiResponse });
+
+    // Extract the actual embedding vector from OpenAI's response
+    // This is a placeholder; adjust based on the actual response structure
+    const embeddingVector = openaiResponse.data[0].embedding; // Adjust according to actual response format
+
+    // Adjust the RPC call to match your PostgreSQL function's expected parameters
+    // Ensure parameters are correctly named and structured
+    const { error: matchError, data: matchedWorkouts } = await supabase.rpc(
+      'match_workouts',
+      {
+        query_embedding: embeddingVector, // Ensure this is the correct format (e.g., an array of floats)
+        match_threshold: 0.78, // Adjust threshold based on your matching criteria
+      }
+    );
+
+    if (matchError) {
+      console.error('Error matching workouts:', matchError);
+    } else {
+      console.log('Matched Workouts:', matchedWorkouts);
+    }
+    setMatchedData(matchedWorkouts);
+  }
+
+  useEffect(() => {
+    if (readyForQuery) {
+      createEmbeddings();
+    }
+  }, [readyForQuery]);
 
   const prompt = [
     {

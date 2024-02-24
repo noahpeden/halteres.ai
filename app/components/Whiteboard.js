@@ -4,7 +4,7 @@ import { useOfficeContext } from '../contexts/OfficeContext';
 import { useRouter } from 'next/navigation';
 
 export default function Whiteboard() {
-  const { addWhiteboardInfo } = useOfficeContext();
+  const { addWhiteboardInfo, setReadyForQuery } = useOfficeContext();
   const [workoutFormat, setWorkoutFormat] = useState(
     'Crossfit Classes: Warmup, Strength, Metcon, Cool Down, Mobility | Olympic Lifting: Warmup, Strength, Cool Down'
   );
@@ -19,6 +19,7 @@ export default function Whiteboard() {
   const handleSubmit = (e) => {
     e.preventDefault();
     addWhiteboardInfo({ cycleLength, workoutFormat, focus, exampleWorkout });
+    setReadyForQuery(true);
     document.getElementById('metcon').scrollIntoView({ behavior: 'smooth' });
   };
 

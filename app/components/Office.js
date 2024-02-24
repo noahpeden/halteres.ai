@@ -1,19 +1,26 @@
 'use client';
 import { useState } from 'react';
 import { useOfficeContext } from '../contexts/OfficeContext';
-import { useRouter } from 'next/navigation';
 
 export default function Office() {
   const { addOfficeInfo } = useOfficeContext();
-  const [equipmentList, setEquipmentList] = useState([]);
+  const [equipmentList, setEquipmentList] = useState([
+    { name: 'rower', quantity: '12' },
+    { name: 'barbell', quantity: '20' },
+    { name: 'dumbbell', quantity: '30' },
+  ]);
   const [newEquipmentName, setNewEquipmentName] = useState('');
   const [newEquipmentQuantity, setNewEquipmentQuantity] = useState('');
-  const [coachList, setCoachList] = useState([]);
-  const [newCoachName, setNewCoachName] = useState('');
-  const [newCoachExperience, setNewCoachExperience] = useState('');
-  const [classSchedule, setClassSchedule] = useState('');
-  const [classDuration, setClassDuration] = useState('');
-  const router = useRouter();
+  const [coachList, setCoachList] = useState([
+    { name: 'Tyler', experience: 'CrossFit Level 1' },
+  ]);
+  const [newCoachName, setNewCoachName] = useState('Tyler');
+  const [newCoachExperience, setNewCoachExperience] =
+    useState('CrossFit Level 1');
+  const [classSchedule, setClassSchedule] = useState(
+    'Monday - Saturday, 6 times a day'
+  );
+  const [classDuration, setClassDuration] = useState('1 hour');
 
   const handleAddEquipment = () => {
     setEquipmentList([
