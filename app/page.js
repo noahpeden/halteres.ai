@@ -1,12 +1,9 @@
 'use client';
-import Office from './components/Office';
-import Whiteboard from './components/Whiteboard';
-import Metcon from './components/Metcon';
-import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { Auth } from '@supabase/auth-ui-react';
 import { ThemeSupa } from '@supabase/auth-ui-shared';
+import Link from 'next/link';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -15,12 +12,6 @@ const supabase = createClient(
 
 export default function Home() {
   const [showComponents, setShowComponents] = useState(false);
-  const handleGetStartedClick = () => {
-    setShowComponents(true);
-    setTimeout(() => {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }, 100);
-  };
 
   const [session, setSession] = useState(null);
 
@@ -60,12 +51,11 @@ export default function Home() {
                 resources to help you run your gym efficiently.
               </p>
               <div className="flex justify-center items-center mt-4">
-                <button
-                  className="btn btn-secondary text-xl"
-                  onClick={() => handleGetStartedClick()}
-                >
-                  Get Started
-                </button>
+                <Link href="/office">
+                  <button className="btn btn-secondary text-xl">
+                    Get Started
+                  </button>
+                </Link>
               </div>
               <div className="m-2">
                 {session && (
@@ -81,41 +71,6 @@ export default function Home() {
           )
         )}
       </div>
-
-      {session && showComponents && (
-        <>
-          <div className="ml-12">
-            <div id="office" className="h-screen">
-              <Office />
-            </div>
-            <div id="whiteboard" className="h-screen">
-              <Whiteboard />
-            </div>
-            <div id="metcon" className="h-screen">
-              <Metcon />
-            </div>
-          </div>
-          <nav className="fixed top-50 left-0 p-4">
-            <ul className="flex flex-col space-y-2 steps steps-vertical">
-              <li className="step step-primary">
-                <Link href="#office" className="smooth-scroll">
-                  Office
-                </Link>
-              </li>
-              <li className="step step-primary">
-                <Link href="#whiteboard" className="smooth-scroll">
-                  Whiteboard
-                </Link>
-              </li>
-              <li className="step step-primary">
-                <Link href="#metcon" className="smooth-scroll">
-                  Metcon
-                </Link>
-              </li>
-            </ul>
-          </nav>
-        </>
-      )}
     </main>
   );
 }

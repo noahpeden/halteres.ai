@@ -1,9 +1,11 @@
 'use client';
 import { useState } from 'react';
 import { useOfficeContext } from '../contexts/OfficeContext';
+import { useRouter } from 'next/navigation';
 
 export default function Office() {
   const { addOfficeInfo } = useOfficeContext();
+  const { push } = useRouter();
   const [equipmentList, setEquipmentList] = useState([
     { name: 'rower', quantity: '12' },
     { name: 'barbell', quantity: '20' },
@@ -55,9 +57,7 @@ export default function Office() {
   const handleSubmit = (e) => {
     e.preventDefault();
     addOfficeInfo({ equipmentList, coachList, classSchedule, classDuration });
-    document
-      .getElementById('whiteboard')
-      .scrollIntoView({ behavior: 'smooth' });
+    push('/whiteboard');
   };
 
   return (

@@ -4,6 +4,7 @@ import { useOfficeContext } from '../contexts/OfficeContext';
 import { useRouter } from 'next/navigation';
 
 export default function Whiteboard() {
+  const { push } = useRouter();
   const { addWhiteboardInfo, setReadyForQuery } = useOfficeContext();
   const [workoutFormat, setWorkoutFormat] = useState(
     'Crossfit Classes: Warmup, Strength, Metcon, Cool Down, Mobility | Olympic Lifting: Warmup, Strength, Cool Down'
@@ -14,13 +15,11 @@ export default function Whiteboard() {
     "7 sets for load: 6 alternating front-rack reverse lunges (3/leg) Post heaviest load to comments. Scaling: Each set in today’s workout is meant to be heavy relative to each athlete's ability. Adjust the load as needed to maintain proper form and mechanics across all 7 sets. Intermediate option: Same as Rx’d Beginner option: Same as Rx’d'"
   );
 
-  const router = useRouter();
-
   const handleSubmit = (e) => {
     e.preventDefault();
     addWhiteboardInfo({ cycleLength, workoutFormat, focus, exampleWorkout });
     setReadyForQuery(true);
-    document.getElementById('metcon').scrollIntoView({ behavior: 'smooth' });
+    push('/metcon');
   };
 
   return (
