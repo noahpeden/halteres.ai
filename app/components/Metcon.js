@@ -4,13 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { useOfficeContext } from '../contexts/OfficeContext';
 import { useChatCompletion } from '../hooks/useOpenAiStream/chat-hook';
 import OpenAI from 'openai';
-import { createClient } from '@supabase/supabase-js';
 
 export default function Metcon() {
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  );
   const openai = new OpenAI({
     apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY,
     dangerouslyAllowBrowser: true,
@@ -19,7 +14,11 @@ export default function Metcon() {
   const [loading, setLoading] = useState(false);
   const [matchedWorkouts, setmatchedWorkouts] = useState([]);
   const userPrompt = `
-  Based on the provided gym information, create a detailed ${whiteboard.cycleLength} CrossFit workout plan. Include workouts for each day, tailored to the available equipment and coaching expertise. Specify exact workouts, including scaled and RX weights for each exercise, without suggesting repetitions of previous workouts or scaling instructions. Focus solely on listing unique and specific workouts for each day of the ${whiteboard.cycleLength}.
+  Based on the provided gym information, create a detailed ${
+    whiteboard.cycleLength
+  } CrossFit workout plan. Include workouts for each day, tailored to the available equipment and coaching expertise. Specify exact workouts, including scaled and RX weights for each exercise, without suggesting repetitions of previous workouts or scaling instructions. Focus solely on listing unique and specific workouts for each day of the ${
+    whiteboard.cycleLength
+  }.
   Here are the included details: 
   - Gym Equipment: ${office.equipmentList}, 
   - Coaching staff: ${office.coachList}, 
@@ -29,7 +28,9 @@ export default function Metcon() {
   - Workout cycle length: ${whiteboard.cycleLength}, 
   - Workout focus: ${whiteboard.focus}, 
   - Template workout: ${whiteboard.exampleWorkout};
-  - Use these workouts as inspiration: ${matchedWorkouts}
+  - Use these workouts as inspiration: ${matchedWorkouts
+    .map((workout) => workout.body)
+    .join(', ')}
   `;
 
   const embeddingPrompt = whiteboard.exampleWorkout;
@@ -46,8 +47,8 @@ export default function Metcon() {
       'match_external_workouts',
       {
         query_embedding: embeddingVector,
-        match_threshold: 0.3, // Adjust threshold based on your matching criteria
-        match_count: 10,
+        match_threshold: 0.4, 
+        match_count: 20,
       }
     );
 
