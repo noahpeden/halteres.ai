@@ -1,16 +1,13 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { createClient } from '@supabase/supabase-js';
+import { createClientComponentClient } from '@supabase/supabase-js';
 import { Auth } from '@supabase/auth-ui-react';
 import { ThemeSupa } from '@supabase/auth-ui-shared';
 import Link from 'next/link';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-);
-
 export default function Home() {
+    const supabase = createClientComponentClient();
+
   const [showComponents, setShowComponents] = useState(false);
 
   const [session, setSession] = useState(null);
@@ -51,7 +48,7 @@ export default function Home() {
                 resources to help you run your gym efficiently.
               </p>
               <div className="flex justify-center items-center mt-4">
-                <Link href="/office">
+                <Link href="/dashboard">
                   <button className="btn btn-secondary text-xl">
                     Get Started
                   </button>
