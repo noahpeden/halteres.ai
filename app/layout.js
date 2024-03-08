@@ -13,15 +13,15 @@ export default function RootLayout({ children }) {
     <html className="scroll-smooth" lang="en">
       <body>
         <OfficeProvider>
-          <div className="fixed top-0 z-50 w-full flex items-center justify-center bg-white text-blue-300 py-4 px-6 border-b border-gray-200">
+          <div className="fixed top-0 z-50 w-full flex items-center justify-between bg-white text-blue-300 py-4 px-6 border-b border-gray-200">
             <Image
               src={img}
               alt="Halteres.ai Logo"
               height={50}
               width={50}
-              className="self-left"
+              className="self-start"
             />
-            <div role="tablist" className="tabs tabs-boxed">
+            <div role="tablist" className="tabs tabs-boxed self-center mx-auto">
               <a
                 href="/office"
                 role="tab"
@@ -48,9 +48,7 @@ export default function RootLayout({ children }) {
             </div>
           </div>
 
-          <main className={`ml-${DRAWER_WIDTH} mt-12 p-32  bg-white-100`}>
-            {children}
-          </main>
+          <main className={`mt-12 p-32  bg-white-100`}>{children}</main>
         </OfficeProvider>
       </body>
     </html>
