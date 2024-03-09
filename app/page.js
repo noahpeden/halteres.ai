@@ -1,75 +1,85 @@
-'use client';
-import { useState, useEffect } from 'react';
-import { createClient } from '@supabase/supabase-js';
-import { Auth } from '@supabase/auth-ui-react';
-import { ThemeSupa } from '@supabase/auth-ui-shared';
 import Link from 'next/link';
+import Image from 'next/image';
+import boxJumps from './assets/box-jumps.jpg';
+import chalk from './assets/chalk.jpg';
+import coachImg from './assets/coach-overhead-press.jpg';
+import womanRopes from './assets/woman-rope-looking.jpg';
+import { createClient } from './utils/supabase/server';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-);
+export default async function Home() {
+  const supabase = createClient();
 
-export default function Home() {
-  const [showComponents, setShowComponents] = useState(false);
-
-  const [session, setSession] = useState(null);
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-    });
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
+  const { data, error } = await supabase.auth.getSession();
 
   return (
     <main className="flex min-h-screen flex-col">
       <div className="text-center">
-        {!session ? (
-          <Auth
-            supabaseClient={supabase}
-            appearance={{ theme: ThemeSupa }}
-            providers={['google']}
+        <h1 className="text-4xl font-bold mt-4">Welcome to Halteres.ai</h1>
+        <p className="text-xl mt-4 mb-8 mx-auto leading-relaxed max-w-xl">
+          Halteres.ai is the smartest app for workout planning. Leveraging
+          cutting-edge AI, we provide tailored workout routines and resources to
+          help you run your gym efficiently.
+        </p>
+        <Image
+          src={coachImg}
+          alt="Halteres.ai Logo"
+          height={200}
+          width={200}
+          className="self-start"
+        />
+        <section>
+          <Image
+            src={boxJumps}
+            alt="Halteres.ai Logo"
+            height={200}
+            width={200}
+            className="self-start"
           />
-        ) : (
-          !showComponents && (
-            <>
-              <h1 className="text-4xl font-bold mt-4">
-                Welcome to Halteres.ai
-              </h1>
-              <p className="text-xl mt-4 mb-8 mx-auto leading-relaxed max-w-xl">
-                Halteres.ai is your digital assistant for gym management and
-                workout planning. Leveraging cutting-edge AI, we provide
-                tailored workout routines, equipment management, and coaching
-                resources to help you run your gym efficiently.
-              </p>
-              <div className="flex justify-center items-center mt-4">
-                <Link href="/office">
-                  <button className="btn btn-secondary text-xl">
-                    Get Started
-                  </button>
-                </Link>
-              </div>
-              <div className="m-2">
-                {session && (
-                  <button
-                    onClick={async () => await supabase.auth.signOut()}
-                    className="ml-auto btn btn-secondary"
-                  >
-                    Sign Out
-                  </button>
-                )}
-              </div>
-            </>
-          )
-        )}
+          <h2 className="text-2xl font-bold mt-4">Tailored to You</h2>
+          <p className="text-lg mt-2">
+            Our AI learns from your preferences and performance to create a
+            personalized workout plan.
+          </p>
+        </section>
+        <section>
+          <h2 className="text-2xl font-bold mt-4">Your Gym</h2>
+          <p className="text-lg mt-2">
+            Manage your gym equipment and schedule efficiently with our
+            integrated tools.
+          </p>
+          <Image
+            src={chalk}
+            alt="Halteres.ai Logo"
+            height={200}
+            width={200}
+            className="self-start"
+          />
+        </section>
+        <section>
+          <h2 className="text-2xl font-bold mt-4">Your Clients</h2>
+          <p className="text-lg mt-2">
+            Provide your clients with a unique and personalized workout
+            experience.
+          </p>
+        </section>
+        <section>
+          <Image
+            src={womanRopes}
+            alt="Halteres.ai Logo"
+            height={200}
+            width={200}
+            className="self-start"
+          />
+          <h2 className="text-2xl font-bold mt-4">Workouts You Love</h2>
+          <p className="text-lg mt-2">
+            Discover new workouts and track your progress over time.
+          </p>
+        </section>
+        <div className="flex justify-center items-center mt-4">
+          <Link href={'/login'}>
+            <button className="btn btn-secondary text-xl">Get Started</button>
+          </Link>
+        </div>
       </div>
     </main>
   );
