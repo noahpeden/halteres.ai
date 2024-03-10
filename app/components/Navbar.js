@@ -24,7 +24,7 @@ export default function Navbar() {
           className="self-start"
         />
       </Link>
-      <div role="tablist" className="tabs tabs-boxed self-center mx-auto">
+      {/* <div role="tablist" className="tabs tabs-boxed self-center mx-auto">
         <a
           href="/office"
           role="tab"
@@ -46,7 +46,7 @@ export default function Navbar() {
         >
           Metcon
         </a>
-      </div>
+      </div> */}
       {session ? (
         <button onClick={handleLogout} className="btn btn-primary">
           Logout

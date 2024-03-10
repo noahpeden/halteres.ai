@@ -9,10 +9,17 @@ const supabase = createClient(
 
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(null);
+  const [user, setUser] = useState(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
+    });
+
+    supabase.auth.getUser().then((user) => {
+      if (user) {
+        setUser(user);
+      }
     });
 
     const {
@@ -25,7 +32,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ session, supabase }}>
+    <AuthContext.Provider value={{ session, supabase, user }}>
       {children}
     </AuthContext.Provider>
   );

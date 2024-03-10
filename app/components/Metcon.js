@@ -1,17 +1,28 @@
 'use client';
-
-import React, { useState, useEffect } from 'react';
-import { useOfficeContext } from '../contexts/OfficeContext';
-import { useChatCompletion } from '../hooks/useOpenAiStream/chat-hook';
+import React, { useState, useEffect, useRef } from 'react';
+import { useOfficeContext } from '@/contexts/OfficeContext';
+import { useChatCompletion } from '@/hooks/useOpenAiStream/chat-hook';
 import OpenAI from 'openai';
+import jsPDF from 'jspdf';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function Metcon() {
+  const { supabase } = useAuth();
+
+  const downloadPDF = () => {
+    const doc = new jsPDF();
+    doc.text(content, 10, 10);
+    doc.save('programming.pdf');
+  };
+  const textAreaRef = useRef(null);
+
   const openai = new OpenAI({
     apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY,
     dangerouslyAllowBrowser: true,
   });
   const { office, whiteboard, readyForQuery } = useOfficeContext();
   const [loading, setLoading] = useState(false);
+  const [content, setContent] = useState('');
   const [matchedWorkouts, setmatchedWorkouts] = useState([]);
   const userPrompt = `
   Based on the provided gym information, create a detailed ${
@@ -47,7 +58,7 @@ export default function Metcon() {
       'match_external_workouts',
       {
         query_embedding: embeddingVector,
-        match_threshold: 0.4, 
+        match_threshold: 0.4,
         match_count: 20,
       }
     );
@@ -84,16 +95,13 @@ export default function Metcon() {
     setLoading(true);
     submitPrompt(prompt);
     console.log(messages);
+    setContent(messages.map((msg) => msg.content).join('\n'));
     setLoading(false);
   };
 
-  useEffect(() => {
-    window.scrollTo(0, document.body.scrollHeight);
-  }, [messages]);
-
   return (
     <div className="container mx-auto my-6">
-      <h1 className="text-2xl font-bold">Metcon</h1>
+      <h1 className="text-2xl font-bold">Metcon Programming Editor</h1>
       <div className="review-details">
         <h2 className="text-xl">Review Details</h2>
 
@@ -145,6 +153,28 @@ export default function Metcon() {
             <li key={index}>{workout.body}</li>
           ))}
         </ul>
+        {loading ? (
+          <div className="flex justify-center items-center">
+            <svg className="animate-spin h-5 w-5 mr-3" viewBox="0 0 24 24">
+              {/* SVG for circular loading indicator */}
+            </svg>
+          </div>
+        ) : (
+          <div>
+            <h2 className="text-xl mt-4">Generated Programming</h2>
+            <div className="chat-wrapper">
+              {messages.length < 1 ? (
+                <div className="empty">No messages</div>
+              ) : (
+                messages.map((msg, i) => (
+                  <div className="message-wrapper" key={i}>
+                    <pre className="chat-message">{msg.content}</pre>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
       </div>
       <button
         className="btn btn-secondary mt-4"
@@ -152,43 +182,17 @@ export default function Metcon() {
       >
         Generate Programming
       </button>
-      {loading ? (
-        <div className="flex justify-center items-center">
-          <svg className="animate-spin h-5 w-5 mr-3" viewBox="0 0 24 24">
-            {/* SVG for circular loading indicator */}
-          </svg>
-        </div>
-      ) : (
-        <div>
-          <h2 className="text-xl mt-4">Generated Programming</h2>
-          <div className="chat-wrapper">
-            {messages.length < 1 ? (
-              <div className="empty">No messages</div>
-            ) : (
-              messages.map((msg, i) => (
-                <div className="message-wrapper" key={i}>
-                  <div className="role">Role: {msg.role}</div>
-                  <pre className="chat-message">{msg.content}</pre>
-                  {!msg.meta.loading && (
-                    <div className="tag-wrapper">
-                      {msg.role === 'assistant' && (
-                        <>
-                          <span className="tag">
-                            Tokens: {msg.meta.chunks.length}
-                          </span>
-                          <span className="tag">
-                            Response time: {msg.meta.responseTime}
-                          </span>
-                        </>
-                      )}
-                    </div>
-                  )}
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-      )}
+      <div className="editor-container p-4">
+        <textarea
+          ref={textAreaRef}
+          className="textarea textarea-bordered w-full h-screen"
+          value={content}
+          onChange={(e) => setContent(e.target.value)}
+        ></textarea>
+        <button className="btn btn-success mt-4" onClick={downloadPDF}>
+          Download as PDF
+        </button>
+      </div>
     </div>
   );
 }
