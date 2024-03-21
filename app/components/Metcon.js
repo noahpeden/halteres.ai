@@ -44,6 +44,19 @@ export default function Metcon() {
     .join(', ')}
   `;
 
+  const prompt = [
+    {
+      content: userPrompt,
+      role: 'user',
+    },
+  ];
+
+  const { messages, submitPrompt } = useChatCompletion({
+    model: 'gpt-4-0125-preview',
+    apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY,
+    temperature: 0.9,
+  });
+
   const embeddingPrompt = whiteboard.exampleWorkout;
 
   async function createEmbeddings() {
@@ -78,24 +91,15 @@ export default function Metcon() {
     }
   }, [readyForQuery]);
 
-  const prompt = [
-    {
-      content: userPrompt,
-      role: 'user',
-    },
-  ];
-
-  const { messages, submitPrompt } = useChatCompletion({
-    model: 'gpt-4-0125-preview',
-    apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY,
-    temperature: 0.9,
-  });
+  useEffect(() => {
+    messages.length < 1
+      ? setContent('No messages yet')
+      : setContent(messages.map((msg) => msg.content).join('\n'));
+  }, [messages]);
 
   const handleGenerateProgramming = () => {
     setLoading(true);
     submitPrompt(prompt);
-    console.log(messages);
-    setContent(messages.map((msg) => msg.content).join('\n'));
     setLoading(false);
   };
 

@@ -16,6 +16,6 @@ export default function App() {
       />
     );
   } else {
-    return redirect('/programs');
+    return redirect('/dashboard');
   }
 }
