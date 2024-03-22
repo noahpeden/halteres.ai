@@ -1,86 +1,130 @@
-import Link from 'next/link';
+'use client';
+import {
+  Button,
+  Typography,
+  Box,
+  Grid,
+  Card,
+  CardContent,
+} from '@mui/material';
+import styled from '@emotion/styled';
 import Image from 'next/image';
-import boxJumps from './assets/box-jumps.jpg';
-import chalk from './assets/chalk.jpg';
-import coachImg from './assets/coach-overhead-press.jpg';
-import womanRopes from './assets/woman-rope-looking.jpg';
-import { createClient } from './utils/supabase/server';
+import Link from 'next/link';
+import chalk from '@/assets/chalk.jpg'; // Make sure the path is correct
+import womanRopes from '@/assets/woman-rope-looking.jpg'; // Make sure the path is correct
+import FitnessCenterIcon from '@mui/icons-material/FitnessCenter';
+import ScheduleIcon from '@mui/icons-material/Schedule';
+import SaveIcon from '@mui/icons-material/Save';
 
-export default async function Home() {
-  const supabase = createClient();
+const StyledImage = styled(Image)`
+  object-fit: cover;
+`;
 
-  const { data, error } = await supabase.auth.getSession();
-
+export default function Page() {
   return (
-    <main className="flex min-h-screen flex-col">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mt-4">Welcome to Halteres.ai</h1>
-        <p className="text-xl mt-4 mb-8 mx-auto leading-relaxed max-w-xl">
-          Halteres.ai is the smartest app for workout planning. Leveraging
-          cutting-edge AI, we provide tailored workout routines and resources to
-          help you run your gym efficiently.
-        </p>
-        <Image
-          src={coachImg}
-          alt="Halteres.ai Logo"
-          height={200}
-          width={200}
-          className="self-start"
-        />
-        <section>
-          <Image
-            src={boxJumps}
-            alt="Halteres.ai Logo"
-            height={200}
-            width={200}
-            className="self-start"
-          />
-          <h2 className="text-2xl font-bold mt-4">Tailored to You</h2>
-          <p className="text-lg mt-2">
-            Our AI learns from your preferences and performance to create a
-            personalized workout plan.
-          </p>
-        </section>
-        <section>
-          <h2 className="text-2xl font-bold mt-4">Your Gym</h2>
-          <p className="text-lg mt-2">
-            Manage your gym equipment and schedule efficiently with our
-            integrated tools.
-          </p>
-          <Image
-            src={chalk}
-            alt="Halteres.ai Logo"
-            height={200}
-            width={200}
-            className="self-start"
-          />
-        </section>
-        <section>
-          <h2 className="text-2xl font-bold mt-4">Your Clients</h2>
-          <p className="text-lg mt-2">
-            Provide your clients with a unique and personalized workout
-            experience.
-          </p>
-        </section>
-        <section>
-          <Image
+    <main>
+      <Grid container spacing={4} alignItems="center">
+        <Grid item xs={12} md={6}>
+          <Box
+            display="flex"
+            flexDirection="column"
+            justifyContent="center"
+            height="100%"
+          >
+            <Typography variant="h2" gutterBottom component="div">
+              Halteres.ai
+            </Typography>
+            <Typography variant="h5" gutterBottom component="div">
+              Automated, smart, and personalized workout programming for gym
+              owners, coaches, and personal trainers.
+            </Typography>
+            <Link href={'/login'} passHref>
+              <Button variant="contained" size="large" marginTop={'15px'}>
+                Get Started
+              </Button>
+            </Link>
+          </Box>
+        </Grid>
+        <Grid item xs={12} md={6}>
+          <StyledImage
             src={womanRopes}
-            alt="Halteres.ai Logo"
-            height={200}
-            width={200}
-            className="self-start"
+            alt="Fitness enthusiast"
+            width={800}
+            height={600}
           />
-          <h2 className="text-2xl font-bold mt-4">Workouts You Love</h2>
-          <p className="text-lg mt-2">
-            Discover new workouts and track your progress over time.
-          </p>
-        </section>
-        <div className="flex justify-center items-center mt-4">
-          <Link href={'/login'}>
-            <button className="btn btn-secondary text-xl">Get Started</button>
-          </Link>
-        </div>
-      </div>
+        </Grid>
+        <Grid container spacing={3} marginTop={'10px'}>
+          <Grid item xs={4}>
+            <Card sx={{ height: '125px' }}>
+              <Box
+                display="flex"
+                flexDirection="column"
+                justifyContent="space-between"
+                height="100%"
+              >
+                <CardContent>
+                  <Box display="flex" alignItems="center">
+                    <FitnessCenterIcon sx={{ marginRight: '10px' }} />
+                    <Typography variant="h6" component="div">
+                      Gym Personalization
+                    </Typography>
+                  </Box>
+                  <Typography variant="body2">
+                    Tailor workouts to your gym's equipment and class schedule.
+                  </Typography>
+                </CardContent>
+              </Box>
+            </Card>
+          </Grid>
+          <Grid item xs={4}>
+            <Card sx={{ height: '125px' }}>
+              <Box
+                display="flex"
+                flexDirection="column"
+                justifyContent="space-between"
+                height="100%"
+              >
+                <CardContent>
+                  <Box display="flex" alignItems="center">
+                    <ScheduleIcon sx={{ marginRight: '10px' }} />
+                    <Typography variant="h6" component="div">
+                      Accurate Workout Programming
+                    </Typography>
+                  </Box>
+                  <Typography variant="body2">
+                    Leverage our database of 1000s of exercises and upload your
+                    own to create hyper accurate and unique programs for
+                    classes, individuals, or yourself!
+                  </Typography>
+                </CardContent>
+              </Box>
+            </Card>
+          </Grid>
+          <Grid item xs={4}>
+            <Card sx={{ height: '125px' }}>
+              <Box
+                display="flex"
+                flexDirection="column"
+                justifyContent="space-between"
+                height="100%"
+              >
+                <CardContent>
+                  <Box display="flex" alignItems="center">
+                    <SaveIcon sx={{ marginRight: '10px' }} />
+                    <Typography variant="h6" component="div">
+                      Save Time
+                    </Typography>
+                  </Box>
+                  <Typography variant="body2">
+                    Auto generate your programming and save hours of time each
+                    week.
+                  </Typography>
+                </CardContent>
+              </Box>
+            </Card>
+          </Grid>
+        </Grid>
+      </Grid>
     </main>
   );
 }
