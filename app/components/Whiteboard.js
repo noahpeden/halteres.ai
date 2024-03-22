@@ -1,11 +1,16 @@
-'use client';
-
 import { useState } from 'react';
 import { useOfficeContext } from '../contexts/OfficeContext';
-import { useRouter } from 'next/navigation';
+import { useRouter } from 'next/router';
+import {
+  Container,
+  Typography,
+  TextField,
+  Button,
+  TextareaAutosize,
+} from '@mui/material';
 
-export default function WhiteboardDrawer() {
-  const { push } = useRouter();
+export default function WhiteboardPage() {
+  // const router = useRouter();
   const { addWhiteboardInfo, setReadyForQuery } = useOfficeContext();
   const [workoutFormat, setWorkoutFormat] = useState(
     'Crossfit Classes: Warmup, Strength, Metcon, Cool Down, Mobility | Olympic Lifting: Warmup, Strength, Cool Down'
@@ -20,65 +25,63 @@ export default function WhiteboardDrawer() {
     e.preventDefault();
     addWhiteboardInfo({ cycleLength, workoutFormat, focus, exampleWorkout });
     setReadyForQuery(true);
+    // router.push('/'); // Redirect to home page after submission
   };
 
   return (
-    <div className={`drawer drawer-end`}>
-      <input id="whiteboardDrawer" type="checkbox" className="drawer-toggle" />
-      <div className="drawer-content">
-        <label
-          htmlFor="whiteboardDrawer"
-          className="btn btn-primary drawer-button"
-        >
-          Workout
-        </label>
-      </div>
-      <div className="drawer-side">
-        <label htmlFor="whiteboardDrawer" className="drawer-overlay"></label>
-        <ul className="menu h-full p-4 overflow-y-auto w-80 bg-base-100 pt-[100px]">
-          <div className="container mx-auto my-6">
-            <div className="my-4">
-              <h2 className="text-xl">Workout Format</h2>
-              <textarea
-                className="textarea textarea-bordered w-full h-32"
-                value={workoutFormat}
-                onChange={(e) => setWorkoutFormat(e.target.value)}
-              />
-            </div>
+    <Container maxWidth="md" sx={{ mt: 4 }}>
+      <Typography variant="h4" sx={{ mb: 4 }}>
+        Whiteboard Information
+      </Typography>
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="my-4">
+          <Typography variant="h5">Workout Format</Typography>
+          <TextareaAutosize
+            rowsMin={3}
+            fullWidth
+            variant="outlined"
+            value={workoutFormat}
+            onChange={(e) => setWorkoutFormat(e.target.value)}
+          />
+        </div>
 
-            <div className="my-4">
-              <h2 className="text-xl">Cycle Length</h2>
-              <textarea
-                className="textarea textarea-bordered w-full h-32"
-                value={cycleLength}
-                onChange={(e) => setCycleLength(e.target.value)}
-              />
-            </div>
+        <div className="my-4">
+          <Typography variant="h5">Cycle Length</Typography>
+          <TextareaAutosize
+            rowsMin={3}
+            fullWidth
+            variant="outlined"
+            value={cycleLength}
+            onChange={(e) => setCycleLength(e.target.value)}
+          />
+        </div>
 
-            <div className="my-4">
-              <h2 className="text-xl">Focuses</h2>
-              <textarea
-                className="textarea textarea-bordered w-full h-32"
-                value={focus}
-                onChange={(e) => setFocus(e.target.value)}
-              />
-            </div>
+        <div className="my-4">
+          <Typography variant="h5">Focuses</Typography>
+          <TextareaAutosize
+            rowsMin={3}
+            fullWidth
+            variant="outlined"
+            value={focus}
+            onChange={(e) => setFocus(e.target.value)}
+          />
+        </div>
 
-            <div className="my-4">
-              <h2 className="text-xl">Template Workouts</h2>
-              <textarea
-                className="textarea textarea-bordered w-full h-32"
-                value={exampleWorkout}
-                onChange={(e) => setExampleWorkout(e.target.value)}
-              />
-            </div>
+        <div className="my-4">
+          <Typography variant="h5">Template Workouts</Typography>
+          <TextareaAutosize
+            rowsMin={3}
+            fullWidth
+            variant="outlined"
+            value={exampleWorkout}
+            onChange={(e) => setExampleWorkout(e.target.value)}
+          />
+        </div>
 
-            <button className="btn btn-primary mt-4" onClick={handleSubmit}>
-              Save
-            </button>
-          </div>
-        </ul>
-      </div>
-    </div>
+        <Button fullWidth variant="contained" color="primary" type="submit">
+          Save
+        </Button>
+      </form>
+    </Container>
   );
 }

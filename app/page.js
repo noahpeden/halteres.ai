@@ -10,8 +10,7 @@ import {
 import styled from '@emotion/styled';
 import Image from 'next/image';
 import Link from 'next/link';
-import chalk from '@/assets/chalk.jpg'; // Make sure the path is correct
-import womanRopes from '@/assets/woman-rope-looking.jpg'; // Make sure the path is correct
+import boxJumps from '@/assets/box-jumps.jpg';
 import FitnessCenterIcon from '@mui/icons-material/FitnessCenter';
 import ScheduleIcon from '@mui/icons-material/Schedule';
 import SaveIcon from '@mui/icons-material/Save';
@@ -47,13 +46,13 @@ export default function Page() {
         </Grid>
         <Grid item xs={12} md={6}>
           <StyledImage
-            src={womanRopes}
+            src={boxJumps}
             alt="Fitness enthusiast"
             width={800}
             height={600}
           />
         </Grid>
-        <Grid container spacing={3} marginTop={'10px'}>
+        <Grid container spacing={3} marginTop={'10px'} marginLeft={'10px'}>
           <Grid item xs={4}>
             <Card sx={{ height: '125px' }}>
               <Box

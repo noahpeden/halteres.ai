@@ -1,8 +1,14 @@
-'use client';
-
 import { useState } from 'react';
 import { useOfficeContext } from '../contexts/OfficeContext';
 import EquipmentSelector from './EquipmentSelector';
+import {
+  Container,
+  Typography,
+  TextField,
+  Button,
+  Grid,
+  TextareaAutosize,
+} from '@mui/material';
 
 export default function Office() {
   const { addOfficeInfo } = useOfficeContext();
@@ -33,6 +39,7 @@ export default function Office() {
     e.preventDefault();
     addOfficeInfo({ equipmentList, coachList, classSchedule, classDuration });
   };
+
   const handleAddEquipmentDetail = (tag) => {
     const isActive = equipmentList.includes(tag);
     isActive
@@ -42,20 +49,28 @@ export default function Office() {
   };
 
   return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-6">Gym Info</h1>
+    <Container maxWidth="md" sx={{ p: 4 }}>
+      <Typography variant="h4" sx={{ mb: 6, fontWeight: 'bold' }}>
+        Gym Info
+      </Typography>
       <form onSubmit={handleSubmit} className="space-y-6">
         <section>
-          <h2 className="text-xl mb-4">Gym Name</h2>
-          <input
+          <Typography variant="h5" sx={{ mb: 4 }}>
+            Gym Name
+          </Typography>
+          <TextField
             type="text"
-            className="input input-bordered w-full"
+            fullWidth
+            variant="outlined"
             placeholder="Enter the gym name"
+            value={gymName}
             onChange={(e) => setGymName(e.target.value)}
           />
         </section>
         <section>
-          <h2 className="text-xl mb-4">Add Equipment from your Gym</h2>
+          <Typography variant="h5" sx={{ mb: 4 }}>
+            Add Equipment from your Gym
+          </Typography>
           <EquipmentSelector
             selected={equipmentList}
             setSelected={handleAddEquipmentDetail}
@@ -63,60 +78,83 @@ export default function Office() {
         </section>
 
         <section>
-          <h2 className="text-xl mb-4">Coaching Staff</h2>
-          <div className="space-y-2 mb-4">
-            <input
-              type="text"
-              className="input input-bordered w-full"
-              value={newCoachName}
-              onChange={(e) => setNewCoachName(e.target.value)}
-              placeholder="Coach name"
-            />
-            <input
-              type="text"
-              className="input input-bordered w-full"
-              value={newCoachExperience}
-              onChange={(e) => setNewCoachExperience(e.target.value)}
-              placeholder="Experience"
-            />
-            <button
-              type="button"
-              className="btn btn-primary w-full"
-              onClick={handleAddCoach}
-            >
-              Add Coach
-            </button>
-          </div>
-          <div className="flex flex-col gap-2">
+          <Typography variant="h5" sx={{ mb: 4 }}>
+            Coaching Staff
+          </Typography>
+          <Grid container spacing={2} sx={{ mb: 4 }}>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                type="text"
+                fullWidth
+                variant="outlined"
+                placeholder="Coach name"
+                value={newCoachName}
+                onChange={(e) => setNewCoachName(e.target.value)}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                type="text"
+                fullWidth
+                variant="outlined"
+                placeholder="Experience"
+                value={newCoachExperience}
+                onChange={(e) => setNewCoachExperience(e.target.value)}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <Button
+                type="button"
+                fullWidth
+                variant="contained"
+                onClick={handleAddCoach}
+              >
+                Add Coach
+              </Button>
+            </Grid>
+          </Grid>
+          <Grid container spacing={2}>
             {coachList.map((coach, index) => (
-              <div key={index} className="flex gap-2 items-center">
-                <input
-                  type="text"
-                  className="input input-bordered flex-1"
-                  value={coach.name}
-                  readOnly
-                />
-                <input
-                  type="text"
-                  className="input input-bordered flex-1"
-                  value={coach.experience}
-                  readOnly
-                />
-                <button
-                  type="button"
-                  className="btn btn-error btn-sm"
-                  onClick={() => removeCoach(index)}
-                >
-                  Remove
-                </button>
-              </div>
+              <>
+                <Grid key={index} item xs={12} sm={6}>
+                  <TextField
+                    type="text"
+                    fullWidth
+                    variant="outlined"
+                    value={coach.name}
+                    readOnly
+                  />
+                </Grid>
+                <Grid key={index} item xs={12} sm={6}>
+                  <TextField
+                    type="text"
+                    fullWidth
+                    variant="outlined"
+                    value={coach.experience}
+                    readOnly
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <Button
+                    fullWidth
+                    variant="outlined"
+                    onClick={() => removeCoach(index)}
+                  >
+                    Remove
+                  </Button>
+                </Grid>
+              </>
             ))}
-          </div>
+          </Grid>
         </section>
         <section>
-          <h2 className="text-xl mb-4">Class Schedule</h2>
-          <textarea
-            className="textarea textarea-bordered w-full"
+          <Typography variant="h5" sx={{ mb: 4 }}>
+            Class Schedule
+          </Typography>
+          <TextareaAutosize
+            rowsMin={3}
+            fullWidth
+            variant="outlined"
             value={classSchedule}
             onChange={(e) => setClassSchedule(e.target.value)}
             placeholder="Enter the class schedule"
@@ -124,20 +162,23 @@ export default function Office() {
         </section>
 
         <section>
-          <h2 className="text-xl mb-4">Class Duration</h2>
-          <input
+          <Typography variant="h5" sx={{ mb: 4 }}>
+            Class Duration
+          </Typography>
+          <TextField
             type="text"
-            className="input input-bordered w-full"
+            fullWidth
+            variant="outlined"
             value={classDuration}
             onChange={(e) => setClassDuration(e.target.value)}
             placeholder="Enter the duration for each class"
           />
         </section>
 
-        <button className="btn btn-primary w-full" type="submit">
+        <Button fullWidth variant="contained" type="submit">
           Save Gym Info
-        </button>
+        </Button>
       </form>
-    </div>
+    </Container>
   );
 }

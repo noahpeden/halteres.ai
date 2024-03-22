@@ -2,6 +2,15 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
+import {
+  Container,
+  Button,
+  TextField,
+  Typography,
+  Grid,
+  Card,
+  CardActionArea,
+} from '@mui/material';
 
 export default function Programs() {
   const { user, supabase } = useAuth();
@@ -44,82 +53,73 @@ export default function Programs() {
   }
 
   return (
-    <div className="container mx-auto p-4">
-      <div className="text-center my-4">
-        <Link href="/create-program">
-          <button className="btn btn-primary px-8 py-3 text-lg font-bold">
+    <Container maxWidth="lg">
+      <Typography variant="h4" align="center" my={4}>
+        <Link href="/create-program" passHref>
+          <Button variant="contained" size="large">
             Create brand new programming
-          </button>
+          </Button>
         </Link>
-      </div>
-      <div>
-        <h1>Programs</h1>
-        <form onSubmit={(e) => createEntity(e, 'programs')} className="mb-8">
-          <input
-            type="text"
-            placeholder="Type here"
-            className="input input-bordered w-full max-w-xs"
-            name="name"
-            value={programName}
-            onChange={(e) => setProgramName(e.target.value)}
-          />
-          <button className="btn btn-primary mt-4" type="submit">
-            Create Program
-          </button>
-        </form>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {programs.map((program) => (
-            <a
-              as={Link}
-              href={`/programs/${program.program_id}`}
-              key={program.program_id}
-              className="card bordered shadow-lg cursor-pointer hover:shadow-xl transition-all duration-300 ease-in-out"
-            >
-              <div className="card-body">{program.name}</div>
-            </a>
-          ))}
-        </div>
-      </div>
-      <div>
-        <h1>Gyms</h1>
-        <Link href="/create-gym">
-          <button className="btn btn-primary mt-4" type="button">
-            Create Gym
-          </button>
-        </Link>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {gyms?.map((gym) => (
-            <a
-              as={Link}
-              href={`/gyms/${gym.gym_id}`}
-              key={gym.gym_id}
-              className="card bordered shadow-lg cursor-pointer hover:shadow-xl transition-all duration-300 ease-in-out"
-            >
-              <div className="card-body">{gym.name}</div>
-            </a>
-          ))}
-        </div>
-      </div>
-      <div>
-        <h1>Whiteboards</h1>
-        <Link href="/create-whiteboard">
-          <button className="btn btn-primary mt-4" type="button">
-            Create Program
-          </button>
-        </Link>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {whiteboards?.map((program) => (
-            <a
-              as={Link}
-              href={`/whiteboards/${program.program_id}`}
-              key={program.program_id}
-              className="card bordered shadow-lg cursor-pointer hover:shadow-xl transition-all duration-300 ease-in-out"
-            >
-              <div className="card-body">{program.name}</div>
-            </a>
-          ))}
-        </div>
-      </div>
-    </div>
+      </Typography>
+      <Typography variant="h5" gutterBottom>
+        Programs
+      </Typography>
+
+      <Grid container spacing={2}>
+        {programs.map((program) => (
+          <Grid item key={program.program_id} xs={12} sm={6} md={4}>
+            <Card>
+              <CardActionArea>
+                <Typography variant="body1" component="div">
+                  <Link href={`/programs/${program.program_id}`} passHref>
+                    <Button variant="text" fullWidth>
+                      {program.name}
+                    </Button>
+                  </Link>
+                </Typography>
+              </CardActionArea>
+            </Card>
+          </Grid>
+        ))}
+      </Grid>
+      {/* Repeat the above structure for Gyms and Whiteboards */}
+      <Grid container spacing={2}>
+        {gyms?.map((gym) => (
+          <Grid item key={gym.gym_id} xs={12} sm={6} md={4}>
+            <Card>
+              <CardActionArea>
+                <Typography variant="body1" component="div">
+                  <Link href={`/gyms/${gym.gym_id}`} passHref>
+                    <Button variant="text" fullWidth>
+                      {gym.name}
+                    </Button>
+                  </Link>
+                </Typography>
+              </CardActionArea>
+            </Card>
+          </Grid>
+        ))}
+      </Grid>
+      <Grid container spacing={2}>
+        {whiteboards?.map((whiteboard) => (
+          <Grid item key={whiteboard.whiteboard_id} xs={12} sm={6} md={4}>
+            <Card>
+              <CardActionArea>
+                <Typography variant="body1" component="div">
+                  <Link
+                    href={`/whiteboards/${whiteboard.whiteboard_id}`}
+                    passHref
+                  >
+                    <Button variant="text" fullWidth>
+                      {whiteboard.name}
+                    </Button>
+                  </Link>
+                </Typography>
+              </CardActionArea>
+            </Card>
+          </Grid>
+        ))}
+      </Grid>
+    </Container>
   );
 }
