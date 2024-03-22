@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { useOfficeContext } from '../contexts/OfficeContext';
 import EquipmentSelector from './EquipmentSelector';
-import equipmentList from '@/utils/equipmentlist';
 
 export default function Office() {
   const { addOfficeInfo } = useOfficeContext();
@@ -13,6 +12,7 @@ export default function Office() {
   const [newCoachExperience, setNewCoachExperience] = useState('');
   const [classSchedule, setClassSchedule] = useState('');
   const [classDuration, setClassDuration] = useState('');
+  const [gymName, setGymName] = useState('');
 
   const handleAddCoach = () => {
     if (newCoachName && newCoachExperience) {
@@ -34,25 +34,32 @@ export default function Office() {
     addOfficeInfo({ equipmentList, coachList, classSchedule, classDuration });
   };
   const handleAddEquipmentDetail = (tag) => {
-    setEquipmentList([...equipmentList, tag]);
+    const isActive = equipmentList.includes(tag);
+    isActive
+      ? setEquipmentList(equipmentList.filter((item) => item !== tag))
+      : setEquipmentList([...equipmentList, tag]);
+    console.log(isActive, tag, equipmentList);
   };
+
   return (
     <div className="container mx-auto p-4">
       <h1 className="text-2xl font-bold mb-6">Gym Info</h1>
       <form onSubmit={handleSubmit} className="space-y-6">
         <section>
-          <h2 className="text-xl mb-4">Equipment List</h2>
-          <div className="space-y-2 mb-4">
-            <EquipmentSelector
-              selected={equipmentList.map((equipment, index) => ({
-                id: index,
-                name: equipment,
-              }))}
-              setSelected={(tags) =>
-                setEquipmentList(tags.map((tag) => tag.name))
-              }
-            />
-          </div>
+          <h2 className="text-xl mb-4">Gym Name</h2>
+          <input
+            type="text"
+            className="input input-bordered w-full"
+            placeholder="Enter the gym name"
+            onChange={(e) => setGymName(e.target.value)}
+          />
+        </section>
+        <section>
+          <h2 className="text-xl mb-4">Add Equipment from your Gym</h2>
+          <EquipmentSelector
+            selected={equipmentList}
+            setSelected={handleAddEquipmentDetail}
+          />
         </section>
 
         <section>

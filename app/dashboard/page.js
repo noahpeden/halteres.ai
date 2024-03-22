@@ -82,21 +82,11 @@ export default function Programs() {
       </div>
       <div>
         <h1>Gyms</h1>
-        <form onSubmit={(e) => createEntity(e, 'gyms')} className="mb-8">
-          <input
-            type="text"
-            placeholder="Type here"
-            className="input input-bordered w-full max-w-xs"
-            name="name"
-            value={programName}
-            onChange={(e) => setProgramName(e.target.value)}
-          />
-          <Link href="/create-gym">
-            <button className="btn btn-primary mt-4" type="submit">
-              Create Gym
-            </button>
-          </Link>
-        </form>
+        <Link href="/create-gym">
+          <button className="btn btn-primary mt-4" type="button">
+            Create Gym
+          </button>
+        </Link>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {gyms?.map((gym) => (
             <a
@@ -112,19 +102,11 @@ export default function Programs() {
       </div>
       <div>
         <h1>Whiteboards</h1>
-        <form onSubmit={(e) => createEntity(e, 'whiteboards')} className="mb-8">
-          <input
-            type="text"
-            placeholder="Type here"
-            className="input input-bordered w-full max-w-xs"
-            name="name"
-            value={programName}
-            onChange={(e) => setProgramName(e.target.value)}
-          />
-          <button className="btn btn-primary mt-4" type="submit">
+        <Link href="/create-whiteboard">
+          <button className="btn btn-primary mt-4" type="button">
             Create Program
           </button>
-        </form>
+        </Link>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {whiteboards?.map((program) => (
             <a
