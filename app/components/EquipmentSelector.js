@@ -1,30 +1,60 @@
-import React, { useCallback, useState, useRef } from 'react';
 import equipmentList from '@/utils/equipmentList';
 
 function EquipmentSelector({ selected, setSelected }) {
   return (
     <div className="flex flex-wrap w-full">
-      {equipmentList.map((equipment) => {
-        const isActive = selected.includes(equipment.label);
-        console.log(isActive, 'active');
-        return (
-          <div className="flex w-1/5 m-2">
-            <div
-              key={equipment.label}
-              className={`card bordered shadow-lg cursor-pointer ${
-                isActive ? 'bg-light-blue' : ''
-              } hover:shadow-xl transition-all duration-300 ease-in-out w-full`}
-            >
-              <div
-                className="card-body"
-                onClick={() => setSelected(equipment.label)}
-              >
-                {equipment.label}
+      <button
+        className="btn btn-primary text-white"
+        onClick={() => document.getElementById('my_modal_4').showModal()}
+      >
+        Configure Equipment
+      </button>
+      <dialog id="my_modal_4" className="modal">
+        <div className="modal-box w-11/12 max-w-5xl">
+          <h3 className="font-bold text-lg">Configure your gym</h3>
+          <p className="py-4">
+            Select the equipment your gym has to add it as a reference for
+            HalteresAI to use when writing your program.
+          </p>
+          <form method="dialog">
+            <div className="form-control">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {equipmentList.map((equipment) => {
+                  return (
+                    <label
+                      className="label cursor-pointer px-8"
+                      key={equipment.value}
+                    >
+                      <span className="label-text">{equipment.label}</span>
+                      <input
+                        type="checkbox"
+                        checked={selected.includes(equipment.value)}
+                        className="checkbox checkbox-primary"
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelected([...selected, equipment.value]);
+                          } else {
+                            setSelected(
+                              selected.filter(
+                                (item) => item !== equipment.value
+                              )
+                            );
+                          }
+                        }}
+                      />
+                    </label>
+                  );
+                })}
               </div>
             </div>
-          </div>
-        );
-      })}
+            <div className="modal-action">
+              <button className="btn btn-accent text-white">
+                Save & Close
+              </button>
+            </div>
+          </form>
+        </div>
+      </dialog>
     </div>
   );
 }
