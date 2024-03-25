@@ -1,84 +1,77 @@
-import Link from 'next/link';
+'use client';
 import Image from 'next/image';
-import boxJumps from './assets/box-jumps.jpg';
-import chalk from './assets/chalk.jpg';
-import coachImg from './assets/coach-overhead-press.jpg';
-import womanRopes from './assets/woman-rope-looking.jpg';
-import { createClient } from './utils/supabase/server';
+import Link from 'next/link';
+import boxJumps from '@/assets/box-jumps.jpg';
+import {
+  BookOpenIcon,
+  CalendarDaysIcon,
+  ClockIcon,
+} from '@heroicons/react/24/outline';
 
-export default async function Home() {
-  const supabase = createClient();
-
-  const { data, error } = await supabase.auth.getSession();
-
+export default function Page() {
   return (
-    <main className="flex min-h-screen flex-col">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mt-4">Welcome to Halteres.ai</h1>
-        <p className="text-xl mt-4 mb-8 mx-auto leading-relaxed max-w-xl">
-          Halteres.ai is the smartest app for workout planning. Leveraging
-          cutting-edge AI, we provide tailored workout routines and resources to
-          help you run your gym efficiently.
-        </p>
-        <Image
-          src={coachImg}
-          alt="Halteres.ai Logo"
-          height={200}
-          width={200}
-          className="self-start"
-        />
-        <section>
+    <main className="container mx-auto p-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+        <div className="flex flex-col justify-center">
+          <h2 className="text-2xl font-bold mb-2">HalteresAI</h2>
+          <p className="text-lg mb-2">
+            Automated, smart, and personalized workout programming for gym
+            owners, coaches, and personal trainers.
+          </p>
+          <Link href={'/login'}>
+            <button className="btn btn-primary btn-large text-white mt-4">
+              Get Started
+            </button>
+          </Link>
+        </div>
+        <div>
           <Image
             src={boxJumps}
-            alt="Halteres.ai Logo"
-            height={200}
-            width={200}
-            className="self-start"
+            alt="Fitness enthusiast"
+            width={800}
+            height={600}
+            className="object-cover"
           />
-          <h2 className="text-2xl font-bold mt-4">Tailored to You</h2>
-          <p className="text-lg mt-2">
-            Our AI learns from your preferences and performance to create a
-            personalized workout plan.
-          </p>
-        </section>
-        <section>
-          <h2 className="text-2xl font-bold mt-4">Your Gym</h2>
-          <p className="text-lg mt-2">
-            Manage your gym equipment and schedule efficiently with our
-            integrated tools.
-          </p>
-          <Image
-            src={chalk}
-            alt="Halteres.ai Logo"
-            height={200}
-            width={200}
-            className="self-start"
-          />
-        </section>
-        <section>
-          <h2 className="text-2xl font-bold mt-4">Your Clients</h2>
-          <p className="text-lg mt-2">
-            Provide your clients with a unique and personalized workout
-            experience.
-          </p>
-        </section>
-        <section>
-          <Image
-            src={womanRopes}
-            alt="Halteres.ai Logo"
-            height={200}
-            width={200}
-            className="self-start"
-          />
-          <h2 className="text-2xl font-bold mt-4">Workouts You Love</h2>
-          <p className="text-lg mt-2">
-            Discover new workouts and track your progress over time.
-          </p>
-        </section>
-        <div className="flex justify-center items-center mt-4">
-          <Link href={'/login'}>
-            <button className="btn btn-secondary text-xl">Get Started</button>
-          </Link>
+        </div>
+      </div>
+      <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="card bordered">
+          <div className="card-body">
+            <div className="flex items-center mb-2">
+              <CalendarDaysIcon className="h-6 w-6 mr-2" />
+              <h2 className="text-lg font-bold">Gym Personalization</h2>
+            </div>
+            <p className="text-sm">
+              Tailor workouts to your gym's equipment and class schedule.
+            </p>
+          </div>
+        </div>
+        <div className="card bordered">
+          <div className="card-body">
+            <div className="flex items-center mb-2">
+              <BookOpenIcon className="h-6 w-6 mr-2" />
+              <h2 className="text-lg font-bold">
+                {' '}
+                Accurate Workout Programming
+              </h2>
+            </div>
+            <p className="text-sm">
+              Leverage our database of 1000s of exercises and upload your own to
+              create hyper accurate and unique programs for classes,
+              individuals, or yourself!{' '}
+            </p>
+          </div>
+        </div>
+        <div className="card bordered">
+          <div className="card-body">
+            <div className="flex items-center mb-2">
+              <ClockIcon className="h-6 w-6 mr-2" />
+              <h2 className="text-lg font-bold">Save Time</h2>
+            </div>
+            <p className="text-sm">
+              Auto generate your programming and save hours of time each week.{' '}
+            </p>
+          </div>
         </div>
       </div>
     </main>

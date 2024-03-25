@@ -48,12 +48,12 @@ export default function Navbar() {
         </a>
       </div> */}
       {session ? (
-        <button onClick={handleLogout} className="btn btn-primary">
+        <button onClick={handleLogout} className="btn btn-secondary text-white">
           Logout
         </button>
       ) : (
         <Link href="/login">
-          <button className="btn btn-primary">Login</button>
+          <button className="btn btn-secondary text-white">Login</button>
         </Link>
       )}
     </div>

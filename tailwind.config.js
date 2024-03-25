@@ -1,4 +1,6 @@
 /** @type {import('tailwindcss').Config} */
+const { fontFamily } = require('tailwindcss/defaultTheme');
+
 module.exports = {
   content: [
     './pages/**/*.{js,ts,jsx,tsx,mdx}',
@@ -7,11 +9,87 @@ module.exports = {
   ],
   theme: {
     extend: {
-      backgroundImage: {
-        'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
-        'gradient-conic':
-          'conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))',
+      colors: {
+        white: '#ffffff',
+        gallery: '#f9fbff',
+        pampas: '#f5f4f0',
+        'website-blue': '#deebfd',
+        'error-red': '#e74444',
+        'success-green': '#188038',
+        'smart-blue': {
+          DEFAULT: '#1771dc',
+          primary: '#1771dc',
+          1: '#134e93',
+          2: '#1a61b5',
+          3: '#3682de',
+          4: '#a5ceff',
+        },
+        'helpful-orange': {
+          DEFAULT: '#ea7f49',
+          primary: '#ea7f49',
+          1: '#a75932',
+          2: '#c06e44',
+          3: '#ed9264',
+          4: '#ffd2bb',
+        },
+        'thriving-green': {
+          DEFAULT: '#3c8f73',
+          primary: '#3c8f73',
+          1: '#2d6955',
+          2: '#3d846c',
+          3: '#65a790',
+          4: '#bfe8d9',
+        },
+        'never-preachy-peach': {
+          DEFAULT: '#ffcc7b',
+          primary: '#ffcc7b',
+          1: '#bf9147',
+          2: '#ddad61',
+          3: '#ffd592',
+          4: '#ffeed3',
+        },
+        'practical-gray': {
+          DEFAULT: '#6f879a',
+          primary: '#6f879a',
+          1: '#35546c',
+          2: '#526f86',
+          3: '#7995a9',
+          4: '#c4d1db',
+        },
+        black: {
+          1: '#121212',
+          2: '#383838',
+          3: '#606060',
+          4: '#808080',
+        },
+        grayscale: {
+          1: '#9e9e9e',
+          2: '#cacdd4',
+          3: '#eaebed',
+          4: '#f3f4f5',
+        },
       },
+      opacity: {
+        8: '0.08',
+      },
+      spacing: {
+        128: '32rem',
+        144: '36rem',
+        150: '37.5rem',
+        160: '40rem',
+      },
+    },
+    fontFamily: {
+      body: ['var(--font-nunito-sans'],
+      sans: ['var(--font-poppins)'],
+    },
+    screens: {
+      xs: '25rem',
+      sm: '37.5rem',
+      md: '50.5rem',
+      lg: '64rem',
+      xl: '80.5rem',
+      '2xl': '87.5rem',
     },
   },
   plugins: [require('daisyui')],
@@ -19,19 +97,26 @@ module.exports = {
     themes: [
       {
         mytheme: {
-          primary: '#4b5563', // A dark slate gray
-          accent: '#ADCCD8', // A light, airy blue
-          secondary: '#f97316', // A bright, vibrant orange
-
-          neutral: '#F3F4F6', // A very light gray for a neutral look
-          'base-100': '#ffffff', // Pure white for base elements
-
-          info: '#3ABFF8', // A bright blue, good for informational elements
-          success: '#22C55E', // A crisp green, indicating success or completion
-          warning: '#EAB308', // A warm yellow, suitable for warnings
-          error: '#EF4444', // A strong red for error messages
+          primary: '#1771dc', // smart-blue
+          secondary: '#ea7f49', // helpful-orange
+          accent: '#3c8f73', // thriving-green
+          neutral: '#6f879a', // practical-gray
+          'base-100': '#ffffff', // white
+          info: '#deebfd', // website-blue
+          success: '#188038', // success-green
+          warning: '#ffcc7b', // never-preachy-peach
+          error: '#e74444', // error-red
+          '--btn-primary': '#1771dc',
+          '--btn-primary-text': '#ffffff',
+          '--rounded-box': '1rem', // Default rounded box (optional)
+          '--rounded-btn': '0.5rem', // Default rounded button (optional)
+          '--rounded-badge': '1.9rem', // Default rounded badge (optional)
         },
       },
     ],
+    styled: true, // include daisyUI colors and design decisions for all components
+    utils: true, // adds responsive and modifier utility classes
+    prefix: '', // prefix for daisyUI classnames (components, modifiers and responsive class names. Not colors)
+    themeRoot: ':root',
   },
 };
