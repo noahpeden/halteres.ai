@@ -1,3 +1,4 @@
+'use client';
 import equipmentList from '@/utils/equipmentList';
 
 function EquipmentSelector({ selected, setSelected }) {
@@ -16,43 +17,43 @@ function EquipmentSelector({ selected, setSelected }) {
             Select the equipment your gym has to add it as a reference for
             HalteresAI to use when writing your program.
           </p>
-          <form method="dialog">
-            <div className="form-control">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {equipmentList.map((equipment) => {
-                  return (
-                    <label
-                      className="label cursor-pointer px-8"
-                      key={equipment.value}
-                    >
-                      <span className="label-text">{equipment.label}</span>
-                      <input
-                        type="checkbox"
-                        checked={selected.includes(equipment.value)}
-                        className="checkbox checkbox-primary"
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setSelected([...selected, equipment.value]);
-                          } else {
-                            setSelected(
-                              selected.filter(
-                                (item) => item !== equipment.value
-                              )
-                            );
-                          }
-                        }}
-                      />
-                    </label>
-                  );
-                })}
-              </div>
+
+          <div className="form-control">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {equipmentList.map((equipment) => {
+                return (
+                  <label
+                    className="label cursor-pointer px-8"
+                    key={equipment.value}
+                  >
+                    <span className="label-text">{equipment.label}</span>
+                    <input
+                      type="checkbox"
+                      checked={selected.includes(equipment.label)}
+                      className="checkbox checkbox-primary"
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelected([...selected, equipment.label]);
+                        } else {
+                          setSelected(
+                            selected.filter((item) => item !== equipment.label)
+                          );
+                        }
+                      }}
+                    />
+                  </label>
+                );
+              })}
             </div>
-            <div className="modal-action">
-              <button className="btn btn-accent text-white">
-                Save & Close
-              </button>
-            </div>
-          </form>
+          </div>
+          <div className="modal-action">
+            <button
+              onClick={() => document.getElementById('my_modal_4').close()}
+              className="btn btn-accent text-white"
+            >
+              Save & Close
+            </button>
+          </div>
         </div>
       </dialog>
     </div>
