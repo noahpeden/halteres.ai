@@ -23,7 +23,7 @@ function EquipmentSelector({ selected, setSelected }) {
               {equipmentList.map((equipment) => {
                 return (
                   <label
-                    className="label cursor-pointer px-8"
+                    className="label cursor-pointer px-6"
                     key={equipment.value}
                   >
                     <span className="label-text">{equipment.label}</span>

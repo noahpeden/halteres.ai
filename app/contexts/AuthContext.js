@@ -1,11 +1,8 @@
 import { createContext, useState, useEffect, useContext } from 'react';
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from '@/utils/supabase/server';
 
 const AuthContext = createContext();
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-);
+const supabase = createClient();
 
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(null);

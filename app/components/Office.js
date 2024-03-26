@@ -5,8 +5,10 @@ import { useOfficeContext } from '../contexts/OfficeContext';
 import EquipmentSelector from './EquipmentSelector';
 import Coaches from './Coaches';
 import { XMarkIcon } from '@heroicons/react/16/solid';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function Office() {
+  const { supabase, user, session } = useAuth();
   const { addOfficeInfo } = useOfficeContext();
   const [equipmentList, setEquipmentList] = useState([]);
   const [coachList, setCoachList] = useState([]);
@@ -31,7 +33,8 @@ export default function Office() {
     setCoachList(coachList.filter((_, idx) => idx !== index));
   };
 
-  const handleSubmit = (e) => {
+  console.log(user.data.user.id);
+  const handleSubmit = async (e) => {
     e.preventDefault();
     addOfficeInfo({
       equipmentList,
@@ -40,6 +43,24 @@ export default function Office() {
       classDuration,
       gymName,
     });
+
+    const { data, error } = await supabase
+      .from('gyms')
+      .insert(
+        [
+          {
+            name: gymName,
+            equipment: equipmentList,
+            coaches: coachList,
+            schedule: classSchedule,
+            duration: classDuration,
+            user_id: user.data.user.id,
+          },
+        ],
+        { returning: 'minimal' }
+      )
+      .select();
+    console.log(data, error);
   };
 
   const removeEquipment = (index) => {
@@ -49,7 +70,7 @@ export default function Office() {
   return (
     <div className="container mx-auto p-4">
       <h1 className="text-2xl font-bold mb-6">Configure Your Gym</h1>
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="space-y-6">
         <section>
           <input
             type="text"
@@ -138,11 +159,14 @@ export default function Office() {
             placeholder="e.g. 1 hour, 45 minutes, etc."
           />
         </section>
-
-        <button className="btn btn-primary w-full text-white" type="submit">
+        <button
+          className="btn btn-primary w-full text-white"
+          onClick={handleSubmit}
+          type="button"
+        >
           Save and Continue
         </button>
-      </form>
+      </div>
     </div>
   );
 }

@@ -107,9 +107,17 @@ export default function Metcon() {
   return (
     <div className="container mx-auto my-6">
       <h1 className="text-2xl font-bold">Metcon Programming Editor</h1>
-      <ReviewDetails office={office} whiteboard={whiteboard} />
+      <div className="flex align-center justify-between">
+        <ReviewDetails office={office} whiteboard={whiteboard} />
+        <button
+          className="btn btn-success text-white mt-4"
+          onClick={handleGenerateProgramming}
+        >
+          Generate Programming
+        </button>
+      </div>
       <div>
-        {loading ? (
+        {loading && (
           <div className="flex justify-center items-center">
             <div className="flex flex-col gap-4 w-52">
               <div className="skeleton h-32 w-full"></div>
@@ -118,38 +126,19 @@ export default function Metcon() {
               <div className="skeleton h-4 w-full"></div>
             </div>
           </div>
-        ) : (
-          <div>
-            <h2 className="text-xl mt-4">Generated Programming</h2>
-            <div className="chat-wrapper">
-              {messages.length < 1 ? (
-                <div className="empty">No messages</div>
-              ) : (
-                messages.map((msg, i) => (
-                  <div className="message-wrapper" key={i}>
-                    <pre className="chat-message">{msg.content}</pre>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
         )}
       </div>
-      <button
-        className="btn btn-secondary text-white mt-4"
-        onClick={handleGenerateProgramming}
-      >
-        Generate Programming
-      </button>
+
       <div className="editor-container p-4">
         <textarea
           ref={textAreaRef}
-          className="textarea textarea-bordered w-full h-screen"
+          className="textarea textarea-bordered w-full h-96"
           value={content}
           onChange={(e) => setContent(e.target.value)}
         ></textarea>
+
         <button
-          className="btn btn-success text-white mt-4"
+          className="btn btn-primary text-white mt-4"
           onClick={downloadPDF}
         >
           Download as PDF
