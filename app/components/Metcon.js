@@ -5,6 +5,7 @@ import { useChatCompletion } from '@/hooks/useOpenAiStream/chat-hook';
 import OpenAI from 'openai';
 import jsPDF from 'jspdf';
 import { useAuth } from '@/contexts/AuthContext';
+import ReviewDetails from '@/components/ReviewDetails';
 
 export default function Metcon() {
   const { supabase } = useAuth();
@@ -30,14 +31,14 @@ export default function Metcon() {
   } CrossFit workout plan. Include workouts for each day, tailored to the available equipment and coaching expertise. Specify exact workouts, including scaled and RX weights for each exercise, without suggesting repetitions of previous workouts or scaling instructions. Focus solely on listing unique and specific workouts for each day of the ${
     whiteboard.cycleLength
   }.
-  Here are the included details: 
-  - Gym Equipment: ${office.equipmentList}, 
-  - Coaching staff: ${office.coachList}, 
-  - Class Schedule: ${office.classSchedule}, 
-  - Class duration: ${office.classDuration}, 
-  - Workout format: ${whiteboard.workoutFormat}, 
-  - Workout cycle length: ${whiteboard.cycleLength}, 
-  - Workout focus: ${whiteboard.focus}, 
+  Here are the included details:
+  - Gym Equipment: ${office.equipmentList},
+  - Coaching staff: ${office.coachList},
+  - Class Schedule: ${office.classSchedule},
+  - Class duration: ${office.classDuration},
+  - Workout format: ${whiteboard.workoutFormat},
+  - Workout cycle length: ${whiteboard.cycleLength},
+  - Workout focus: ${whiteboard.focus},
   - Template workout: ${whiteboard.exampleWorkout};
   - Use these workouts as inspiration: ${matchedWorkouts
     .map((workout) => workout.body)
@@ -106,62 +107,16 @@ export default function Metcon() {
   return (
     <div className="container mx-auto my-6">
       <h1 className="text-2xl font-bold">Metcon Programming Editor</h1>
-      <div className="review-details">
-        <h2 className="text-xl">Review Details</h2>
-
-        <div>
-          <h3 className="text-lg font-semibold">Office Details</h3>
-          <ul>
-            <li>
-              Equipment List:
-              <ul>
-                {office?.equipmentList?.map((item, index) => (
-                  <li key={index}>
-                    {item.quantity}x {item.name}
-                  </li>
-                ))}
-              </ul>
-            </li>
-            <li>
-              Coaching Staff:
-              <ul>
-                {office?.coachList?.map((coach, index) => (
-                  <li key={index}>
-                    {coach.name} - {coach.experience}
-                  </li>
-                ))}
-              </ul>
-            </li>
-            <li>Class Schedule: {office.classSchedule}</li>
-            <li>Class Duration: {office.classDuration}</li>
-          </ul>
-        </div>
-
-        <div>
-          <h3 className="text-lg font-semibold">Whiteboard Details</h3>
-          <ul>
-            <li>Cycle Length: {whiteboard.cycleLength}</li>
-            <li>Workout Format: {whiteboard.workoutFormat}</li>
-            <li>Focus: {whiteboard.focus}</li>
-            <li>Example Workout: {whiteboard.exampleWorkout}</li>
-          </ul>
-        </div>
-      </div>
-
+      <ReviewDetails office={office} whiteboard={whiteboard} />
       <div>
-        <h3 className="text-lg font-semibold">
-          Matched workouts we'll use for RAG
-        </h3>
-        <ul>
-          {matchedWorkouts?.map((workout, index) => (
-            <li key={index}>{workout.body}</li>
-          ))}
-        </ul>
         {loading ? (
           <div className="flex justify-center items-center">
-            <svg className="animate-spin h-5 w-5 mr-3" viewBox="0 0 24 24">
-              {/* SVG for circular loading indicator */}
-            </svg>
+            <div className="flex flex-col gap-4 w-52">
+              <div className="skeleton h-32 w-full"></div>
+              <div className="skeleton h-4 w-28"></div>
+              <div className="skeleton h-4 w-full"></div>
+              <div className="skeleton h-4 w-full"></div>
+            </div>
           </div>
         ) : (
           <div>
@@ -181,7 +136,7 @@ export default function Metcon() {
         )}
       </div>
       <button
-        className="btn btn-secondary mt-4"
+        className="btn btn-secondary text-white mt-4"
         onClick={handleGenerateProgramming}
       >
         Generate Programming
@@ -193,7 +148,10 @@ export default function Metcon() {
           value={content}
           onChange={(e) => setContent(e.target.value)}
         ></textarea>
-        <button className="btn btn-success mt-4" onClick={downloadPDF}>
+        <button
+          className="btn btn-success text-white mt-4"
+          onClick={downloadPDF}
+        >
           Download as PDF
         </button>
       </div>

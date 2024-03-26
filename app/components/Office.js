@@ -54,7 +54,7 @@ export default function Office() {
           <input
             type="text"
             value={gymName}
-            className="input input-info input-bordered w-full "
+            className="input input-info input-bordered w-full focus:outline-primary"
             placeholder="Enter the gym name"
             onChange={(e) => setGymName(e.target.value)}
           />
@@ -132,7 +132,7 @@ export default function Office() {
           <h2 className="text-xl mb-4">Class Duration</h2>
           <input
             type="text"
-            className="input input-bordered w-full"
+            className="input input-bordered focus:outline-primary w-full"
             value={classDuration}
             onChange={(e) => setClassDuration(e.target.value)}
             placeholder="e.g. 1 hour, 45 minutes, etc."
@@ -140,7 +140,7 @@ export default function Office() {
         </section>
 
         <button className="btn btn-primary w-full text-white" type="submit">
-          Save
+          Save and Continue
         </button>
       </form>
     </div>
