@@ -6,6 +6,9 @@ export async function POST(req) {
   try {
     const body = await req.json();
     const {
+      openAir,
+      outdoorRunning,
+      quirks,
       gymName,
       equipmentList,
       coachList,
@@ -18,16 +21,18 @@ export async function POST(req) {
 
     const { data, error } = await supabase.from('gyms').insert([
       {
+        open_air: openAir,
+        outside_running_path: outdoorRunning,
+        quirks,
         name: gymName,
         equipment: equipmentList,
         coaches: coachList,
         schedule: classSchedule,
         duration: classDuration,
-        user_id: userId, // Ensure you have a 'user_id' column to associate the gym with a user
+        user_id: userId,
       },
     ]);
     if (error) throw error;
-    // Respond with success
     return NextResponse.json({ data }, { status: 200 });
   } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });

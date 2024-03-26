@@ -1,17 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { useOfficeContext } from '../contexts/OfficeContext';
 import EquipmentSelector from './EquipmentSelector';
 import Coaches from './Coaches';
 import { XMarkIcon } from '@heroicons/react/16/solid';
 import { useAuth } from '../contexts/AuthContext';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 
 export default function Office() {
-  const supabase = createClientComponentClient();
-  const { user, session } = useAuth();
-  const { addOfficeInfo } = useOfficeContext();
+  const { user } = useAuth();
   const [equipmentList, setEquipmentList] = useState([
     'Barbell',
     'Bumper Plates',
@@ -32,6 +28,9 @@ export default function Office() {
   ]);
   const [classDuration, setClassDuration] = useState('');
   const [gymName, setGymName] = useState('');
+  const [openAir, setOpenAir] = useState(true);
+  const [outdoorRunning, setOutdoorRunning] = useState(true);
+  const [quirks, setQuirks] = useState('');
 
   const handleAddCoach = () => {
     if (newCoachName && newCoachExperience) {
@@ -58,6 +57,9 @@ export default function Office() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          openAir,
+          outdoorRunning,
+          quirks,
           gymName,
           equipmentList,
           coachList,
@@ -125,6 +127,26 @@ export default function Office() {
             </div>
           )}
         </section>
+        <section className="w-[50%]">
+          <label className="cursor-pointer label">
+            <span className="label-text mr-2">Is the gym open air?</span>
+            <input
+              type="checkbox"
+              className="toggle toggle-primary"
+              checked={openAir}
+              onChange={() => setOpenAir(!openAir)}
+            />
+          </label>
+          <label className="cursor-pointer label">
+            <span className="label-text mr-2">Is the running outdoors?</span>
+            <input
+              type="checkbox"
+              className="toggle toggle-primary"
+              checked={outdoorRunning}
+              onChange={() => setOutdoorRunning(!outdoorRunning)}
+            />
+          </label>
+        </section>
         <div className="divider divider-info"></div>
         <Coaches
           handleAddCoach={handleAddCoach}
@@ -176,6 +198,16 @@ export default function Office() {
             onChange={(e) => setClassDuration(e.target.value)}
             placeholder="e.g. 1 hour, 45 minutes, etc."
           />
+        </section>
+        <div className="divider divider-info"></div>
+        <section>
+          <h2 className="text-xl mb-4">Quirks</h2>
+          <textarea
+            className="textarea textarea-bordered focus:outline-primary w-full"
+            placeholder="Any quirks or special features of the gym?"
+            value={quirks}
+            onChange={(e) => setQuirks(e.target.value)}
+          ></textarea>
         </section>
         <button
           className="btn btn-primary w-full text-white"
