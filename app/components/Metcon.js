@@ -4,11 +4,11 @@ import { useOfficeContext } from '@/contexts/OfficeContext';
 import { useChatCompletion } from '@/hooks/useOpenAiStream/chat-hook';
 import OpenAI from 'openai';
 import jsPDF from 'jspdf';
-import { useAuth } from '@/contexts/AuthContext';
 import ReviewDetails from '@/components/ReviewDetails';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 
 export default function Metcon() {
-  const { supabase } = useAuth();
+  const supabase = createClientComponentClient();
 
   const downloadPDF = () => {
     const doc = new jsPDF();

@@ -1,21 +1,13 @@
-'use client';
-import { useAuth } from '@/contexts/AuthContext';
-import { Auth } from '@supabase/auth-ui-react';
-import { ThemeSupa } from '@supabase/auth-ui-shared';
-import { redirect } from 'next/navigation';
-
-export default function App() {
-  const { session, supabase } = useAuth();
-
-  if (!session) {
-    return (
-      <Auth
-        supabaseClient={supabase}
-        appearance={{ theme: ThemeSupa }}
-        providers={['google']}
-      />
-    );
-  } else {
-    return redirect('/dashboard');
-  }
+export default function Login() {
+  return (
+    <form action="/auth/login" method="post">
+      <label htmlFor="email">Email</label>
+      <input name="email" />
+      <label htmlFor="password">Password</label>
+      <input type="password" name="password" />
+      <button>Sign In</button>
+      <button formAction="/auth/sign-up">Sign Up</button>
+      <button formAction="/auth/logout">Sign Out</button>
+    </form>
+  );
 }

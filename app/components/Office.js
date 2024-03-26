@@ -6,15 +6,30 @@ import EquipmentSelector from './EquipmentSelector';
 import Coaches from './Coaches';
 import { XMarkIcon } from '@heroicons/react/16/solid';
 import { useAuth } from '../contexts/AuthContext';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 
 export default function Office() {
-  const { supabase, user, session } = useAuth();
+  const supabase = createClientComponentClient();
+  const { user, session } = useAuth();
   const { addOfficeInfo } = useOfficeContext();
-  const [equipmentList, setEquipmentList] = useState([]);
+  const [equipmentList, setEquipmentList] = useState([
+    'Barbell',
+    'Bumper Plates',
+    'Power Rack',
+    'Kettlebell',
+    'Rower',
+  ]);
   const [coachList, setCoachList] = useState([]);
   const [newCoachName, setNewCoachName] = useState('');
   const [newCoachExperience, setNewCoachExperience] = useState('');
-  const [classSchedule, setClassSchedule] = useState([]);
+  const [classSchedule, setClassSchedule] = useState([
+    'Monday',
+    'Tuesday',
+    'Wednesday',
+    'Thursday',
+    'Friday',
+    'Saturday',
+  ]);
   const [classDuration, setClassDuration] = useState('');
   const [gymName, setGymName] = useState('');
 
@@ -33,34 +48,37 @@ export default function Office() {
     setCoachList(coachList.filter((_, idx) => idx !== index));
   };
 
-  console.log(user.data.user.id);
   const handleSubmit = async (e) => {
     e.preventDefault();
-    addOfficeInfo({
-      equipmentList,
-      coachList,
-      classSchedule,
-      classDuration,
-      gymName,
-    });
 
-    const { data, error } = await supabase
-      .from('gyms')
-      .insert(
-        [
-          {
-            name: gymName,
-            equipment: equipmentList,
-            coaches: coachList,
-            schedule: classSchedule,
-            duration: classDuration,
-            user_id: user.data.user.id,
-          },
-        ],
-        { returning: 'minimal' }
-      )
-      .select();
-    console.log(data, error);
+    try {
+      const response = await fetch('/api/Office', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          gymName,
+          equipmentList,
+          coachList,
+          classSchedule,
+          classDuration,
+          userId: user?.data.user.id, // Assuming 'user' object has an 'id'. Adjust as necessary.
+        }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        console.log('Gym created:', result.data);
+        // Handle success (e.g., show success message, redirect, etc.)
+      } else {
+        throw new Error(result.error);
+      }
+    } catch (error) {
+      console.error('Error creating gym:', error);
+      // Handle error (e.g., show error message)
+    }
   };
 
   const removeEquipment = (index) => {
@@ -134,7 +152,7 @@ export default function Office() {
                 <span className="label-text mr-2">{day}</span>
                 <input
                   type="checkbox"
-                  className="toggle toggle-accent"
+                  className="toggle toggle-secondary"
                   checked={classSchedule.includes(day)}
                   onChange={(e) => {
                     if (e.target.checked) {

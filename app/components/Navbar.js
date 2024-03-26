@@ -4,10 +4,12 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useAuth } from '../contexts/AuthContext';
 import { usePathname } from 'next/navigation';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 
 export default function Navbar() {
   const pathname = usePathname();
-  const { session, supabase } = useAuth();
+  const { session } = useAuth();
+  const supabase = createClientComponentClient();
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -24,29 +26,6 @@ export default function Navbar() {
           className="self-start"
         />
       </Link>
-      {/* <div role="tablist" className="tabs tabs-boxed self-center mx-auto">
-        <a
-          href="/office"
-          role="tab"
-          className={pathname === '/office' ? 'tab tab-active' : 'tab'}
-        >
-          Office
-        </a>
-        <a
-          href="/whiteboard"
-          role="tab"
-          className={pathname === '/whiteboard' ? 'tab tab-active' : 'tab'}
-        >
-          Whiteboard
-        </a>
-        <a
-          href="/metcon"
-          role="tab"
-          className={pathname === '/metcon' ? 'tab tab-active' : 'tab'}
-        >
-          Metcon
-        </a>
-      </div> */}
       {session ? (
         <button onClick={handleLogout} className="btn btn-secondary text-white">
           Logout
