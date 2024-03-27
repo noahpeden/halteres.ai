@@ -2,10 +2,14 @@
 import { useState } from 'react';
 import { useOfficeContext } from '../contexts/OfficeContext';
 import { useRouter } from 'next/navigation';
+import ProgramLength from './ProgramLength';
+import { InformationCircleIcon } from '@heroicons/react/24/outline';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function Whiteboard() {
   const { push } = useRouter();
   const { addWhiteboardInfo, setReadyForQuery } = useOfficeContext();
+  const { user } = useAuth();
   const [workoutFormat, setWorkoutFormat] = useState('');
   const [programLength, setProgramLength] = useState('1 Day');
   const [focus, setFocus] = useState('');
@@ -18,12 +22,60 @@ export default function Whiteboard() {
     push('/metcon');
   };
 
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('userId', user.data.user.id);
+    formData.append('fileName', file.name);
+
+    const response = await fetch('/api/Whiteboard', {
+      method: 'POST',
+      body: formData,
+    });
+    const data = await response.json();
+    console.log(data);
+  };
+
   return (
     <div className="container mx-auto my-6">
       <h1 className="text-2xl font-bold">Program Customization</h1>
-
+      <ProgramLength
+        programLength={programLength}
+        setProgramLength={setProgramLength}
+      />
       <div className="my-4">
-        <h2 className="text-xl">Workout Format</h2>
+        <div className="flex">
+          <h2 className="text-xl">Upload Your Workouts</h2>
+          <div
+            className="ml-[6px] tooltip tooltip-info cursor-pointer"
+            data-tip="If you have favorite workouts you've written or otherwise, paste them in here to be used as a reference by our AI!"
+          >
+            <InformationCircleIcon className="h-6 w-6 text-gray-500" />
+          </div>
+        </div>
+        <input
+          type="file"
+          className="file-input file-input-bordered file-input-success text-white w-full max-w-xs"
+          onChange={handleFileUpload}
+        />
+      </div>
+      <div className="my-4">
+        <div className="flex">
+          <h2
+            className="text-xl"
+            data-tip="How would you like to format each workout?"
+          >
+            Workout Format
+          </h2>
+          <div
+            className="ml-[6px] tooltip tooltip-info cursor-pointer"
+            data-tip="If you have favorite workouts you've written or otherwise, paste them in here to be used as a reference by our AI!"
+          >
+            <InformationCircleIcon className="h-6 w-6 text-gray-500" />
+          </div>
+        </div>
         <input
           className="input input-bordered focus:outline-primary w-full"
           value={workoutFormat}
@@ -33,73 +85,20 @@ export default function Whiteboard() {
       </div>
 
       <div className="my-6">
-        <h2 className="text-xl">How long will this program be?</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="form-control">
-            <label className="label cursor-pointer">
-              <span className="label-text">1 Day</span>
-              <input
-                type="radio"
-                name="programLength"
-                className="radio checked:bg-accent"
-                checked={programLength === '1 Day'}
-                onChange={() => setProgramLength('1 Day')}
-              />
-            </label>
-          </div>
-          <div className="form-control">
-            <label className="label cursor-pointer">
-              <span className="label-text">2 Weeks</span>
-              <input
-                type="radio"
-                name="programLength"
-                className="radio checked:bg-accent"
-                checked={programLength === '2 Weeks'}
-                onChange={() => setProgramLength('2 Weeks')}
-              />
-            </label>
-          </div>
-          <div className="form-control">
-            <label className="label cursor-pointer">
-              <span className="label-text">4 Weeks</span>
-              <input
-                type="radio"
-                name="programLength"
-                className="radio checked:bg-accent"
-                checked={programLength === '4 Weeks'}
-                onChange={() => setProgramLength('4 Weeks')}
-              />
-            </label>
-          </div>
-          <div className="form-control">
-            <label className="label cursor-pointer">
-              <span className="label-text">6 Weeks</span>
-              <input
-                type="radio"
-                name="programLength"
-                className="radio checked:bg-accent"
-                checked={programLength === '6 Weeks'}
-                onChange={() => setProgramLength('6 Weeks')}
-              />
-            </label>
-          </div>
-          <div className="form-control">
-            <label className="label cursor-pointer">
-              <span className="label-text">8 Weeks</span>
-              <input
-                type="radio"
-                name="programLength"
-                className="radio checked:bg-accent"
-                checked={programLength === '8 Weeks'}
-                onChange={() => setProgramLength('8 Weeks')}
-              />
-            </label>
+        <div className="flex">
+          <h2
+            className="text-xl"
+            data-tip="Is there anything specific you'd like to focus on for this program?"
+          >
+            Focuses
+          </h2>
+          <div
+            className="ml-[6px] tooltip tooltip-info cursor-pointer"
+            data-tip="If you have favorite workouts you've written or otherwise, paste them in here to be used as a reference by our AI!"
+          >
+            <InformationCircleIcon className="h-6 w-6 text-gray-500" />
           </div>
         </div>
-      </div>
-
-      <div className="my-6">
-        <h2 className="text-xl">Focuses</h2>
         <input
           className="input input-bordered focus:outline-primary w-full"
           value={focus}
@@ -109,7 +108,15 @@ export default function Whiteboard() {
       </div>
 
       <div className="my-6">
-        <h2 className="text-xl">Template Workouts</h2>
+        <div className="flex">
+          <h2 className="text-xl">Template Workouts</h2>
+          <div
+            className="ml-[6px] tooltip tooltip-info cursor-pointer"
+            data-tip="If you have favorite workouts you've written or otherwise, paste them in here to be used as a reference by our AI!"
+          >
+            <InformationCircleIcon className="h-6 w-6 text-gray-500" />
+          </div>
+        </div>
         <textarea
           className="textarea textarea-bordered focus:outline-primary w-full h-32"
           value={exampleWorkout}

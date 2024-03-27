@@ -6,6 +6,7 @@ import OpenAI from 'openai';
 import jsPDF from 'jspdf';
 import ReviewDetails from '@/components/ReviewDetails';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import ProgramLength from './ProgramLength';
 
 export default function Metcon() {
   const supabase = createClientComponentClient();

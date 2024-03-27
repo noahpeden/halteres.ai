@@ -19,6 +19,7 @@ export default function Programs() {
 
   async function fetchGyms() {
     let { data, error } = await supabase.from('gyms').select('*');
+    console.log('gyms', data);
     setGyms(data);
   }
 
