@@ -18,7 +18,7 @@ export default function Page() {
             Automated, smart, and personalized workout programming for gym
             owners, coaches, and personal trainers.
           </p>
-          <Link href={'/login'}>
+          <Link href={'/create-program'}>
             <button className="btn btn-primary btn-large text-white mt-4">
               Get Started
             </button>

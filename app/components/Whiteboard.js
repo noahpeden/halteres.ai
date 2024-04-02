@@ -1,13 +1,11 @@
 'use client';
 import { useState } from 'react';
 import { useOfficeContext } from '../contexts/OfficeContext';
-import { useRouter } from 'next/navigation';
 import ProgramLength from './ProgramLength';
 import { InformationCircleIcon } from '@heroicons/react/24/outline';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function Whiteboard({ setStep }) {
-  const { push } = useRouter();
   const { addWhiteboardInfo, setReadyForQuery, whiteboard } =
     useOfficeContext();
   const { user } = useAuth();

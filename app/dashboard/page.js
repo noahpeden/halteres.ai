@@ -48,12 +48,12 @@ export default function Programs() {
     <div className="container mx-auto p-4">
       <div className="text-center my-4">
         <Link href="/create-program">
-          <button className="btn btn-primary px-8 py-3 text-lg font-bold">
+          <button className="btn btn-primary text-white  text-lg font-bold">
             Create brand new programming
           </button>
         </Link>
       </div>
-      <div>
+      {/* <div>
         <h1>Programs</h1>
         <form onSubmit={(e) => createEntity(e, 'programs')} className="mb-8">
           <input
@@ -120,7 +120,7 @@ export default function Programs() {
             </a>
           ))}
         </div>
-      </div>
+      </div> */}
     </div>
   );
 }
