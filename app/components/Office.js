@@ -4,33 +4,44 @@ import { useState } from 'react';
 import EquipmentSelector from './EquipmentSelector';
 import Coaches from './Coaches';
 import { XMarkIcon } from '@heroicons/react/16/solid';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { useOfficeContext } from '@/contexts/OfficeContext';
+import { InformationCircleIcon } from '@heroicons/react/24/outline';
 
-export default function Office() {
+export default function Office({ setStep }) {
   const { user } = useAuth();
-  const [equipmentList, setEquipmentList] = useState([
-    'Barbell',
-    'Bumper Plates',
-    'Power Rack',
-    'Kettlebell',
-    'Rower',
-  ]);
-  const [coachList, setCoachList] = useState([]);
+  const { addOfficeInfo, office } = useOfficeContext();
+  const [equipmentList, setEquipmentList] = useState(
+    office?.equipmentList ?? [
+      'Barbell',
+      'Bumper Plates',
+      'Power Rack',
+      'Kettlebell',
+      'Rower',
+    ]
+  );
+  const [coachList, setCoachList] = useState(office?.coachList ?? []);
   const [newCoachName, setNewCoachName] = useState('');
   const [newCoachExperience, setNewCoachExperience] = useState('');
-  const [classSchedule, setClassSchedule] = useState([
-    'Monday',
-    'Tuesday',
-    'Wednesday',
-    'Thursday',
-    'Friday',
-    'Saturday',
-  ]);
-  const [classDuration, setClassDuration] = useState('');
-  const [gymName, setGymName] = useState('');
-  const [openAir, setOpenAir] = useState(true);
-  const [outdoorRunning, setOutdoorRunning] = useState(true);
-  const [quirks, setQuirks] = useState('');
+  const [classSchedule, setClassSchedule] = useState(
+    office?.classSchedule ?? [
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+    ]
+  );
+  const [classDuration, setClassDuration] = useState(
+    office?.classDuration ?? ''
+  );
+  const [gymName, setGymName] = useState(office?.gymName ?? '');
+  const [openAir, setOpenAir] = useState(office?.openAir ?? true);
+  const [outdoorRunning, setOutdoorRunning] = useState(
+    office?.outdoorRunning ?? true
+  );
+  const [quirks, setQuirks] = useState(office?.quirks ?? '');
 
   const handleAddCoach = () => {
     if (newCoachName && newCoachExperience) {
@@ -49,6 +60,18 @@ export default function Office() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const officeDetails = {
+      openAir,
+      outdoorRunning,
+      quirks,
+      gymName,
+      equipmentList,
+      coachList,
+      classSchedule,
+      classDuration,
+      userId: user?.data.user.id,
+    };
+    addOfficeInfo(officeDetails);
 
     try {
       const response = await fetch('/api/Office', {
@@ -56,17 +79,7 @@ export default function Office() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          openAir,
-          outdoorRunning,
-          quirks,
-          gymName,
-          equipmentList,
-          coachList,
-          classSchedule,
-          classDuration,
-          userId: user?.data.user.id, // Assuming 'user' object has an 'id'. Adjust as necessary.
-        }),
+        body: JSON.stringify(officeDetails),
       });
 
       const result = await response.json();
@@ -81,6 +94,7 @@ export default function Office() {
       console.error('Error creating gym:', error);
       // Handle error (e.g., show error message)
     }
+    setStep(1);
   };
 
   const removeEquipment = (index) => {
@@ -201,10 +215,21 @@ export default function Office() {
         </section>
         <div className="divider divider-info"></div>
         <section>
-          <h2 className="text-xl mb-4">Quirks</h2>
+          <div className="flex">
+            <h2 className="text-xl mb-4 tooltip tooltip-info cursor-pointer">
+              Quirks
+            </h2>
+            <div
+              className="ml-[6px] tooltip tooltip-info cursor-pointer"
+              data-tip="Any quirks or special features of the gym? I.e. funky equipment, things that only you would know that you would like taken into account in the program creation?"
+            >
+              <InformationCircleIcon className="h-6 w-6 text-gray-500" />
+            </div>
+          </div>
+
           <textarea
             className="textarea textarea-bordered focus:outline-primary w-full"
-            placeholder="Any quirks or special features of the gym?"
+            placeholder="We only have 6 rowers, no ski ergs, and the pull-up bar is 8ft tall."
             value={quirks}
             onChange={(e) => setQuirks(e.target.value)}
           ></textarea>

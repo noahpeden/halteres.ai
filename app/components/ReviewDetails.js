@@ -17,26 +17,21 @@ export default function ReviewDetails({ office, whiteboard }) {
             aria-label="close sidebar"
             className="drawer-overlay"
           ></label>
-          <ul className="menu p-4 overflow-y-auto min-h-full bg-white w-80 text-base-content pt-40">
-            <li className="menu-title">
-              <span className="text-lg font-bold">Office Details</span>
-            </li>
+          <ul className="menu p-4 overflow-y-auto min-h-full bg-white w-80 text-base-content pt-[7rem]">
             <li className="py-2">
-              <div className="font-semibold">Equipment List:</div>
+              <div className="font-semibold">Equipment</div>
               <ul className="pl-4">
                 {office?.equipmentList?.map((item, index) => (
                   <li key={index} className="py-1">
                     <div className="flex items-center justify-between bg-base-100 p-2 rounded">
-                      <span>
-                        {item.quantity}x {item.name}
-                      </span>
+                      <span>{item}</span>
                     </div>
                   </li>
                 ))}
               </ul>
             </li>
             <li className="py-2">
-              <div className="font-semibold">Coaching Staff:</div>
+              <div className="font-semibold">Coaches</div>
               <ul className="pl-4">
                 {office?.coachList?.map((coach, index) => (
                   <li key={index} className="py-1">
@@ -50,39 +45,45 @@ export default function ReviewDetails({ office, whiteboard }) {
               </ul>
             </li>
             <li className="py-2">
-              <div className="font-semibold">Class Schedule:</div>
-              <div className="bg-base-100 p-2 rounded">
-                {office.classSchedule}
-              </div>
+              <div className="font-semibold">Schedule:</div>
+              <ul className="pl-4">
+                {office.classSchedule.map((day) => (
+                  <li key={day} className="py-1">
+                    <div className="flex items-center justify-between bg-base-100 p-2 rounded">
+                      {day}
+                    </div>
+                  </li>
+                ))}
+              </ul>
             </li>
             <li className="py-2">
-              <div className="font-semibold">Class Duration:</div>
+              <div className="font-semibold">Duration</div>
               <div className="bg-base-100 p-2 rounded">
                 {office.classDuration}
               </div>
             </li>
 
             <li className="menu-title">
-              <span className="text-lg font-bold">Whiteboard Details</span>
+              <span className="text-lg font-bold">Workout Details</span>
             </li>
             <li className="py-2">
-              <div className="font-semibold">Cycle Length:</div>
+              <div className="font-semibold">Program Length</div>
               <div className="bg-base-100 p-2 rounded">
-                {whiteboard.cycleLength}
+                {whiteboard.programLength}
               </div>
             </li>
             <li className="py-2">
-              <div className="font-semibold">Workout Format:</div>
+              <div className="font-semibold">Format</div>
               <div className="bg-base-100 p-2 rounded">
                 {whiteboard.workoutFormat}
               </div>
             </li>
             <li className="py-2">
-              <div className="font-semibold">Focus:</div>
+              <div className="font-semibold">Focus</div>
               <div className="bg-base-100 p-2 rounded">{whiteboard.focus}</div>
             </li>
             <li className="py-2">
-              <div className="font-semibold">Example Workout:</div>
+              <div className="font-semibold">Example Workout</div>
               <div className="bg-base-100 p-2 rounded">
                 {whiteboard.exampleWorkout}
               </div>

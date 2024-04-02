@@ -34,7 +34,9 @@ export default function Metcon() {
   }.
   Here are the included details:
   - Gym Equipment: ${office.equipmentList},
-  - Coaching staff: ${office.coachList},
+  - Coaching staff: ${office.coachList
+    .map((coach) => coach.experience)
+    .join(', ')},
   - Class Schedule: ${office.classSchedule},
   - Class duration: ${office.classDuration},
   - Workout format: ${whiteboard.workoutFormat},

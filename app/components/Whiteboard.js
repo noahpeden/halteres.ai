@@ -6,20 +6,27 @@ import ProgramLength from './ProgramLength';
 import { InformationCircleIcon } from '@heroicons/react/24/outline';
 import { useAuth } from '@/contexts/AuthContext';
 
-export default function Whiteboard() {
+export default function Whiteboard({ setStep }) {
   const { push } = useRouter();
-  const { addWhiteboardInfo, setReadyForQuery } = useOfficeContext();
+  const { addWhiteboardInfo, setReadyForQuery, whiteboard } =
+    useOfficeContext();
   const { user } = useAuth();
-  const [workoutFormat, setWorkoutFormat] = useState('');
-  const [programLength, setProgramLength] = useState('1 Day');
-  const [focus, setFocus] = useState('');
-  const [exampleWorkout, setExampleWorkout] = useState('');
+  const [workoutFormat, setWorkoutFormat] = useState(
+    whiteboard?.workoutFormat ?? ''
+  );
+  const [programLength, setProgramLength] = useState(
+    whiteboard?.programLength ?? '1 Day'
+  );
+  const [focus, setFocus] = useState(whiteboard?.focus ?? '');
+  const [exampleWorkout, setExampleWorkout] = useState(
+    whiteboard?.exampleWorkout ?? ''
+  );
 
   const handleSubmit = (e) => {
     e.preventDefault();
     addWhiteboardInfo({ programLength, workoutFormat, focus, exampleWorkout });
+    setStep(2);
     setReadyForQuery(true);
-    push('/metcon');
   };
 
   const handleFileUpload = async (e) => {
@@ -41,25 +48,30 @@ export default function Whiteboard() {
   return (
     <div className="container mx-auto my-6">
       <h1 className="text-2xl font-bold">Program Customization</h1>
-      <ProgramLength
-        programLength={programLength}
-        setProgramLength={setProgramLength}
-      />
       <div className="my-4">
-        <div className="flex">
-          <h2 className="text-xl">Upload Your Workouts</h2>
-          <div
-            className="ml-[6px] tooltip tooltip-info cursor-pointer"
-            data-tip="If you have favorite workouts you've written or otherwise, paste them in here to be used as a reference by our AI!"
-          >
-            <InformationCircleIcon className="h-6 w-6 text-gray-500" />
+        <div className="flex items-center justify-around">
+          <ProgramLength
+            programLength={programLength}
+            setProgramLength={setProgramLength}
+          />
+          <div className="flex flex-col">
+            <div className="flex">
+              <h2 className="text-xl">Upload Your Workouts</h2>
+              <div
+                className="ml-[6px] tooltip tooltip-info cursor-pointer"
+                data-tip="Coming soon! Upload a PDF, Doc, or other file with your workouts to be used as a reference when generating your program."
+              >
+                <InformationCircleIcon className="h-6 w-6 text-gray-500" />
+              </div>
+            </div>
+            <input
+              type="file"
+              className="file-input file-input-bordered file-input-success text-white w-full max-w-xs"
+              onChange={handleFileUpload}
+              disabled
+            />
           </div>
         </div>
-        <input
-          type="file"
-          className="file-input file-input-bordered file-input-success text-white w-full max-w-xs"
-          onChange={handleFileUpload}
-        />
       </div>
       <div className="my-4">
         <div className="flex">
@@ -71,7 +83,7 @@ export default function Whiteboard() {
           </h2>
           <div
             className="ml-[6px] tooltip tooltip-info cursor-pointer"
-            data-tip="If you have favorite workouts you've written or otherwise, paste them in here to be used as a reference by our AI!"
+            data-tip="Put in your ideal workout format that you'd like your program to follow. For example, Warmup, Strength, Conditioning, Mobility."
           >
             <InformationCircleIcon className="h-6 w-6 text-gray-500" />
           </div>
@@ -94,7 +106,7 @@ export default function Whiteboard() {
           </h2>
           <div
             className="ml-[6px] tooltip tooltip-info cursor-pointer"
-            data-tip="If you have favorite workouts you've written or otherwise, paste them in here to be used as a reference by our AI!"
+            data-tip="Put in any specific focuses you'd like to have in your program. It can be anything from increasing back squat strength to getting ready for the Open"
           >
             <InformationCircleIcon className="h-6 w-6 text-gray-500" />
           </div>
@@ -112,7 +124,7 @@ export default function Whiteboard() {
           <h2 className="text-xl">Template Workouts</h2>
           <div
             className="ml-[6px] tooltip tooltip-info cursor-pointer"
-            data-tip="If you have favorite workouts you've written or otherwise, paste them in here to be used as a reference by our AI!"
+            data-tip="If you have favorite workouts you've written or otherwise, paste them in here to be used as a reference when generating your program. Paste in as many as you'd like."
           >
             <InformationCircleIcon className="h-6 w-6 text-gray-500" />
           </div>
