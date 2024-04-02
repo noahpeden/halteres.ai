@@ -1,6 +1,6 @@
 'use client';
 import Image from 'next/image';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import boxJumps from '@/assets/box-jumps.jpg';
 import {
   BookOpenIcon,
@@ -9,6 +9,8 @@ import {
 } from '@heroicons/react/24/outline';
 
 export default function Page() {
+  const router = useRouter();
+  const replace = () => router.replace('/create-program');
   return (
     <main className="container mx-auto p-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
@@ -18,11 +20,13 @@ export default function Page() {
             Automated, smart, and personalized workout programming for gym
             owners, coaches, and personal trainers.
           </p>
-          <Link href={'/create-program'}>
-            <button className="btn btn-primary btn-large text-white mt-4">
-              Get Started
-            </button>
-          </Link>
+
+          <button
+            className="btn btn-primary btn-large text-white mt-4"
+            onClick={replace}
+          >
+            Get Started
+          </button>
         </div>
         <div>
           <Image
@@ -42,7 +46,7 @@ export default function Page() {
               <h2 className="text-lg font-bold">Gym Personalization</h2>
             </div>
             <p className="text-sm">
-              Tailor workouts to your gym's equipment and class schedule.
+              Tailor workouts to your gym&apos;s equipment and class schedule.
             </p>
           </div>
         </div>

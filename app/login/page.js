@@ -13,9 +13,10 @@ export default function App() {
         supabaseClient={supabase}
         appearance={{ theme: ThemeSupa }}
         providers={['google']}
+        redirectTo="/create-program"
       />
     );
   } else {
-    return redirect('/dashboard');
+    return redirect('/create-program');
   }
 }
