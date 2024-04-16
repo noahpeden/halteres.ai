@@ -93,7 +93,10 @@ export default function Metcon() {
   }
 
   useEffect(() => {
-    if (readyForQuery) {
+    if (
+      readyForQuery &&
+      whiteboard.personalization === 'Crossfit Coach or Owner'
+    ) {
       createEmbeddings();
     }
   }, [readyForQuery]);
