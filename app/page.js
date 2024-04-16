@@ -7,10 +7,21 @@ import {
   CalendarDaysIcon,
   ClockIcon,
 } from '@heroicons/react/24/outline';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function Page() {
+  const { session, supabase } = useAuth();
+
   const router = useRouter();
-  const replace = () => router.replace('/create-program');
+  const push = () => {
+    console.log(session);
+    if (session) {
+      router.refresh();
+      router.push('/create-program');
+    } else {
+      router.push('/login');
+    }
+  };
   return (
     <main className="container mx-auto p-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
@@ -23,7 +34,7 @@ export default function Page() {
 
           <button
             className="btn btn-primary btn-large text-white mt-4"
-            onClick={replace}
+            onClick={push}
           >
             Get Started
           </button>

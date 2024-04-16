@@ -2,10 +2,18 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { Auth } from '@supabase/auth-ui-react';
 import { ThemeSupa } from '@supabase/auth-ui-shared';
-import { redirect } from 'next/navigation';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 
 export default function App() {
   const { session, supabase } = useAuth();
+  const router = useRouter();
+  useEffect(() => {
+    if (session) {
+      router.refresh();
+      router.push('/create-program');
+    }
+  }, [session, router]);
 
   if (!session) {
     return (
@@ -16,7 +24,5 @@ export default function App() {
         redirectTo="/create-program"
       />
     );
-  } else {
-    return redirect('/create-program');
   }
 }

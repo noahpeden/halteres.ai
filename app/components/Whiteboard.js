@@ -12,6 +12,9 @@ export default function Whiteboard({ setStep }) {
   const [workoutFormat, setWorkoutFormat] = useState(
     whiteboard?.workoutFormat ?? ''
   );
+  const [personalization, setPersonalization] = useState(
+    'Crossfit Coach or Owner'
+  );
   const [programLength, setProgramLength] = useState(
     whiteboard?.programLength ?? '1 Day'
   );
@@ -22,7 +25,13 @@ export default function Whiteboard({ setStep }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    addWhiteboardInfo({ programLength, workoutFormat, focus, exampleWorkout });
+    addWhiteboardInfo({
+      personalization,
+      programLength,
+      workoutFormat,
+      focus,
+      exampleWorkout,
+    });
     setStep(2);
     setReadyForQuery(true);
   };
@@ -46,6 +55,27 @@ export default function Whiteboard({ setStep }) {
   return (
     <div className="container mx-auto my-6">
       <h1 className="text-2xl font-bold">Program Customization</h1>
+      <div className="my-4">
+        <h2 className="text-xl">Who is this for?</h2>
+        <select
+          value={programLength}
+          onChange={(e) => setPersonalization(e.target.value)}
+          className="select select-bordered w-full max-w-xs"
+        >
+          <option disabled selected>
+            What best describes who is programming this?
+          </option>
+          {[
+            'Crossfit Coach or Owner',
+            'Personal Trainer',
+            'Physical Therapist',
+          ].map((length, index) => (
+            <option key={index} value={length}>
+              {length}
+            </option>
+          ))}
+        </select>
+      </div>
       <div className="my-4">
         <div className="flex items-center justify-around">
           <ProgramLength

@@ -1,7 +1,12 @@
 {
   "compilerOptions": {
+    "baseUrl": "app",
     "paths": {
-      "@/*": ["./app/*"]
+      "@/utils/*": ["utils/*"],
+      "@/assets/*": ["assets/*"],
+      "@/components/*": ["components/*"],
+      "@/contexts/*": ["contexts/*"],
+      "@/hooks/*": ["hooks/*"]
     }
   }
 }

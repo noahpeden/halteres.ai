@@ -26,11 +26,14 @@ export default function Metcon() {
   const [loading, setLoading] = useState(false);
   const [content, setContent] = useState('');
   const [matchedWorkouts, setmatchedWorkouts] = useState([]);
+
   const userPrompt = `
   Based on the provided gym information, create a detailed ${
-    whiteboard.cycleLength
-  } CrossFit workout plan. Include workouts for each day, tailored to the available equipment and coaching expertise. Specify exact workouts, including scaled and RX weights for each exercise, without suggesting repetitions of previous workouts or scaling instructions. Focus solely on listing unique and specific workouts for each day of the ${
-    whiteboard.cycleLength
+    whiteboard.programLength
+  } ${
+    whiteboard.personalization
+  } workout plan. Include workouts for each day, tailored to the available equipment and coaching expertise. Specify exact workouts, including scaled and RX weights for each exercise, without suggesting repetitions of previous workouts or scaling instructions. Focus solely on listing unique and specific workouts for each day of the ${
+    whiteboard.programLength
   }.
   Here are the included details:
   - Gym Equipment: ${office.equipmentList},
@@ -40,7 +43,7 @@ export default function Metcon() {
   - Class Schedule: ${office.classSchedule},
   - Class duration: ${office.classDuration},
   - Workout format: ${whiteboard.workoutFormat},
-  - Workout cycle length: ${whiteboard.cycleLength},
+  - Workout cycle length: ${whiteboard.programLength},
   - Workout focus: ${whiteboard.focus},
   - Template workout: ${whiteboard.exampleWorkout};
   - Use these workouts as inspiration: ${matchedWorkouts
