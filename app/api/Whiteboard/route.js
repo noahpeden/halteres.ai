@@ -3,28 +3,32 @@ import { NextResponse } from 'next/server';
 
 export async function POST(req) {
   try {
-    const body = await req.formData();
-    const file = body.get('file');
-    const userId = body.get('userId');
-    const fileName = body.get('fileName');
-    console.log(userId, fileName, file);
-    if (!userId) {
-      throw new Error('User ID is required');
-    }
-
+    const body = await req.json();
+    const {
+      personalization,
+      programLength,
+      workoutFormat,
+      focus,
+      exampleWorkout,
+      programId,
+      userId,
+    } = body;
+    console.log('req', req.body);
     const supabase = createClient();
-    const filePath = `${userId}/${fileName}`;
 
-    const { data, error } = await supabase.storage
-      .from('External Workouts')
-      .upload(filePath, file, {
-        cacheControl: '3600',
-        upsert: false,
-        userId: userId,
-      });
-    console.log(data, error);
+    const { data, error } = await supabase.from('whiteboard').upsert([
+      {
+        personalization,
+        workout_format: workoutFormat,
+        cycle_length: programLength,
+        focus,
+        references: exampleWorkout,
+        program_id: programId,
+        user_id: userId,
+      },
+    ]);
+    console.log(error);
     if (error) throw error;
-
     return NextResponse.json({ data }, { status: 200 });
   } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });

@@ -23,15 +23,39 @@ export default function Whiteboard({ setStep, params }) {
     whiteboard?.exampleWorkout ?? ''
   );
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    addWhiteboardInfo({
+    const whiteboardDetails = {
       personalization,
       programLength,
       workoutFormat,
       focus,
       exampleWorkout,
-    });
+      programId: params.programId,
+      userId: user.data.user.id,
+    };
+    addWhiteboardInfo(whiteboardDetails);
+    try {
+      const response = await fetch('/api/Whiteboard', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(whiteboardDetails),
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        console.log('Workout successfully customized:', result.data);
+        // Handle success (e.g., show success message, redirect, etc.)
+      } else {
+        throw new Error(result.error);
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      // Handle error (e.g., show error message)
+    }
     setStep(1);
     setReadyForQuery(true);
   };
@@ -44,7 +68,7 @@ export default function Whiteboard({ setStep, params }) {
     formData.append('userId', user.data.user.id);
     formData.append('fileName', file.name);
 
-    const response = await fetch('/api/Whiteboard', {
+    const response = await fetch('/api/WorkoutUpload', {
       method: 'POST',
       body: formData,
     });
