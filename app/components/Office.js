@@ -30,7 +30,7 @@ export default function Office({ setStep, params }) {
     }
     fetchOfficeInfo();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [params.programId]);
+  }, [params?.programId]);
   const [equipmentList, setEquipmentList] = useState(
     office?.equipmentList ?? [
       'Barbell',
