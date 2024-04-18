@@ -9,7 +9,6 @@ export default function Programs() {
   const { user, supabase } = useAuth();
   const [programs, setPrograms] = useState([]);
   const [programName, setProgramName] = useState('');
-
   useEffect(() => {
     async function fetchPrograms() {
       let { data } = await supabase.from('programs').select('*');
@@ -18,17 +17,29 @@ export default function Programs() {
     fetchPrograms();
   }, [supabase]);
 
-  async function createEntity(event, entityName) {
+  async function createProgram(event) {
     event.preventDefault();
-    if (user) {
-      const { data, error } = await supabase
-        .from(entityName)
-        .insert([{ name: programName, user_id: user.id }]);
-      if (error) {
-        return console.error(error);
+    try {
+      const response = await fetch('/api/CreateProgram', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ name: programName, userId: user.data.user.id }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        console.log('Workout successfully customized:', result);
+        router.push(`/program/${result?.data[0].program_id}`);
+        // Handle success (e.g., show success message, redirect, etc.)
+      } else {
+        throw new Error(result.error);
       }
-      console.log(data);
-      router.push('/program' + data[0].program_id);
+    } catch (error) {
+      console.error('Error:', error);
+      // Handle error (e.g., show error message)
     }
   }
 
@@ -36,7 +47,7 @@ export default function Programs() {
     <div className="container mx-auto p-4">
       <div>
         <h1>Programs</h1>
-        <form onSubmit={(e) => createEntity(e, 'programs')} className="mb-8">
+        <form onSubmit={(e) => createProgram(e)} className="mb-8">
           <input
             type="text"
             placeholder="Type here"

@@ -86,7 +86,7 @@ export default function Whiteboard({ setStep, params }) {
               <h2 className="text-xl">Who is this for?</h2>
             </div>
             <select
-              value={programLength}
+              value={personalization}
               onChange={(e) => setPersonalization(e.target.value)}
               className="select select-bordered w-full max-w-xs"
             >
