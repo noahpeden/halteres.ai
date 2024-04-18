@@ -4,7 +4,7 @@ import Office from '@/components/Office';
 import Whiteboard from '@/components/Whiteboard';
 import { useState } from 'react';
 
-export default function CreateGym() {
+export default function EditProgram({ params }) {
   const [step, setStep] = useState(0);
   return (
     <div>
@@ -16,13 +16,13 @@ export default function CreateGym() {
             }`}
             onClick={() => setStep(0)}
           >
-            Configure Gym
+            Customize Program
           </li>
           <li
             className={`cursor-pointer step ${step >= 1 ? 'step-primary' : ''}`}
             onClick={() => setStep(1)}
           >
-            Customize Workout
+            Configure Gym
           </li>
           <li
             className={`cursor-pointer step ${
@@ -34,9 +34,9 @@ export default function CreateGym() {
           </li>
         </ul>
       </div>
-      {step === 0 && <Office setStep={setStep} />}
-      {step === 1 && <Whiteboard setStep={setStep} />}
-      {step === 2 && <Metcon />}
+      {step === 0 && <Whiteboard setStep={setStep} params={params} />}
+      {step === 1 && <Office setStep={setStep} params={params} />}
+      {step === 2 && <Metcon params={params} />}
     </div>
   );
 }

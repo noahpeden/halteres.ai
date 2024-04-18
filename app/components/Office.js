@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import EquipmentSelector from './EquipmentSelector';
 import Coaches from './Coaches';
 import { XMarkIcon } from '@heroicons/react/16/solid';
@@ -8,9 +8,29 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useOfficeContext } from '@/contexts/OfficeContext';
 import { InformationCircleIcon } from '@heroicons/react/24/outline';
 
-export default function Office({ setStep }) {
-  const { user } = useAuth();
+export default function Office({ setStep, params }) {
+  const { user, supabase } = useAuth();
   const { addOfficeInfo, office } = useOfficeContext();
+  useEffect(() => {
+    async function fetchOfficeInfo() {
+      const { data } = await supabase
+        .from('gyms')
+        .select('*')
+        .eq('program_id', params.programId);
+      if (data?.length > 0) {
+        const officeInfo = {
+          programId: params.programId,
+          openAir: data[0].open_air,
+          outdoorRunning: data[0].outside_running_path,
+          ...data[0],
+        };
+        addOfficeInfo(officeInfo);
+        console.log(data);
+      }
+    }
+    fetchOfficeInfo();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.programId]);
   const [equipmentList, setEquipmentList] = useState(
     office?.equipmentList ?? [
       'Barbell',
@@ -94,7 +114,7 @@ export default function Office({ setStep }) {
       console.error('Error creating gym:', error);
       // Handle error (e.g., show error message)
     }
-    setStep(1);
+    setStep(2);
   };
 
   const removeEquipment = (index) => {

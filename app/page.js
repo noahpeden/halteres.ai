@@ -17,7 +17,7 @@ export default function Page() {
     console.log(session);
     if (session) {
       router.refresh();
-      router.push('/create-program');
+      router.push('/dashboard');
     } else {
       router.push('/login');
     }

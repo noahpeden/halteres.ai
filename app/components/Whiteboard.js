@@ -5,7 +5,7 @@ import ProgramLength from './ProgramLength';
 import { InformationCircleIcon } from '@heroicons/react/24/outline';
 import { useAuth } from '@/contexts/AuthContext';
 
-export default function Whiteboard({ setStep }) {
+export default function Whiteboard({ setStep, params }) {
   const { addWhiteboardInfo, setReadyForQuery, whiteboard } =
     useOfficeContext();
   const { user } = useAuth();
@@ -32,7 +32,7 @@ export default function Whiteboard({ setStep }) {
       focus,
       exampleWorkout,
     });
-    setStep(2);
+    setStep(1);
     setReadyForQuery(true);
   };
 
@@ -56,35 +56,37 @@ export default function Whiteboard({ setStep }) {
     <div className="container mx-auto my-6">
       <h1 className="text-2xl font-bold">Program Customization</h1>
       <div className="my-4">
-        <h2 className="text-xl">Who is this for?</h2>
-        <select
-          value={programLength}
-          onChange={(e) => setPersonalization(e.target.value)}
-          className="select select-bordered w-full max-w-xs"
-        >
-          <option disabled selected>
-            What best describes who is programming this?
-          </option>
-          {[
-            'Crossfit Coach or Owner',
-            'Personal Trainer',
-            'Physical Therapist',
-          ].map((length, index) => (
-            <option key={index} value={length}>
-              {length}
-            </option>
-          ))}
-        </select>
+        <div className="flex items-center justify-around">
+          <div className="my-6">
+            <div className="flex">
+              <h2 className="text-xl">Who is this for?</h2>
+            </div>
+            <select
+              value={programLength}
+              onChange={(e) => setPersonalization(e.target.value)}
+              className="select select-bordered w-full max-w-xs"
+            >
+              <option disabled selected>
+                What best describes who is programming this?
+              </option>
+              {[
+                'Crossfit Coach or Owner',
+                'Personal Trainer',
+                'Physical Therapist',
+              ].map((length, index) => (
+                <option key={index} value={length}>
+                  {length}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
       </div>
       <div className="my-4">
         <div className="flex items-center justify-around">
-          <ProgramLength
-            programLength={programLength}
-            setProgramLength={setProgramLength}
-          />
           <div className="flex flex-col">
             <div className="flex">
-              <h2 className="text-xl">Upload Your Workouts</h2>
+              <h2 className="text-xl">Upload Workouts</h2>
               <div
                 className="ml-[6px] tooltip tooltip-info cursor-pointer"
                 data-tip="Coming soon! Upload a PDF, Doc, or other file with your workouts to be used as a reference when generating your program."
@@ -100,6 +102,12 @@ export default function Whiteboard({ setStep }) {
             />
           </div>
         </div>
+      </div>
+      <div className="my-4 flex justify-center">
+        <ProgramLength
+          programLength={programLength}
+          setProgramLength={setProgramLength}
+        />
       </div>
       <div className="my-4">
         <div className="flex">

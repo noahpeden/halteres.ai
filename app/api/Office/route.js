@@ -14,11 +14,12 @@ export async function POST(req) {
       classSchedule,
       classDuration,
       userId,
+      programId,
     } = body;
     console.log('req', req.body);
     const supabase = createClient();
 
-    const { data, error } = await supabase.from('gyms').insert([
+    const { data, error } = await supabase.from('gyms').upsert([
       {
         open_air: openAir,
         outside_running_path: outdoorRunning,
@@ -29,6 +30,7 @@ export async function POST(req) {
         schedule: classSchedule,
         duration: classDuration,
         user_id: userId,
+        program_id: programId,
       },
     ]);
     if (error) throw error;

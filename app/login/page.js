@@ -11,7 +11,7 @@ export default function App() {
   useEffect(() => {
     if (session) {
       router.refresh();
-      router.push('/create-program');
+      router.push('/dashboard');
     }
   }, [session, router]);
 
@@ -21,7 +21,7 @@ export default function App() {
         supabaseClient={supabase}
         appearance={{ theme: ThemeSupa }}
         providers={['google']}
-        redirectTo="/create-program"
+        redirectTo="/dashboard"
       />
     );
   }

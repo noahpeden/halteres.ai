@@ -8,7 +8,7 @@ import ReviewDetails from '@/components/ReviewDetails';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import ProgramLength from './ProgramLength';
 
-export default function Metcon() {
+export default function Metcon({ params }) {
   const supabase = createClientComponentClient();
 
   const downloadPDF = () => {
