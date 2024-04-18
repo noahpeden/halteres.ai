@@ -37,7 +37,7 @@ export default function ReviewDetails({ office, whiteboard }) {
                   <li key={index} className="py-1">
                     <div className="flex items-center justify-between bg-base-100 p-2 rounded">
                       <span>
-                        {coach.name} - {coach.experience}
+                        {coach?.name} - {coach?.experience}
                       </span>
                     </div>
                   </li>
@@ -47,7 +47,7 @@ export default function ReviewDetails({ office, whiteboard }) {
             <li className="py-2">
               <div className="font-semibold">Schedule:</div>
               <ul className="pl-4">
-                {office.classSchedule.map((day) => (
+                {office?.classSchedule?.map((day) => (
                   <li key={day} className="py-1">
                     <div className="flex items-center justify-between bg-base-100 p-2 rounded">
                       {day}
@@ -59,7 +59,7 @@ export default function ReviewDetails({ office, whiteboard }) {
             <li className="py-2">
               <div className="font-semibold">Duration</div>
               <div className="bg-base-100 p-2 rounded">
-                {office.classDuration}
+                {office?.classDuration}
               </div>
             </li>
 
@@ -69,23 +69,23 @@ export default function ReviewDetails({ office, whiteboard }) {
             <li className="py-2">
               <div className="font-semibold">Program Length</div>
               <div className="bg-base-100 p-2 rounded">
-                {whiteboard.programLength}
+                {whiteboard?.programLength}
               </div>
             </li>
             <li className="py-2">
               <div className="font-semibold">Format</div>
               <div className="bg-base-100 p-2 rounded">
-                {whiteboard.workoutFormat}
+                {whiteboard?.workoutFormat}
               </div>
             </li>
             <li className="py-2">
               <div className="font-semibold">Focus</div>
-              <div className="bg-base-100 p-2 rounded">{whiteboard.focus}</div>
+              <div className="bg-base-100 p-2 rounded">{whiteboard?.focus}</div>
             </li>
             <li className="py-2">
               <div className="font-semibold">Example Workout</div>
               <div className="bg-base-100 p-2 rounded">
-                {whiteboard.exampleWorkout}
+                {whiteboard?.exampleWorkout}
               </div>
             </li>
           </ul>

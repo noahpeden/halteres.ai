@@ -1,32 +1,25 @@
 'use client';
 import React, { useState, useEffect, useRef } from 'react';
 import { useOfficeContext } from '@/contexts/OfficeContext';
-import { useChatCompletion } from '@/hooks/useOpenAiStream/chat-hook';
 import OpenAI from 'openai';
 import jsPDF from 'jspdf';
 import ReviewDetails from '@/components/ReviewDetails';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
-import ProgramLength from './ProgramLength';
+import { useChatCompletion } from '@/hooks/useOpenAiStream/chat-hook';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function Metcon({ params }) {
   const { supabase } = useAuth();
-
-  const downloadPDF = () => {
-    const doc = new jsPDF();
-    doc.text(content, 10, 10);
-    doc.save('programming.pdf');
-  };
+  const { office, whiteboard, readyForQuery } = useOfficeContext();
+  const [loading, setLoading] = useState(false);
+  const [content, setContent] = useState('');
+  const [currentPage, setCurrentPage] = useState(0);
+  const [assistantMessages, setAssistantMessages] = useState([]);
   const textAreaRef = useRef(null);
 
   const openai = new OpenAI({
     apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY,
     dangerouslyAllowBrowser: true,
   });
-  const { office, whiteboard, readyForQuery } = useOfficeContext();
-  const [loading, setLoading] = useState(false);
-  const [content, setContent] = useState('');
-  const [matchedWorkouts, setmatchedWorkouts] = useState([]);
 
   const userPrompt = `
 Create a detailed workout program for a ${
@@ -34,12 +27,14 @@ Create a detailed workout program for a ${
   } for the next ${whiteboard.programLength} days. The user is a ${
     whiteboard.personalization
   } and the gym they own has the following details and they'd like to create a plan based on the provided information. The gym is equipped with the following equipment: ${
-    office.equipmentList
-  }. The coaching staff has the following experience: ${office.coachList
-    .map((coach) => coach.experience)
-    .join(', ')}.  The class schedule is as follows: ${
-    office.classSchedule
-  }. The class duration is ${office.classDuration}. The workout format is ${
+    office?.equipmentList
+  }. The coaching staff has the following experience: ${
+    office?.coachList?.length
+      ? office?.coachList.map((coach) => coach.experience).join(', ')
+      : "the coaching staff wasn't listed"
+  }.  The class schedule is as follows: ${
+    office?.classSchedule
+  }. The class duration is ${office?.classDuration}. The workout format is ${
     whiteboard.workoutFormat
   }. The workout cycle length is ${
     whiteboard.programLength
@@ -47,9 +42,7 @@ Create a detailed workout program for a ${
     whiteboard.focus
   }. Please use the example workout they've provided as the leading influencer in your writing: ${
     whiteboard.exampleWorkout
-  }. Use these workouts as inspiration ONLY IF they are a crossfit coach: ${matchedWorkouts
-    .map((workout) => workout.body)
-    .join(', ')}.`;
+  }.`;
 
   const prompt = [
     {
@@ -58,7 +51,7 @@ Create a detailed workout program for a ${
     },
     {
       content: `
-        Based on the provided gym information, create a detailed ${whiteboard.programLength} workout plan. Include workouts for each day based on the ${whiteboard.programLength}, tailored to the available equipment and coaching expertise. Specify exact workouts, without suggesting repetitions of previous workouts or scaling instructions. Focus solely on listing unique and specific workouts for each day of the ${whiteboard.programLength}. Most importantly tailor the workouts to the user's profession as a ${whiteboard.personalization} AND make sure the provided template workout is the leading influence for the workouts you generate. Make sure to ONLY generate the number of workouts they ask for in the workout cycle length e.g ${whiteboard.programLength} days. If the workouts are for Crossfit, make sure to provide RX and scaled weights and male and female options. If the focus is on a specific area, make sure to include that in the workout. If there is a focus, make sure the workouts are incrementally challenging in that area and that the workouts are varied. `,
+        Based on the provided gym information, create a detailed ${whiteboard.programLength} workout plan. Include workouts for each day based on the ${whiteboard.programLength}, tailored to the available equipment and coaching expertise. Specify exact workouts, without suggesting repetitions of previous workouts or scaling instructions. Focus solely on listing unique and specific workouts for each day of the ${whiteboard.programLength}. Most importantly tailor the workouts to the user's profession as a ${whiteboard.personalization} AND make sure the provided template workout is the leading influence for the workouts you generate. Make sure to ONLY generate the number of workouts they ask for in the workout cycle length e.g ${whiteboard.programLength} days. `,
       role: 'system',
     },
   ];
@@ -111,13 +104,39 @@ Create a detailed workout program for a ${
       : setContent(messages.map((msg) => msg.content).join('\n'));
   }, [messages]);
 
+  const goToNextPage = () => {
+    setCurrentPage((prev) =>
+      prev + 1 < assistantMessages.length ? prev + 1 : prev
+    );
+  };
+
+  const goToPreviousPage = () => {
+    setCurrentPage((prev) => (prev > 0 ? prev - 1 : 0));
+  };
+
+  useEffect(() => {
+    if (messages.length < 1) {
+      setContent('No messages yet');
+    } else {
+      const filteredMessages = messages.filter(
+        (msg) => msg.role === 'assistant'
+      );
+      setAssistantMessages(filteredMessages);
+      setContent(filteredMessages[currentPage]?.content || 'No messages yet');
+    }
+  }, [messages, currentPage]);
+
   const handleGenerateProgramming = () => {
     setLoading(true);
     submitPrompt(prompt);
     setLoading(false);
   };
 
-  console.log(messages);
+  const downloadPDF = () => {
+    const doc = new jsPDF();
+    doc.text(content, 10, 10);
+    doc.save('programming.pdf');
+  };
 
   return (
     <div className="container mx-auto my-6">
@@ -151,7 +170,22 @@ Create a detailed workout program for a ${
           value={content}
           onChange={(e) => setContent(e.target.value)}
         ></textarea>
-
+        <div className="pagination-controls my-4">
+          <button
+            className="btn btn-primary mr-2"
+            onClick={goToPreviousPage}
+            disabled={currentPage === 0}
+          >
+            Previous
+          </button>
+          <button
+            className="btn btn-primary"
+            onClick={goToNextPage}
+            disabled={currentPage === assistantMessages.length - 1}
+          >
+            Next
+          </button>
+        </div>
         <button
           className="btn btn-primary text-white mt-4"
           onClick={downloadPDF}
