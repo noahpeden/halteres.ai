@@ -4,6 +4,7 @@ import { useOfficeContext } from '../contexts/OfficeContext';
 import ProgramLength from './ProgramLength';
 import { InformationCircleIcon } from '@heroicons/react/24/outline';
 import { useAuth } from '@/contexts/AuthContext';
+import { uploadWorkout } from 'actions/WorkoutUpload';
 
 export default function Whiteboard({ setStep, params }) {
   const { addWhiteboardInfo, setReadyForQuery, whiteboard } =
@@ -68,12 +69,14 @@ export default function Whiteboard({ setStep, params }) {
     formData.append('userId', user.data.user.id);
     formData.append('fileName', file.name);
 
-    const response = await fetch('/api/WorkoutUpload', {
-      method: 'POST',
-      body: formData,
-    });
-    const data = await response.json();
-    console.log(data);
+    try {
+      const response = await uploadWorkout(formData);
+      console.log('File uploaded and parsed successfully:', response);
+      // Handle success (e.g., show success message, update state, etc.)
+    } catch (error) {
+      console.error('Error:', error);
+      // Handle error (e.g., show error message)
+    }
   };
 
   return (
@@ -90,9 +93,6 @@ export default function Whiteboard({ setStep, params }) {
               onChange={(e) => setPersonalization(e.target.value)}
               className="select select-bordered w-full max-w-xs"
             >
-              <option disabled selected>
-                What best describes who is programming this?
-              </option>
               {[
                 'Crossfit Coach or Owner',
                 'Personal Trainer',
@@ -113,7 +113,7 @@ export default function Whiteboard({ setStep, params }) {
               <h2 className="text-xl">Upload Workouts</h2>
               <div
                 className="ml-[6px] tooltip tooltip-info cursor-pointer"
-                data-tip="Coming soon! Upload a PDF, Doc, or other file with your workouts to be used as a reference when generating your program."
+                data-tip="Upload a PDF, Doc, or other file with your workouts to be used as a reference when generating your program."
               >
                 <InformationCircleIcon className="h-6 w-6 text-gray-500" />
               </div>
@@ -122,7 +122,6 @@ export default function Whiteboard({ setStep, params }) {
               type="file"
               className="file-input file-input-bordered file-input-success text-white w-full max-w-xs"
               onChange={handleFileUpload}
-              disabled
             />
           </div>
         </div>

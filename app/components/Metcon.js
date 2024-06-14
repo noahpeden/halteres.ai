@@ -32,7 +32,7 @@ Create a detailed workout program for a ${
     office?.coachList?.length
       ? office?.coachList.map((coach) => coach.experience).join(', ')
       : "the coaching staff wasn't listed"
-  }.  The class schedule is as follows: ${
+  }. The class schedule is as follows: ${
     office?.classSchedule
   }. The class duration is ${office?.classDuration}. The workout format is ${
     whiteboard.workoutFormat
@@ -42,7 +42,7 @@ Create a detailed workout program for a ${
     whiteboard.focus
   }. Please use the example workout they've provided as the leading influencer in your writing: ${
     whiteboard.exampleWorkout
-  }.`;
+  }`;
 
   const prompt = [
     {
@@ -72,7 +72,31 @@ Create a detailed workout program for a ${
     });
 
     const embeddingVector = openaiResponse.data[0].embedding;
-    const searchedWorkoutsResult = await supabase.rpc(
+
+    // Match internal workouts first
+    const searchedInternalWorkoutsResult = await supabase.rpc(
+      'match_internal_workouts',
+      {
+        query_embedding: embeddingVector,
+        match_threshold: 0.4,
+        match_count: 20,
+      }
+    );
+
+    if (searchedInternalWorkoutsResult.error) {
+      console.error(
+        'Error matching internal workouts:',
+        searchedInternalWorkoutsResult.error
+      );
+    } else {
+      setMatchedWorkouts((prev) => [
+        ...prev,
+        ...searchedInternalWorkoutsResult.data,
+      ]);
+    }
+
+    // Match external workouts
+    const searchedExternalWorkoutsResult = await supabase.rpc(
       'match_external_workouts',
       {
         query_embedding: embeddingVector,
@@ -81,10 +105,16 @@ Create a detailed workout program for a ${
       }
     );
 
-    if (searchedWorkoutsResult.error) {
-      console.error('Error matching workouts:', searchedWorkoutsResult.error);
+    if (searchedExternalWorkoutsResult.error) {
+      console.error(
+        'Error matching external workouts:',
+        searchedExternalWorkoutsResult.error
+      );
     } else {
-      setmatchedWorkouts(searchedWorkoutsResult.data);
+      setMatchedWorkouts((prev) => [
+        ...prev,
+        ...searchedExternalWorkoutsResult.data,
+      ]);
     }
   }
 
