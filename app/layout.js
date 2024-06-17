@@ -1,5 +1,5 @@
 'use client';
-import 'tailwindcss/tailwind.css';
+import './globals.css';
 import { OfficeProvider } from './contexts/OfficeContext';
 import { AuthProvider } from './contexts/AuthContext';
 import Navbar from './components/Navbar';

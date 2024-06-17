@@ -4,7 +4,7 @@ import { useOfficeContext } from '../contexts/OfficeContext';
 import ProgramLength from './ProgramLength';
 import { InformationCircleIcon } from '@heroicons/react/24/outline';
 import { useAuth } from '@/contexts/AuthContext';
-import { uploadWorkout } from 'actions/WorkoutUpload';
+import { handleWorkoutUpload } from '@/actions/workout-upload';
 
 export default function Whiteboard({ setStep, params }) {
   const { addWhiteboardInfo, setReadyForQuery, whiteboard } =
@@ -48,7 +48,7 @@ export default function Whiteboard({ setStep, params }) {
       const result = await response.json();
 
       if (response.ok) {
-        console.log('Workout successfully customized:', result.data);
+        console.log('Workout successfully customized:', result);
         // Handle success (e.g., show success message, redirect, etc.)
       } else {
         throw new Error(result.error);
@@ -68,14 +68,13 @@ export default function Whiteboard({ setStep, params }) {
     formData.append('file', file);
     formData.append('userId', user.data.user.id);
     formData.append('fileName', file.name);
-
+    console.log(formData.get('file'));
     try {
-      const response = await uploadWorkout(formData);
-      console.log('File uploaded and parsed successfully:', response);
-      // Handle success (e.g., show success message, update state, etc.)
+      const response = await handleWorkoutUpload(formData);
+      console.log(response);
+      return response;
     } catch (error) {
-      console.error('Error:', error);
-      // Handle error (e.g., show error message)
+      console.error('Error uploading file:', error);
     }
   };
 

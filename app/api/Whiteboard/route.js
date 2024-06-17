@@ -13,7 +13,7 @@ export async function POST(req) {
       programId,
       userId,
     } = body;
-    console.log('req', req.body);
+
     const supabase = createClient();
 
     const { data, error } = await supabase.from('whiteboard').upsert([
