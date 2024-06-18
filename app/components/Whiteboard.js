@@ -68,7 +68,7 @@ export default function Whiteboard({ setStep, params }) {
     formData.append('file', file);
     formData.append('userId', user.data.user.id);
     formData.append('fileName', file.name);
-    console.log(formData.get('file'));
+
     try {
       const response = await handleWorkoutUpload(formData);
       console.log(response);

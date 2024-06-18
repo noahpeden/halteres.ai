@@ -1,10 +1,17 @@
 // app/actions/workout-upload.js
 'use server';
 
-import { supabase } from '@/utils/supabase/server';
+import { createClient } from '@/utils/supabase/server';
+import OpenAI from 'openai';
 import mammoth from 'mammoth';
 import pdf from 'pdf-parse/lib/pdf-parse';
 import * as XLSX from 'xlsx';
+import Tesseract from 'tesseract.js';
+
+const openai = new OpenAI({
+  apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY,
+  dangerouslyAllowBrowser: true,
+});
 
 const parseFile = async (file) => {
   const buffer = Buffer.from(await file.arrayBuffer());
@@ -12,7 +19,13 @@ const parseFile = async (file) => {
   if (file.type === 'application/pdf') {
     const data = await pdf(buffer);
     console.log(data);
-    return data.text;
+    if (data.text.trim()) {
+      return data.text;
+    } else {
+      // Use OCR if the PDF contains images with text
+      const text = await Tesseract.recognize(buffer, 'eng');
+      return text.data.text;
+    }
   } else if (
     file.type ===
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
@@ -33,26 +46,31 @@ const parseFile = async (file) => {
   throw new Error('Unsupported file type');
 };
 
-const generateEmbedding = async (text) => {
-  // Implement your embedding logic here.
-  // For demonstration, let's assume we use a placeholder function.
-  return Array(512).fill(Math.random()); // Example embedding of size 512
-};
+async function createEmbeddings(embeddingPrompt) {
+  const openaiResponse = await openai.embeddings.create({
+    model: 'text-embedding-3-small',
+    input: embeddingPrompt,
+    encoding_format: 'float',
+  });
+  return openaiResponse.data[0].embedding;
+}
 
 export async function handleWorkoutUpload(formData) {
+  const supabase = createClient();
+
   try {
     const file = formData.get('file');
     const userId = formData.get('userId');
     const fileName = formData.get('fileName');
 
     const fileContent = await parseFile(file);
-    const embedding = await generateEmbedding(fileContent);
+    const embedding = await createEmbeddings(fileContent);
 
     const { data, error } = await supabase.from('internal_workouts').insert([
       {
         user_id: userId,
         file_name: fileName,
-        content: fileContent,
+        parsed_text: fileContent,
         embedding,
       },
     ]);
