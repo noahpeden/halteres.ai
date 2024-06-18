@@ -6,7 +6,7 @@ import OpenAI from 'openai';
 import mammoth from 'mammoth';
 import pdf from 'pdf-parse/lib/pdf-parse';
 import * as XLSX from 'xlsx';
-import Tesseract from 'tesseract.js';
+import { createWorker } from 'tesseract.js';
 
 const openai = new OpenAI({
   apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY,
@@ -18,14 +18,25 @@ const parseFile = async (file) => {
 
   if (file.type === 'application/pdf') {
     const data = await pdf(buffer);
-    console.log(data);
     if (data.text.trim()) {
       return data.text;
     } else {
-      // Use OCR if the PDF contains images with text
-      const text = await Tesseract.recognize(buffer, 'eng');
-      return text.data.text;
+      return 'Please upload a valid PDF file.';
     }
+    // TODO: implement image parsing
+    // else {
+    //   const worker = await createWorker({
+    //     langPath: 'https://tessdata.projectnaptha.com/4.0.0_best',
+    //   });
+    //   await worker.load();
+    //   await worker.loadLanguage('eng');
+    //   await worker.initialize('eng');
+    //   const {
+    //     data: { text },
+    //   } = await worker.recognize(buffer);
+    //   await worker.terminate();
+    //   return text;
+    // }
   } else if (
     file.type ===
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document'

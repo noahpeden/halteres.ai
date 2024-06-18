@@ -8,12 +8,14 @@ import { useChatCompletion } from '@/hooks/useOpenAiStream/chat-hook';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function Metcon({ params }) {
-  const { supabase } = useAuth();
+  const { supabase, user } = useAuth();
   const { office, whiteboard, readyForQuery } = useOfficeContext();
   const [loading, setLoading] = useState(false);
   const [content, setContent] = useState('');
+  const [internalWorkouts, setInternalWorkouts] = useState('');
   const [currentPage, setCurrentPage] = useState(0);
   const [assistantMessages, setAssistantMessages] = useState([]);
+  const [matchedWorkouts, setMatchedWorkouts] = useState([]);
   const textAreaRef = useRef(null);
 
   const openai = new OpenAI({
@@ -40,9 +42,15 @@ Create a detailed workout program for a ${
     whiteboard.programLength
   }. The workout focus is ${
     whiteboard.focus
-  }. Please use the example workout they've provided as the leading influencer in your writing: ${
+  }. Please use the example workout and uploaded workout (if they've provided them) they've provided as the leading influencers in your writing: Example workout: ${
     whiteboard.exampleWorkout
-  }`;
+  }, and uploaded workout: ${
+    matchedWorkouts.length
+      ? matchedWorkouts.map((workout) => workout.content).join(', ')
+      : 'No uploaded workout provided'
+  }.`;
+  const systemPrompt = `
+Based on the provided gym information, create a detailed ${whiteboard.programLength} workout plan. Include workouts for each day based on the ${whiteboard.programLength}, tailored to the available equipment and coaching expertise. Specify exact workouts, without suggesting repetitions of previous workouts or scaling instructions. Focus solely on listing unique and specific workouts for each day of the ${whiteboard.programLength}. Most importantly tailor the workouts to the user's profession as a ${whiteboard.personalization} AND make sure the provided template workout and/or internal workouts as the leading influences for the workouts you generate. Make sure to ONLY generate the number of workouts they ask for in the workout cycle length e.g ${whiteboard.programLength} days. Also, integrate the matched external workouts as references.`;
 
   const prompt = [
     {
@@ -50,8 +58,7 @@ Create a detailed workout program for a ${
       role: 'user',
     },
     {
-      content: `
-        Based on the provided gym information, create a detailed ${whiteboard.programLength} workout plan. Include workouts for each day based on the ${whiteboard.programLength}, tailored to the available equipment and coaching expertise. Specify exact workouts, without suggesting repetitions of previous workouts or scaling instructions. Focus solely on listing unique and specific workouts for each day of the ${whiteboard.programLength}. Most importantly tailor the workouts to the user's profession as a ${whiteboard.personalization} AND make sure the provided template workout is the leading influence for the workouts you generate. Make sure to ONLY generate the number of workouts they ask for in the workout cycle length e.g ${whiteboard.programLength} days. `,
+      content: systemPrompt,
       role: 'system',
     },
   ];
@@ -62,71 +69,93 @@ Create a detailed workout program for a ${
     temperature: 0.9,
   });
 
-  const embeddingPrompt = whiteboard.exampleWorkout;
-
-  async function createEmbeddings() {
-    const openaiResponse = await openai.embeddings.create({
-      model: 'text-embedding-3-small',
-      input: embeddingPrompt,
-      encoding_format: 'float',
+  const createEmbeddings = async (text) => {
+    const response = await openai.embeddings.create({
+      model: 'text-embedding-ada-002',
+      input: text,
     });
 
-    const embeddingVector = openaiResponse.data[0].embedding;
+    return response.data[0].embedding;
+  };
 
-    // Match internal workouts first
-    const searchedInternalWorkoutsResult = await supabase.rpc(
-      'match_internal_workouts',
-      {
-        query_embedding: embeddingVector,
-        match_threshold: 0.4,
-        match_count: 20,
-      }
-    );
+  const matchWorkouts = async (embedding, matchTable) => {
+    const matchResult = await supabase.rpc('match_external_workouts', {
+      query_embedding: embedding,
+      match_threshold: 0.4,
+      match_count: 20,
+    });
 
-    if (searchedInternalWorkoutsResult.error) {
+    if (matchResult.error) {
       console.error(
-        'Error matching internal workouts:',
-        searchedInternalWorkoutsResult.error
+        `Error matching workouts from ${matchTable}:`,
+        matchResult.error
       );
-    } else {
-      setMatchedWorkouts((prev) => [
-        ...prev,
-        ...searchedInternalWorkoutsResult.data,
-      ]);
+      return [];
     }
+    return matchResult.data;
+  };
 
-    // Match external workouts
-    const searchedExternalWorkoutsResult = await supabase.rpc(
-      'match_external_workouts',
-      {
-        query_embedding: embeddingVector,
-        match_threshold: 0.4,
-        match_count: 20,
+  const handleGenerateProgramming = async () => {
+    setLoading(true);
+    try {
+      const { data: internalWorkout, error: internalError } = await supabase
+        .from('internal_workouts')
+        .select('parsed_text, embedding')
+        .eq('user_id', user.data.user.id)
+        .eq('file_name', whiteboard.internalWorkoutName)
+        .limit(1)
+        .single();
+
+      if (internalError) {
+        throw internalError;
       }
-    );
 
-    if (searchedExternalWorkoutsResult.error) {
-      console.error(
-        'Error matching external workouts:',
-        searchedExternalWorkoutsResult.error
+      const internalEmbedding = internalWorkout.embedding;
+      const internalContent = `internal workouts: ${internalWorkout.content}, example workout: ${whiteboard.exampleWorkout}`;
+      setInternalWorkouts(internalContent);
+
+      const matchedExternalWorkouts = await matchWorkouts(
+        internalEmbedding,
+        'match_external_workouts'
       );
-    } else {
-      setMatchedWorkouts((prev) => [
-        ...prev,
-        ...searchedExternalWorkoutsResult.data,
-      ]);
-    }
-  }
 
-  useEffect(() => {
-    if (
-      readyForQuery &&
-      whiteboard.personalization === 'Crossfit Coach or Owner'
-    ) {
-      createEmbeddings();
+      const exampleWorkoutEmbedding = await createEmbeddings(
+        whiteboard.exampleWorkout
+      );
+      const matchedExampleWorkouts = await matchWorkouts(
+        exampleWorkoutEmbedding,
+        'match_external_workouts'
+      );
+
+      const combinedWorkouts = [
+        { content: internalContent },
+        ...matchedExampleWorkouts,
+        ...matchedExternalWorkouts,
+      ];
+      setMatchedWorkouts(combinedWorkouts);
+
+      const combinedWorkoutsText = combinedWorkouts
+        .map((workout) => workout.content)
+        .join('\n');
+      const fullUserPrompt = `${userPrompt}\n\nUse the following workouts as references:\n${combinedWorkoutsText}`;
+
+      const fullPrompt = [
+        {
+          content: fullUserPrompt,
+          role: 'user',
+        },
+        {
+          content: systemPrompt,
+          role: 'system',
+        },
+      ];
+
+      submitPrompt(fullPrompt);
+    } catch (error) {
+      console.error('Error generating programming:', error);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [readyForQuery]);
+    setLoading(false);
+  };
 
   useEffect(() => {
     messages.length < 1
@@ -155,12 +184,6 @@ Create a detailed workout program for a ${
       setContent(filteredMessages[currentPage]?.content || 'No messages yet');
     }
   }, [messages, currentPage]);
-
-  const handleGenerateProgramming = () => {
-    setLoading(true);
-    submitPrompt(prompt);
-    setLoading(false);
-  };
 
   const downloadPDF = () => {
     const doc = new jsPDF();

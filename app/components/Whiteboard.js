@@ -23,6 +23,7 @@ export default function Whiteboard({ setStep, params }) {
   const [exampleWorkout, setExampleWorkout] = useState(
     whiteboard?.exampleWorkout ?? ''
   );
+  const [fileValue, setFileValue] = useState(null);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -34,6 +35,7 @@ export default function Whiteboard({ setStep, params }) {
       exampleWorkout,
       programId: params.programId,
       userId: user.data.user.id,
+      internalWorkoutName: fileValue,
     };
     addWhiteboardInfo(whiteboardDetails);
     try {
@@ -48,17 +50,14 @@ export default function Whiteboard({ setStep, params }) {
       const result = await response.json();
 
       if (response.ok) {
-        console.log('Workout successfully customized:', result);
-        // Handle success (e.g., show success message, redirect, etc.)
+        setStep(1);
+        return setReadyForQuery(true);
       } else {
         throw new Error(result.error);
       }
     } catch (error) {
       console.error('Error:', error);
-      // Handle error (e.g., show error message)
     }
-    setStep(1);
-    setReadyForQuery(true);
   };
 
   const handleFileUpload = async (e) => {
@@ -68,10 +67,10 @@ export default function Whiteboard({ setStep, params }) {
     formData.append('file', file);
     formData.append('userId', user.data.user.id);
     formData.append('fileName', file.name);
+    setFileValue(file.name);
 
     try {
       const response = await handleWorkoutUpload(formData);
-      console.log(response);
       return response;
     } catch (error) {
       console.error('Error uploading file:', error);
@@ -122,6 +121,9 @@ export default function Whiteboard({ setStep, params }) {
               className="file-input file-input-bordered file-input-success text-white w-full max-w-xs"
               onChange={handleFileUpload}
             />
+            {fileValue && (
+              <div className="mt-2 text-sm text-gray-500">{fileValue}</div>
+            )}
           </div>
         </div>
       </div>

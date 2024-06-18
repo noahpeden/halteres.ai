@@ -14,7 +14,6 @@ export default function Page() {
 
   const router = useRouter();
   const push = () => {
-    console.log(session);
     if (session) {
       router.refresh();
       router.push('/dashboard');

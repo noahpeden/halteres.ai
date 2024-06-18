@@ -25,7 +25,6 @@ export default function Office({ setStep, params }) {
           ...data[0],
         };
         addOfficeInfo(officeInfo);
-        console.log(data);
       }
     }
     fetchOfficeInfo();

@@ -16,7 +16,6 @@ export async function POST(req) {
       userId,
       programId,
     } = body;
-    console.log('req', req.body);
     const supabase = createClient();
 
     const { data, error } = await supabase.from('gyms').upsert([
