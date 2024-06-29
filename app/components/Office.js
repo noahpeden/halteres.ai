@@ -11,56 +11,56 @@ import { InformationCircleIcon } from '@heroicons/react/24/outline';
 export default function Office({ setStep, params }) {
   const { user, supabase } = useAuth();
   const { addOfficeInfo, office } = useOfficeContext();
+
+  const [equipmentList, setEquipmentList] = useState([]);
+  const [coachList, setCoachList] = useState([]);
+  const [newCoachName, setNewCoachName] = useState('');
+  const [newCoachExperience, setNewCoachExperience] = useState('');
+  const [classSchedule, setClassSchedule] = useState([]);
+  const [classDuration, setClassDuration] = useState('');
+  const [gymName, setGymName] = useState('');
+  const [openAir, setOpenAir] = useState(true);
+  const [outdoorRunning, setOutdoorRunning] = useState(true);
+  const [quirks, setQuirks] = useState('');
+
   useEffect(() => {
     async function fetchOfficeInfo() {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('gyms')
         .select('*')
         .eq('program_id', params.programId);
-      if (data?.length > 0) {
+
+      if (error) {
+        console.error('Error fetching data:', error);
+      } else if (data?.length > 0) {
         const officeInfo = {
-          programId: params.programId,
+          ...data[0],
+          programId: data[0].program_id,
           openAir: data[0].open_air,
           outdoorRunning: data[0].outside_running_path,
-          ...data[0],
+          equipment: JSON.parse(data[0].equipment),
+          coaches: JSON.parse(data[0].coaches),
         };
+        console.log('Fetched officeInfo:', officeInfo);
         addOfficeInfo(officeInfo);
       }
     }
     fetchOfficeInfo();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [params?.programId]);
-  const [equipmentList, setEquipmentList] = useState(
-    office?.equipmentList ?? [
-      'Barbell',
-      'Bumper Plates',
-      'Power Rack',
-      'Kettlebell',
-      'Rower',
-    ]
-  );
-  const [coachList, setCoachList] = useState(office?.coachList ?? []);
-  const [newCoachName, setNewCoachName] = useState('');
-  const [newCoachExperience, setNewCoachExperience] = useState('');
-  const [classSchedule, setClassSchedule] = useState(
-    office?.classSchedule ?? [
-      'Monday',
-      'Tuesday',
-      'Wednesday',
-      'Thursday',
-      'Friday',
-      'Saturday',
-    ]
-  );
-  const [classDuration, setClassDuration] = useState(
-    office?.classDuration ?? ''
-  );
-  const [gymName, setGymName] = useState(office?.gymName ?? '');
-  const [openAir, setOpenAir] = useState(office?.openAir ?? true);
-  const [outdoorRunning, setOutdoorRunning] = useState(
-    office?.outdoorRunning ?? true
-  );
-  const [quirks, setQuirks] = useState(office?.quirks ?? '');
+  }, [params.programId]);
+
+  useEffect(() => {
+    if (office) {
+      setEquipmentList(office.equipment || []);
+      setCoachList(office.coaches || []);
+      setClassSchedule(office.schedule || []);
+      setClassDuration(office.duration || '');
+      setGymName(office.name || '');
+      setOpenAir(office.open_air ?? true);
+      setOutdoorRunning(office.outside_running_path ?? true);
+      setQuirks(office.quirks || '');
+    }
+  }, [office]);
 
   const handleAddCoach = () => {
     if (newCoachName && newCoachExperience) {
@@ -83,12 +83,12 @@ export default function Office({ setStep, params }) {
       openAir,
       outdoorRunning,
       quirks,
-      gymName,
-      equipmentList,
-      coachList,
-      classSchedule,
-      classDuration,
-      userId: user?.data.user.id,
+      name: gymName,
+      equipment: equipmentList,
+      coaches: coachList,
+      schedule: classSchedule,
+      duration: classDuration,
+      user_id: user?.data.user.id,
     };
     addOfficeInfo(officeDetails);
 

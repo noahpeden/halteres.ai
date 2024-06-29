@@ -19,7 +19,14 @@ export const OfficeProvider = ({ children }) => {
 
   return (
     <OfficeContext.Provider
-      value={{ office, whiteboard, addOfficeInfo, addWhiteboardInfo, readyForQuery, setReadyForQuery}}
+      value={{
+        office,
+        whiteboard,
+        addOfficeInfo,
+        addWhiteboardInfo,
+        readyForQuery,
+        setReadyForQuery,
+      }}
     >
       {children}
     </OfficeContext.Provider>
