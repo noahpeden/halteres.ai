@@ -50,7 +50,7 @@ Create a detailed workout program for a ${
       : 'No uploaded workout provided'
   }.`;
   const systemPrompt = `
-Based on the provided gym information, create a detailed ${whiteboard.programLength} workout plan. Include workouts for each day based on the ${whiteboard.programLength}, tailored to the available equipment and coaching expertise. Specify exact workouts, without suggesting repetitions of previous workouts or scaling instructions. Focus solely on listing unique and specific workouts for each day of the ${whiteboard.programLength}. Most importantly tailor the workouts to the user's profession as a ${whiteboard.personalization} AND make sure the provided template workout and/or internal workouts as the leading influences for the workouts you generate. Make sure to ONLY generate the number of workouts they ask for in the workout cycle length e.g ${whiteboard.programLength} days. Also, integrate the matched external workouts as references.`;
+Based on the provided gym information, create a detailed ${whiteboard.programLength} workout plan. Make sure to write an intro to the program detailing what the program will focus on. Include workouts for each day based on the ${whiteboard.programLength}, tailored to the available equipment and coaching expertise. Specify exact workouts, without suggesting repetitions of previous workouts or scaling instructions. Provide scaled, RX, and compete weight and movement options, as well as female and male weight and movement options. Include specific stretches and cool down movements if the user asks for it in the workout format. Focus on listing unique and specific workouts for each day of the ${whiteboard.programLength}. Most importantly tailor the workouts to the user's profession as a ${whiteboard.personalization} AND make sure the provided template workout and/or internal workouts as the leading influences for the workouts you generate. Make sure to ONLY generate the number of workouts they ask for in the workout cycle length e.g ${whiteboard.programLength} days. Finally, integrate the matched external workouts as references. `;
 
   const prompt = [
     {
@@ -64,9 +64,9 @@ Based on the provided gym information, create a detailed ${whiteboard.programLen
   ];
 
   const { messages, submitPrompt } = useChatCompletion({
-    model: 'gpt-3.5-turbo',
+    model: 'gpt-4o',
     apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY,
-    temperature: 0.9,
+    temperature: 0.6,
   });
 
   const createEmbeddings = async (text) => {
@@ -98,37 +98,53 @@ Based on the provided gym information, create a detailed ${whiteboard.programLen
   const handleGenerateProgramming = async () => {
     setLoading(true);
     try {
-      const { data: internalWorkout, error: internalError } = await supabase
-        .from('internal_workouts')
-        .select('parsed_text, embedding')
-        .eq('user_id', user.data.user.id)
-        .eq('file_name', whiteboard.internalWorkoutName)
-        .limit(1)
-        .single();
+      let internalWorkout,
+        internalError,
+        internalContent = '';
 
-      if (internalError) {
-        throw internalError;
+      if (whiteboard.internalWorkoutName) {
+        ({ data: internalWorkout, error: internalError } = await supabase
+          .from('internal_workouts')
+          .select('parsed_text, embedding')
+          .eq('user_id', user.data.user.id)
+          .eq('file_name', whiteboard.internalWorkoutName)
+          .limit(1)
+          .single());
+
+        if (internalError && internalError.code !== 'PGRST116') {
+          // If the error is not "No rows found", throw it
+          throw internalError;
+        }
+
+        if (internalWorkout) {
+          internalContent = `Internal workout: ${internalWorkout.parsed_text}`;
+          setInternalWorkouts(internalContent);
+        }
       }
 
-      const internalEmbedding = internalWorkout.embedding;
-      const internalContent = `internal workouts: ${internalWorkout.content}, example workout: ${whiteboard.exampleWorkout}`;
-      setInternalWorkouts(internalContent);
+      let matchedExternalWorkouts = [];
+      if (internalWorkout) {
+        const internalEmbedding = internalWorkout.embedding;
+        matchedExternalWorkouts = await matchWorkouts(
+          internalEmbedding,
+          'match_external_workouts'
+        );
+      }
 
-      const matchedExternalWorkouts = await matchWorkouts(
-        internalEmbedding,
-        'match_external_workouts'
-      );
-
-      const exampleWorkoutEmbedding = await createEmbeddings(
-        whiteboard.exampleWorkout
-      );
-      const matchedExampleWorkouts = await matchWorkouts(
-        exampleWorkoutEmbedding,
-        'match_external_workouts'
-      );
+      let exampleWorkoutEmbedding,
+        matchedExampleWorkouts = [];
+      if (whiteboard.exampleWorkout) {
+        exampleWorkoutEmbedding = await createEmbeddings(
+          whiteboard.exampleWorkout
+        );
+        matchedExampleWorkouts = await matchWorkouts(
+          exampleWorkoutEmbedding,
+          'match_external_workouts'
+        );
+      }
 
       const combinedWorkouts = [
-        { content: internalContent },
+        ...(internalContent ? [{ content: internalContent }] : []),
         ...matchedExampleWorkouts,
         ...matchedExternalWorkouts,
       ];
@@ -137,7 +153,9 @@ Based on the provided gym information, create a detailed ${whiteboard.programLen
       const combinedWorkoutsText = combinedWorkouts
         .map((workout) => workout.content)
         .join('\n');
-      const fullUserPrompt = `${userPrompt}\n\nUse the following workouts as references:\n${combinedWorkoutsText}`;
+      const fullUserPrompt = `${userPrompt}\n\nUse the following workouts as references:\n${
+        combinedWorkoutsText || 'No uploaded or example workouts provided'
+      }`;
 
       const fullPrompt = [
         {
