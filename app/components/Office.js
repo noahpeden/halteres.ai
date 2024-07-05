@@ -28,34 +28,38 @@ export default function Office({ setStep, params }) {
       const { data, error } = await supabase
         .from('gyms')
         .select('*')
-        .eq('program_id', params.programId);
-      console.log(data, error);
+        .eq('program_id', params.programId)
+        .single();
+
       if (error) {
         console.error('Error fetching data:', error);
-      } else if (data?.length > 0) {
+      } else if (data) {
         const officeInfo = {
-          ...data[0],
-          programId: data[0].program_id,
-          openAir: data[0].open_air,
-          outdoorRunning: data[0].outside_running_path,
-          equipment: JSON.parse(data[0].equipment),
-          coaches: JSON.parse(data[0].coaches),
+          ...data,
+          programId: data.program_id,
+          openAir: data.open_air,
+          outdoorRunning: data.outside_running_path,
+          equipment: JSON.parse(data.equipment || '[]'),
+          coaches: JSON.parse(data.coaches || '[]'),
         };
-        if (officeInfo) {
-          setEquipmentList(office.equipment || []);
-          setCoachList(office.coaches || []);
-          setClassSchedule(office.schedule || []);
-          setClassDuration(office.duration || '');
-          setGymName(office.name || '');
-          setOpenAir(office.open_air ?? true);
-          setOutdoorRunning(office.outside_running_path ?? true);
-          setQuirks(office.quirks || '');
-        }
         addOfficeInfo(officeInfo);
       }
     }
     fetchOfficeInfo();
-  }, []);
+  }, [params.programId, supabase, addOfficeInfo]);
+
+  useEffect(() => {
+    if (office) {
+      setEquipmentList(office.equipment || []);
+      setCoachList(office.coaches || []);
+      setClassSchedule(office.schedule || []);
+      setClassDuration(office.duration || '');
+      setGymName(office.name || '');
+      setOpenAir(office.openAir ?? true);
+      setOutdoorRunning(office.outdoorRunning ?? true);
+      setQuirks(office.quirks || '');
+    }
+  }, [office]);
 
   const handleAddCoach = () => {
     if (newCoachName && newCoachExperience) {
