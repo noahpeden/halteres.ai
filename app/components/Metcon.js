@@ -210,40 +210,39 @@ Based on the provided gym information, create a detailed ${whiteboard.programLen
   };
 
   return (
-    <div className="container mx-auto my-6">
-      <h1 className="text-2xl font-bold">Metcon Programming Editor</h1>
-      <div className="flex align-center justify-between">
+    <div className="container mx-auto my-6 px-4">
+      <h1 className="text-2xl font-bold mb-4">Metcon Programming Editor</h1>
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-4 sm:space-y-0">
         <ReviewDetails office={office} whiteboard={whiteboard} />
         <button
-          className="btn btn-success text-white mt-4"
+          className="btn btn-success text-white w-full sm:w-auto"
           onClick={handleGenerateProgramming}
         >
           Generate Programming
         </button>
       </div>
-      <div>
-        {loading && (
-          <div className="flex justify-center items-center">
-            <div className="flex flex-col gap-4 w-52">
-              <div className="skeleton h-32 w-full"></div>
-              <div className="skeleton h-4 w-28"></div>
-              <div className="skeleton h-4 w-full"></div>
-              <div className="skeleton h-4 w-full"></div>
-            </div>
-          </div>
-        )}
-      </div>
 
-      <div className="editor-container p-4">
+      {loading && (
+        <div className="flex justify-center items-center my-4">
+          <div className="flex flex-col gap-4 w-full sm:w-52">
+            <div className="skeleton h-32 w-full"></div>
+            <div className="skeleton h-4 w-28"></div>
+            <div className="skeleton h-4 w-full"></div>
+            <div className="skeleton h-4 w-full"></div>
+          </div>
+        </div>
+      )}
+
+      <div className="editor-container mt-6">
         <textarea
           ref={textAreaRef}
-          className="textarea textarea-bordered w-full h-96"
+          className="textarea textarea-bordered w-full h-64 sm:h-96"
           value={content}
           onChange={(e) => setContent(e.target.value)}
         ></textarea>
-        <div className="pagination-controls my-4">
+        <div className="pagination-controls my-4 flex justify-between">
           <button
-            className="btn btn-primary mr-2"
+            className="btn btn-primary"
             onClick={goToPreviousPage}
             disabled={currentPage === 0}
           >
@@ -258,7 +257,7 @@ Based on the provided gym information, create a detailed ${whiteboard.programLen
           </button>
         </div>
         <button
-          className="btn btn-primary text-white mt-4"
+          className="btn btn-primary text-white w-full"
           onClick={downloadPDF}
         >
           Download as PDF

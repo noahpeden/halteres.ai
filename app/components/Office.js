@@ -29,7 +29,7 @@ export default function Office({ setStep, params }) {
         .from('gyms')
         .select('*')
         .eq('program_id', params.programId);
-
+      console.log(data, error);
       if (error) {
         console.error('Error fetching data:', error);
       } else if (data?.length > 0) {
@@ -41,26 +41,21 @@ export default function Office({ setStep, params }) {
           equipment: JSON.parse(data[0].equipment),
           coaches: JSON.parse(data[0].coaches),
         };
-        console.log('Fetched officeInfo:', officeInfo);
+        if (officeInfo) {
+          setEquipmentList(office.equipment || []);
+          setCoachList(office.coaches || []);
+          setClassSchedule(office.schedule || []);
+          setClassDuration(office.duration || '');
+          setGymName(office.name || '');
+          setOpenAir(office.open_air ?? true);
+          setOutdoorRunning(office.outside_running_path ?? true);
+          setQuirks(office.quirks || '');
+        }
         addOfficeInfo(officeInfo);
       }
     }
     fetchOfficeInfo();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [params.programId]);
-
-  useEffect(() => {
-    if (office) {
-      setEquipmentList(office.equipment || []);
-      setCoachList(office.coaches || []);
-      setClassSchedule(office.schedule || []);
-      setClassDuration(office.duration || '');
-      setGymName(office.name || '');
-      setOpenAir(office.open_air ?? true);
-      setOutdoorRunning(office.outside_running_path ?? true);
-      setQuirks(office.quirks || '');
-    }
-  }, [office]);
+  }, []);
 
   const handleAddCoach = () => {
     if (newCoachName && newCoachExperience) {
@@ -133,9 +128,10 @@ export default function Office({ setStep, params }) {
             onChange={(e) => setGymName(e.target.value)}
           />
         </section>
+
         <div className="divider divider-info"></div>
 
-        <section className="flex justify-between">
+        <section className="flex flex-col sm:flex-row sm:justify-between space-y-4 sm:space-y-0 sm:space-x-4">
           <EquipmentSelector
             selected={equipmentList}
             setSelected={setEquipmentList}
@@ -145,22 +141,18 @@ export default function Office({ setStep, params }) {
             <div className="flex flex-wrap gap-2">
               {equipmentList.map((equipment, index) => (
                 <div key={index} className="badge badge-info gap-2">
-                  <div
+                  <XMarkIcon
+                    className="h-4 w-4 cursor-pointer"
                     onClick={() => removeEquipment(index)}
-                    className="h-4 w-4 cursor-pointer transform hover:scale-110 "
-                  >
-                    <XMarkIcon
-                      pointerEvents={'none'}
-                      className="w-full h-full"
-                    />
-                  </div>
+                  />
                   {equipment}
                 </div>
               ))}
             </div>
           )}
         </section>
-        <section className="w-[50%]">
+
+        <section className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <label className="cursor-pointer label">
             <span className="label-text mr-2">Is the gym open air?</span>
             <input
@@ -180,7 +172,9 @@ export default function Office({ setStep, params }) {
             />
           </label>
         </section>
+
         <div className="divider divider-info"></div>
+
         <Coaches
           handleAddCoach={handleAddCoach}
           newCoachName={newCoachName}
@@ -190,10 +184,12 @@ export default function Office({ setStep, params }) {
           coachList={coachList}
           removeCoach={removeCoach}
         />
+
         <div className="divider divider-info"></div>
+
         <section>
           <h2 className="text-xl mb-4">Class Schedule</h2>
-          <div className="flex flex-wrap gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
             {[
               'Monday',
               'Tuesday',
@@ -221,7 +217,9 @@ export default function Office({ setStep, params }) {
             ))}
           </div>
         </section>
+
         <div className="divider divider-info"></div>
+
         <section>
           <h2 className="text-xl mb-4">Class Duration</h2>
           <input
@@ -232,14 +230,14 @@ export default function Office({ setStep, params }) {
             placeholder="e.g. 1 hour, 45 minutes, etc."
           />
         </section>
+
         <div className="divider divider-info"></div>
+
         <section>
-          <div className="flex">
-            <h2 className="text-xl mb-4 tooltip tooltip-info cursor-pointer">
-              Quirks
-            </h2>
+          <div className="flex items-center mb-4">
+            <h2 className="text-xl">Quirks</h2>
             <div
-              className="ml-[6px] tooltip tooltip-info cursor-pointer"
+              className="ml-2 tooltip tooltip-info cursor-pointer"
               data-tip="Any quirks or special features of the gym? I.e. funky equipment, things that only you would know that you would like taken into account in the program creation?"
             >
               <InformationCircleIcon className="h-6 w-6 text-gray-500" />
@@ -253,6 +251,7 @@ export default function Office({ setStep, params }) {
             onChange={(e) => setQuirks(e.target.value)}
           ></textarea>
         </section>
+
         <button
           className="btn btn-primary w-full text-white"
           onClick={handleSubmit}
