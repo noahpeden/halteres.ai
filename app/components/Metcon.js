@@ -6,9 +6,11 @@ import jsPDF from 'jspdf';
 import ReviewDetails from '@/components/ReviewDetails';
 import { useChatCompletion } from '@/hooks/useOpenAiStream/chat-hook';
 import { useAuth } from '@/contexts/AuthContext';
+import { createClient } from '@/utils/supabase/client';
 
 export default function Metcon({ params }) {
-  const { supabase, user } = useAuth();
+  const supabase = createClient();
+  const { user } = useAuth();
   const { office, whiteboard, readyForQuery } = useOfficeContext();
   const [loading, setLoading] = useState(false);
   const [content, setContent] = useState('');
@@ -16,6 +18,8 @@ export default function Metcon({ params }) {
   const [currentPage, setCurrentPage] = useState(0);
   const [assistantMessages, setAssistantMessages] = useState([]);
   const [matchedWorkouts, setMatchedWorkouts] = useState([]);
+  const [savedMetcons, setSavedMetcons] = useState([]);
+  const [unsavedChanges, setUnsavedChanges] = useState(false);
   const textAreaRef = useRef(null);
 
   const openai = new OpenAI({
@@ -49,6 +53,7 @@ Create a detailed workout program for a ${
       ? matchedWorkouts.map((workout) => workout.content).join(', ')
       : 'No uploaded workout provided'
   }.`;
+
   const systemPrompt = `
 Based on the provided gym information, create a detailed ${whiteboard.programLength} workout plan. Make sure to write an intro to the program detailing what the program will focus on. Include workouts for each day based on the ${whiteboard.programLength}, tailored to the available equipment and coaching expertise. Specify exact workouts, without suggesting repetitions of previous workouts or scaling instructions. Provide scaled, RX, and compete weight and movement options, as well as female and male weight and movement options. Include specific stretches and cool down movements if the user asks for it in the workout format. Focus on listing unique and specific workouts for each day of the ${whiteboard.programLength}. Most importantly tailor the workouts to the user's profession as a ${whiteboard.personalization} AND make sure the provided template workout and/or internal workouts as the leading influences for the workouts you generate. Make sure to ONLY generate the number of workouts they ask for in the workout cycle length e.g ${whiteboard.programLength} days. Finally, integrate the matched external workouts as references. `;
 
@@ -69,6 +74,52 @@ Based on the provided gym information, create a detailed ${whiteboard.programLen
     temperature: 0.6,
   });
 
+  useEffect(() => {
+    loadSavedMetcons();
+  }, []);
+
+  const loadSavedMetcons = async () => {
+    const { data, error } = await supabase
+      .from('metcon')
+      .select('*')
+      .eq('program_id', params.programId)
+      .order('generation_date', { ascending: false });
+
+    if (error) {
+      console.error('Error loading saved metcons:', error);
+    } else {
+      setSavedMetcons(data || []);
+      if (data && data.length > 0) {
+        setContent(data[0].generated_workout);
+        setCurrentPage(0);
+        setUnsavedChanges(false);
+      }
+    }
+  };
+
+  const saveMetcon = async () => {
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+
+    if (userError) {
+      console.error('Error getting user:', userError);
+      return;
+    }
+
+    const { data, error } = await supabase.from('metcon').insert({
+      generated_workout: content,
+      generation_date: new Date().toISOString(),
+      program_id: params.programId,
+      user_id: userData.user.id,
+    });
+
+    if (error) {
+      console.error('Error saving metcon:', error);
+    } else {
+      setUnsavedChanges(false);
+      loadSavedMetcons();
+    }
+  };
+
   const createEmbeddings = async (text) => {
     const response = await openai.embeddings.create({
       model: 'text-embedding-ada-002',
@@ -78,7 +129,7 @@ Based on the provided gym information, create a detailed ${whiteboard.programLen
     return response.data[0].embedding;
   };
 
-  const matchWorkouts = async (embedding, matchTable) => {
+  const matchWorkouts = async (embedding) => {
     const matchResult = await supabase.rpc('match_external_workouts', {
       query_embedding: embedding,
       match_threshold: 0.4,
@@ -86,10 +137,7 @@ Based on the provided gym information, create a detailed ${whiteboard.programLen
     });
 
     if (matchResult.error) {
-      console.error(
-        `Error matching workouts from ${matchTable}:`,
-        matchResult.error
-      );
+      console.error('Error matching workouts:', matchResult.error);
       return [];
     }
     return matchResult.data;
@@ -112,7 +160,6 @@ Based on the provided gym information, create a detailed ${whiteboard.programLen
           .single());
 
         if (internalError && internalError.code !== 'PGRST116') {
-          // If the error is not "No rows found", throw it
           throw internalError;
         }
 
@@ -125,10 +172,7 @@ Based on the provided gym information, create a detailed ${whiteboard.programLen
       let matchedExternalWorkouts = [];
       if (internalWorkout) {
         const internalEmbedding = internalWorkout.embedding;
-        matchedExternalWorkouts = await matchWorkouts(
-          internalEmbedding,
-          'match_external_workouts'
-        );
+        matchedExternalWorkouts = await matchWorkouts(internalEmbedding);
       }
 
       let exampleWorkoutEmbedding,
@@ -137,10 +181,7 @@ Based on the provided gym information, create a detailed ${whiteboard.programLen
         exampleWorkoutEmbedding = await createEmbeddings(
           whiteboard.exampleWorkout
         );
-        matchedExampleWorkouts = await matchWorkouts(
-          exampleWorkoutEmbedding,
-          'match_external_workouts'
-        );
+        matchedExampleWorkouts = await matchWorkouts(exampleWorkoutEmbedding);
       }
 
       const combinedWorkouts = [
@@ -176,32 +217,35 @@ Based on the provided gym information, create a detailed ${whiteboard.programLen
   };
 
   useEffect(() => {
-    messages.length < 1
-      ? setContent('No messages yet')
-      : setContent(messages.map((msg) => msg.content).join('\n'));
+    if (messages.length > 0) {
+      const latestMessage = messages[messages.length - 1];
+      if (latestMessage.role === 'assistant') {
+        setContent(latestMessage.content);
+        setUnsavedChanges(true);
+      }
+    }
   }, [messages]);
 
+  const handleContentChange = (e) => {
+    setContent(e.target.value);
+    setUnsavedChanges(true);
+  };
+
   const goToNextPage = () => {
-    setCurrentPage((prev) =>
-      prev + 1 < assistantMessages.length ? prev + 1 : prev
-    );
+    if (currentPage + 1 < savedMetcons.length) {
+      setCurrentPage(currentPage + 1);
+      setContent(savedMetcons[currentPage + 1].generated_workout);
+      setUnsavedChanges(false);
+    }
   };
 
   const goToPreviousPage = () => {
-    setCurrentPage((prev) => (prev > 0 ? prev - 1 : 0));
-  };
-
-  useEffect(() => {
-    if (messages.length < 1) {
-      setContent('No messages yet');
-    } else {
-      const filteredMessages = messages.filter(
-        (msg) => msg.role === 'assistant'
-      );
-      setAssistantMessages(filteredMessages);
-      setContent(filteredMessages[currentPage]?.content || 'No messages yet');
+    if (currentPage > 0) {
+      setCurrentPage(currentPage - 1);
+      setContent(savedMetcons[currentPage - 1].generated_workout);
+      setUnsavedChanges(false);
     }
-  }, [messages, currentPage]);
+  };
 
   const downloadPDF = () => {
     const doc = new jsPDF();
@@ -212,13 +256,13 @@ Based on the provided gym information, create a detailed ${whiteboard.programLen
   return (
     <div className="container mx-auto my-6 px-4">
       <h1 className="text-2xl font-bold mb-4">Metcon Programming Editor</h1>
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-4 sm:space-y-0">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-4 sm:space-y-0 mb-4">
         <ReviewDetails office={office} whiteboard={whiteboard} />
         <button
           className="btn btn-success text-white w-full sm:w-auto"
           onClick={handleGenerateProgramming}
         >
-          Generate Programming
+          Generate New Programming
         </button>
       </div>
 
@@ -233,35 +277,53 @@ Based on the provided gym information, create a detailed ${whiteboard.programLen
         </div>
       )}
 
-      <div className="editor-container mt-6">
+      <div className="editor-container mt-6 bg-white shadow-lg rounded-lg p-6">
         <textarea
           ref={textAreaRef}
-          className="textarea textarea-bordered w-full h-64 sm:h-96"
+          className="w-full h-[60vh] p-4 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none font-sans text-base leading-relaxed"
           value={content}
-          onChange={(e) => setContent(e.target.value)}
+          onChange={handleContentChange}
+          style={{
+            minHeight: '500px',
+            lineHeight: '1.5',
+            color: '#333',
+            backgroundColor: '#fff',
+          }}
         ></textarea>
-        <div className="pagination-controls my-4 flex justify-between">
-          <button
-            className="btn btn-primary"
-            onClick={goToPreviousPage}
-            disabled={currentPage === 0}
-          >
-            Previous
-          </button>
-          <button
-            className="btn btn-primary"
-            onClick={goToNextPage}
-            disabled={currentPage === assistantMessages.length - 1}
-          >
-            Next
-          </button>
+        <div className="controls my-4 flex justify-between items-center">
+          <div className="pagination-controls flex items-center">
+            <button
+              className="btn btn-primary mr-2"
+              onClick={goToPreviousPage}
+              disabled={currentPage === 0}
+            >
+              Previous
+            </button>
+            <span>{`${currentPage + 1} / ${savedMetcons.length}`}</span>
+            <button
+              className="btn btn-primary ml-2"
+              onClick={goToNextPage}
+              disabled={currentPage === savedMetcons.length - 1}
+            >
+              Next
+            </button>
+          </div>
+          <div className="action-buttons">
+            <button
+              className="btn btn-primary text-white mr-2"
+              onClick={saveMetcon}
+              disabled={!unsavedChanges}
+            >
+              Save
+            </button>
+            <button
+              className="btn btn-secondary text-white"
+              onClick={downloadPDF}
+            >
+              Download PDF
+            </button>
+          </div>
         </div>
-        <button
-          className="btn btn-primary text-white w-full"
-          onClick={downloadPDF}
-        >
-          Download as PDF
-        </button>
       </div>
     </div>
   );
