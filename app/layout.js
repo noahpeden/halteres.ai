@@ -27,7 +27,9 @@ export default function RootLayout({ children }) {
           <OfficeProvider>
             <Navbar />
 
-            <main className={`mt-12 p-[2rem]  bg-white-100`}>{children}</main>
+            <main className={`mt-12 p-[2rem] pt-[4rem] bg-white-100`}>
+              {children}
+            </main>
           </OfficeProvider>
         </AuthProvider>
       </body>
