@@ -18,7 +18,7 @@ export default function EditProgram({ params }) {
   return (
     <div className="w-full max-w-3xl mx-auto px-4 py-6">
       <div className="w-full mb-8">
-        <ul className="steps steps-vertical w-full">
+        <ul className="steps steps-horizontal sm:steps-horizontal w-full">
           {steps.map((s, index) => (
             <li
               key={index}
