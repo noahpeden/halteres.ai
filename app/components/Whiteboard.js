@@ -1,36 +1,72 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useOfficeContext } from '../contexts/OfficeContext';
 import ProgramLength from './ProgramLength';
 import { InformationCircleIcon } from '@heroicons/react/24/outline';
 import { useAuth } from '@/contexts/AuthContext';
 import { handleWorkoutUpload } from '@/actions/workout-upload';
+import { upsertWhiteboard } from '@/actions/upsertWhiteboard';
 
 export default function Whiteboard({ setStep, params }) {
   const { addWhiteboardInfo, setReadyForQuery, whiteboard } =
     useOfficeContext();
-  const { user } = useAuth();
-  const [workoutFormat, setWorkoutFormat] = useState(
-    whiteboard?.workoutFormat ?? ''
-  );
+  const { user, supabase } = useAuth();
+
+  const [workoutFormat, setWorkoutFormat] = useState('');
   const [personalization, setPersonalization] = useState(
     'Crossfit Coach or Owner'
   );
-  const [programLength, setProgramLength] = useState(
-    whiteboard?.programLength ?? '1 Day'
-  );
-  const [focus, setFocus] = useState(whiteboard?.focus ?? '');
-  const [exampleWorkout, setExampleWorkout] = useState(
-    whiteboard?.exampleWorkout ?? ''
-  );
+  const [programLength, setProgramLength] = useState('1 Day');
+  const [focus, setFocus] = useState('');
+  const [exampleWorkout, setExampleWorkout] = useState('');
   const [fileValue, setFileValue] = useState(null);
+
+  useEffect(() => {
+    async function fetchWhiteboardInfo() {
+      const { data, error } = await supabase
+        .from('whiteboard')
+        .select('*')
+        .eq('program_id', params.programId)
+        .single();
+
+      if (error) {
+        console.error('Error fetching whiteboard data:', error);
+      } else {
+        const whiteboardInfo = {
+          workoutFormat: data.workout_format,
+          personalization: data.personalization,
+          programLength: data.cycle_length,
+          focus: data.focus,
+          exampleWorkout: data.references,
+          programId: data.program_id,
+          userId: data.user_id,
+        };
+        console.log('Fetched whiteboardInfo:', whiteboardInfo);
+        addWhiteboardInfo(whiteboardInfo);
+      }
+    }
+    fetchWhiteboardInfo();
+  }, [params.programId]);
+
+  useEffect(() => {
+    if (whiteboard) {
+      setWorkoutFormat(whiteboard.workoutFormat || '');
+      setPersonalization(
+        whiteboard.personalization || 'Crossfit Coach or Owner'
+      );
+      setProgramLength(whiteboard.programLength || '1 Day');
+      setFocus(whiteboard.focus || '');
+      setExampleWorkout(whiteboard.exampleWorkout || '');
+    }
+  }, [whiteboard]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     const whiteboardDetails = {
+      workoutFormat,
       personalization,
       programLength,
-      workoutFormat,
       focus,
       exampleWorkout,
       programId: params.programId,
@@ -38,23 +74,12 @@ export default function Whiteboard({ setStep, params }) {
       internalWorkoutName: fileValue,
     };
     addWhiteboardInfo(whiteboardDetails);
+
     try {
-      const response = await fetch('/api/Whiteboard', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(whiteboardDetails),
-      });
-
-      const result = await response.json();
-
-      if (response.ok) {
-        setStep(1);
-        return setReadyForQuery(true);
-      } else {
-        throw new Error(result.error);
-      }
+      const data = await upsertWhiteboard(whiteboardDetails);
+      console.log('Whiteboard upserted:', data);
+      setStep(1);
+      setReadyForQuery(true);
     } catch (error) {
       console.error('Error:', error);
     }
