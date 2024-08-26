@@ -161,7 +161,7 @@ export default function HomePage() {
       </section>
 
       {/* Testimonials */}
-      <section className="py-16">
+      {/* <section className="py-16">
         <div className="container mx-auto px-4">
           <h2 className="text-3xl font-bold text-center mb-12">
             Trusted by Fitness Professionals
@@ -187,10 +187,10 @@ export default function HomePage() {
             </div>
           </div>
         </div>
-      </section>
+      </section> */}
 
       {/* Call to Action */}
-      <section className="bg-blue-600 text-white py-16">
+      {/* <section className="bg-blue-600 text-white py-16">
         <div className="container mx-auto px-4 text-center">
           <h2 className="text-3xl font-bold mb-4">
             Ready to Transform Your Fitness Programming?
@@ -208,7 +208,7 @@ export default function HomePage() {
             programming risk-free.
           </p>
         </div>
-      </section>
+      </section> */}
     </div>
   );
 }

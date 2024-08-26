@@ -11,7 +11,7 @@ import { InformationCircleIcon } from '@heroicons/react/24/outline';
 export default function Office({ setStep, params }) {
   const { user, supabase } = useAuth();
   const { addOfficeInfo, office } = useOfficeContext();
-
+  const [loaded, setLoaded] = useState(false);
   const [equipmentList, setEquipmentList] = useState([]);
   const [coachList, setCoachList] = useState([]);
   const [newCoachName, setNewCoachName] = useState('');
@@ -43,6 +43,7 @@ export default function Office({ setStep, params }) {
           coaches: JSON.parse(data.coaches || '[]'),
         };
         addOfficeInfo(officeInfo);
+        setLoaded(true);
       }
     }
     fetchOfficeInfo();
@@ -59,8 +60,7 @@ export default function Office({ setStep, params }) {
       setOutdoorRunning(office.outdoorRunning ?? true);
       setQuirks(office.quirks || '');
     }
-  }, [office]);
-
+  }, [loaded]);
   const handleAddCoach = () => {
     if (newCoachName && newCoachExperience) {
       setCoachList([

@@ -55,18 +55,7 @@ Create a detailed workout program for a ${
   }.`;
 
   const systemPrompt = `
-Based on the provided gym information, create a detailed ${whiteboard.programLength} workout plan. Make sure to write an intro to the program detailing what the program will focus on. Include workouts for each day based on the ${whiteboard.programLength}, tailored to the available equipment and coaching expertise. Specify exact workouts, without suggesting repetitions of previous workouts or scaling instructions. Provide scaled, RX, and compete weight and movement options, as well as female and male weight and movement options. Include specific stretches and cool down movements if the user asks for it in the workout format. Focus on listing unique and specific workouts for each day of the ${whiteboard.programLength}. Most importantly tailor the workouts to the user's profession as a ${whiteboard.personalization} AND make sure the provided template workout and/or internal workouts as the leading influences for the workouts you generate. Make sure to ONLY generate the number of workouts they ask for in the workout cycle length e.g ${whiteboard.programLength} days. Finally, integrate the matched external workouts as references. `;
-
-  const prompt = [
-    {
-      content: userPrompt,
-      role: 'user',
-    },
-    {
-      content: systemPrompt,
-      role: 'system',
-    },
-  ];
+Based on the provided gym information, create a detailed ${whiteboard.programLength} workout plan and program. Make sure to write an intro to the program detailing what the program will focus on. Include workouts for each day based on the ${whiteboard.programLength}, tailored to the available equipment and coaching expertise. Specify exact workouts, without suggesting repetitions of previous workouts or scaling instructions. Include coaches notes and suggestions for each strength and conditioning workout. Provide scaled, RX, and compete weight and movement options, as well as making sure to provide female and male weight and movement options. Include specific stretches and cool down movements if the user asks for it in the workout format. Focus on listing unique and specific workouts for each day of the ${whiteboard.programLength}. Most importantly tailor the workouts to the user's profession as a ${whiteboard.personalization} AND make sure the provided template workout and/or internal workouts as the leading influences for the workouts you generate. Make sure to ONLY generate the number of workouts they ask for in the workout cycle length e.g ${whiteboard.programLength} days. Finally, integrate the matched external workouts as references. `;
 
   const { messages, submitPrompt } = useChatCompletion({
     model: 'gpt-4o',
