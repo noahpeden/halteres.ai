@@ -111,7 +111,7 @@ Based on the provided gym information, create a detailed ${whiteboard.programLen
 
   const createEmbeddings = async (text) => {
     const response = await openai.embeddings.create({
-      model: 'text-embedding-ada-002',
+      model: 'text-embedding-3-large',
       input: text,
     });
 
@@ -119,7 +119,7 @@ Based on the provided gym information, create a detailed ${whiteboard.programLen
   };
 
   const matchWorkouts = async (embedding) => {
-    const matchResult = await supabase.rpc('match_external_workouts', {
+    const matchResult = await supabase.rpc('find_workout_references', {
       query_embedding: embedding,
       match_threshold: 0.4,
       match_count: 20,
