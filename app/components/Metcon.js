@@ -30,32 +30,70 @@ export default function Metcon({ params }) {
   const userPrompt = `
 Create a detailed workout program for a ${
     whiteboard.personalization
-  } for the next ${whiteboard.programLength} days. The user is a ${
+  } for the next ${whiteboard.programLength} days or weeks. The user is a ${
     whiteboard.personalization
-  } and the gym they own has the following details and they'd like to create a plan based on the provided information. The gym is equipped with the following equipment: ${
-    office?.equipmentList
-  }. The coaching staff has the following experience: ${
+  } and the gym they own has the following details:
+- Equipment: ${office?.equipmentList}
+- Coaching staff experience: ${
     office?.coachList?.length
       ? office?.coachList.map((coach) => coach.experience).join(', ')
-      : "the coaching staff wasn't listed"
-  }. The class schedule is as follows: ${
-    office?.classSchedule
-  }. The class duration is ${office?.classDuration}. The workout format is ${
-    whiteboard.workoutFormat
-  }. The workout cycle length is ${
-    whiteboard.programLength
-  }. The workout focus is ${
-    whiteboard.focus
-  }. Please use the example workout and uploaded workout (if they've provided them) they've provided as the leading influencers in your writing: Example workout: ${
-    whiteboard.exampleWorkout
-  }, and uploaded workout: ${
+      : 'Not specified'
+  }
+- Class schedule: ${office?.classSchedule}
+- Class duration: ${office?.classDuration}
+- Workout format: ${whiteboard.workoutFormat}
+- Workout cycle length: ${whiteboard.programLength}
+- Workout focus: ${whiteboard.focus}
+
+Please use the following as primary references for workout structure and style:
+1. Example workout: ${whiteboard.exampleWorkout}
+2. Uploaded workouts: ${
     matchedWorkouts.length
       ? matchedWorkouts.map((workout) => workout.content).join(', ')
       : 'No uploaded workout provided'
-  }.`;
+  }
+`;
 
   const systemPrompt = `
-Based on the provided gym information, create a detailed ${whiteboard.programLength} workout plan and program. Make sure to write an intro to the program detailing what the program will focus on. Include workouts for each day based on the ${whiteboard.programLength}, tailored to the available equipment and coaching expertise. Specify exact workouts, without suggesting repetitions of previous workouts or scaling instructions. Include coaches notes and suggestions for each strength and conditioning workout. Provide scaled, RX, and compete weight and movement options, as well as making sure to provide female and male weight and movement options. Include specific stretches and cool down movements if the user asks for it in the workout format. Focus on listing unique and specific workouts for each day of the ${whiteboard.programLength}. Most importantly tailor the workouts to the user's profession as a ${whiteboard.personalization} AND make sure the provided template workout and/or internal workouts as the leading influences for the workouts you generate. Make sure to ONLY generate the number of workouts they ask for in the workout cycle length e.g ${whiteboard.programLength} days. Finally, integrate the matched external workouts as references. `;
+As a knowledgeable CrossFit coach, create a comprehensive ${whiteboard.programLength}-day workout plan tailored to a ${whiteboard.personalization}. Follow this structure for each day's workout:
+
+1. Title: Create a unique, engaging title for each workout.
+
+2. Body: 
+   - RX: Provide the main workout with specific weights and movements.
+   - Scaled: Offer a scaled version with adjusted weights and movement modifications.
+   - RX+: Include a more challenging version for advanced athletes.
+
+3. Strategy:
+   a. Time Frame: Break down the class structure (e.g., Intro, Warmup, Strength, Workout, Cooldown, Mobility).
+   b. Target Score: Include target times and time caps for the workout.
+   c. Stimulus and Goals: Describe the intended stimulus and overall goals of the workout.
+
+4. Workout Strategy & Flow:
+   - For each movement, provide detailed strategies including:
+     • Form cues
+     • Pacing advice
+     • Common faults to avoid
+     • Specific weights for male and female athletes
+   - Include coach's notes and suggestions for each strength and conditioning component.
+
+5. Scaling:
+   - Explain the scaling aim
+   - Provide specific options for RX+, RX, Scaled, Limited Equipment, and Large Class scenarios
+
+Key points to remember:
+- Each week builds on the previous week's progress.
+- Make sure there is variety in movements and time domains.
+- Include benchmark workouts and retests to track progress at the beginning and end of the program.
+- Integrate the provided template workout and/or internal workouts as primary influences.
+- Generate exactly ${whiteboard.programLength} unique workouts.
+- Use the matched external workouts as references to inform your programming.
+- Include specific stretches and cool-down movements if requested in the workout format.
+- Ensure each day's workout is unique and specific, avoiding repetitions or generic instructions.
+- Use RPE (Rate of Perceived Exertion) scales to guide intensity levels as well as percentages of max lifts.
+
+Your goal is to create a high-quality, personalized workout program that matches or exceeds the detail and specificity of professionally curated CrossFit workouts.
+`;
 
   const { messages, submitPrompt } = useChatCompletion({
     model: 'gpt-4o',
