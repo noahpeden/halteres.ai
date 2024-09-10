@@ -41,7 +41,6 @@ export default function Whiteboard({ setStep, params }) {
           programId: data.program_id,
           userId: data.user_id,
         };
-        console.log('Fetched whiteboardInfo:', whiteboardInfo);
         addWhiteboardInfo(whiteboardInfo);
       }
     }
@@ -77,7 +76,6 @@ export default function Whiteboard({ setStep, params }) {
 
     try {
       const data = await upsertWhiteboard(whiteboardDetails);
-      console.log('Whiteboard upserted:', data);
       setStep(1);
       setReadyForQuery(true);
     } catch (error) {

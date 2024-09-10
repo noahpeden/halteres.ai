@@ -31,7 +31,6 @@ export default function Programs() {
       const result = await response.json();
 
       if (response.ok) {
-        console.log('Workout successfully customized:', result);
         router.push(`/program/${result?.data[0].program_id}`);
         // Handle success (e.g., show success message, redirect, etc.)
       } else {
