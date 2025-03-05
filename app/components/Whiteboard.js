@@ -3,9 +3,9 @@ import { useState, useEffect } from 'react';
 import { useOfficeContext } from '../contexts/OfficeContext';
 import ProgramLength from './ProgramLength';
 import { InformationCircleIcon } from '@heroicons/react/24/outline';
-import { useAuth } from '@/contexts/AuthContext';
-import { handleWorkoutUpload } from '@/actions/workout-upload';
-import { upsertWhiteboard } from '@/actions/upsertWhiteboard';
+import { useAuth } from '../contexts/AuthContext';
+import { handleWorkoutUpload } from '../actions/workout-upload';
+import { upsertWhiteboard } from '../actions/upsertWhiteboard';
 
 export default function Whiteboard({ setStep, params }) {
   const { addWhiteboardInfo, setReadyForQuery, whiteboard } =

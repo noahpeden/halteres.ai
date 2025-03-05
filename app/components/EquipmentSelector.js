@@ -1,5 +1,5 @@
 'use client';
-import equipmentList from '@/utils/equipmentList';
+import equipmentList from '../utils/equipmentList';
 
 function EquipmentSelector({ selected, setSelected }) {
   return (

@@ -9,7 +9,7 @@ import {
   ClockIcon,
   UserGroupIcon,
 } from '@heroicons/react/24/outline';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from './contexts/AuthContext';
 import Image from 'next/image';
 import whiteboardWriting from '@/assets/generating-programming.gif';
 import gymWhiteboard from '@/assets/configure-gym.gif';

@@ -1,13 +1,14 @@
 {
   "compilerOptions": {
-    "baseUrl": "app",
+    "baseUrl": ".",
     "paths": {
-      "@/utils/*": ["utils/*"],
-      "@/assets/*": ["assets/*"],
-      "@/components/*": ["components/*"],
-      "@/contexts/*": ["contexts/*"],
-      "@/hooks/*": ["hooks/*"],
-      "@/actions/*": ["actions/*"]
+      "@/app/*": ["app/*"],
+      "@/utils/*": ["app/utils/*"],
+      "@/assets/*": ["app/assets/*"],
+      "@/components/*": ["app/components/*"],
+      "@/contexts/*": ["app/contexts/*"],
+      "@/hooks/*": ["app/hooks/*"],
+      "@/actions/*": ["app/actions/*"]
     }
   }
 }

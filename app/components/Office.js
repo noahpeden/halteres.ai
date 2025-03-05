@@ -4,8 +4,8 @@ import { useState, useEffect } from 'react';
 import EquipmentSelector from './EquipmentSelector';
 import Coaches from './Coaches';
 import { XMarkIcon } from '@heroicons/react/16/solid';
-import { useAuth } from '@/contexts/AuthContext';
-import { useOfficeContext } from '@/contexts/OfficeContext';
+import { useAuth } from '../contexts/AuthContext';
+import { useOfficeContext } from '../contexts/OfficeContext';
 import { InformationCircleIcon } from '@heroicons/react/24/outline';
 
 export default function Office({ setStep, params }) {

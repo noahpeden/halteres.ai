@@ -1,12 +1,12 @@
 'use client';
 import React, { useState, useEffect, useRef } from 'react';
-import { useOfficeContext } from '@/contexts/OfficeContext';
+import { useOfficeContext } from '../contexts/OfficeContext';
 import OpenAI from 'openai';
 import jsPDF from 'jspdf';
-import ReviewDetails from '@/components/ReviewDetails';
-import { useChatCompletion } from '@/hooks/useOpenAiStream/chat-hook';
-import { useAuth } from '@/contexts/AuthContext';
-import { createClient } from '@/utils/supabase/client';
+import ReviewDetails from './ReviewDetails';
+import { useChatCompletion } from '../hooks/useOpenAiStream/chat-hook';
+import { useAuth } from '../contexts/AuthContext';
+import { createClient } from '../utils/supabase/client';
 
 export default function Metcon({ params }) {
   const supabase = createClient();

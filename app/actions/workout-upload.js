@@ -1,7 +1,7 @@
 // app/actions/workout-upload.js
 'use server';
 
-import { createClient } from '@/utils/supabase/server';
+import { createClient } from '../utils/supabase/server';
 import OpenAI from 'openai';
 import mammoth from 'mammoth';
 import pdf from 'pdf-parse/lib/pdf-parse';
