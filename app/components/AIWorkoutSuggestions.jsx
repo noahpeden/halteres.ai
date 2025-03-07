@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import equipmentList from '@/utils/equipmentList';
 
@@ -7,15 +7,62 @@ export default function AIWorkoutSuggestions({ programId, onSelectWorkout }) {
   const { supabase } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
+  const [referenceWorkouts, setReferenceWorkouts] = useState([]);
+  const [selectedReference, setSelectedReference] = useState(null);
   const [formData, setFormData] = useState({
     goal: 'strength',
-    duration: '60',
+    duration: '7', // Changed to 7 days by default
     difficulty: 'intermediate',
     equipment: [],
     focusArea: '',
     additionalNotes: '',
+    personalization: '',
+    workoutFormats: [], // Changed to array for multi-select
+    quirks: '',
+    exampleWorkout: '',
   });
   const [error, setError] = useState('');
+  const [officeData, setOfficeData] = useState({
+    gymName: '',
+    equipmentList: '',
+    coachList: [],
+    classSchedule: '',
+    classDuration: '60',
+  });
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [allEquipmentSelected, setAllEquipmentSelected] = useState(false);
+
+  // Fetch reference workouts on component mount
+  useEffect(() => {
+    async function fetchReferenceWorkouts() {
+      try {
+        const { data, error } = await supabase
+          .from('external_workouts')
+          .select('id, title, body, tags') // Remove workout_type if it doesn't exist
+          .limit(10);
+
+        if (error) throw error;
+        setReferenceWorkouts(data || []);
+      } catch (error) {
+        console.error('Error fetching reference workouts:', error);
+      }
+    }
+
+    fetchReferenceWorkouts();
+  }, [supabase]);
+
+  // Check if all equipment is selected when component mounts or equipment changes
+  useEffect(() => {
+    if (
+      equipmentList.length > 0 &&
+      formData.equipment.length === equipmentList.length
+    ) {
+      setAllEquipmentSelected(true);
+    } else {
+      setAllEquipmentSelected(false);
+    }
+  }, [formData.equipment]);
 
   const goals = [
     { value: 'strength', label: 'Strength' },
@@ -42,6 +89,15 @@ export default function AIWorkoutSuggestions({ programId, onSelectWorkout }) {
     { value: 'anterior_chain', label: 'Anterior Chain' },
   ];
 
+  const workoutFormats = [
+    { value: 'standard', label: 'Standard Format' },
+    { value: 'emom', label: 'EMOM' },
+    { value: 'amrap', label: 'AMRAP' },
+    { value: 'for_time', label: 'For Time' },
+    { value: 'tabata', label: 'Tabata' },
+    { value: 'circuit', label: 'Circuit Training' },
+  ];
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
@@ -50,67 +106,185 @@ export default function AIWorkoutSuggestions({ programId, onSelectWorkout }) {
     }));
   };
 
+  const handleOfficeChange = (e) => {
+    const { name, value } = e.target;
+    setOfficeData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
   const handleEquipmentChange = (e) => {
-    const value = parseInt(e.target.value);
+    const value = e.target.value === '-1' ? -1 : parseInt(e.target.value);
+    const isChecked = e.target.checked;
+
+    // If "Select All" is clicked
+    if (value === -1) {
+      if (isChecked) {
+        // Select all equipment
+        setFormData((prev) => ({
+          ...prev,
+          equipment: equipmentList.map((item) => item.value),
+        }));
+        setAllEquipmentSelected(true);
+      } else {
+        // Deselect all equipment
+        setFormData((prev) => ({
+          ...prev,
+          equipment: [],
+        }));
+        setAllEquipmentSelected(false);
+      }
+      return;
+    }
+
+    setFormData((prev) => {
+      if (isChecked) {
+        const newEquipment = [...prev.equipment, value];
+        return {
+          ...prev,
+          equipment: newEquipment,
+        };
+      } else {
+        const newEquipment = prev.equipment.filter((item) => item !== value);
+        return {
+          ...prev,
+          equipment: newEquipment,
+        };
+      }
+    });
+  };
+
+  const handleWorkoutFormatChange = (e) => {
+    const value = e.target.value;
     const isChecked = e.target.checked;
 
     setFormData((prev) => {
       if (isChecked) {
         return {
           ...prev,
-          equipment: [...prev.equipment, value],
+          workoutFormats: [...prev.workoutFormats, value],
         };
       } else {
         return {
           ...prev,
-          equipment: prev.equipment.filter((item) => item !== value),
+          workoutFormats: prev.workoutFormats.filter(
+            (format) => format !== value
+          ),
         };
       }
     });
   };
 
+  // Search for reference workouts
+  const searchReferenceWorkouts = async () => {
+    setIsLoading(true);
+    try {
+      let query = supabase
+        .from('external_workouts')
+        .select('id, title, body, tags, difficulty');
+
+      // Add text search with proper formatting
+      if (searchQuery) {
+        // Format the search query for tsquery
+        const formattedQuery = searchQuery
+          .trim()
+          .split(/\s+/)
+          .map((term) => term + ':*')
+          .join(' & ');
+
+        query = query.textSearch('body', formattedQuery, {
+          type: 'plain',
+          config: 'english',
+        });
+      }
+
+      const { data, error } = await query.limit(10);
+
+      if (error) throw error;
+      setSearchResults(data || []);
+    } catch (error) {
+      console.error('Error searching workouts:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Select a reference workout
+  const selectReferenceWorkout = (workout) => {
+    setSelectedReference(workout);
+    setFormData((prev) => ({
+      ...prev,
+      exampleWorkout: workout.title,
+    }));
+  };
+
+  // Clear selected reference
+  const clearSelectedReference = () => {
+    setSelectedReference(null);
+    setFormData((prev) => ({
+      ...prev,
+      exampleWorkout: '',
+    }));
+  };
+
+  // Generate workouts
   const generateWorkouts = async () => {
     setIsLoading(true);
     setError('');
 
     try {
-      // Fetch program details to get context for AI suggestions
-      const { data: programData } = await supabase
-        .from('programs')
-        .select('*')
-        .eq('program_id', programId)
-        .single();
+      // Get selected equipment names
+      const selectedEquipment = formData.equipment
+        .map((id) => {
+          const equipment = equipmentList.find((item) => item.value === id);
+          return equipment ? equipment.label : null;
+        })
+        .filter(Boolean)
+        .join(', ');
 
-      // Fetch client metrics if available
-      const { data: metricsData } = await supabase
-        .from('client_metrics')
-        .select('*')
-        .eq('program_id', programId)
-        .single();
+      // Format workout formats
+      const formattedWorkoutFormats = formData.workoutFormats
+        .map((format) => {
+          const formatObj = workoutFormats.find((f) => f.value === format);
+          return formatObj ? formatObj.label : null;
+        })
+        .filter(Boolean)
+        .join(', ');
 
-      // Call your AI suggestion API
+      // Prepare data for API
+      const requestData = {
+        programId,
+        preferences: {
+          ...formData,
+          equipment: selectedEquipment,
+          workoutFormats: formattedWorkoutFormats,
+        },
+        office: officeData,
+        whiteboard: {
+          focus: selectedReference?.body || '',
+        },
+      };
+
+      // Call API to generate workouts
       const response = await fetch('/api/generate-workouts', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          programId,
-          programDetails: programData,
-          clientMetrics: metricsData,
-          preferences: formData,
-        }),
+        body: JSON.stringify(requestData),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to generate workouts');
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to generate workouts');
       }
 
       const data = await response.json();
-      setSuggestions(data.workouts || []);
+      setSuggestions(data.workouts);
     } catch (error) {
       console.error('Error generating workouts:', error);
-      setError('Failed to generate workouts. Please try again.');
+      setError(error.message || 'Failed to generate workouts');
     } finally {
       setIsLoading(false);
     }
@@ -122,79 +296,209 @@ export default function AIWorkoutSuggestions({ programId, onSelectWorkout }) {
     }
   };
 
+  // Update the searchWithEmbeddings function
+  const searchWithEmbeddings = async () => {
+    if (!searchQuery.trim()) return;
+
+    setIsLoading(true);
+    try {
+      const response = await fetch('/api/search-workouts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          query: searchQuery,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to search workouts');
+      }
+
+      const data = await response.json();
+      console.log('Search results:', data.workouts);
+      setSearchResults(data.workouts || []);
+    } catch (error) {
+      console.error('Error searching with embeddings:', error);
+      // Fall back to text search if embedding search fails
+      searchReferenceWorkouts();
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  console.log(searchResults);
+
   return (
     <div className="bg-white rounded-lg shadow-md p-4">
       <h2 className="text-xl font-semibold mb-4">AI Workout Generator</h2>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-        <div>
-          <label className="label">
-            <span className="label-text">Training Goal</span>
-          </label>
-          <select
-            className="select select-bordered w-full"
-            name="goal"
-            value={formData.goal}
-            onChange={handleChange}
-          >
-            {goals.map((goal) => (
-              <option key={goal.value} value={goal.value}>
-                {goal.label}
-              </option>
-            ))}
-          </select>
-        </div>
+      <div className="mb-6">
+        <label className="label">
+          <span className="label-text">Reference Workout (Optional)</span>
+        </label>
+        {selectedReference ? (
+          <div className="border rounded-md p-3 relative">
+            <button
+              className="absolute top-2 right-2 btn btn-sm btn-circle"
+              onClick={clearSelectedReference}
+            >
+              ✕
+            </button>
+            <h3 className="font-medium">{selectedReference.title}</h3>
+            <p className="text-sm mt-1">
+              {selectedReference.body.substring(0, 200)}...
+            </p>
+          </div>
+        ) : (
+          <div>
+            <div className="flex gap-2 mb-2">
+              <input
+                type="text"
+                className="input input-bordered flex-grow"
+                placeholder="Search for reference workouts..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+              <button
+                className="btn btn-primary"
+                onClick={searchWithEmbeddings}
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <span className="loading loading-spinner loading-sm"></span>
+                ) : (
+                  'Search'
+                )}
+              </button>
+            </div>
+            {searchResults.length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
+                {searchResults.map((workout) => (
+                  <div
+                    key={workout.id}
+                    className="border rounded-md p-2 cursor-pointer hover:bg-blue-50 transition-colors"
+                    onClick={() => selectReferenceWorkout(workout)}
+                  >
+                    <div className="font-medium">{workout.title}</div>
+                    <div className="flex gap-1 mt-1">
+                      <span className="badge badge-sm">
+                        {workout.tags?.workout_type ||
+                          workout.tags?.type ||
+                          workout.difficulty ||
+                          'Custom'}
+                      </span>
+                      {workout.tags?.focus && (
+                        <span className="badge badge-sm badge-outline">
+                          {workout.tags.focus}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
 
-        <div>
-          <label className="label">
-            <span className="label-text">Workout Duration (minutes)</span>
-          </label>
-          <input
-            type="number"
-            className="input input-bordered w-full"
-            name="duration"
-            value={formData.duration}
-            onChange={handleChange}
-            min="10"
-            max="120"
-          />
-        </div>
+      <div className="mb-6">
+        <h3 className="font-medium mb-3">Workout Parameters</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="label">
+              <span className="label-text">Goal</span>
+            </label>
+            <select
+              className="select select-bordered w-full"
+              name="goal"
+              value={formData.goal}
+              onChange={handleChange}
+            >
+              {goals.map((goal) => (
+                <option key={goal.value} value={goal.value}>
+                  {goal.label}
+                </option>
+              ))}
+            </select>
+          </div>
 
-        <div>
-          <label className="label">
-            <span className="label-text">Difficulty Level</span>
-          </label>
-          <select
-            className="select select-bordered w-full"
-            name="difficulty"
-            value={formData.difficulty}
-            onChange={handleChange}
-          >
-            {difficulties.map((difficulty) => (
-              <option key={difficulty.value} value={difficulty.value}>
-                {difficulty.label}
-              </option>
-            ))}
-          </select>
-        </div>
+          <div>
+            <label className="label">
+              <span className="label-text">Difficulty</span>
+            </label>
+            <select
+              className="select select-bordered w-full"
+              name="difficulty"
+              value={formData.difficulty}
+              onChange={handleChange}
+            >
+              {difficulties.map((difficulty) => (
+                <option key={difficulty.value} value={difficulty.value}>
+                  {difficulty.label}
+                </option>
+              ))}
+            </select>
+          </div>
 
-        <div>
-          <label className="label">
-            <span className="label-text">Focus Area</span>
-          </label>
-          <select
-            className="select select-bordered w-full"
-            name="focusArea"
-            value={formData.focusArea}
-            onChange={handleChange}
-          >
-            <option value="">Any Focus Area</option>
-            {focusAreas.map((area) => (
-              <option key={area.value} value={area.value}>
-                {area.label}
-              </option>
-            ))}
-          </select>
+          <div>
+            <label className="label">
+              <span className="label-text">Focus Area</span>
+            </label>
+            <select
+              className="select select-bordered w-full"
+              name="focusArea"
+              value={formData.focusArea}
+              onChange={handleChange}
+            >
+              <option value="">Select Focus Area</option>
+              {focusAreas.map((area) => (
+                <option key={area.value} value={area.value}>
+                  {area.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="label">
+              <span className="label-text">Duration (days)</span>
+            </label>
+            <select
+              className="select select-bordered w-full"
+              name="duration"
+              value={formData.duration}
+              onChange={handleChange}
+            >
+              <option value="1">1 Day</option>
+              <option value="3">3 Days</option>
+              <option value="5">5 Days</option>
+              <option value="7">7 Days</option>
+              <option value="14">14 Days</option>
+              <option value="30">30 Days</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div className="mb-6">
+        <label className="label">
+          <span className="label-text">Workout Formats</span>
+        </label>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-2 p-2 border rounded-md">
+          {workoutFormats.map((format) => (
+            <label key={format.value} className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                className="checkbox"
+                value={format.value}
+                checked={formData.workoutFormats.includes(format.value)}
+                onChange={handleWorkoutFormatChange}
+              />
+              <span>{format.label}</span>
+            </label>
+          ))}
         </div>
       </div>
 
@@ -202,22 +506,45 @@ export default function AIWorkoutSuggestions({ programId, onSelectWorkout }) {
         <label className="label">
           <span className="label-text">Available Equipment</span>
         </label>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 max-h-40 overflow-y-auto p-2 border rounded-md">
-          {equipmentList.map((equipment) => (
-            <div key={equipment.value} className="form-control">
-              <label className="label cursor-pointer justify-start gap-2">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-60 overflow-y-auto p-2 border rounded-md">
+          <label className="flex items-center gap-2 font-semibold">
+            <input
+              type="checkbox"
+              className="checkbox"
+              value="-1"
+              checked={allEquipmentSelected}
+              onChange={handleEquipmentChange}
+            />
+            <span>Select All</span>
+          </label>
+          {equipmentList &&
+            equipmentList.map((item) => (
+              <label key={item.value} className="flex items-center gap-2">
                 <input
                   type="checkbox"
-                  className="checkbox checkbox-sm checkbox-primary"
-                  value={equipment.value}
-                  checked={formData.equipment.includes(equipment.value)}
+                  className="checkbox"
+                  value={item.value}
+                  checked={formData.equipment.includes(item.value)}
                   onChange={handleEquipmentChange}
                 />
-                <span className="label-text">{equipment.label}</span>
+                <span>{item.label}</span>
               </label>
-            </div>
-          ))}
+            ))}
         </div>
+      </div>
+
+      <div className="mb-6">
+        <label className="label">
+          <span className="label-text">Personalization</span>
+        </label>
+        <input
+          type="text"
+          className="input input-bordered w-full"
+          name="personalization"
+          value={formData.personalization}
+          onChange={handleChange}
+          placeholder="e.g., CrossFit athlete, powerlifter, etc."
+        />
       </div>
 
       <div className="mb-6">
@@ -229,8 +556,22 @@ export default function AIWorkoutSuggestions({ programId, onSelectWorkout }) {
           name="additionalNotes"
           value={formData.additionalNotes}
           onChange={handleChange}
-          placeholder="Any specific requirements or constraints..."
+          placeholder="Any additional information or specific requirements..."
           rows="3"
+        />
+      </div>
+
+      <div className="mb-6">
+        <label className="label">
+          <span className="label-text">Special Quirks or Preferences</span>
+        </label>
+        <textarea
+          className="textarea textarea-bordered w-full"
+          name="quirks"
+          value={formData.quirks}
+          onChange={handleChange}
+          placeholder="Any special preferences or quirks for the workouts..."
+          rows="2"
         />
       </div>
 
@@ -278,7 +619,10 @@ export default function AIWorkoutSuggestions({ programId, onSelectWorkout }) {
                 className="border rounded-md p-4 hover:bg-blue-50 transition-colors cursor-pointer"
                 onClick={() => handleSelectWorkout(workout)}
                 draggable
-                onDragStart={() => handleSelectWorkout(workout)}
+                onDragStart={(e) => {
+                  e.dataTransfer.setData('text/plain', JSON.stringify(workout));
+                  handleSelectWorkout(workout);
+                }}
               >
                 <h4 className="font-medium text-lg">
                   {workout.title || `Workout ${index + 1}`}
@@ -288,7 +632,7 @@ export default function AIWorkoutSuggestions({ programId, onSelectWorkout }) {
                     {workout.type || formData.goal}
                   </span>
                   <span className="badge badge-secondary">
-                    {workout.duration || formData.duration} min
+                    Day {workout.day || index + 1}
                   </span>
                   <span className="badge">
                     {workout.difficulty || formData.difficulty}

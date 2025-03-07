@@ -4,10 +4,12 @@ import { useAuth } from '@/contexts/AuthContext';
 import AIWorkoutSuggestions from '@/components/AIWorkoutSuggestions';
 import PeriodizationView from '@/components/PeriodizationView';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 export default function ProgramWorkoutsPage({ params }) {
   const { programId } = params;
   const { supabase } = useAuth();
+  const router = useRouter();
   const [program, setProgram] = useState(null);
   const [workouts, setWorkouts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -21,13 +23,13 @@ export default function ProgramWorkoutsPage({ params }) {
         const { data: programData, error: programError } = await supabase
           .from('programs')
           .select('*')
-          .eq('program_id', programId)
+          .eq('id', programId)
           .single();
 
         if (programError) throw programError;
         setProgram(programData);
 
-        // Fetch program workouts
+        // Fetch program workouts from the new table
         const { data: workoutsData, error: workoutsError } = await supabase
           .from('program_workouts')
           .select('*')
@@ -47,8 +49,39 @@ export default function ProgramWorkoutsPage({ params }) {
   }, [programId, supabase]);
 
   const handleSelectWorkout = (workout) => {
-    // Handle the selected workout from AI suggestions
-    console.log('Selected AI workout:', workout);
+    // Navigate to calendar to schedule the workout
+    router.push(
+      `/program/${programId}/calendar?selectedWorkout=${encodeURIComponent(
+        JSON.stringify(workout)
+      )}`
+    );
+  };
+
+  const deleteWorkout = async (workoutId) => {
+    if (!confirm('Are you sure you want to delete this workout?')) return;
+
+    setIsLoading(true);
+    try {
+      const { error } = await supabase
+        .from('program_workouts')
+        .delete()
+        .eq('id', workoutId);
+
+      if (error) throw error;
+
+      // Update local state
+      setWorkouts(workouts.filter((w) => w.id !== workoutId));
+    } catch (error) {
+      console.error('Error deleting workout:', error);
+      alert('Failed to delete workout. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const viewWorkoutDetails = (workout) => {
+    // You can implement a modal or navigate to a details page
+    alert(`Workout details: ${workout.title}\n\n${workout.body}`);
   };
 
   if (isLoading) {
@@ -140,11 +173,13 @@ export default function ProgramWorkoutsPage({ params }) {
                   {workouts.map((workout) => (
                     <tr key={workout.id}>
                       <td>
-                        {new Date(workout.scheduled_date).toLocaleDateString()}
+                        {workout.scheduled_date
+                          ? new Date(
+                              workout.scheduled_date
+                            ).toLocaleDateString()
+                          : 'Not scheduled'}
                       </td>
-                      <td>
-                        {workout.workout_data?.title || 'Untitled Workout'}
-                      </td>
+                      <td>{workout.title || 'Untitled Workout'}</td>
                       <td>
                         <span className="badge badge-primary">
                           {workout.workout_type || 'Custom'}
@@ -152,7 +187,10 @@ export default function ProgramWorkoutsPage({ params }) {
                       </td>
                       <td>
                         <div className="flex gap-2">
-                          <button className="btn btn-sm btn-outline btn-square">
+                          <button
+                            className="btn btn-sm btn-outline btn-square"
+                            onClick={() => viewWorkoutDetails(workout)}
+                          >
                             <svg
                               xmlns="http://www.w3.org/2000/svg"
                               className="h-4 w-4"
@@ -174,7 +212,10 @@ export default function ProgramWorkoutsPage({ params }) {
                               />
                             </svg>
                           </button>
-                          <button className="btn btn-sm btn-outline btn-square">
+                          <Link
+                            href={`/program/${programId}/calendar?editWorkout=${workout.id}`}
+                            className="btn btn-sm btn-outline btn-square"
+                          >
                             <svg
                               xmlns="http://www.w3.org/2000/svg"
                               className="h-4 w-4"
@@ -189,8 +230,11 @@ export default function ProgramWorkoutsPage({ params }) {
                                 d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
                               />
                             </svg>
-                          </button>
-                          <button className="btn btn-sm btn-outline btn-square btn-error">
+                          </Link>
+                          <button
+                            className="btn btn-sm btn-outline btn-square btn-error"
+                            onClick={() => deleteWorkout(workout.id)}
+                          >
                             <svg
                               xmlns="http://www.w3.org/2000/svg"
                               className="h-4 w-4"
@@ -232,9 +276,7 @@ export default function ProgramWorkoutsPage({ params }) {
         />
       )}
 
-      {activeTab === 'periodization' && (
-        <PeriodizationView programId={programId} />
-      )}
+      {activeTab === 'periodization' && <PeriodizationView id={programId} />}
     </div>
   );
 }

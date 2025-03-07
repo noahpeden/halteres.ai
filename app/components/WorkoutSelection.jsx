@@ -8,7 +8,6 @@ export default function WorkoutSelection({ programId, onSelectWorkout }) {
   const [workoutType, setWorkoutType] = useState('');
   const [timeRange, setTimeRange] = useState('');
   const [searchResults, setSearchResults] = useState([]);
-  const [aiSuggestions, setAiSuggestions] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
 
   // Search for workouts
@@ -41,80 +40,19 @@ export default function WorkoutSelection({ programId, onSelectWorkout }) {
     }
   };
 
-  // Get AI suggestions
-  const getAiSuggestions = async () => {
-    setIsLoading(true);
-    try {
-      // Fetch program details to get context for AI suggestions
-      const { data: programData } = await supabase
-        .from('programs')
-        .select('*')
-        .eq('program_id', programId)
-        .single();
-
-      // Call your AI suggestion API
-      const response = await fetch('/api/ai-workout-suggestions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          programId,
-          programDetails: programData,
-          filters: {
-            workoutType,
-            timeRange,
-          },
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to get AI suggestions');
-      }
-
-      const data = await response.json();
-      setAiSuggestions(data.suggestions || []);
-    } catch (error) {
-      console.error('Error getting AI suggestions:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Auto-fill next 4 weeks
-  const autoFillNextFourWeeks = async () => {
-    setIsLoading(true);
-    try {
-      const response = await fetch('/api/auto-fill-program', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          programId,
-          weeks: 4,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to auto-fill program');
-      }
-
-      // Refresh the calendar or notify the parent component
-      if (onSelectWorkout) {
-        onSelectWorkout({ action: 'refresh' });
-      }
-    } catch (error) {
-      console.error('Error auto-filling program:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   // Handle workout selection
   const handleSelectWorkout = (workout) => {
+    // Format the workout for the calendar
+    const formattedWorkout = {
+      title: workout.title || 'Untitled Workout',
+      description: workout.body || '',
+      type: workout.workout_type || 'custom',
+      difficulty: 'intermediate',
+      focus: workout.tags?.focus || '',
+    };
+
     if (onSelectWorkout) {
-      onSelectWorkout(workout);
+      onSelectWorkout(formattedWorkout);
     }
   };
 
@@ -172,102 +110,63 @@ export default function WorkoutSelection({ programId, onSelectWorkout }) {
             <option value="20-30">20-30 minutes</option>
             <option value="30+">30+ minutes</option>
           </select>
-
-          <button
-            className="btn btn-secondary"
-            onClick={getAiSuggestions}
-            disabled={isLoading}
-          >
-            Get AI Suggestions
-          </button>
-
-          <button
-            className="btn btn-accent"
-            onClick={autoFillNextFourWeeks}
-            disabled={isLoading}
-          >
-            Auto-Fill Next 4 Weeks
-          </button>
         </div>
       </div>
 
       {/* Results section */}
-      <div className="space-y-4">
-        {aiSuggestions.length > 0 && (
-          <div>
-            <h3 className="text-lg font-medium mb-2">AI Suggestions</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {aiSuggestions.map((workout, index) => (
-                <div
-                  key={`ai-${index}`}
-                  className="border rounded-md p-3 cursor-pointer hover:bg-blue-50 transition-colors"
-                  onClick={() => handleSelectWorkout(workout)}
-                  draggable
-                  onDragStart={() => handleSelectWorkout(workout)}
-                >
-                  <div className="font-medium">
-                    {workout.title || 'AI Suggested Workout'}
-                  </div>
-                  <div className="text-sm text-gray-600 mt-1">
-                    {workout.description || workout.body}
-                  </div>
-                  <div className="flex gap-2 mt-2">
-                    <span className="badge badge-primary">
-                      {workout.workout_type || 'Custom'}
-                    </span>
-                    {workout.time_domain && (
-                      <span className="badge badge-secondary">
-                        {workout.time_domain}
-                      </span>
-                    )}
-                  </div>
+      <div>
+        <h3 className="text-lg font-medium mb-2">Search Results</h3>
+        {isLoading ? (
+          <div className="flex justify-center p-4">
+            <span className="loading loading-spinner loading-md"></span>
+          </div>
+        ) : searchResults.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {searchResults.map((workout) => (
+              <div
+                key={workout.id}
+                className="border rounded-md p-3 cursor-pointer hover:bg-blue-50 transition-colors"
+                onClick={() => handleSelectWorkout(workout)}
+                draggable
+                onDragStart={(e) => {
+                  const formattedWorkout = {
+                    title: workout.title || 'Untitled Workout',
+                    description: workout.body || '',
+                    type: workout.workout_type || 'custom',
+                    difficulty: 'intermediate',
+                    focus: workout.tags?.focus || '',
+                  };
+                  e.dataTransfer.setData(
+                    'text/plain',
+                    JSON.stringify(formattedWorkout)
+                  );
+                  handleSelectWorkout(formattedWorkout);
+                }}
+              >
+                <div className="font-medium">
+                  {workout.title || 'Untitled Workout'}
                 </div>
-              ))}
-            </div>
+                <div className="text-sm text-gray-600 mt-1">
+                  {workout.body.substring(0, 100)}...
+                </div>
+                <div className="flex gap-2 mt-2">
+                  <span className="badge badge-primary">
+                    {workout.workout_type || 'Custom'}
+                  </span>
+                  {workout.time_domain && (
+                    <span className="badge badge-secondary">
+                      {workout.time_domain}
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center p-4 text-gray-500">
+            No workouts found. Try adjusting your search.
           </div>
         )}
-
-        <div>
-          <h3 className="text-lg font-medium mb-2">Search Results</h3>
-          {isLoading ? (
-            <div className="flex justify-center p-4">
-              <span className="loading loading-spinner loading-md"></span>
-            </div>
-          ) : searchResults.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {searchResults.map((workout) => (
-                <div
-                  key={workout.id}
-                  className="border rounded-md p-3 cursor-pointer hover:bg-blue-50 transition-colors"
-                  onClick={() => handleSelectWorkout(workout)}
-                  draggable
-                  onDragStart={() => handleSelectWorkout(workout)}
-                >
-                  <div className="font-medium">
-                    {workout.title || 'Untitled Workout'}
-                  </div>
-                  <div className="text-sm text-gray-600 mt-1">
-                    {workout.body.substring(0, 100)}...
-                  </div>
-                  <div className="flex gap-2 mt-2">
-                    <span className="badge badge-primary">
-                      {workout.workout_type || 'Custom'}
-                    </span>
-                    {workout.time_domain && (
-                      <span className="badge badge-secondary">
-                        {workout.time_domain}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center p-4 text-gray-500">
-              No workouts found. Try adjusting your search.
-            </div>
-          )}
-        </div>
       </div>
     </div>
   );

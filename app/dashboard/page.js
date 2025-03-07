@@ -74,7 +74,7 @@ export default function Dashboard() {
       const result = await response.json();
 
       if (response.ok) {
-        router.push(`/program/${result?.data[0].program_id}`);
+        router.push(`/program/${result?.data[0].id}`);
       } else {
         throw new Error(result.error);
       }
@@ -90,7 +90,7 @@ export default function Dashboard() {
       </div>
     );
   }
-
+  console.log(programs);
   return (
     <div className="container mx-auto p-4">
       <div className="mb-8">
@@ -178,7 +178,7 @@ export default function Dashboard() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {programs.map((program) => (
               <div
-                key={program.program_id}
+                key={program.id}
                 className="card bg-white shadow-md hover:shadow-lg transition-shadow"
               >
                 <div className="card-body">
@@ -191,13 +191,13 @@ export default function Dashboard() {
                   </p>
                   <div className="card-actions justify-end mt-4">
                     <Link
-                      href={`/program/${program.program_id}/calendar`}
+                      href={`/program/${program.id}/calendar`}
                       className="btn btn-primary btn-sm"
                     >
                       Open Calendar
                     </Link>
                     <Link
-                      href={`/program/${program.program_id}/workouts`}
+                      href={`/program/${program.id}/workouts`}
                       className="btn btn-outline btn-sm"
                     >
                       Manage Workouts

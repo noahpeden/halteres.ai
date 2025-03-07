@@ -2,12 +2,20 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 
-export default function PeriodizationView({ programId }) {
+export default function PeriodizationView({ id }) {
   const { supabase } = useAuth();
   const [periodization, setPeriodization] = useState([]);
   const [isEditing, setIsEditing] = useState(false);
   const [editedPhase, setEditedPhase] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  if (!id) {
+    return (
+      <div className="bg-white rounded-lg shadow-md p-4">
+        <p className="text-center text-gray-500">No program ID provided.</p>
+      </div>
+    );
+  }
 
   const phaseTypes = [
     { value: 'strength', label: 'Strength', color: 'bg-red-500' },
@@ -22,12 +30,18 @@ export default function PeriodizationView({ programId }) {
 
   useEffect(() => {
     async function fetchPeriodization() {
+      if (!id) {
+        console.error('No id provided to PeriodizationView');
+        setIsLoading(false);
+        return;
+      }
+
       setIsLoading(true);
       try {
         const { data, error } = await supabase
           .from('programs')
           .select('periodization')
-          .eq('id', programId)
+          .eq('id', id)
           .single();
 
         if (error) throw error;
@@ -40,7 +54,7 @@ export default function PeriodizationView({ programId }) {
     }
 
     fetchPeriodization();
-  }, [programId, supabase]);
+  }, [id, supabase]);
 
   const handleAddPhase = () => {
     // Calculate default start date (today) and end date (4 weeks from today)
@@ -49,7 +63,7 @@ export default function PeriodizationView({ programId }) {
     fourWeeksLater.setDate(today.getDate() + 28);
 
     const newPhase = {
-      program_id: programId,
+      id: id,
       phase_type: 'strength',
       start_date: today.toISOString().split('T')[0],
       end_date: fourWeeksLater.toISOString().split('T')[0],
@@ -72,7 +86,7 @@ export default function PeriodizationView({ programId }) {
       const { data, error: fetchError } = await supabase
         .from('programs')
         .select('periodization')
-        .eq('id', programId)
+        .eq('id', id)
         .single();
 
       if (fetchError) throw fetchError;
@@ -96,7 +110,7 @@ export default function PeriodizationView({ programId }) {
       const { error: updateError } = await supabase
         .from('programs')
         .update({ periodization: updatedPeriodization })
-        .eq('id', programId);
+        .eq('id', id);
 
       if (updateError) throw updateError;
 

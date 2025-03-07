@@ -38,10 +38,10 @@ export default function ProgramMetricsPage({ params }) {
           setMetrics(entityData);
         }
 
-        // Fetch workout history
+        // Fetch workout history from program_workouts
         const { data: workoutsData, error: workoutsError } = await supabase
-          .from('workout_schedule')
-          .select('*, external_workouts(*)')
+          .from('program_workouts')
+          .select('*')
           .eq('program_id', programId)
           .order('scheduled_date', { ascending: false });
 

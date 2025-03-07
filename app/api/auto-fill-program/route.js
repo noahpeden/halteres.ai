@@ -6,6 +6,13 @@ export async function POST(req) {
     const body = await req.json();
     const { programId, weeks } = body;
 
+    if (!programId || programId === 'undefined') {
+      return NextResponse.json(
+        { error: 'Invalid program ID' },
+        { status: 400 }
+      );
+    }
+
     const supabase = createClient();
 
     // Get program details
@@ -34,7 +41,7 @@ export async function POST(req) {
         const workoutType = getRandomWorkoutType();
         const workoutTitle = getRandomWorkoutTitle(workoutType);
 
-        // Create a workout in external_workouts first
+        // Create a workout in external_workouts first (for RAG purposes)
         const { data: externalWorkout, error: externalError } = await supabase
           .from('external_workouts')
           .insert({
@@ -48,20 +55,25 @@ export async function POST(req) {
 
         if (externalError) throw externalError;
 
-        // Then schedule it
+        // Insert into program_workouts
         workouts.push({
           program_id: programId,
           entity_id: program.entity_id,
-          workout_id: externalWorkout.id,
+          title: workoutTitle,
+          body: `Auto-generated ${workoutType} workout for ${workoutDate.toLocaleDateString()}`,
+          workout_type: workoutType,
+          difficulty: 'intermediate',
+          tags: { type: workoutType },
           scheduled_date: workoutDate.toISOString().split('T')[0],
+          external_workout_id: externalWorkout.id,
           notes: `Auto-generated ${workoutType} workout`,
         });
       }
     }
 
-    // Insert workouts into the workout_schedule table
+    // Insert workouts into the program_workouts table
     const { data, error } = await supabase
-      .from('workout_schedule')
+      .from('program_workouts')
       .insert(workouts)
       .select();
 
@@ -76,49 +88,21 @@ export async function POST(req) {
   }
 }
 
+// Helper functions
 function getRandomWorkoutType() {
-  const types = [
-    'Strength',
-    'AMRAP',
-    'EMOM',
-    'For Time',
-    'Skill',
-    'Hypertrophy',
-  ];
+  const types = ['Strength', 'Cardio', 'HIIT', 'Mobility', 'Recovery'];
   return types[Math.floor(Math.random() * types.length)];
 }
 
 function getRandomWorkoutTitle(type) {
-  switch (type) {
-    case 'Strength':
-      return `${
-        ['Upper', 'Lower', 'Full Body', 'Push', 'Pull'][
-          Math.floor(Math.random() * 5)
-        ]
-      } Strength`;
-    case 'AMRAP':
-      return `AMRAP ${[15, 20, 25, 30][Math.floor(Math.random() * 4)]}`;
-    case 'EMOM':
-      return `EMOM ${[20, 24, 30, 36][Math.floor(Math.random() * 4)]}`;
-    case 'For Time':
-      return `${
-        ['Chipper', 'Couplet', 'Triplet', 'Hero WOD'][
-          Math.floor(Math.random() * 4)
-        ]
-      }`;
-    case 'Skill':
-      return `${
-        ['Gymnastics', 'Olympic Lifting', 'Mobility', 'Technique'][
-          Math.floor(Math.random() * 4)
-        ]
-      } Skill`;
-    case 'Hypertrophy':
-      return `${
-        ['Upper Body', 'Lower Body', 'Push', 'Pull', 'Legs'][
-          Math.floor(Math.random() * 5)
-        ]
-      } Hypertrophy`;
-    default:
-      return 'Training Session';
-  }
+  const titles = {
+    Strength: ['Power Building', 'Max Strength', 'Hypertrophy Focus'],
+    Cardio: ['Endurance Builder', 'Heart Rate Zones', 'Steady State'],
+    HIIT: ['Tabata Intervals', 'EMOM Challenge', 'Metabolic Conditioning'],
+    Mobility: ['Dynamic Flexibility', 'Joint Mobility', 'Movement Patterns'],
+    Recovery: ['Active Recovery', 'Deload Session', 'Restoration'],
+  };
+
+  const options = titles[type] || ['Workout Session'];
+  return `${type}: ${options[Math.floor(Math.random() * options.length)]}`;
 }

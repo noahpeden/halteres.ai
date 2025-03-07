@@ -15,6 +15,22 @@ export async function POST(req) {
     } = body;
     const supabase = createClient();
 
+    // Fetch program details if not provided
+    let entityId;
+    if (programDetails?.entity_id) {
+      entityId = programDetails.entity_id;
+    } else {
+      // Fetch the program to get the entity_id
+      const { data: program, error: programError } = await supabase
+        .from('programs')
+        .select('entity_id')
+        .eq('id', programId)
+        .single();
+
+      if (programError) throw programError;
+      entityId = program?.entity_id;
+    }
+
     // Initialize OpenAI client
     const openai = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY,
@@ -34,7 +50,7 @@ export async function POST(req) {
     } 
     for the next ${
       preferences.duration || '7'
-    } days or weeks. The user has the following details:
+    } days. The user has the following details:
     - Equipment: ${office?.equipmentList || 'Standard gym equipment'}
     - Coaching staff experience: ${
       office?.coachList?.length
@@ -43,7 +59,7 @@ export async function POST(req) {
     }
     - Class schedule: ${office?.classSchedule || 'Not specified'}
     - Class duration: ${office?.classDuration || '60 minutes'}
-    - Workout format: ${preferences.workoutFormat || 'Standard format'}
+    - Workout formats: ${preferences.workoutFormats || 'Standard format'}
     - Workout cycle length: ${preferences.duration || '7 days'}
     - Workout focus: ${preferences.focusArea || 'General fitness'}
     - Goal: ${preferences.goal || 'Overall fitness'}
@@ -55,9 +71,11 @@ export async function POST(req) {
     1. Example workout: ${preferences.exampleWorkout || 'Not provided'}
     2. Uploaded workouts: ${
       matchedWorkouts.length
-        ? matchedWorkouts.map((workout) => workout.content).join(', ')
+        ? matchedWorkouts.map((workout) => workout.content).join('\n\n')
         : 'No uploaded workout provided'
     }
+    
+    Additional notes from the user: ${preferences.additionalNotes || 'None'}
     `;
 
     // System prompt for workout generation
@@ -92,9 +110,6 @@ export async function POST(req) {
         • Specific weights for male and female athletes
       - Include coach's notes and suggestions for each strength and conditioning component.
 
-    5. Scaling:
-      - Explain the scaling aim
-      - Provide specific options for RX+, RX, Scaled, Limited Equipment, and Large Class scenarios
 
     Key points to remember:
     - Each workout builds on the previous day's progress.
@@ -130,7 +145,26 @@ export async function POST(req) {
     // Parse the generated content into workout objects
     const workouts = parseWorkoutsFromContent(generatedContent, preferences);
 
-    // Store the generated workouts in the workout_generations table
+    // Store the generated workouts in the program_workouts table
+    for (const workout of workouts) {
+      await supabase.from('program_workouts').insert({
+        program_id: programId,
+        entity_id: entityId,
+        title: workout.title,
+        body: workout.description || workout.content,
+        workout_type: workout.type,
+        difficulty: preferences.difficulty || 'intermediate',
+        tags: {
+          type: workout.type,
+          focus: workout.focus || preferences.focusArea,
+          generated: true,
+        },
+        scheduled_date: workout.date,
+        notes: 'AI-generated workout',
+      });
+    }
+
+    // Also store in workout_generations for reference
     const { data, error } = await supabase
       .from('workout_generations')
       .insert({
@@ -198,6 +232,7 @@ function parseWorkoutsFromContent(content, preferences) {
       duration: preferences.duration || '60 minutes',
       difficulty: preferences.difficulty || 'Intermediate',
       day: index + 1,
+      focus: preferences.focusArea || '',
     };
   });
 }
