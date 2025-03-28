@@ -66,7 +66,7 @@ export default function ProgramCalendarPage({ params }) {
       setIsLoadingSidebar(true);
       try {
         const { data, error } = await supabase
-          .from('workouts')
+          .from('program_workouts')
           .select('*')
           .eq('program_id', programId)
           .order('created_at', { ascending: false })
