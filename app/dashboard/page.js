@@ -74,7 +74,7 @@ export default function Dashboard() {
       const result = await response.json();
 
       if (response.ok) {
-        router.push(`/program/${result?.data[0].id}`);
+        router.push(`/program/${result?.data[0].id}/calendar`);
       } else {
         throw new Error(result.error);
       }

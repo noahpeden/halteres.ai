@@ -1,10 +1,11 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function ProgramCalendar({
   programId,
   initialDragWorkout = null,
+  selectedDate = null,
 }) {
   const { supabase } = useAuth();
   const [workouts, setWorkouts] = useState([]);
@@ -12,6 +13,8 @@ export default function ProgramCalendar({
   const [draggedWorkout, setDraggedWorkout] = useState(null);
   const [calendarDays, setCalendarDays] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [highlightedDate, setHighlightedDate] = useState(null);
+  const calendarRef = useRef(null);
 
   // Generate calendar days for the current month
   useEffect(() => {
@@ -73,6 +76,38 @@ export default function ProgramCalendar({
       setDraggedWorkout(initialDragWorkout);
     }
   }, [initialDragWorkout]);
+
+  // Handle selectedDate changes
+  useEffect(() => {
+    if (selectedDate) {
+      const dateObj = new Date(selectedDate);
+
+      // Check if the date is in the current month
+      if (
+        dateObj.getMonth() !== currentDate.getMonth() ||
+        dateObj.getFullYear() !== currentDate.getFullYear()
+      ) {
+        // Update current date to show the month containing the selected date
+        setCurrentDate(new Date(dateObj.getFullYear(), dateObj.getMonth(), 1));
+      }
+
+      // Highlight the selected date
+      setHighlightedDate(selectedDate);
+
+      // If we have a reference to the calendar, attempt to scroll to the date
+      setTimeout(() => {
+        if (calendarRef.current) {
+          const dateString = dateObj.toISOString().split('T')[0];
+          const dateElement = document.querySelector(
+            `[data-date="${dateString}"]`
+          );
+          if (dateElement) {
+            dateElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }
+      }, 100);
+    }
+  }, [selectedDate, currentDate]);
 
   // Handle drag start
   const handleDragStart = (workout) => {
@@ -150,6 +185,9 @@ export default function ProgramCalendar({
           setWorkouts([...workouts, data[0]]);
         }
       }
+
+      // Clear the highlighted date
+      setHighlightedDate(null);
     } catch (error) {
       console.error('Error saving workout:', error);
       alert('Failed to save workout. Please try again.');
@@ -212,114 +250,150 @@ export default function ProgramCalendar({
     }
   };
 
-  return (
-    <div className="bg-white rounded-lg shadow-md p-4 relative">
-      {isLoading && (
-        <div className="absolute inset-0 bg-white bg-opacity-70 flex items-center justify-center z-10">
-          <span className="loading loading-spinner loading-lg"></span>
-        </div>
-      )}
+  // Format date for display
+  const formatDateString = (date) => {
+    return date.toISOString().split('T')[0];
+  };
 
+  // Check if a date is highlighted
+  const isHighlightedDate = (date) => {
+    if (!highlightedDate) return false;
+    return formatDateString(date) === highlightedDate;
+  };
+
+  return (
+    <div className="bg-white rounded-lg shadow-md p-4">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-semibold">
-          {currentDate.toLocaleString('default', {
-            month: 'long',
-            year: 'numeric',
-          })}
+          {currentDate.toLocaleString('default', { month: 'long' })}{' '}
+          {currentDate.getFullYear()}
         </h2>
-        <div className="flex space-x-2">
-          <button onClick={prevMonth} className="btn btn-sm btn-outline">
-            Previous
+        <div className="flex gap-2">
+          <button
+            className="btn btn-sm btn-outline"
+            onClick={prevMonth}
+            disabled={isLoading}
+          >
+            ← Prev
           </button>
           <button
-            onClick={() => setCurrentDate(new Date())}
             className="btn btn-sm btn-outline"
+            onClick={() => setCurrentDate(new Date())}
           >
             Today
           </button>
-          <button onClick={nextMonth} className="btn btn-sm btn-outline">
-            Next
+          <button
+            className="btn btn-sm btn-outline"
+            onClick={nextMonth}
+            disabled={isLoading}
+          >
+            Next →
           </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-7 gap-1">
+      {isLoading && (
+        <div className="absolute inset-0 bg-white bg-opacity-80 flex items-center justify-center z-10">
+          <span className="loading loading-spinner loading-md"></span>
+        </div>
+      )}
+
+      {draggedWorkout && (
+        <div className="mb-3 p-2 bg-yellow-100 rounded-md text-sm">
+          <p>
+            Dragging:{' '}
+            <span className="font-medium">{draggedWorkout.title}</span>
+          </p>
+          <p className="text-xs text-gray-600">
+            Drop onto a date to schedule this workout
+          </p>
+        </div>
+      )}
+
+      <div className="grid grid-cols-7 gap-1" ref={calendarRef}>
         {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) => (
           <div key={day} className="text-center font-semibold p-2">
             {day}
           </div>
         ))}
 
-        {calendarDays.map((day, index) => (
-          <div
-            key={index}
-            className={`min-h-[120px] border rounded-md p-2 ${
-              day.isCurrentMonth ? 'bg-white' : 'bg-gray-100 text-gray-500'
-            } ${
-              day.date.toDateString() === new Date().toDateString()
-                ? 'border-blue-500 border-2'
-                : ''
-            }`}
-            onDragOver={handleDragOver}
-            onDrop={(e) => handleDrop(e, day.date)}
-          >
-            <div className="text-right mb-1">{day.date.getDate()}</div>
-            <div className="space-y-1 max-h-[100px] overflow-y-auto">
-              {getWorkoutsForDate(day.date).map((workout) => (
-                <div
-                  key={workout.id}
-                  className="bg-blue-100 p-1 rounded text-xs cursor-move flex justify-between items-center group"
-                  draggable
-                  onDragStart={() => handleDragStart(workout)}
-                >
-                  <span className="truncate">
-                    {workout.title || 'Untitled Workout'}
-                  </span>
-                  <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button
-                      onClick={() => copyWorkout(workout)}
-                      className="text-gray-500 hover:text-gray-700"
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-3 w-3"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
+        {calendarDays.map((day, index) => {
+          const dateString = formatDateString(day.date);
+          const isHighlighted = isHighlightedDate(day.date);
+          return (
+            <div
+              key={index}
+              className={`min-h-[120px] border rounded-md p-2 ${
+                day.isCurrentMonth ? 'bg-white' : 'bg-gray-100 text-gray-500'
+              } ${
+                day.date.toDateString() === new Date().toDateString()
+                  ? 'border-blue-500 border-2'
+                  : ''
+              } ${
+                isHighlighted ? 'border-purple-500 border-2 bg-purple-50' : ''
+              }`}
+              onDragOver={handleDragOver}
+              onDrop={(e) => handleDrop(e, day.date)}
+              data-date={dateString}
+            >
+              <div className="text-right mb-1">{day.date.getDate()}</div>
+              <div className="space-y-1 max-h-[100px] overflow-y-auto">
+                {getWorkoutsForDate(day.date).map((workout) => (
+                  <div
+                    key={workout.id}
+                    className="bg-blue-100 p-1 rounded text-xs cursor-move flex justify-between items-center group"
+                    draggable
+                    onDragStart={() => handleDragStart(workout)}
+                  >
+                    <span className="truncate">
+                      {workout.title || 'Untitled Workout'}
+                    </span>
+                    <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        onClick={() => copyWorkout(workout)}
+                        className="text-gray-500 hover:text-gray-700"
                       >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-                        />
-                      </svg>
-                    </button>
-                    <button
-                      onClick={(e) => deleteWorkout(workout.id, e)}
-                      className="text-red-500 hover:text-red-700"
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-3 w-3"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-3 w-3"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                          />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={(e) => deleteWorkout(workout.id, e)}
+                        className="text-red-500 hover:text-red-700"
                       >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                        />
-                      </svg>
-                    </button>
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-3 w-3"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                          />
+                        </svg>
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

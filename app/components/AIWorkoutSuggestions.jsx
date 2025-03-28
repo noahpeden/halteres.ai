@@ -20,6 +20,7 @@ export default function AIWorkoutSuggestions({ programId, onSelectWorkout }) {
     workoutFormats: [], // Changed to array for multi-select
     quirks: '',
     exampleWorkout: '',
+    gymType: 'Gym', // Add default gym type
   });
   const [error, setError] = useState('');
   const [officeData, setOfficeData] = useState({
@@ -32,6 +33,7 @@ export default function AIWorkoutSuggestions({ programId, onSelectWorkout }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [allEquipmentSelected, setAllEquipmentSelected] = useState(false);
+  const [showEquipment, setShowEquipment] = useState(false); // Added state for collapsible equipment section
 
   // Fetch reference workouts on component mount
   useEffect(() => {
@@ -51,6 +53,39 @@ export default function AIWorkoutSuggestions({ programId, onSelectWorkout }) {
 
     fetchReferenceWorkouts();
   }, [supabase]);
+
+  // Equipment presets based on gym type
+  const gymEquipmentPresets = {
+    'Crossfit Box': [
+      1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 14, 15, 16, 17, 18, 19, 20, 22, 23,
+      26, 46,
+    ],
+    'Commercial Gym': [
+      1, 2, 3, 4, 5, 16, 24, 27, 39, 40, 41, 42, 44, 45, 46, 47,
+    ],
+    'Home Gym': [4, 5, 6, 16, 24, 27],
+    'Minimal Equipment': [4, 5, 6, 16, 27],
+    'Outdoor Space': [6, 16, 18, 27],
+    'Powerlifting Gym': [1, 2, 3, 5, 16, 21, 24, 27, 36, 37],
+    'Olympic Weightlifting Gym': [1, 2, 3, 5, 16, 24, 27],
+    'Bodyweight Only': [27, 38],
+    'Studio Gym': [4, 5, 6, 16, 27, 35, 44, 45],
+    'University Gym': [1, 2, 3, 4, 5, 39, 40, 41, 42, 44, 45, 46, 47],
+    'Hotel Gym': [5, 16, 27, 39, 44, 45, 47],
+    'Apartment Gym': [5, 16, 27, 44, 45],
+    'Boxing/MMA Gym': [5, 6, 7, 16, 17, 18, 22, 27, 35],
+    Other: [],
+  };
+
+  // Update equipment selection when gym type changes
+  useEffect(() => {
+    if (formData.gymType) {
+      setFormData((prev) => ({
+        ...prev,
+        equipment: gymEquipmentPresets[formData.gymType] || [],
+      }));
+    }
+  }, [formData.gymType]);
 
   // Check if all equipment is selected when component mounts or equipment changes
   useEffect(() => {
@@ -96,6 +131,22 @@ export default function AIWorkoutSuggestions({ programId, onSelectWorkout }) {
     { value: 'for_time', label: 'For Time' },
     { value: 'tabata', label: 'Tabata' },
     { value: 'circuit', label: 'Circuit Training' },
+  ];
+
+  const gymTypes = [
+    { value: 'Crossfit Box', label: 'Crossfit Box' },
+    { value: 'Commercial Gym', label: 'Commercial Gym' },
+    { value: 'Home Gym', label: 'Home Gym' },
+    { value: 'Minimal Equipment', label: 'Minimal Equipment' },
+    { value: 'Outdoor Space', label: 'Outdoor Space' },
+    { value: 'Powerlifting Gym', label: 'Powerlifting Gym' },
+    { value: 'Olympic Weightlifting Gym', label: 'Olympic Weightlifting Gym' },
+    { value: 'Bodyweight Only', label: 'Bodyweight Only' },
+    { value: 'Studio Gym', label: 'Studio Gym' },
+    { value: 'University Gym', label: 'University Gym' },
+    { value: 'Hotel Gym', label: 'Hotel Gym' },
+    { value: 'Apartment Gym', label: 'Apartment Gym' },
+    { value: 'Boxing/MMA Gym', label: 'Boxing/MMA Gym' },
   ];
 
   const handleChange = (e) => {
@@ -259,6 +310,7 @@ export default function AIWorkoutSuggestions({ programId, onSelectWorkout }) {
           ...formData,
           equipment: selectedEquipment,
           workoutFormats: formattedWorkoutFormats,
+          gymType: formData.gymType, // Ensure gym type is included
         },
         office: officeData,
         whiteboard: {
@@ -479,6 +531,24 @@ export default function AIWorkoutSuggestions({ programId, onSelectWorkout }) {
               <option value="30">30 Days</option>
             </select>
           </div>
+
+          <div>
+            <label className="label">
+              <span className="label-text">Gym Type</span>
+            </label>
+            <select
+              className="select select-bordered w-full"
+              name="gymType"
+              value={formData.gymType}
+              onChange={handleChange}
+            >
+              {gymTypes.map((type) => (
+                <option key={type.value} value={type.value}>
+                  {type.label}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 
@@ -503,34 +573,50 @@ export default function AIWorkoutSuggestions({ programId, onSelectWorkout }) {
       </div>
 
       <div className="mb-6">
-        <label className="label">
-          <span className="label-text">Available Equipment</span>
-        </label>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-60 overflow-y-auto p-2 border rounded-md">
-          <label className="flex items-center gap-2 font-semibold">
-            <input
-              type="checkbox"
-              className="checkbox"
-              value="-1"
-              checked={allEquipmentSelected}
-              onChange={handleEquipmentChange}
-            />
-            <span>Select All</span>
+        <div className="flex justify-between items-center mb-2">
+          <label className="label">
+            <span className="label-text">Available Equipment</span>
           </label>
-          {equipmentList &&
-            equipmentList.map((item) => (
-              <label key={item.value} className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  className="checkbox"
-                  value={item.value}
-                  checked={formData.equipment.includes(item.value)}
-                  onChange={handleEquipmentChange}
-                />
-                <span>{item.label}</span>
-              </label>
-            ))}
+          <button
+            className="btn btn-sm btn-ghost"
+            onClick={() => setShowEquipment(!showEquipment)}
+          >
+            {showEquipment ? 'Hide' : 'Customize'}
+          </button>
         </div>
+
+        {!showEquipment ? (
+          <div className="text-sm text-gray-600 p-2 border rounded-md">
+            Using equipment preset for {formData.gymType} (
+            {formData.equipment.length} items selected)
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-60 overflow-y-auto p-2 border rounded-md">
+            <label className="flex items-center gap-2 font-semibold">
+              <input
+                type="checkbox"
+                className="checkbox"
+                value="-1"
+                checked={allEquipmentSelected}
+                onChange={handleEquipmentChange}
+              />
+              <span>Select All</span>
+            </label>
+            {equipmentList &&
+              equipmentList.map((item) => (
+                <label key={item.value} className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    className="checkbox"
+                    value={item.value}
+                    checked={formData.equipment.includes(item.value)}
+                    onChange={handleEquipmentChange}
+                  />
+                  <span>{item.label}</span>
+                </label>
+              ))}
+          </div>
+        )}
       </div>
 
       <div className="mb-6">

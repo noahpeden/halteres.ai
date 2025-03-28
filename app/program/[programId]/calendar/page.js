@@ -3,7 +3,8 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSearchParams } from 'next/navigation';
 import ProgramCalendar from '@/components/ProgramCalendar';
-import WorkoutSelection from '@/components/WorkoutSelection';
+import AIProgramWriter from '@/components/AIProgramWriter';
+import AISingleWorkoutGenerator from '@/components/AISingleWorkoutGenerator';
 import ClientMetricsSidebar from '@/components/ClientMetricsSidebar';
 import Link from 'next/link';
 
@@ -15,6 +16,7 @@ export default function ProgramCalendarPage({ params }) {
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('calendar');
   const [selectedWorkout, setSelectedWorkout] = useState(null);
+  const [selectedDate, setSelectedDate] = useState(null);
   const [sidebarWorkouts, setSidebarWorkouts] = useState([]);
   const [isLoadingSidebar, setIsLoadingSidebar] = useState(false);
   const [error, setError] = useState(null);
@@ -48,6 +50,10 @@ export default function ProgramCalendarPage({ params }) {
       try {
         const workout = JSON.parse(decodeURIComponent(workoutParam));
         setSelectedWorkout(workout);
+        // Also set the selected date if available
+        if (workout.date || workout.suggestedDate) {
+          setSelectedDate(workout.date || workout.suggestedDate);
+        }
         // Highlight the workout somehow or show a notification
         alert(
           `Workout "${workout.title}" is ready to be scheduled. Drag it to a date on the calendar.`
@@ -86,6 +92,21 @@ export default function ProgramCalendarPage({ params }) {
 
   const handleSelectWorkout = (workout) => {
     setSelectedWorkout(workout);
+    // If the workout has a date, also set the selected date
+    if (workout.date || workout.suggestedDate) {
+      setSelectedDate(workout.date || workout.suggestedDate);
+    }
+
+    // If the currently active tab is not calendar, switch to it
+    if (activeTab !== 'calendar') {
+      setActiveTab('calendar');
+    }
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return 'Not scheduled';
+    const options = { month: 'short', day: 'numeric', year: 'numeric' };
+    return new Date(dateString).toLocaleDateString(undefined, options);
   };
 
   async function generateWorkouts() {
@@ -172,10 +193,20 @@ export default function ProgramCalendarPage({ params }) {
           Calendar
         </button>
         <button
-          className={`tab ${activeTab === 'workouts' ? 'tab-active' : ''}`}
-          onClick={() => setActiveTab('workouts')}
+          className={`tab ${
+            activeTab === 'program_writer' ? 'tab-active' : ''
+          }`}
+          onClick={() => setActiveTab('program_writer')}
         >
-          Find Workouts
+          Program Writer
+        </button>
+        <button
+          className={`tab ${
+            activeTab === 'workout_editor' ? 'tab-active' : ''
+          }`}
+          onClick={() => setActiveTab('workout_editor')}
+        >
+          Single Workout Editor
         </button>
       </div>
 
@@ -186,12 +217,18 @@ export default function ProgramCalendarPage({ params }) {
               Selected Workout: {selectedWorkout.title}
             </h3>
             <p className="text-sm text-gray-600">
+              {selectedDate
+                ? `Scheduled for ${formatDate(selectedDate)}. `
+                : ''}
               Drag this workout to a date on the calendar to schedule it
             </p>
           </div>
           <button
             className="btn btn-sm btn-ghost"
-            onClick={() => setSelectedWorkout(null)}
+            onClick={() => {
+              setSelectedWorkout(null);
+              setSelectedDate(null);
+            }}
           >
             ✕
           </button>
@@ -200,13 +237,21 @@ export default function ProgramCalendarPage({ params }) {
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         <div className="lg:col-span-3">
-          {activeTab === 'calendar' ? (
+          {activeTab === 'calendar' && (
             <ProgramCalendar
               programId={programId}
               initialDragWorkout={selectedWorkout}
+              selectedDate={selectedDate}
             />
-          ) : (
-            <WorkoutSelection
+          )}
+          {activeTab === 'program_writer' && (
+            <AIProgramWriter
+              programId={programId}
+              onSelectWorkout={handleSelectWorkout}
+            />
+          )}
+          {activeTab === 'workout_editor' && (
+            <AISingleWorkoutGenerator
               programId={programId}
               onSelectWorkout={handleSelectWorkout}
             />
@@ -238,12 +283,20 @@ export default function ProgramCalendarPage({ params }) {
                           JSON.stringify(workout)
                         );
                         setSelectedWorkout(workout);
+                        if (workout.date) {
+                          setSelectedDate(workout.date);
+                        }
                       }}
                     >
                       <h3 className="font-medium text-sm">{workout.title}</h3>
                       <p className="text-xs text-gray-600 truncate">
                         {workout.description}
                       </p>
+                      {workout.date && (
+                        <div className="text-xs text-right mt-1 text-gray-500">
+                          {formatDate(workout.date)}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
