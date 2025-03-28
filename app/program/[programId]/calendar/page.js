@@ -21,6 +21,9 @@ export default function ProgramCalendarPage({ params }) {
   const [isLoadingSidebar, setIsLoadingSidebar] = useState(false);
   const [error, setError] = useState(null);
 
+  // Track if calendar has been refreshed after adding a workout
+  const [refreshRequired, setRefreshRequired] = useState(false);
+
   useEffect(() => {
     async function fetchProgram() {
       setIsLoading(true);
@@ -79,6 +82,7 @@ export default function ProgramCalendarPage({ params }) {
           .limit(10);
 
         if (error) throw error;
+        console.log('Fetched sidebar workouts:', data);
         setSidebarWorkouts(data || []);
       } catch (error) {
         console.error('Error fetching sidebar workouts:', error);
@@ -88,6 +92,59 @@ export default function ProgramCalendarPage({ params }) {
     }
 
     fetchSidebarWorkouts();
+
+    // Set up a subscription to listen for changes to workouts
+    const workoutsSubscription = supabase
+      .channel('program_workouts_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'program_workouts',
+          filter: `program_id=eq.${programId}`,
+        },
+        (payload) => {
+          console.log('Workouts subscription received event:', payload);
+          // Refresh the sidebar when workouts change
+          fetchSidebarWorkouts();
+          // Flag that we need to refresh the calendar
+          setRefreshRequired(true);
+        }
+      )
+      .subscribe();
+
+    // Set up a subscription for schedule changes
+    const scheduleSubscription = supabase
+      .channel('workout_schedule_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'workout_schedule',
+          filter: `program_id=eq.${programId}`,
+        },
+        (payload) => {
+          console.log('Schedule subscription received event:', payload);
+          // Flag that we need to refresh the calendar
+          setRefreshRequired(true);
+        }
+      )
+      .subscribe();
+
+    console.log('Set up subscriptions for program_id:', programId);
+
+    // Force refresh after a short delay to ensure initial data load
+    setTimeout(() => {
+      setRefreshRequired((prev) => !prev);
+    }, 500);
+
+    return () => {
+      console.log('Unsubscribing from channels');
+      workoutsSubscription.unsubscribe();
+      scheduleSubscription.unsubscribe();
+    };
   }, [programId, supabase]);
 
   const handleSelectWorkout = (workout) => {
@@ -166,6 +223,39 @@ export default function ProgramCalendarPage({ params }) {
           </div>
 
           <div className="flex gap-2">
+            <button
+              className="btn btn-sm btn-outline btn-warning"
+              onClick={async () => {
+                try {
+                  const response = await fetch(
+                    `/api/debug?programId=${programId}`
+                  );
+                  const data = await response.json();
+                  console.log('Debug data:', data);
+
+                  if (data.totalSchedules > 0) {
+                    alert(
+                      `Found ${data.totalSchedules} scheduled workout entries out of ${data.totalWorkouts} total workouts. Check console for details.`
+                    );
+
+                    // Log more detailed information
+                    console.table(data.scheduledWorkouts);
+                  } else {
+                    alert(
+                      `No scheduled workouts found. You have ${data.totalWorkouts} workouts available to schedule.`
+                    );
+                  }
+                  // Force refresh the calendar
+                  setRefreshRequired((prev) => !prev);
+                } catch (error) {
+                  console.error('Debug check failed:', error);
+                  alert('Debug check failed. See console for details.');
+                }
+              }}
+            >
+              Check Data
+            </button>
+
             <Link
               href={`/program/${programId}/workouts`}
               className="btn btn-outline btn-sm"
@@ -242,6 +332,7 @@ export default function ProgramCalendarPage({ params }) {
               programId={programId}
               initialDragWorkout={selectedWorkout}
               selectedDate={selectedDate}
+              key={refreshRequired ? 'refresh' : 'normal'}
             />
           )}
           {activeTab === 'program_writer' && (
@@ -258,66 +349,103 @@ export default function ProgramCalendarPage({ params }) {
           )}
         </div>
 
-        <div className="lg:col-span-1">
-          <div className="card bg-base-100 shadow-md">
-            <div className="card-body p-4">
-              <h2 className="card-title text-lg">Recent Workouts</h2>
-              <p className="text-sm text-gray-500 mb-3">
-                Drag to calendar to schedule
-              </p>
+        {activeTab === 'calendar' && (
+          <div className="lg:col-span-1">
+            <div className="card bg-base-100 shadow-md">
+              <div className="card-body p-4">
+                <h2 className="card-title text-lg">Recent Workouts</h2>
+                <p className="text-sm text-gray-500 mb-3">
+                  Drag to calendar to schedule
+                </p>
 
-              {isLoadingSidebar ? (
-                <div className="flex justify-center py-4">
-                  <span className="loading loading-spinner loading-md"></span>
-                </div>
-              ) : sidebarWorkouts.length > 0 ? (
-                <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
-                  {sidebarWorkouts.map((workout) => (
-                    <div
-                      key={workout.id}
-                      className="p-3 bg-base-200 rounded-md cursor-move hover:bg-base-300 transition-colors"
-                      draggable="true"
-                      onDragStart={(e) => {
-                        e.dataTransfer.setData(
-                          'workout',
-                          JSON.stringify(workout)
-                        );
-                        setSelectedWorkout(workout);
-                        if (workout.date) {
-                          setSelectedDate(workout.date);
-                        }
-                      }}
+                {isLoadingSidebar ? (
+                  <div className="flex justify-center py-4">
+                    <span className="loading loading-spinner loading-md"></span>
+                  </div>
+                ) : sidebarWorkouts.length > 0 ? (
+                  <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
+                    {sidebarWorkouts.map((workout) => (
+                      <div
+                        key={workout.id}
+                        className="p-3 bg-base-200 rounded-md cursor-move hover:bg-base-300 transition-colors"
+                        draggable="true"
+                        onDragStart={(e) => {
+                          console.log(
+                            'Sidebar drag start with workout:',
+                            workout
+                          );
+                          try {
+                            const workoutJson = JSON.stringify(workout);
+                            console.log(
+                              'Serialized workout data:',
+                              workoutJson
+                            );
+
+                            // Set data using multiple mime types for compatibility
+                            e.dataTransfer.setData('text/plain', workoutJson);
+
+                            // Some browsers have issues with custom mime types, so try/catch this
+                            try {
+                              e.dataTransfer.setData('workout', workoutJson);
+                            } catch (customTypeError) {
+                              console.warn(
+                                'Could not set custom mime type:',
+                                customTypeError
+                              );
+                            }
+
+                            // Store the workout in parent component state as fallback
+                            setSelectedWorkout(workout);
+
+                            // Set better drag image if possible
+                            try {
+                              const dragEl = e.target.cloneNode(true);
+                              dragEl.style.width = '200px';
+                              dragEl.style.backgroundColor =
+                                'rgba(59, 130, 246, 0.5)';
+                              document.body.appendChild(dragEl);
+                              e.dataTransfer.setDragImage(dragEl, 10, 10);
+                              setTimeout(
+                                () => document.body.removeChild(dragEl),
+                                0
+                              );
+                            } catch (dragImgError) {
+                              console.warn(
+                                'Could not set drag image:',
+                                dragImgError
+                              );
+                            }
+                          } catch (error) {
+                            console.error('Error setting drag data:', error);
+                          }
+                        }}
+                      >
+                        <h3 className="font-medium text-sm">{workout.title}</h3>
+                        <p className="text-xs text-gray-600 truncate">
+                          {workout.body}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-4 text-gray-500">
+                    <p>No workouts found</p>
+                    <Link
+                      href={`/program/${programId}/workouts`}
+                      className="btn btn-sm btn-outline mt-2"
                     >
-                      <h3 className="font-medium text-sm">{workout.title}</h3>
-                      <p className="text-xs text-gray-600 truncate">
-                        {workout.description}
-                      </p>
-                      {workout.date && (
-                        <div className="text-xs text-right mt-1 text-gray-500">
-                          {formatDate(workout.date)}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-4 text-gray-500">
-                  <p>No workouts found</p>
-                  <Link
-                    href={`/program/${programId}/workouts`}
-                    className="btn btn-sm btn-outline mt-2"
-                  >
-                    Create Workouts
-                  </Link>
-                </div>
-              )}
+                      Create Workouts
+                    </Link>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="mt-4">
+              <ClientMetricsSidebar programId={programId} />
             </div>
           </div>
-
-          <div className="mt-4">
-            <ClientMetricsSidebar programId={programId} />
-          </div>
-        </div>
+        )}
       </div>
     </div>
   );

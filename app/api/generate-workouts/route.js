@@ -159,7 +159,7 @@ export async function POST(req) {
           focus: workout.focus || preferences.focusArea,
           generated: true,
         },
-        scheduled_date: workout.date,
+        scheduled_date: workout.date || workout.scheduled_date,
         notes: 'AI-generated workout',
       });
     }

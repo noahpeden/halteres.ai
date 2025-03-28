@@ -9,6 +9,11 @@ export default function Dashboard() {
   const { user, supabase } = useAuth();
   const [programs, setPrograms] = useState([]);
   const [programName, setProgramName] = useState('');
+  const [programDuration, setProgramDuration] = useState(4); // Default 4 weeks
+  const [startDate, setStartDate] = useState(
+    new Date().toISOString().split('T')[0]
+  ); // Default to today
+  const [daysOfWeek, setDaysOfWeek] = useState([1, 3, 5]); // Default to Mon, Wed, Fri (where 0=Sun, 1=Mon, etc.)
   const [isLoading, setIsLoading] = useState(true);
   const [stats, setStats] = useState({
     totalPrograms: 0,
@@ -58,9 +63,25 @@ export default function Dashboard() {
     fetchData();
   }, [user, supabase]);
 
+  // Calculate end date based on start date and duration
+  const calculateEndDate = () => {
+    const date = new Date(startDate);
+    date.setDate(date.getDate() + programDuration * 7 - 1);
+    return date.toISOString().split('T')[0];
+  };
+
+  // Toggle a day in the daysOfWeek array
+  const toggleDay = (day) => {
+    if (daysOfWeek.includes(day)) {
+      setDaysOfWeek(daysOfWeek.filter((d) => d !== day));
+    } else {
+      setDaysOfWeek([...daysOfWeek, day].sort());
+    }
+  };
+
   async function createProgram(event) {
     event.preventDefault();
-    if (!programName.trim()) return;
+    if (!programName.trim() || daysOfWeek.length === 0) return;
 
     try {
       const response = await fetch('/api/CreateProgram', {
@@ -68,12 +89,26 @@ export default function Dashboard() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ name: programName, userId: user.data.user.id }),
+        body: JSON.stringify({
+          name: programName,
+          duration_weeks: programDuration,
+          start_date: startDate,
+          end_date: calculateEndDate(),
+          days_of_week: daysOfWeek,
+        }),
       });
 
       const result = await response.json();
 
       if (response.ok) {
+        // Close the modal
+        document.getElementById('create-program-modal').checked = false;
+        // Reset form
+        setProgramName('');
+        setProgramDuration(4);
+        setStartDate(new Date().toISOString().split('T')[0]);
+        setDaysOfWeek([1, 3, 5]);
+        // Navigate to the program
         router.push(`/program/${result?.data[0].id}/calendar`);
       } else {
         throw new Error(result.error);
@@ -230,7 +265,7 @@ export default function Dashboard() {
         <div className="modal-box">
           <h3 className="font-bold text-lg mb-4">Create New Program</h3>
           <form onSubmit={createProgram}>
-            <div className="form-control">
+            <div className="form-control mb-4">
               <label className="label">
                 <span className="label-text">Program Name</span>
               </label>
@@ -243,11 +278,85 @@ export default function Dashboard() {
                 required
               />
             </div>
+
+            <div className="form-control mb-4">
+              <label className="label">
+                <span className="label-text">Start Date</span>
+              </label>
+              <input
+                type="date"
+                className="input input-bordered w-full"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="form-control mb-4">
+              <label className="label">
+                <span className="label-text">Program Duration (weeks)</span>
+              </label>
+              <input
+                type="number"
+                min="1"
+                max="52"
+                className="input input-bordered w-full"
+                value={programDuration}
+                onChange={(e) => setProgramDuration(parseInt(e.target.value))}
+                required
+              />
+            </div>
+
+            <div className="form-control mb-4">
+              <label className="label">
+                <span className="label-text">End Date (calculated)</span>
+              </label>
+              <input
+                type="date"
+                className="input input-bordered w-full bg-gray-100"
+                value={calculateEndDate()}
+                readOnly
+              />
+            </div>
+
+            <div className="form-control mb-4">
+              <label className="label">
+                <span className="label-text">Workout Days</span>
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(
+                  (day, index) => (
+                    <button
+                      key={day}
+                      type="button"
+                      className={`btn btn-sm ${
+                        daysOfWeek.includes(index)
+                          ? 'btn-primary'
+                          : 'btn-outline'
+                      }`}
+                      onClick={() => toggleDay(index)}
+                    >
+                      {day}
+                    </button>
+                  )
+                )}
+              </div>
+              {daysOfWeek.length === 0 && (
+                <p className="text-red-500 text-sm mt-2">
+                  Please select at least one day
+                </p>
+              )}
+            </div>
+
             <div className="modal-action">
               <label htmlFor="create-program-modal" className="btn btn-outline">
                 Cancel
               </label>
-              <button type="submit" className="btn btn-primary">
+              <button
+                type="submit"
+                className="btn btn-primary"
+                disabled={daysOfWeek.length === 0}
+              >
                 Create
               </button>
             </div>

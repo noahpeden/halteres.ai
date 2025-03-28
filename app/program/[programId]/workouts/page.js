@@ -133,12 +133,6 @@ export default function ProgramWorkoutsPage({ params }) {
           Workouts
         </button>
         <button
-          className={`tab ${activeTab === 'ai' ? 'tab-active' : ''}`}
-          onClick={() => setActiveTab('ai')}
-        >
-          AI Generator
-        </button>
-        <button
           className={`tab ${activeTab === 'periodization' ? 'tab-active' : ''}`}
           onClick={() => setActiveTab('periodization')}
         >
@@ -268,14 +262,6 @@ export default function ProgramWorkoutsPage({ params }) {
           )}
         </div>
       )}
-
-      {activeTab === 'ai' && (
-        <AIWorkoutSuggestions
-          programId={programId}
-          onSelectWorkout={handleSelectWorkout}
-        />
-      )}
-
       {activeTab === 'periodization' && <PeriodizationView id={programId} />}
     </div>
   );
