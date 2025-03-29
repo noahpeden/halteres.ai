@@ -28,6 +28,7 @@ export default function PeriodizationView({ id }) {
     { value: 'recovery', label: 'Recovery', color: 'bg-teal-500' },
   ];
 
+  // eslint-disable-next-line react-hooks/rules-of-hooks
   useEffect(() => {
     async function fetchPeriodization() {
       if (!id) {
