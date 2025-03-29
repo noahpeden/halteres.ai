@@ -1,12 +1,13 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, use } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import AIWorkoutSuggestions from '@/components/AIWorkoutSuggestions';
 import PeriodizationView from '@/components/PeriodizationView';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
-export default function ProgramWorkoutsPage({ params }) {
+export default function ProgramWorkoutsPage(props) {
+  const params = use(props.params);
   const { programId } = params;
   const { supabase } = useAuth();
   const router = useRouter();

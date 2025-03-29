@@ -1,10 +1,11 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, use } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import ClientMetricsSidebar from '@/components/ClientMetricsSidebar';
 import Link from 'next/link';
 
-export default function ProgramMetricsPage({ params }) {
+export default function ProgramMetricsPage(props) {
+  const params = use(props.params);
   const { programId } = params;
   const { supabase } = useAuth();
   const [program, setProgram] = useState(null);

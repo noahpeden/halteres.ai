@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, use } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSearchParams } from 'next/navigation';
 import ProgramCalendar from '@/components/ProgramCalendar';
@@ -8,7 +8,8 @@ import AISingleWorkoutGenerator from '@/components/AISingleWorkoutGenerator';
 import ClientMetricsSidebar from '@/components/ClientMetricsSidebar';
 import Link from 'next/link';
 
-export default function ProgramCalendarPage({ params }) {
+export default function ProgramCalendarPage(props) {
+  const params = use(props.params);
   const { programId } = params;
   const searchParams = useSearchParams();
   const { supabase } = useAuth();
