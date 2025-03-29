@@ -74,16 +74,68 @@ export default function ProgramCalendarPage({ params }) {
 
       setIsLoadingSidebar(true);
       try {
+        // Fetch program first to get generated workouts
+        const { data: programData, error: programError } = await supabase
+          .from('programs')
+          .select('*')
+          .eq('id', programId)
+          .single();
+
+        if (programError) throw programError;
+
+        // Fetch all workouts for this program
         const { data, error } = await supabase
           .from('program_workouts')
           .select('*')
           .eq('program_id', programId)
-          .order('created_at', { ascending: false })
-          .limit(10);
+          .order('created_at', { ascending: false });
 
         if (error) throw error;
-        console.log('Fetched sidebar workouts:', data);
-        setSidebarWorkouts(data || []);
+
+        let allWorkouts = data || [];
+
+        // Add generated workouts if available
+        if (
+          programData?.generated_program &&
+          Array.isArray(programData.generated_program)
+        ) {
+          console.log(
+            'Adding generated workouts to sidebar:',
+            programData.generated_program.length
+          );
+
+          // Transform generated workouts to match the format of program_workouts
+          const generatedWorkouts = programData.generated_program.map(
+            (workout) => ({
+              id:
+                workout.id ||
+                `generated-${Date.now()}-${Math.random()
+                  .toString(36)
+                  .substr(2, 9)}`,
+              program_id: programId,
+              title: workout.title,
+              body: workout.description,
+              workout_type: 'generated',
+              isGenerated: true,
+              suggestedDate: workout.suggestedDate,
+              tags: {
+                generated: true,
+                type: 'ai_generated',
+              },
+            })
+          );
+
+          // Add to workouts array, but don't duplicate
+          const existingIds = new Set(allWorkouts.map((w) => w.id));
+          const uniqueGeneratedWorkouts = generatedWorkouts.filter(
+            (w) => !existingIds.has(w.id)
+          );
+
+          allWorkouts = [...allWorkouts, ...uniqueGeneratedWorkouts];
+        }
+
+        console.log('Total sidebar workouts:', allWorkouts.length);
+        setSidebarWorkouts(allWorkouts || []);
       } catch (error) {
         console.error('Error fetching sidebar workouts:', error);
       } finally {
@@ -353,9 +405,9 @@ export default function ProgramCalendarPage({ params }) {
           <div className="lg:col-span-1">
             <div className="card bg-base-100 shadow-md">
               <div className="card-body p-4">
-                <h2 className="card-title text-lg">Recent Workouts</h2>
+                <h2 className="card-title text-lg">Program Workouts</h2>
                 <p className="text-sm text-gray-500 mb-3">
-                  Drag to calendar to schedule
+                  Available workouts - drag to calendar days to schedule
                 </p>
 
                 {isLoadingSidebar ? (
@@ -367,7 +419,9 @@ export default function ProgramCalendarPage({ params }) {
                     {sidebarWorkouts.map((workout) => (
                       <div
                         key={workout.id}
-                        className="p-3 bg-base-200 rounded-md cursor-move hover:bg-base-300 transition-colors"
+                        className={`p-3 rounded-md cursor-move hover:bg-base-300 transition-colors ${
+                          workout.isGenerated ? 'bg-blue-50' : 'bg-base-200'
+                        }`}
                         draggable="true"
                         onDragStart={(e) => {
                           console.log(
@@ -375,6 +429,12 @@ export default function ProgramCalendarPage({ params }) {
                             workout
                           );
                           try {
+                            // For generated workouts, make sure description is in body field
+                            if (workout.isGenerated && workout.description) {
+                              workout.body =
+                                workout.body || workout.description;
+                            }
+
                             const workoutJson = JSON.stringify(workout);
                             console.log(
                               'Serialized workout data:',
@@ -420,22 +480,44 @@ export default function ProgramCalendarPage({ params }) {
                           }
                         }}
                       >
-                        <h3 className="font-medium text-sm">{workout.title}</h3>
+                        <div className="flex justify-between items-start">
+                          <h3 className="font-medium text-sm">
+                            {workout.title}
+                          </h3>
+                          {workout.isGenerated && (
+                            <span className="badge badge-sm badge-info">
+                              AI Generated
+                            </span>
+                          )}
+                        </div>
                         <p className="text-xs text-gray-600 truncate">
-                          {workout.body}
+                          {workout.body || workout.description || ''}
                         </p>
+                        {workout.suggestedDate && (
+                          <p className="text-xs text-gray-500 mt-1">
+                            Suggested date: {formatDate(workout.suggestedDate)}
+                          </p>
+                        )}
                       </div>
                     ))}
                   </div>
                 ) : (
                   <div className="text-center py-4 text-gray-500">
                     <p>No workouts found</p>
-                    <Link
-                      href={`/program/${programId}/workouts`}
-                      className="btn btn-sm btn-outline mt-2"
-                    >
-                      Create Workouts
-                    </Link>
+                    <div className="flex flex-col gap-2 mt-2">
+                      <button
+                        onClick={() => setActiveTab('program_writer')}
+                        className="btn btn-sm btn-primary"
+                      >
+                        Generate Program
+                      </button>
+                      <Link
+                        href={`/program/${programId}/workouts`}
+                        className="btn btn-sm btn-outline"
+                      >
+                        Create Individual Workouts
+                      </Link>
+                    </div>
                   </div>
                 )}
               </div>

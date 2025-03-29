@@ -33,7 +33,7 @@ export async function POST(req) {
 
     // Initialize OpenAI client
     const openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
+      apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY,
     });
 
     // Get matched workouts if available
@@ -163,20 +163,6 @@ export async function POST(req) {
         notes: 'AI-generated workout',
       });
     }
-
-    // Also store in workout_generations for reference
-    const { data, error } = await supabase
-      .from('workout_generations')
-      .insert({
-        program_id: programId,
-        workout_data: workouts,
-        raw_content: generatedContent,
-        status: 'completed',
-        created_at: new Date().toISOString(),
-      })
-      .select();
-
-    if (error) throw error;
 
     return NextResponse.json(
       { workouts, rawContent: generatedContent },

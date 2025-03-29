@@ -23,6 +23,201 @@ export default function ProgramCalendar({
   // Force refresh when props change
   const [forceUpdate, setForceUpdate] = useState(0);
 
+  // Utility function to create a new workout
+  const createNewWorkout = async (workout, date) => {
+    try {
+      const workoutData = {
+        program_id: programId,
+        title: workout.title || 'Untitled Workout',
+        body: workout.description || workout.body || workout.content || '',
+        workout_type: workout.workout_type || workout.type || 'generated',
+        difficulty: workout.difficulty || 'intermediate',
+        tags: workout.tags || {
+          type: workout.workout_type || workout.type || 'generated',
+          focus: workout.focus || '',
+          generated: workout.isGenerated || true,
+          date: workout.suggestedDate || date || null,
+          ai_generated: workout.isGenerated || true,
+        },
+      };
+
+      console.log('Creating new workout with data:', workoutData);
+      const { data: workoutResult, error: workoutError } = await supabase
+        .from('program_workouts')
+        .insert(workoutData)
+        .select();
+
+      if (workoutError) {
+        console.error('Supabase error creating workout:', workoutError);
+        throw new Error(
+          `Error creating workout: ${workoutError.message || workoutError}`
+        );
+      }
+
+      if (!workoutResult || workoutResult.length === 0) {
+        throw new Error('Failed to create workout - no data returned');
+      }
+
+      const workoutId = workoutResult[0].id;
+      console.log('Created new workout with ID:', workoutId);
+
+      // Add to local workouts array
+      setWorkouts((prev) => [...prev, workoutResult[0]]);
+
+      return workoutId;
+    } catch (error) {
+      console.error('Error in createNewWorkout:', error);
+      throw error;
+    }
+  };
+
+  // Utility function to schedule a workout
+  const scheduleWorkout = async (workoutId, date, entityId = null) => {
+    try {
+      const formattedDate =
+        typeof date === 'string' ? date : date.toISOString().split('T')[0];
+
+      // Try to directly create the schedule entry without checking workout_generations
+      // This is a simpler approach if the foreign key constraints have changed
+      const scheduleData = {
+        program_id: programId,
+        workout_id: workoutId,
+        entity_id: entityId,
+        scheduled_date: formattedDate,
+      };
+
+      console.log('Creating schedule entry:', scheduleData);
+      const { data: scheduleResult, error: scheduleError } = await supabase
+        .from('workout_schedule')
+        .insert(scheduleData)
+        .select();
+
+      // If we get a foreign key error, try to understand which table we need to work with
+      if (scheduleError) {
+        console.error('Initial schedule creation error:', scheduleError);
+
+        if (
+          scheduleError.message &&
+          scheduleError.message.includes('foreign key constraint')
+        ) {
+          // Try to extract the constraint name from the error message
+          const constraintMatch =
+            scheduleError.message.match(/constraint "([^"]+)"/);
+          const constraint = constraintMatch ? constraintMatch[1] : null;
+
+          console.log('Foreign key constraint issue detected:', constraint);
+
+          // Get the current database schema to understand the relationships
+          try {
+            // First try to determine if workout_id is actually a foreign key to program_workouts
+            // This would be a more sensible design
+            const { data: programWorkout } = await supabase
+              .from('program_workouts')
+              .select('id')
+              .eq('id', workoutId)
+              .single();
+
+            if (programWorkout) {
+              console.log(
+                'Workout exists in program_workouts table, attempting direct connection'
+              );
+
+              // Try a simpler approach - just create the schedule entry directly with RLS bypass
+              const { data: directResult, error: directError } =
+                await supabase.rpc('create_workout_schedule', {
+                  p_program_id: programId,
+                  p_workout_id: workoutId,
+                  p_entity_id: entityId,
+                  p_scheduled_date: formattedDate,
+                });
+
+              if (directError) {
+                console.error('Direct RPC call failed:', directError);
+                throw new Error(
+                  `Cannot schedule workout: ${directError.message}`
+                );
+              }
+
+              console.log('Successfully scheduled workout via RPC');
+
+              // If we have data in expected format, use it
+              if (directResult && typeof directResult === 'object') {
+                console.log('RPC returned schedule data:', directResult);
+                setScheduledWorkouts((prev) => [...prev, directResult]);
+                return directResult;
+              }
+
+              // Otherwise fetch the newly created workout schedule
+              const { data: newSchedule, error: fetchError } = await supabase
+                .from('workout_schedule')
+                .select('*')
+                .eq('program_id', programId)
+                .eq('workout_id', workoutId)
+                .eq('scheduled_date', formattedDate)
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .single();
+
+              if (fetchError) {
+                console.error('Error fetching new schedule:', fetchError);
+              } else if (newSchedule) {
+                console.log('Found newly created schedule:', newSchedule);
+                setScheduledWorkouts((prev) => [...prev, newSchedule]);
+                return newSchedule;
+              }
+            } else {
+              console.log(
+                'Workout not found in program_workouts, trying alternative approach'
+              );
+            }
+          } catch (schemaError) {
+            console.error('Schema detection failed:', schemaError);
+
+            // As a last resort, try to determine if workout_generations is actually needed
+            try {
+              const { data: tableInfo, error: tableError } = await supabase
+                .from('workout_schedule')
+                .select('workout_id')
+                .limit(1)
+                .single();
+
+              if (!tableError && tableInfo) {
+                console.log('Found example workout_schedule entry:', tableInfo);
+                // We found a valid entry, so we can determine which tables are involved
+              }
+            } catch (tableError) {
+              console.error('Table structure detection failed:', tableError);
+            }
+          }
+
+          // If all else fails, inform the user about the database schema issue
+          throw new Error(
+            'The database schema has changed. The workout_schedule table has different foreign key relationships than expected. Please ask your database administrator to update the application code.'
+          );
+        } else {
+          // If it's not a foreign key issue, throw the original error
+          throw new Error(
+            `Error creating schedule: ${scheduleError.message || scheduleError}`
+          );
+        }
+      }
+
+      if (!scheduleResult || scheduleResult.length === 0) {
+        throw new Error('Failed to schedule workout - no data returned');
+      }
+
+      console.log('Created schedule entry:', scheduleResult[0]);
+
+      // Update local state
+      setScheduledWorkouts((prev) => [...prev, scheduleResult[0]]);
+
+      return scheduleResult[0];
+    } catch (error) {
+      console.error('Error in scheduleWorkout:', error);
+      throw error;
+    }
+  };
+
   useEffect(() => {
     // Force refresh when programId changes
     setForceUpdate((prev) => prev + 1);
@@ -79,6 +274,15 @@ export default function ProgramCalendar({
 
       setIsLoading(true);
       try {
+        // Fetch program data including generated program
+        const { data: programData, error: programError } = await supabase
+          .from('programs')
+          .select('*')
+          .eq('id', programId)
+          .single();
+
+        if (programError) throw programError;
+
         // Fetch all workouts for this program
         const { data: workoutsData, error: workoutsError } = await supabase
           .from('program_workouts')
@@ -98,6 +302,74 @@ export default function ProgramCalendar({
         // Set the states
         setWorkouts(workoutsData || []);
         setScheduledWorkouts(scheduleData || []);
+
+        console.log('Calendar debug - Current state:');
+        console.log('- Workouts:', workoutsData?.length || 0, 'items');
+        console.log(
+          '- Scheduled workouts:',
+          scheduleData?.length || 0,
+          'items'
+        );
+
+        // If there's a generated program, add those workouts to the local state
+        if (
+          programData?.generated_program &&
+          Array.isArray(programData.generated_program)
+        ) {
+          console.log(
+            'Found generated program with workouts:',
+            programData.generated_program.length
+          );
+
+          // Log the first workout as an example
+          if (programData.generated_program.length > 0) {
+            console.log(
+              'Example workout from generated program:',
+              JSON.stringify(programData.generated_program[0], null, 2)
+            );
+          }
+
+          // Create a local copy of the workouts with program metadata
+          const generatedWorkouts = programData.generated_program.map(
+            (workout) => ({
+              ...workout,
+              id:
+                workout.id ||
+                `generated-${Date.now()}-${Math.random()
+                  .toString(36)
+                  .substr(2, 9)}`,
+              program_id: programId,
+              isGenerated: true,
+              title: workout.title || 'Generated Workout',
+              // Ensure we have content in the body field
+              body: workout.description || workout.body || '',
+              // Store the original description as well
+              description: workout.description || workout.body || '',
+              workout_type: 'generated',
+              tags: {
+                generated: true,
+                date: workout.suggestedDate,
+                ai_generated: true,
+              },
+            })
+          );
+
+          // Add these to the workouts list if they're not already there
+          setWorkouts((prevWorkouts) => {
+            const existingIds = new Set(prevWorkouts.map((w) => w.id));
+            const newWorkouts = generatedWorkouts.filter(
+              (w) => !existingIds.has(w.id)
+            );
+            console.log(
+              'Adding',
+              newWorkouts.length,
+              'new generated workouts to calendar'
+            );
+            return [...prevWorkouts, ...newWorkouts];
+          });
+        } else {
+          console.log('No generated program found or it has no workouts');
+        }
       } catch (error) {
         console.error('Error fetching data:', error);
       } finally {
@@ -260,244 +532,279 @@ export default function ProgramCalendar({
     let workout = draggedWorkout;
     let transferData = null;
 
-    // Log all available types
-    console.log('Available data types:', e.dataTransfer.types);
-
-    // First try to get workout data directly
-    if (e.dataTransfer.types.includes('workout')) {
-      try {
-        const workoutData = e.dataTransfer.getData('workout');
-        console.log('Raw workout data from drop:', workoutData);
-        transferData = JSON.parse(workoutData);
-        console.log('Parsed workout data:', transferData);
-      } catch (error) {
-        console.error('Error parsing workout drag data:', error);
-      }
-    }
-
-    // Fallback to text/plain if workout data is not available
-    if (!transferData && e.dataTransfer.types.includes('text/plain')) {
-      try {
-        const textData = e.dataTransfer.getData('text/plain');
-        console.log('Raw text/plain data from drop:', textData);
-        transferData = JSON.parse(textData);
-        console.log('Parsed text/plain data:', transferData);
-      } catch (error) {
-        console.error('Error parsing text/plain drag data:', error);
-      }
-    }
-
-    // Use the transfer data if available, otherwise use the dragged workout
-    if (transferData) {
-      workout = transferData;
-    }
-
-    if (!workout) {
-      console.error('No workout data found to drop');
-      return;
-    }
-
-    // Debugging: Check the actual structure of the workout data
-    console.log('Final workout to save:', workout);
-    console.log('Workout ID type:', typeof workout.id);
-
-    const formattedDate = date.toISOString().split('T')[0];
-    console.log('Saving workout to date:', formattedDate);
-    setIsLoading(true);
-
     try {
-      // If the workout has a scheduleId, it means we're updating an existing scheduled workout
-      if (workout.scheduleId) {
-        console.log('Updating existing scheduled workout:', workout.scheduleId);
-        const { data, error } = await supabase
-          .from('workout_schedule')
-          .update({ scheduled_date: formattedDate })
-          .eq('id', workout.scheduleId)
-          .select();
+      // Log all available types
+      console.log('Available data types:', e.dataTransfer.types);
 
-        if (error) {
-          console.error('Supabase error updating schedule:', error);
-          throw new Error(`Error updating schedule: ${error.message || error}`);
-        }
-
-        console.log('Update response:', data);
-
-        // Update local state
-        const updatedSchedules = scheduledWorkouts.map((sw) =>
-          sw.id === workout.scheduleId
-            ? { ...sw, scheduled_date: formattedDate }
-            : sw
-        );
-        console.log('Updated schedule state:', updatedSchedules);
-        setScheduledWorkouts(updatedSchedules);
-      }
-      // If it has an ID but no scheduleId, it's an existing workout but not yet scheduled
-      else if (workout.id) {
-        // First check if this workout already exists and belongs to this program
-        console.log(
-          `Checking if workout ${workout.id} exists and belongs to program ${programId}`
-        );
-        const { data: verifyWorkout, error: verifyError } = await supabase
-          .from('program_workouts')
-          .select('id')
-          .eq('id', workout.id)
-          .eq('program_id', programId)
-          .single();
-
-        if (verifyError && verifyError.code !== 'PGRST116') {
-          // Not found is OK
-          console.error('Error verifying workout:', verifyError);
-        }
-
-        // If workout wasn't found, we need to create it first
-        let workoutId = workout.id;
-
-        if (!verifyWorkout) {
-          console.log('Workout not found in this program, creating it first');
-
-          // Create a copy of the workout in this program
-          const workoutData = {
-            program_id: programId,
-            title: workout.title || 'Untitled Workout',
-            body: workout.body || workout.description || '',
-            workout_type: workout.workout_type || workout.type || 'custom',
-            difficulty: workout.difficulty || 'intermediate',
-            tags: workout.tags || {
-              type: workout.type || 'custom',
-              focus: workout.focus || '',
-              generated: true,
-            },
-          };
-
-          console.log('Creating workout copy with data:', workoutData);
-          const { data: newWorkout, error: createError } = await supabase
-            .from('program_workouts')
-            .insert(workoutData)
-            .select();
-
-          if (createError) {
-            console.error('Error creating workout copy:', createError);
-            throw new Error(`Unable to create workout: ${createError.message}`);
+      // First try to get workout data directly
+      if (e.dataTransfer.types.includes('workout')) {
+        try {
+          const workoutData = e.dataTransfer.getData('workout');
+          console.log('Raw workout data from drop:', workoutData);
+          if (workoutData) {
+            transferData = JSON.parse(workoutData);
+            console.log('Parsed workout data:', transferData);
           }
-
-          if (!newWorkout || newWorkout.length === 0) {
-            throw new Error('Failed to create workout - no data returned');
-          }
-
-          workoutId = newWorkout[0].id;
-          console.log('Created new workout with ID:', workoutId);
-
-          // Add to local workouts array
-          setWorkouts([...workouts, newWorkout[0]]);
-        }
-
-        // Insert a new schedule entry
-        const scheduleData = {
-          program_id: programId,
-          workout_id: workoutId,
-          entity_id: workout.entity_id || null, // Use entity_id if available
-          scheduled_date: formattedDate,
-        };
-
-        console.log('Creating new schedule entry:', scheduleData);
-        const { data, error } = await supabase
-          .from('workout_schedule')
-          .insert(scheduleData)
-          .select();
-
-        if (error) {
-          console.error('Supabase error creating schedule:', error);
-          throw new Error(`Error creating schedule: ${error.message || error}`);
-        }
-
-        console.log('Insert schedule response:', data);
-
-        if (data && data.length > 0) {
-          setScheduledWorkouts([...scheduledWorkouts, data[0]]);
-        } else {
-          console.error('No data returned from insert operation');
+        } catch (error) {
+          console.error('Error parsing workout drag data:', error);
         }
       }
-      // If it's a new workout from AI generator, first create the workout, then schedule it
-      else {
-        // First insert the workout
-        const workoutData = {
-          program_id: programId,
-          title: workout.title || 'Untitled Workout',
-          body: workout.description || workout.content || workout.body || '',
-          workout_type: workout.type || workout.workout_type || 'custom',
-          difficulty: workout.difficulty || 'intermediate',
-          tags: workout.tags || {
-            type: workout.type || workout.workout_type || 'custom',
-            focus: workout.focus || '',
-            generated: true,
-          },
-        };
 
-        console.log('Creating new workout with data:', workoutData);
-        const { data: workoutResult, error: workoutError } = await supabase
-          .from('program_workouts')
-          .insert(workoutData)
-          .select();
+      // Fallback to text/plain if workout data is not available
+      if (!transferData && e.dataTransfer.types.includes('text/plain')) {
+        try {
+          const textData = e.dataTransfer.getData('text/plain');
+          console.log('Raw text/plain data from drop:', textData);
+          if (textData && textData.includes('{') && textData.includes('}')) {
+            transferData = JSON.parse(textData);
+            console.log('Parsed text/plain data:', transferData);
+          }
+        } catch (error) {
+          console.error('Error parsing text/plain drag data:', error);
+        }
+      }
 
-        if (workoutError) {
-          console.error('Supabase error creating workout:', workoutError);
-          throw new Error(
-            `Error creating workout: ${workoutError.message || workoutError}`
+      // Use the transfer data if available, otherwise use the dragged workout
+      if (transferData && typeof transferData === 'object') {
+        workout = transferData;
+      }
+
+      if (!workout) {
+        console.error('No workout data found to drop');
+        return;
+      }
+
+      // Ensure workout has required properties
+      if (!workout.title) {
+        workout.title = 'Untitled Workout';
+      }
+
+      // Debugging: Check the actual structure of the workout data
+      console.log('Final workout to save:', workout);
+      console.log('Workout ID type:', typeof workout.id);
+
+      const formattedDate = date.toISOString().split('T')[0];
+      console.log('Saving workout to date:', formattedDate);
+      setIsLoading(true);
+
+      try {
+        // If the workout has a scheduleId, it means we're updating an existing scheduled workout
+        if (workout.scheduleId) {
+          console.log(
+            'Updating existing scheduled workout:',
+            workout.scheduleId
           );
-        }
-
-        console.log('Insert workout response:', workoutResult);
-
-        if (workoutResult && workoutResult.length > 0) {
-          // Add the new workout to our local state
-          setWorkouts([...workouts, workoutResult[0]]);
-
-          // Now create the schedule entry
-          const scheduleData = {
-            program_id: programId,
-            workout_id: workoutResult[0].id,
-            entity_id: workout.entity_id || null,
-            scheduled_date: formattedDate,
-          };
-
-          console.log('Creating schedule for new workout:', scheduleData);
-          const { data: scheduleResult, error: scheduleError } = await supabase
+          const { data, error } = await supabase
             .from('workout_schedule')
-            .insert(scheduleData)
+            .update({ scheduled_date: formattedDate })
+            .eq('id', workout.scheduleId)
             .select();
 
-          if (scheduleError) {
-            console.error(
-              'Supabase error scheduling new workout:',
-              scheduleError
-            );
+          if (error) {
+            console.error('Supabase error updating schedule:', error);
             throw new Error(
-              `Error scheduling workout: ${
-                scheduleError.message || scheduleError
-              }`
+              `Error updating schedule: ${error.message || error}`
             );
           }
 
-          console.log('Insert schedule response:', scheduleResult);
+          console.log('Update response:', data);
 
-          if (scheduleResult && scheduleResult.length > 0) {
-            setScheduledWorkouts([...scheduledWorkouts, scheduleResult[0]]);
-          } else {
-            console.error('No data returned from schedule insert operation');
-          }
-        } else {
-          console.error('No data returned from workout insert operation');
+          // Update local state
+          const updatedSchedules = scheduledWorkouts.map((sw) =>
+            sw.id === workout.scheduleId
+              ? { ...sw, scheduled_date: formattedDate }
+              : sw
+          );
+          console.log('Updated schedule state:', updatedSchedules);
+          setScheduledWorkouts(updatedSchedules);
         }
-      }
+        // If it has an ID but no scheduleId, it's an existing workout but not yet scheduled
+        else if (workout.id) {
+          // Check if this is a generated ID (not a valid UUID)
+          const isGeneratedId = workout.id.startsWith('generated-');
 
-      // Clear the highlighted date and trigger a refresh
-      setHighlightedDate(null);
-      setForceUpdate((prev) => prev + 1);
+          if (isGeneratedId) {
+            console.log(
+              'This is a generated ID, not a real UUID. Creating new workout instead of trying to verify.'
+            );
+
+            try {
+              // Use our utility function to create a new workout
+              const workoutId = await createNewWorkout(workout, formattedDate);
+
+              // Then schedule it using our utility function
+              await scheduleWorkout(
+                workoutId,
+                formattedDate,
+                workout.entity_id || null
+              );
+
+              console.log(
+                'Successfully created and scheduled new workout from generated ID:',
+                workoutId
+              );
+            } catch (error) {
+              console.error(
+                'Error creating or scheduling workout from generated ID:',
+                error
+              );
+              throw error;
+            }
+          } else {
+            // Regular UUID handling for normal workouts
+            console.log(
+              `Checking if workout ${workout.id} exists and belongs to program ${programId}`
+            );
+
+            // Fix for potential UUID format issues
+            const workoutIdToUse =
+              typeof workout.id === 'string' ? workout.id : String(workout.id);
+
+            const { data: verifyWorkout, error: verifyError } = await supabase
+              .from('program_workouts')
+              .select('id')
+              .eq('id', workoutIdToUse)
+              .maybeSingle();
+
+            if (verifyError) {
+              console.error('Error verifying workout:', verifyError);
+              throw new Error(
+                `Error verifying workout: ${verifyError.message}`
+              );
+            }
+
+            // If workout wasn't found, we need to create it first
+            let workoutId = workoutIdToUse;
+
+            if (!verifyWorkout) {
+              console.log(
+                'Workout not found in this program, creating it first'
+              );
+
+              // Create a copy of the workout in this program
+              const workoutData = {
+                program_id: programId,
+                title: workout.title || 'Untitled Workout',
+                body: workout.body || workout.description || '',
+                workout_type: workout.workout_type || workout.type || 'custom',
+                difficulty: workout.difficulty || 'intermediate',
+                tags: workout.tags || {
+                  type: workout.type || 'custom',
+                  focus: workout.focus || '',
+                  generated: true,
+                },
+              };
+
+              console.log('Creating workout copy with data:', workoutData);
+              const { data: newWorkout, error: createError } = await supabase
+                .from('program_workouts')
+                .insert(workoutData)
+                .select();
+
+              if (createError) {
+                console.error('Error creating workout copy:', createError);
+                throw new Error(
+                  `Unable to create workout: ${createError.message}`
+                );
+              }
+
+              if (!newWorkout || newWorkout.length === 0) {
+                throw new Error('Failed to create workout - no data returned');
+              }
+
+              workoutId = newWorkout[0].id;
+              console.log('Created new workout with ID:', workoutId);
+
+              // Add to local workouts array
+              setWorkouts([...workouts, newWorkout[0]]);
+            } else {
+              console.log(
+                'Workout exists in program, using existing ID:',
+                workoutId
+              );
+            }
+
+            // Verify the workout ID exists one more time as a safety check
+            const { data: finalCheck, error: finalCheckError } = await supabase
+              .from('program_workouts')
+              .select('id')
+              .eq('id', workoutId)
+              .maybeSingle();
+
+            if (finalCheckError || !finalCheck) {
+              console.error(
+                'Final workout verification failed:',
+                finalCheckError || 'No workout found'
+              );
+              throw new Error(
+                'Unable to find or create valid workout to schedule'
+              );
+            }
+
+            // Insert a new schedule entry
+            const scheduleData = {
+              program_id: programId,
+              workout_id: workoutId,
+              entity_id: workout.entity_id || null, // Use entity_id if available
+              scheduled_date: formattedDate,
+            };
+
+            console.log('Creating new schedule entry:', scheduleData);
+            const { data, error } = await supabase
+              .from('workout_schedule')
+              .insert(scheduleData)
+              .select();
+
+            if (error) {
+              console.error('Supabase error creating schedule:', error);
+              throw new Error(
+                `Error creating schedule: ${error.message || error}`
+              );
+            }
+
+            console.log('Insert schedule response:', data);
+
+            if (data && data.length > 0) {
+              setScheduledWorkouts([...scheduledWorkouts, data[0]]);
+            } else {
+              console.error('No data returned from insert operation');
+            }
+          }
+        }
+        // If it's a new workout from AI generator, first create the workout, then schedule it
+        else {
+          try {
+            // Use our utility function to create a new workout
+            const workoutId = await createNewWorkout(workout, formattedDate);
+
+            // Then schedule it using our utility function
+            await scheduleWorkout(
+              workoutId,
+              formattedDate,
+              workout.entity_id || null
+            );
+
+            console.log(
+              'Successfully created and scheduled new workout:',
+              workoutId
+            );
+          } catch (error) {
+            console.error('Error creating or scheduling new workout:', error);
+            throw error;
+          }
+        }
+      } catch (error) {
+        console.error('Error saving workout:', error);
+        alert(`Failed to schedule workout: ${error.message}`);
+      } finally {
+        setIsLoading(false);
+        setDraggedWorkout(null);
+      }
     } catch (error) {
-      console.error('Error saving workout:', error);
-      alert(`Failed to save workout: ${error.message}`);
-    } finally {
+      console.error('Error handling drop:', error);
+      alert(
+        'There was an error processing the drag and drop operation. Please try again.'
+      );
       setIsLoading(false);
       setDraggedWorkout(null);
     }

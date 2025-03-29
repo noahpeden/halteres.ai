@@ -2,6 +2,15 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import equipmentList from '@/utils/equipmentList';
+import {
+  goals,
+  difficulties,
+  focusAreas,
+  workoutFormats,
+  programTypes,
+  gymTypes,
+  gymEquipmentPresets,
+} from './utils';
 
 export default function AIProgramWriter({ programId, onSelectWorkout }) {
   const { supabase } = useAuth();
@@ -24,10 +33,13 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
     startDate: new Date().toISOString().split('T')[0], // Today's date in YYYY-MM-DD format
   });
   const [error, setError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [allEquipmentSelected, setAllEquipmentSelected] = useState(false);
   const [showEquipment, setShowEquipment] = useState(false);
+  const [selectedWorkout, setSelectedWorkout] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Fetch reference workouts on component mount
   useEffect(() => {
@@ -48,28 +60,108 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
     fetchReferenceWorkouts();
   }, [supabase]);
 
-  // Equipment presets based on gym type
-  const gymEquipmentPresets = {
-    'Crossfit Box': [
-      1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 14, 15, 16, 17, 18, 19, 20, 22, 23,
-      26, 46,
-    ],
-    'Commercial Gym': [
-      1, 2, 3, 4, 5, 16, 24, 27, 39, 40, 41, 42, 44, 45, 46, 47,
-    ],
-    'Home Gym': [4, 5, 6, 16, 24, 27],
-    'Minimal Equipment': [4, 5, 6, 16, 27],
-    'Outdoor Space': [6, 16, 18, 27],
-    'Powerlifting Gym': [1, 2, 3, 5, 16, 21, 24, 27, 36, 37],
-    'Olympic Weightlifting Gym': [1, 2, 3, 5, 16, 24, 27],
-    'Bodyweight Only': [27, 38],
-    'Studio Gym': [4, 5, 6, 16, 27, 35, 44, 45],
-    'University Gym': [1, 2, 3, 4, 5, 39, 40, 41, 42, 44, 45, 46, 47],
-    'Hotel Gym': [5, 16, 27, 39, 44, 45, 47],
-    'Apartment Gym': [5, 16, 27, 44, 45],
-    'Boxing/MMA Gym': [5, 6, 7, 16, 17, 18, 22, 27, 35],
-    Other: [],
-  };
+  // Fetch program data when component mounts and programId is available
+  useEffect(() => {
+    async function fetchProgramData() {
+      if (!programId) return;
+
+      setIsLoading(true);
+      setError('');
+      setSuccessMessage('');
+
+      try {
+        const { data: program, error } = await supabase
+          .from('programs')
+          .select('*')
+          .eq('id', programId)
+          .single();
+
+        if (error) throw error;
+
+        if (program) {
+          // Update form data based on program settings if available
+          if (program.calendar_data) {
+            const { days_of_week = [], start_date } = program.calendar_data;
+            setFormData((prev) => ({
+              ...prev,
+              startDate: start_date || prev.startDate,
+              daysPerWeek: days_of_week.length.toString() || prev.daysPerWeek,
+            }));
+          }
+
+          // If there's a saved generated program, load it
+          if (
+            program.generated_program &&
+            Array.isArray(program.generated_program) &&
+            program.generated_program.length > 0
+          ) {
+            // Load the saved program
+            console.log(
+              'Loaded saved program:',
+              program.generated_program.length,
+              'workouts'
+            );
+
+            // Also fetch workouts from program_workouts to get any additional data like full descriptions
+            const { data: savedWorkouts, error: workoutsError } = await supabase
+              .from('program_workouts')
+              .select('id, title, body, tags')
+              .eq('program_id', programId)
+              .order('created_at');
+
+            if (!workoutsError && savedWorkouts && savedWorkouts.length > 0) {
+              console.log(
+                'Found',
+                savedWorkouts.length,
+                'workouts in program_workouts'
+              );
+
+              // Merge the more detailed data from program_workouts with the generated_program
+              const enhancedWorkouts = program.generated_program.map(
+                (workout) => {
+                  // Try to find corresponding workout in program_workouts
+                  const savedWorkout = savedWorkouts.find(
+                    (sw) =>
+                      sw.title === workout.title ||
+                      (sw.tags?.week === workout.tags?.week &&
+                        sw.tags?.day === workout.tags?.day)
+                  );
+
+                  if (savedWorkout) {
+                    return {
+                      ...workout,
+                      description: savedWorkout.body || workout.description,
+                      // If workoutDetails was stored in tags, restore it
+                      workoutDetails:
+                        savedWorkout.tags?.workoutDetails ||
+                        workout.workoutDetails,
+                      savedWorkoutId: savedWorkout.id,
+                    };
+                  }
+
+                  return workout;
+                }
+              );
+
+              setSuggestions(enhancedWorkouts);
+            } else {
+              // Fall back to the saved generated program
+              setSuggestions(program.generated_program);
+            }
+
+            setSuccessMessage('Loaded saved program successfully!');
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching program data:', error);
+        setError('Failed to load saved program data');
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchProgramData();
+  }, [programId, supabase]);
 
   // Update equipment selection when gym type changes
   useEffect(() => {
@@ -92,64 +184,6 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
       setAllEquipmentSelected(false);
     }
   }, [formData.equipment]);
-
-  const goals = [
-    { value: 'strength', label: 'Strength' },
-    { value: 'endurance', label: 'Endurance' },
-    { value: 'hypertrophy', label: 'Hypertrophy' },
-    { value: 'power', label: 'Power' },
-    { value: 'skill', label: 'Skill Development' },
-    { value: 'conditioning', label: 'Conditioning' },
-  ];
-
-  const difficulties = [
-    { value: 'beginner', label: 'Beginner' },
-    { value: 'intermediate', label: 'Intermediate' },
-    { value: 'advanced', label: 'Advanced' },
-    { value: 'elite', label: 'Elite' },
-  ];
-
-  const focusAreas = [
-    { value: 'upper_body', label: 'Upper Body' },
-    { value: 'lower_body', label: 'Lower Body' },
-    { value: 'full_body', label: 'Full Body' },
-    { value: 'core', label: 'Core' },
-    { value: 'posterior_chain', label: 'Posterior Chain' },
-    { value: 'anterior_chain', label: 'Anterior Chain' },
-  ];
-
-  const workoutFormats = [
-    { value: 'standard', label: 'Standard Format' },
-    { value: 'emom', label: 'EMOM' },
-    { value: 'amrap', label: 'AMRAP' },
-    { value: 'for_time', label: 'For Time' },
-    { value: 'tabata', label: 'Tabata' },
-    { value: 'circuit', label: 'Circuit Training' },
-  ];
-
-  const programTypes = [
-    { value: 'linear', label: 'Linear Progression' },
-    { value: 'undulating', label: 'Undulating Periodization' },
-    { value: 'block', label: 'Block Periodization' },
-    { value: 'conjugate', label: 'Conjugate Method' },
-    { value: 'concurrent', label: 'Concurrent Training' },
-  ];
-
-  const gymTypes = [
-    { value: 'Crossfit Box', label: 'Crossfit Box' },
-    { value: 'Commercial Gym', label: 'Commercial Gym' },
-    { value: 'Home Gym', label: 'Home Gym' },
-    { value: 'Minimal Equipment', label: 'Minimal Equipment' },
-    { value: 'Outdoor Space', label: 'Outdoor Space' },
-    { value: 'Powerlifting Gym', label: 'Powerlifting Gym' },
-    { value: 'Olympic Weightlifting Gym', label: 'Olympic Weightlifting Gym' },
-    { value: 'Bodyweight Only', label: 'Bodyweight Only' },
-    { value: 'Studio Gym', label: 'Studio Gym' },
-    { value: 'University Gym', label: 'University Gym' },
-    { value: 'Hotel Gym', label: 'Hotel Gym' },
-    { value: 'Apartment Gym', label: 'Apartment Gym' },
-    { value: 'Boxing/MMA Gym', label: 'Boxing/MMA Gym' },
-  ];
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -273,6 +307,7 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
     setIsLoading(true);
     setSuggestions([]);
     setError('');
+    setSuccessMessage('');
 
     try {
       // Get the equipment names instead of IDs
@@ -289,7 +324,8 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          programId,
+          // Only include programId if it's provided and not null/undefined
+          ...(programId ? { programId } : {}),
           goal: formData.goal,
           difficulty: formData.difficulty,
           equipment: selectedEquipmentNames,
@@ -305,20 +341,45 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
         }),
       });
 
-      const data = await response.json();
+      // Check for non-JSON response
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error(
+          `Server returned non-JSON response: ${await response.text()}`
+        );
+      }
+
+      let data;
+      try {
+        data = await response.json();
+      } catch (parseError) {
+        console.error('JSON Parse Error:', parseError);
+        throw new Error(
+          'Failed to parse server response. The response may be incomplete or invalid.'
+        );
+      }
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to generate program');
+        throw new Error(data.error || `Server error: ${response.status}`);
       }
 
       if (data.suggestions && data.suggestions.length > 0) {
         setSuggestions(data.suggestions);
+
+        // Show success message if we have a programId (which means it was saved)
+        if (programId) {
+          setSuccessMessage(
+            'Program generated and saved successfully! You can now add workouts to your calendar.'
+          );
+        } else {
+          setSuccessMessage('Program generated successfully!');
+        }
       } else {
         setError('No program workouts were generated. Please try again.');
       }
     } catch (error) {
       console.error('Error:', error);
-      setError(error.message);
+      setError(`Program generation failed: ${error.message}`);
     } finally {
       setIsLoading(false);
     }
@@ -353,6 +414,164 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
     const daysPerWeek = parseInt(formData.daysPerWeek);
 
     suggestions.forEach((workout, index) => {
+      // Process workoutDetails if present
+      if (
+        (workout.workoutDetails || workout.workout) &&
+        typeof (workout.workoutDetails || workout.workout) === 'object'
+      ) {
+        // Use workoutDetails if available, otherwise use workout property
+        const workoutData = workout.workoutDetails || workout.workout;
+        // If using workout property, also set workoutDetails for consistency
+        if (workout.workout && !workout.workoutDetails) {
+          workout.workoutDetails = workout.workout;
+        }
+
+        let fullDescription = workout.description || '';
+
+        // Format the warm-up section
+        if (workoutData.Warmup || workoutData['Warm-up']) {
+          const warmupData = workoutData.Warmup || workoutData['Warm-up'];
+          fullDescription += '\n\n## Warm-up\n\n';
+
+          if (Array.isArray(warmupData)) {
+            // Check if it's an array of strings or objects
+            if (typeof warmupData[0] === 'string') {
+              fullDescription += warmupData.join('\n');
+            } else if (typeof warmupData[0] === 'object') {
+              // Handle array of objects with movement/exercise and duration/details
+              warmupData.forEach((item) => {
+                if (item.movement || item.exercise) {
+                  const movement = item.movement || item.exercise;
+                  const duration = item.duration || item.time || '';
+
+                  if (duration) {
+                    fullDescription += `${movement} - ${duration}\n`;
+                  } else {
+                    fullDescription += `${movement}\n`;
+                  }
+                } else {
+                  // If structure is unknown, stringify the object
+                  fullDescription += `${JSON.stringify(item)}\n`;
+                }
+              });
+            } else {
+              fullDescription += warmupData.join('\n');
+            }
+          } else if (typeof warmupData === 'string') {
+            fullDescription += warmupData;
+          } else if (typeof warmupData === 'object') {
+            for (const [key, value] of Object.entries(warmupData)) {
+              fullDescription += `${key}: ${value}\n`;
+            }
+          }
+        }
+
+        // Format the main workout section
+        if (workoutData['Main Workout']) {
+          fullDescription += '\n\n## Main Workout\n\n';
+          const mainWorkout = workoutData['Main Workout'];
+
+          if (typeof mainWorkout === 'object' && !Array.isArray(mainWorkout)) {
+            for (const [exercise, details] of Object.entries(mainWorkout)) {
+              fullDescription += `${exercise}:\n`;
+
+              if (typeof details === 'object') {
+                for (const [key, value] of Object.entries(details)) {
+                  fullDescription += `- ${key}: ${value}\n`;
+                }
+              } else {
+                fullDescription += `${details}\n`;
+              }
+              fullDescription += '\n';
+            }
+          } else if (Array.isArray(mainWorkout)) {
+            // Handle array of exercise objects
+            mainWorkout.forEach((item) => {
+              if (typeof item === 'object' && item.exercise) {
+                fullDescription += `${item.exercise}:\n`;
+                // Process each property of the exercise object except the name
+                Object.entries(item)
+                  .filter(([key]) => key !== 'exercise')
+                  .forEach(([key, value]) => {
+                    fullDescription += `- ${key}: ${value}\n`;
+                  });
+                fullDescription += '\n';
+              } else if (typeof item === 'string') {
+                fullDescription += `${item}\n`;
+              } else {
+                fullDescription += `${JSON.stringify(item)}\n`;
+              }
+            });
+          } else {
+            fullDescription += mainWorkout;
+          }
+        }
+
+        // Format the cool-down section
+        if (
+          workoutData.Cooldown ||
+          workoutData['Cool-down'] ||
+          workoutData['Cool-down/Mobility Work']
+        ) {
+          const cooldownData =
+            workoutData.Cooldown ||
+            workoutData['Cool-down'] ||
+            workoutData['Cool-down/Mobility Work'];
+          fullDescription += '\n\n## Cool-down\n\n';
+
+          if (Array.isArray(cooldownData)) {
+            // Check if it's an array of strings or objects
+            if (typeof cooldownData[0] === 'string') {
+              fullDescription += cooldownData.join('\n');
+            } else if (typeof cooldownData[0] === 'object') {
+              // Handle array of objects with movement/exercise and duration/details
+              cooldownData.forEach((item) => {
+                if (item.movement || item.exercise) {
+                  const movement = item.movement || item.exercise;
+                  const duration = item.duration || item.time || '';
+
+                  if (duration) {
+                    fullDescription += `${movement} - ${duration}\n`;
+                  } else {
+                    fullDescription += `${movement}\n`;
+                  }
+                } else {
+                  // If structure is unknown, stringify the object
+                  fullDescription += `${JSON.stringify(item)}\n`;
+                }
+              });
+            } else {
+              fullDescription += cooldownData.join('\n');
+            }
+          } else if (typeof cooldownData === 'string') {
+            fullDescription += cooldownData;
+          } else if (typeof cooldownData === 'object') {
+            for (const [key, value] of Object.entries(cooldownData)) {
+              fullDescription += `${key}: ${value}\n`;
+            }
+          }
+        }
+
+        // Format performance notes
+        if (workoutData['Performance Notes']) {
+          fullDescription += '\n\n## Performance Notes\n\n';
+          fullDescription += workoutData['Performance Notes'];
+        }
+
+        // Update the workout description with our formatted version
+        workout.description = fullDescription.trim();
+      }
+
+      // Ensure workout description is always a string
+      if (workout.description && typeof workout.description === 'object') {
+        // Convert the object description to a formatted string
+        let formattedDescription = '';
+        for (const [section, content] of Object.entries(workout.description)) {
+          formattedDescription += `## ${section}\n\n${content}\n\n`;
+        }
+        workout.description = formattedDescription.trim();
+      }
+
       const weekNumber = Math.floor(index / daysPerWeek) + 1;
       if (!weeks[weekNumber]) {
         weeks[weekNumber] = [];
@@ -364,6 +583,51 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
       week: parseInt(week),
       workouts,
     }));
+  };
+
+  // Save the current program workouts to the database
+  const saveProgram = async () => {
+    if (!programId || !suggestions || suggestions.length === 0) {
+      setError('No program ID or workouts to save');
+      return;
+    }
+
+    setIsLoading(true);
+    setError('');
+    setSuccessMessage('');
+
+    try {
+      const { error: updateError } = await supabase
+        .from('programs')
+        .update({
+          generated_program: suggestions,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', programId);
+
+      if (updateError) {
+        throw updateError;
+      }
+
+      // Show success feedback
+      setSuccessMessage('Program saved successfully!');
+    } catch (error) {
+      console.error('Error saving program:', error);
+      setError(`Failed to save program: ${error.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Handle clicking on a workout to view details
+  const viewWorkoutDetails = (workout) => {
+    setSelectedWorkout(workout);
+    setIsModalOpen(true);
+  };
+
+  // Close the workout details modal
+  const closeModal = () => {
+    setIsModalOpen(false);
   };
 
   return (
@@ -633,6 +897,9 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
           </div>
 
           {error && <div className="text-error mt-2">{error}</div>}
+          {successMessage && (
+            <div className="text-success mt-2">{successMessage}</div>
+          )}
         </div>
 
         {/* Right column - Reference workouts */}
@@ -705,7 +972,25 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
       {/* Results section */}
       {suggestions.length > 0 && (
         <div className="mt-6">
-          <h3 className="text-lg font-medium mb-3">Generated Program</h3>
+          <div className="flex justify-between items-center mb-3">
+            <h3 className="text-lg font-medium">Generated Program</h3>
+            {programId && (
+              <button
+                className="btn btn-sm btn-primary"
+                onClick={saveProgram}
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <>
+                    <span className="loading loading-spinner loading-xs"></span>
+                    Saving...
+                  </>
+                ) : (
+                  'Save Program'
+                )}
+              </button>
+            )}
+          </div>
 
           {/* Group workouts by week for better organization */}
           {groupWorkoutsByWeek().map((weekGroup) => (
@@ -718,7 +1003,7 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
                   <div
                     key={`${weekGroup.week}-${index}`}
                     className="border rounded-md p-4 hover:bg-blue-50 cursor-pointer"
-                    onClick={() => handleSelectWorkout(workout)}
+                    onClick={() => viewWorkoutDetails(workout)}
                     draggable
                     onDragStart={(e) => {
                       e.dataTransfer.setData(
@@ -739,8 +1024,13 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
                           : 'Not scheduled'}
                       </span>
                     </div>
-                    <div className="whitespace-pre-line mt-2">
-                      {workout.description}
+                    <div className="whitespace-pre-line mt-2 line-clamp-3">
+                      {typeof workout.description === 'string'
+                        ? workout.description
+                            .replace(/## (.*?)\n/g, '') // Remove section headers
+                            .replace(/\n\n/g, ' ') // Replace double newlines with space
+                            .trim()
+                        : 'No description available'}
                     </div>
                     <div className="flex gap-2 mt-3">
                       <button
@@ -752,12 +1042,249 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
                       >
                         Add to Calendar
                       </button>
+                      <button
+                        className="btn btn-sm btn-outline"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          viewWorkoutDetails(workout);
+                        }}
+                      >
+                        View Details
+                      </button>
                     </div>
                   </div>
                 ))}
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Workout Details Modal */}
+      {isModalOpen && selectedWorkout && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-start mb-4">
+                <h3 className="text-xl font-bold">{selectedWorkout.title}</h3>
+                <button
+                  onClick={closeModal}
+                  className="btn btn-sm btn-circle btn-ghost"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="mb-2">
+                <span className="badge badge-primary">
+                  {selectedWorkout.suggestedDate
+                    ? formatDate(selectedWorkout.suggestedDate)
+                    : 'Not scheduled'}
+                </span>
+              </div>
+
+              {selectedWorkout.description && (
+                <div className="mt-4 mb-6">
+                  <p>{selectedWorkout.description}</p>
+                </div>
+              )}
+
+              <div className="mt-4 prose max-w-none">
+                {/* Handle workout with schedule structure */}
+                {selectedWorkout.schedule && (
+                  <>
+                    {/* Warm-up Section */}
+                    {selectedWorkout.schedule['Warm-up'] && (
+                      <div className="mt-4">
+                        <h3 className="text-lg font-bold mt-6 mb-2 text-primary">
+                          Warm-up
+                        </h3>
+                        {selectedWorkout.schedule['Warm-up'].map((item, i) => (
+                          <div key={i} className="mb-3">
+                            <div className="font-medium">{item.Exercise}</div>
+                            {Object.entries(item)
+                              .filter(
+                                ([key]) =>
+                                  key !== 'Exercise' && key !== 'Movements'
+                              )
+                              .map(([key, value]) => (
+                                <div key={key} className="ml-4">
+                                  {key}: {value}
+                                </div>
+                              ))}
+                            {item.Movements && (
+                              <div className="ml-4">
+                                <div>Movements:</div>
+                                <ul className="list-disc ml-8">
+                                  {item.Movements.map((movement, idx) => (
+                                    <li key={idx}>{movement}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Main Workout Section */}
+                    {selectedWorkout.schedule['Main Workout'] && (
+                      <div className="mt-4">
+                        <h3 className="text-lg font-bold mt-6 mb-2 text-primary">
+                          Main Workout
+                        </h3>
+                        {selectedWorkout.schedule['Main Workout'].map(
+                          (exercise, i) => (
+                            <div key={i} className="mb-4">
+                              <div className="font-bold text-lg">
+                                {exercise.Exercise}
+                              </div>
+                              <div className="grid grid-cols-3 gap-2 mt-1">
+                                {Object.entries(exercise)
+                                  .filter(([key]) => key !== 'Exercise')
+                                  .map(([key, value]) => (
+                                    <div key={key} className="text-sm">
+                                      <span className="font-medium">
+                                        {key}:
+                                      </span>{' '}
+                                      {value}
+                                    </div>
+                                  ))}
+                              </div>
+                            </div>
+                          )
+                        )}
+                      </div>
+                    )}
+
+                    {/* Cool-down Section */}
+                    {selectedWorkout.schedule['Cool-down'] && (
+                      <div className="mt-4">
+                        <h3 className="text-lg font-bold mt-6 mb-2 text-primary">
+                          Cool-down
+                        </h3>
+                        {selectedWorkout.schedule['Cool-down'].map(
+                          (item, i) => (
+                            <div key={i} className="mb-3">
+                              <div className="font-medium">{item.Exercise}</div>
+                              {Object.entries(item)
+                                .filter(
+                                  ([key]) =>
+                                    key !== 'Exercise' && key !== 'Movements'
+                                )
+                                .map(([key, value]) => (
+                                  <div key={key} className="ml-4">
+                                    {key}: {value}
+                                  </div>
+                                ))}
+                              {item.Movements && (
+                                <div className="ml-4">
+                                  <div>Movements:</div>
+                                  <ul className="list-disc ml-8">
+                                    {item.Movements.map((movement, idx) => (
+                                      <li key={idx}>{movement}</li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
+                            </div>
+                          )
+                        )}
+                      </div>
+                    )}
+
+                    {/* Performance Notes */}
+                    {selectedWorkout.schedule['Performance Notes'] && (
+                      <div className="mt-4">
+                        <h3 className="text-lg font-bold mt-6 mb-2 text-primary">
+                          Performance Notes
+                        </h3>
+                        <p>{selectedWorkout.schedule['Performance Notes']}</p>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {/* Handle workoutDetails and formatted description - keep existing code to maintain backward compatibility */}
+                {!selectedWorkout.schedule &&
+                  selectedWorkout.description &&
+                  selectedWorkout.description.split('\n').map((line, i) => {
+                    // Handle section headers (## Section)
+                    if (line.startsWith('## ')) {
+                      return (
+                        <h3
+                          key={i}
+                          className="text-lg font-bold mt-6 mb-2 text-primary"
+                        >
+                          {line.replace('## ', '')}
+                        </h3>
+                      );
+                    }
+                    // Handle exercise names (ending with colon)
+                    else if (line.trim().endsWith(':') && !line.includes('-')) {
+                      return (
+                        <h4 key={i} className="font-bold mt-4 mb-1">
+                          {line}
+                        </h4>
+                      );
+                    }
+                    // Handle bullet points (- Key: Value)
+                    else if (line.trim().startsWith('- ')) {
+                      const parts = line.trim().substring(2).split(':');
+                      if (parts.length > 1) {
+                        return (
+                          <div key={i} className="flex mb-1 ml-4">
+                            <span className="font-medium w-24">
+                              {parts[0]}:
+                            </span>
+                            <span>{parts.slice(1).join(':')}</span>
+                          </div>
+                        );
+                      } else {
+                        return (
+                          <p key={i} className="mb-1 ml-4">
+                            • {line.substring(2)}
+                          </p>
+                        );
+                      }
+                    }
+                    // Handle empty lines
+                    else if (line.trim() === '') {
+                      return <br key={i} />;
+                    }
+                    // Handle regular text
+                    else {
+                      return (
+                        <p key={i} className="mb-2">
+                          {line}
+                        </p>
+                      );
+                    }
+                  })}
+
+                {/* If we have workoutDetails but no schedule or formatted description */}
+                {!selectedWorkout.schedule &&
+                  !selectedWorkout.description &&
+                  selectedWorkout.workoutDetails && (
+                    <pre className="text-sm overflow-x-auto">
+                      {JSON.stringify(selectedWorkout.workoutDetails, null, 2)}
+                    </pre>
+                  )}
+              </div>
+
+              <div className="mt-6 flex justify-end">
+                <button
+                  className="btn btn-primary"
+                  onClick={() => {
+                    handleSelectWorkout(selectedWorkout);
+                    closeModal();
+                  }}
+                >
+                  Add to Calendar
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

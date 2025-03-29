@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(request) {
   const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
+    apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY,
   });
 
   try {
@@ -141,6 +141,75 @@ Return only one workout structured with these sections. Format your response as 
         { error: 'Failed to generate a valid workout' },
         { status: 500 }
       );
+    }
+
+    // If we have a program ID, save the workout to program_workouts and schedule it
+    if (programId) {
+      try {
+        console.log('Saving generated workout to program_workouts...');
+
+        // 1. Create the workout in program_workouts
+        const workoutData = {
+          program_id: programId,
+          title: workoutContent.title,
+          body: workoutContent.description, // Note: body field in program_workouts matches description from AI
+          workout_type: 'generated',
+          difficulty: difficulty,
+          tags: {
+            type: 'generated',
+            focus: focusArea || '',
+            generated: true,
+            date: workoutContent.suggestedDate,
+            ai_generated: true,
+            duration: duration,
+            formats: workoutFormats || [],
+          },
+        };
+
+        const { data: newWorkout, error: workoutError } = await supabase
+          .from('program_workouts')
+          .insert(workoutData)
+          .select()
+          .single();
+
+        if (workoutError) {
+          console.error('Error creating workout:', workoutError);
+        } else {
+          console.log('Created workout with ID:', newWorkout.id);
+
+          // 2. Schedule the workout in workout_schedule
+          if (workoutContent.suggestedDate) {
+            const scheduleData = {
+              program_id: programId,
+              workout_id: newWorkout.id,
+              scheduled_date: workoutContent.suggestedDate,
+            };
+
+            const { data: scheduleResult, error: scheduleError } =
+              await supabase
+                .from('workout_schedule')
+                .insert(scheduleData)
+                .select();
+
+            if (scheduleError) {
+              console.error('Error scheduling workout:', scheduleError);
+            } else {
+              console.log(
+                `Scheduled workout for ${workoutContent.suggestedDate}`
+              );
+
+              // Update the workout in our response with the schedule ID and workout ID
+              if (scheduleResult && scheduleResult.length > 0) {
+                workoutContent.scheduleId = scheduleResult[0].id;
+                workoutContent.id = newWorkout.id;
+              }
+            }
+          }
+        }
+      } catch (saveError) {
+        console.error('Error saving workout:', saveError);
+        // Continue despite errors - we'll still return the generated workout
+      }
     }
 
     // Return the workout as a suggestion
