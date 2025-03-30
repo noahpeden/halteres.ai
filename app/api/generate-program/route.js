@@ -11,7 +11,7 @@ export async function POST(request) {
   });
 
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     const requestData = await request.json();
 
     const {
@@ -185,7 +185,7 @@ ${suggestedDates
     try {
       // Call the OpenAI API with a timeout
       const response = await openai.chat.completions.create({
-        model: 'gpt-4-turbo', // or gpt-4 if available
+        model: 'gpt-4o-mini', // or gpt-4 if available
         messages: [
           {
             role: 'system',

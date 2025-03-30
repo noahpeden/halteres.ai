@@ -5,7 +5,7 @@ export async function POST(req) {
   try {
     const body = await req.json();
     const { programId, programDetails, filters } = body;
-    const supabase = createClient();
+    const supabase = await createClient();
 
     // In a real implementation, you would call your AI service here
     // For now, we'll return mock data

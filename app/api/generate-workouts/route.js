@@ -13,7 +13,7 @@ export async function POST(req) {
       office,
       whiteboard,
     } = body;
-    const supabase = createClient();
+    const supabase = await createClient();
 
     // Fetch program details if not provided
     let entityId;

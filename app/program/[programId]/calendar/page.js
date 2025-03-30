@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useSearchParams } from 'next/navigation';
 import ProgramCalendar from '@/components/ProgramCalendar';
 import AIProgramWriter from '@/components/AIProgramWriter';
-import AISingleWorkoutGenerator from '@/components/AISingleWorkoutGenerator';
+import AIWorkoutReferencer from '@/components/AIWorkoutReferencer';
 import ClientMetricsSidebar from '@/components/ClientMetricsSidebar';
 import Link from 'next/link';
 
@@ -219,41 +219,6 @@ export default function ProgramCalendarPage(props) {
     return new Date(dateString).toLocaleDateString(undefined, options);
   };
 
-  async function generateWorkouts() {
-    setIsLoading(true);
-    try {
-      // Fetch program details first
-      const { data: programData, error: programError } = await supabase
-        .from('programs')
-        .select('*')
-        .eq('id', programId)
-        .single();
-
-      if (programError) throw programError;
-
-      // Now call the API with the program details
-      const response = await fetch('/api/generate-workouts', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          programId,
-          programDetails: programData, // Include the full program data
-          preferences: formData,
-          // Other data...
-        }),
-      });
-
-      // Handle response...
-    } catch (error) {
-      console.error('Error:', error);
-      setError(error.message);
-    } finally {
-      setIsLoading(false);
-    }
-  }
-
   if (isLoading) {
     return (
       <div className="container mx-auto p-4 flex justify-center items-center min-h-[60vh]">
@@ -276,40 +241,8 @@ export default function ProgramCalendarPage(props) {
           </div>
 
           <div className="flex gap-2">
-            <button
-              className="btn btn-sm btn-outline btn-warning"
-              onClick={async () => {
-                try {
-                  const response = await fetch(
-                    `/api/debug?programId=${programId}`
-                  );
-                  const data = await response.json();
-                  console.log('Debug data:', data);
-
-                  if (data.totalSchedules > 0) {
-                    alert(
-                      `Found ${data.totalSchedules} scheduled workout entries out of ${data.totalWorkouts} total workouts. Check console for details.`
-                    );
-
-                    // Log more detailed information
-                    console.table(data.scheduledWorkouts);
-                  } else {
-                    alert(
-                      `No scheduled workouts found. You have ${data.totalWorkouts} workouts available to schedule.`
-                    );
-                  }
-                  // Force refresh the calendar
-                  setRefreshRequired((prev) => !prev);
-                } catch (error) {
-                  console.error('Debug check failed:', error);
-                  alert('Debug check failed. See console for details.');
-                }
-              }}
-            >
-              Check Data
-            </button>
-
-            <Link
+            {/* @TODO: Add these back in when ready */}
+            {/* <Link
               href={`/program/${programId}/workouts`}
               className="btn btn-outline btn-sm"
             >
@@ -320,7 +253,7 @@ export default function ProgramCalendarPage(props) {
               className="btn btn-outline btn-sm"
             >
               Metrics
-            </Link>
+            </Link> */}
             <Link href="/dashboard" className="btn btn-outline btn-sm">
               Back to Dashboard
             </Link>
@@ -349,7 +282,7 @@ export default function ProgramCalendarPage(props) {
           }`}
           onClick={() => setActiveTab('workout_editor')}
         >
-          Single Workout Editor
+          Workout Referencer
         </button>
       </div>
 
@@ -379,7 +312,7 @@ export default function ProgramCalendarPage(props) {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        <div className="lg:col-span-3">
+        <div className="lg:col-span-4">
           {activeTab === 'calendar' && (
             <ProgramCalendar
               programId={programId}
@@ -395,7 +328,7 @@ export default function ProgramCalendarPage(props) {
             />
           )}
           {activeTab === 'workout_editor' && (
-            <AISingleWorkoutGenerator
+            <AIWorkoutReferencer
               programId={programId}
               onSelectWorkout={handleSelectWorkout}
             />

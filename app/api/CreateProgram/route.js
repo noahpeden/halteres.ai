@@ -19,7 +19,7 @@ export async function POST(req) {
       );
     }
 
-    const supabase = createClient();
+    const supabase = await createClient();
 
     // Get the user from the session server-side
     const {

@@ -13,7 +13,7 @@ export async function POST(req) {
       );
     }
 
-    const supabase = createClient();
+    const supabase = await createClient();
 
     // Get program details
     const { data: program, error: programError } = await supabase

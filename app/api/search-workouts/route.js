@@ -2,88 +2,89 @@ import { createClient } from '@/utils/supabase/server';
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 
-export async function POST(req) {
+async function computeQueryEmbeddings(queryText) {
   try {
-    const body = await req.json();
-    const { query } = body;
-    const supabase = createClient();
+    const openai = new OpenAI({
+      apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY,
+    });
 
-    console.log('Received search query:', query);
+    const response = await openai.embeddings.create({
+      model: 'text-embedding-3-small', // You can also use "text-embedding-3-large" for higher quality
+      input: queryText,
+      encoding_format: 'float',
+    });
 
-    // Fetch all workouts
-    const allWorkouts = await fallbackQuery(supabase);
-    console.log('All workouts:', allWorkouts);
-    // Perform local matching
-    const matchedWorkouts = localMatchWorkouts(allWorkouts, query);
-    console.log('Matched workouts count:', matchedWorkouts.length);
+    const embedding = response.data[0].embedding;
 
-    return NextResponse.json({ workouts: matchedWorkouts });
+    const middleIndex = Math.floor(embedding.length / 2);
+    const embeddingPartOne = embedding.slice(0, middleIndex);
+    const embeddingPartTwo = embedding.slice(middleIndex);
+
+    return {
+      embeddingPartOne,
+      embeddingPartTwo,
+    };
   } catch (error) {
-    console.error('Error searching workouts:', error);
+    console.error('Error generating embeddings:', error);
+    throw new Error(`Failed to generate embeddings: ${error.message}`);
+  }
+}
+
+export async function POST(request) {
+  const supabaseClient = await createClient();
+  const requestBody = await request.json();
+  const { goal, difficulty, focusArea, searchQuery } = requestBody;
+
+  const { data: sessionData } = await supabaseClient.auth.getSession();
+  if (!sessionData.session) {
     return NextResponse.json(
-      { error: error.message || 'Failed to search workouts' },
+      { error: 'Authentication required' },
+      { status: 401 }
+    );
+  }
+
+  // Generate embeddings for the search query
+  const queryTextForEmbeddings = searchQuery || `${goal} ${focusArea}`;
+
+  try {
+    const computedEmbeddings = await computeQueryEmbeddings(
+      queryTextForEmbeddings
+    );
+
+    // Search for similar workouts in the local database
+    const localWorkoutResponse = await supabaseClient.rpc(
+      'match_similar_workouts',
+      {
+        query_embedding_1: computedEmbeddings.embeddingPartOne,
+        query_embedding_2: computedEmbeddings.embeddingPartTwo,
+        match_threshold: 0.5,
+        match_count: 10,
+      }
+    );
+
+    let workouts = [];
+    if (localWorkoutResponse.error) {
+      console.error('Error searching workouts:', localWorkoutResponse.error);
+    } else {
+      // Format the workouts to match the expected structure
+      workouts = localWorkoutResponse.data.map((workout) => ({
+        id: workout.id,
+        title: workout.title || 'Untitled Workout',
+        body: workout.body || workout.description || '',
+        tags: workout.tags || [goal, difficulty, focusArea].filter(Boolean),
+        difficulty: workout.difficulty || difficulty || 'intermediate',
+        source: 'Database Search',
+      }));
+    }
+
+    return NextResponse.json({
+      workouts: workouts,
+    });
+  } catch (error) {
+    console.error('Error in search-workouts:', error);
+    return NextResponse.json(
+      { error: 'Failed to search for workouts', message: error.message },
       { status: 500 }
     );
   }
-}
-
-// Helper function to create embeddings
-async function createEmbedding(openai, text) {
-  const response = await openai.embeddings.create({
-    model: 'text-embedding-3-small',
-    input: text,
-  });
-
-  return response.data[0].embedding;
-}
-
-// Match workouts using the correct RPC function
-async function matchWorkouts(supabase, embedding) {
-  try {
-    // Use the match_workouts function (not match_similar_workouts)
-    const matchResult = await supabase.rpc('match_similar_workouts', {
-      query_embedding_1: embedding,
-      query_embedding_2: embedding,
-      match_threshold: 0.4,
-      match_count: 20,
-    });
-
-    if (matchResult.error) {
-      console.error('Error matching workouts:', matchResult.error);
-      throw matchResult.error;
-    }
-
-    console.log('RPC result count:', matchResult.data?.length || 0);
-    return await fallbackQuery(supabase);
-  } catch (error) {
-    console.error('Vector search error:', error);
-
-    // Fall back to a basic query if vector search fails
-    return await fallbackQuery(supabase);
-  }
-}
-
-// Basic fallback query
-async function fallbackQuery(supabase) {
-  try {
-    const { data, error } = await supabase
-      .from('external_workouts')
-      .select('id, title, body, tags, difficulty');
-
-    console.log('Fetched all workouts:', data);
-
-    if (error) throw error;
-
-    return data || [];
-  } catch (error) {
-    console.error('Fallback query error:', error);
-    return [];
-  }
-}
-
-function localMatchWorkouts(workouts, query) {
-  const lowerCaseQuery = query.toLowerCase();
-  return workouts.filter((workout) =>
-    workout.body.toLowerCase().includes(lowerCaseQuery)
-  );
 }

@@ -1,19 +1,20 @@
 const { createServerClient } = require('@supabase/ssr');
 const { cookies } = require('next/headers');
 
-function createClient() {
-  const cookieStore = cookies();
-
+async function createClient() {
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     {
       cookies: {
-        get(name) {
-          return cookieStore.get(name)?.value;
+        async get(name) {
+          const cookieStore = await cookies();
+          const cookie = cookieStore.get(name);
+          return cookie?.value;
         },
-        set(name, value, options) {
+        async set(name, value, options) {
           try {
+            const cookieStore = cookies();
             cookieStore.set({ name, value, ...options });
           } catch (error) {
             // The `set` method was called from a Server Component.
@@ -21,8 +22,9 @@ function createClient() {
             // user sessions.
           }
         },
-        remove(name, options) {
+        async remove(name, options) {
           try {
+            const cookieStore = cookies();
             cookieStore.set({ name, value: '', ...options });
           } catch (error) {
             // The `delete` method was called from a Server Component.

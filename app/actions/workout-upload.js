@@ -67,7 +67,7 @@ async function createEmbeddings(embeddingPrompt) {
 }
 
 export async function handleWorkoutUpload(formData) {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   try {
     const file = formData.get('file');
