@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
 import equipmentList from '@/utils/equipmentList';
 import {
   goals,
@@ -10,11 +9,7 @@ import {
   gymEquipmentPresets,
 } from './utils';
 
-export default function AIWorkoutReferencer({
-  programId,
-  onSelectReferenceWorkout,
-}) {
-  const { supabase } = useAuth();
+export default function AIWorkoutReferencer({ programId }) {
   const [formInput, setFormInput] = useState({
     goal: 'strength',
     duration: '60',
@@ -181,22 +176,11 @@ export default function AIWorkoutReferencer({
     }
   };
 
-  const handleSelectReferenceWorkout = (workout) => {
-    if (onSelectReferenceWorkout) {
-      onSelectReferenceWorkout({
-        id: workout.id,
-        title: workout.title,
-        body: workout.body || workout.description,
-        source: workout.source || (workout.url ? 'Web' : 'Local Library'),
-      });
-    } else {
-      console.warn('onSelectReferenceWorkout prop not provided');
-    }
-  };
-
-  const handleAddWorkoutToProgram = async (workout) => {
-    const workoutId = workout.id || workout.title;
-    setAddingWorkoutStates((prev) => ({ ...prev, [workoutId]: true }));
+  const handleAddWorkoutToProgram = async (workout, isReference = false) => {
+    const workoutKey = `${isReference ? 'ref' : 'prog'}-${
+      workout.id || workout.title
+    }`;
+    setAddingWorkoutStates((prev) => ({ ...prev, [workoutKey]: true }));
     setErrorMessage('');
 
     try {
@@ -207,6 +191,9 @@ export default function AIWorkoutReferencer({
           programId: programId,
           title: workout.title || 'Untitled Workout',
           description: workout.body || workout.description || '',
+          tags: workout.tags || {},
+          source: workout.source || (workout.url ? 'Web' : 'Local Library'),
+          markAsReference: isReference,
         }),
       });
 
@@ -222,7 +209,7 @@ export default function AIWorkoutReferencer({
       console.error('Error adding workout to program:', error);
       setErrorMessage(error.message);
     } finally {
-      setAddingWorkoutStates((prev) => ({ ...prev, [workoutId]: false }));
+      setAddingWorkoutStates((prev) => ({ ...prev, [workoutKey]: false }));
     }
   };
 
@@ -485,7 +472,7 @@ export default function AIWorkoutReferencer({
               <div className="grid grid-cols-1 gap-4">
                 {webSearchWorkoutResults.map((workoutItem, index) => {
                   const workoutKey = workoutItem.id || `web-${index}`;
-                  const isAdding = addingWorkoutStates[workoutKey];
+                  const isAdding = addingWorkoutStates[`ref-${workoutKey}`];
                   return (
                     <div
                       key={workoutKey}
@@ -518,10 +505,18 @@ export default function AIWorkoutReferencer({
                           className="btn btn-sm btn-outline btn-accent"
                           onClick={(event) => {
                             event.stopPropagation();
-                            handleSelectReferenceWorkout(workoutItem);
+                            handleAddWorkoutToProgram(workoutItem, true);
                           }}
+                          disabled={isAdding}
                         >
-                          Use as Reference
+                          {isAdding ? (
+                            <>
+                              <span className="loading loading-spinner loading-xs"></span>
+                              Adding Reference...
+                            </>
+                          ) : (
+                            'Add as Reference'
+                          )}
                         </button>
                         <button
                           className="btn btn-sm btn-primary"
@@ -529,9 +524,9 @@ export default function AIWorkoutReferencer({
                             event.stopPropagation();
                             handleAddWorkoutToProgram(workoutItem);
                           }}
-                          disabled={isAdding}
+                          disabled={addingWorkoutStates[`prog-${workoutKey}`]}
                         >
-                          {isAdding ? (
+                          {addingWorkoutStates[`prog-${workoutKey}`] ? (
                             <>
                               <span className="loading loading-spinner loading-xs"></span>
                               Adding...
@@ -561,7 +556,7 @@ export default function AIWorkoutReferencer({
             <div className="grid grid-cols-1 gap-4">
               {searchWorkoutResults.map((workoutItem, index) => {
                 const workoutKey = workoutItem.id || `local-${index}`;
-                const isAdding = addingWorkoutStates[workoutKey];
+                const isAdding = addingWorkoutStates[`ref-${workoutKey}`];
                 return (
                   <div
                     key={workoutKey}
@@ -589,10 +584,18 @@ export default function AIWorkoutReferencer({
                         className="btn btn-sm btn-outline btn-accent"
                         onClick={(event) => {
                           event.stopPropagation();
-                          handleSelectReferenceWorkout(workoutItem);
+                          handleAddWorkoutToProgram(workoutItem, true);
                         }}
+                        disabled={isAdding}
                       >
-                        Use as Reference
+                        {isAdding ? (
+                          <>
+                            <span className="loading loading-spinner loading-xs"></span>
+                            Adding Ref...
+                          </>
+                        ) : (
+                          'Add as Reference'
+                        )}
                       </button>
                       <button
                         className="btn btn-sm btn-primary"
@@ -600,9 +603,9 @@ export default function AIWorkoutReferencer({
                           event.stopPropagation();
                           handleAddWorkoutToProgram(workoutItem);
                         }}
-                        disabled={isAdding}
+                        disabled={addingWorkoutStates[`prog-${workoutKey}`]}
                       >
-                        {isAdding ? (
+                        {addingWorkoutStates[`prog-${workoutKey}`] ? (
                           <>
                             <span className="loading loading-spinner loading-xs"></span>
                             Adding...

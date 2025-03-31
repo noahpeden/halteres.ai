@@ -15,14 +15,11 @@ export default function ProgramCalendarPage(props) {
   const { supabase } = useAuth();
   const [program, setProgram] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('calendar');
+  const [activeTab, setActiveTab] = useState('program_writer');
   const [selectedWorkout, setSelectedWorkout] = useState(null);
   const [selectedDate, setSelectedDate] = useState(null);
   const [sidebarWorkouts, setSidebarWorkouts] = useState([]);
   const [isLoadingSidebar, setIsLoadingSidebar] = useState(false);
-  const [error, setError] = useState(null);
-
-  // Track if calendar has been refreshed after adding a workout
   const [refreshRequired, setRefreshRequired] = useState(false);
 
   useEffect(() => {
@@ -263,12 +260,6 @@ export default function ProgramCalendarPage(props) {
 
       <div className="tabs tabs-boxed mb-6">
         <button
-          className={`tab ${activeTab === 'calendar' ? 'tab-active' : ''}`}
-          onClick={() => setActiveTab('calendar')}
-        >
-          Calendar
-        </button>
-        <button
           className={`tab ${
             activeTab === 'program_writer' ? 'tab-active' : ''
           }`}
@@ -283,6 +274,12 @@ export default function ProgramCalendarPage(props) {
           onClick={() => setActiveTab('workout_editor')}
         >
           Workout Referencer
+        </button>
+        <button
+          className={`tab ${activeTab === 'calendar' ? 'tab-active' : ''}`}
+          onClick={() => setActiveTab('calendar')}
+        >
+          Calendar
         </button>
       </div>
 
@@ -313,14 +310,6 @@ export default function ProgramCalendarPage(props) {
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         <div className="lg:col-span-4">
-          {activeTab === 'calendar' && (
-            <ProgramCalendar
-              programId={programId}
-              initialDragWorkout={selectedWorkout}
-              selectedDate={selectedDate}
-              key={refreshRequired ? 'refresh' : 'normal'}
-            />
-          )}
           {activeTab === 'program_writer' && (
             <AIProgramWriter
               programId={programId}
@@ -328,9 +317,14 @@ export default function ProgramCalendarPage(props) {
             />
           )}
           {activeTab === 'workout_editor' && (
-            <AIWorkoutReferencer
+            <AIWorkoutReferencer programId={programId} />
+          )}
+          {activeTab === 'calendar' && (
+            <ProgramCalendar
               programId={programId}
-              onSelectWorkout={handleSelectWorkout}
+              initialDragWorkout={selectedWorkout}
+              selectedDate={selectedDate}
+              key={refreshRequired ? 'refresh' : 'normal'}
             />
           )}
         </div>

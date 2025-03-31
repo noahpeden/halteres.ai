@@ -26,11 +26,11 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
     additionalNotes: '',
     personalization: '',
     workoutFormats: [],
-    numberOfWeeks: '4', // Default to 4 weeks
-    daysPerWeek: '4', // Default to 4 days per week
+    numberOfWeeks: '4',
+    daysPerWeek: '4',
     programType: 'linear',
-    gymType: 'Gym',
-    startDate: new Date().toISOString().split('T')[0], // Today's date in YYYY-MM-DD format
+    gymType: 'Crossfit Box',
+    startDate: new Date().toISOString().split('T')[0],
   });
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
@@ -70,98 +70,158 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
       setSuccessMessage('');
 
       try {
-        const { data: program, error } = await supabase
+        // Fetch program details first (optional, but keeps existing form update logic)
+        const { data: program, error: programError } = await supabase
           .from('programs')
-          .select('*')
+          .select('*') // Select needed fields like calendar_data, generated_program
           .eq('id', programId)
           .single();
 
-        if (error) throw error;
+        if (programError && programError.code !== 'PGRST116') {
+          // Ignore 'PGRST116' (No rows found) if program doesn't exist yet
+          throw programError;
+        }
 
-        if (program) {
-          // Update form data based on program settings if available
-          if (program.calendar_data) {
-            const { days_of_week = [], start_date } = program.calendar_data;
-            setFormData((prev) => ({
-              ...prev,
-              startDate: start_date || prev.startDate,
-              daysPerWeek: days_of_week.length.toString() || prev.daysPerWeek,
-            }));
+        // Update form based on program data if it exists
+        if (program && program.calendar_data) {
+          const { days_of_week = [], start_date } = program.calendar_data;
+          setFormData((prev) => ({
+            ...prev,
+            startDate: start_date || prev.startDate,
+            daysPerWeek: days_of_week.length.toString() || prev.daysPerWeek,
+          }));
+        }
+
+        // Fetch workouts directly from program_workouts as the primary source
+        const { data: savedWorkouts, error: workoutsError } = await supabase
+          .from('program_workouts')
+          .select('id, title, body, tags, created_at') // Add created_at for potential sorting
+          .eq('program_id', programId)
+          .order('created_at'); // Order by creation time
+
+        if (workoutsError) {
+          throw workoutsError;
+        }
+
+        let finalSuggestions = [];
+
+        if (savedWorkouts && savedWorkouts.length > 0) {
+          console.log(
+            'Loaded',
+            savedWorkouts.length,
+            'workouts from program_workouts'
+          );
+          // Map saved workouts to the structure expected by the component
+          finalSuggestions = savedWorkouts.map((sw) => ({
+            savedWorkoutId: sw.id,
+            title: sw.title,
+            description: sw.body,
+            tags: sw.tags || {},
+            // If workoutDetails are stored in tags, use them
+            workoutDetails: sw.tags?.workoutDetails,
+            // We might need to reconstruct suggestedDate if it was stored elsewhere or determined by order/AI
+          }));
+
+          // Optional: Enhance with data from program.generated_program if it exists
+          if (
+            program &&
+            program.generated_program &&
+            Array.isArray(program.generated_program)
+          ) {
+            console.log('Found generated_program data, attempting to merge.');
+            finalSuggestions = finalSuggestions.map((suggestion) => {
+              // Find corresponding workout in generated_program (matching by title or maybe tags)
+              const generatedMatch = program.generated_program.find(
+                (gw) =>
+                  gw.title === suggestion.title ||
+                  (gw.tags?.week === suggestion.tags?.week &&
+                    gw.tags?.day === suggestion.tags?.day)
+                // Add more matching logic if needed
+              );
+
+              if (generatedMatch) {
+                return {
+                  ...suggestion,
+                  // Prioritize generated data for things like suggestedDate or potentially richer workoutDetails
+                  suggestedDate:
+                    generatedMatch.suggestedDate || suggestion.suggestedDate,
+                  workoutDetails:
+                    generatedMatch.workoutDetails || suggestion.workoutDetails,
+                  // Add other fields from generatedMatch if necessary
+                };
+              }
+              return suggestion;
+            });
+
+            // Potentially add workouts from generated_program not found in program_workouts (less likely, but possible)
+            // This part might need refinement based on how generated_program is used
+            program.generated_program.forEach((gw) => {
+              const existsInSaved = finalSuggestions.some(
+                (suggestion) =>
+                  suggestion.title === gw.title /* or other matching logic */
+              );
+              if (!existsInSaved) {
+                console.log(
+                  'Adding workout purely from generated_program:',
+                  gw.title
+                );
+                finalSuggestions.push({
+                  ...gw, // Use the generated workout structure
+                  // Ensure description field exists if needed by downstream code
+                  description:
+                    gw.description || gw.workoutDetails
+                      ? 'See details'
+                      : 'No description',
+                });
+              }
+            });
           }
 
-          // If there's a saved generated program, load it
+          setSuggestions(finalSuggestions);
+          setSuccessMessage(
+            `Loaded ${finalSuggestions.length} workouts successfully!`
+          );
+        } else {
+          // Handle case where no workouts exist in program_workouts
+          console.log(
+            'No workouts found in program_workouts for this program.'
+          );
+          // Check if there's data *only* in generated_program (legacy or unsaved generation)
           if (
+            program &&
             program.generated_program &&
             Array.isArray(program.generated_program) &&
             program.generated_program.length > 0
           ) {
-            // Load the saved program
             console.log(
-              'Loaded saved program:',
-              program.generated_program.length,
-              'workouts'
+              'Falling back to generated_program as program_workouts is empty.'
             );
-
-            // Also fetch workouts from program_workouts to get any additional data like full descriptions
-            const { data: savedWorkouts, error: workoutsError } = await supabase
-              .from('program_workouts')
-              .select('id, title, body, tags')
-              .eq('program_id', programId)
-              .order('created_at');
-
-            if (!workoutsError && savedWorkouts && savedWorkouts.length > 0) {
-              console.log(
-                'Found',
-                savedWorkouts.length,
-                'workouts in program_workouts'
-              );
-
-              // Merge the more detailed data from program_workouts with the generated_program
-              const enhancedWorkouts = program.generated_program.map(
-                (workout) => {
-                  // Try to find corresponding workout in program_workouts
-                  const savedWorkout = savedWorkouts.find(
-                    (sw) =>
-                      sw.title === workout.title ||
-                      (sw.tags?.week === workout.tags?.week &&
-                        sw.tags?.day === workout.tags?.day)
-                  );
-
-                  if (savedWorkout) {
-                    return {
-                      ...workout,
-                      description: savedWorkout.body || workout.description,
-                      // If workoutDetails was stored in tags, restore it
-                      workoutDetails:
-                        savedWorkout.tags?.workoutDetails ||
-                        workout.workoutDetails,
-                      savedWorkoutId: savedWorkout.id,
-                    };
-                  }
-
-                  return workout;
-                }
-              );
-
-              setSuggestions(enhancedWorkouts);
-            } else {
-              // Fall back to the saved generated program
-              setSuggestions(program.generated_program);
-            }
-
-            setSuccessMessage('Loaded saved program successfully!');
+            setSuggestions(
+              program.generated_program.map((gw) => ({
+                ...gw,
+                description:
+                  gw.description || gw.workoutDetails
+                    ? 'See details'
+                    : 'No description',
+              }))
+            );
+            setSuccessMessage(
+              'Loaded program from previous generation (not saved individually).'
+            );
+          } else {
+            setSuggestions([]); // No workouts found anywhere
           }
         }
       } catch (error) {
         console.error('Error fetching program data:', error);
-        setError('Failed to load saved program data');
+        setError(`Failed to load program data: ${error.message}`);
       } finally {
         setIsLoading(false);
       }
     }
 
     fetchProgramData();
-  }, [programId, supabase]);
+  }, [programId, supabase]); // Keep dependencies
 
   // Update equipment selection when gym type changes
   useEffect(() => {

@@ -65,9 +65,9 @@ ${exampleWorkout}`
       web_search_options: {},
       messages: [
         {
-          role: 'developer',
+          role: 'system',
           content:
-            'You are a helpful fitness assistant that searches for workout information on the web. For any workouts you find, please format them as structured data with fields for title, body, source, and tags. Return a JSON array of objects, with each object representing a workout.',
+            'You are a helpful fitness assistant that searches for workout information on the web. Prioritize results from crossfit.com/workout, wodwell.com, wodprep.com, crossfit.com/at-home/workouts, and crossfitsouthbrooklyn.com/blog/. For any workouts you find, please format them as structured data with fields for title, body, source, and tags. Crucially, the "body" field MUST contain the full workout details (sets, reps, movements, rest periods, etc.), not just a summary or description. Return a JSON array of objects, with each object representing a workout.',
         },
         {
           role: 'user',
@@ -99,15 +99,135 @@ ${exampleWorkout}`
         ) {
           workouts = workouts.workouts;
         }
+
+        // Ensure workouts is an array before proceeding
+        if (!Array.isArray(workouts)) {
+          // If parsing resulted in a single object, wrap it in an array
+          if (
+            typeof workouts === 'object' &&
+            workouts !== null &&
+            !Array.isArray(workouts)
+          ) {
+            // Check if it's the structure { workouts: [...] }
+            if (workouts.workouts && Array.isArray(workouts.workouts)) {
+              workouts = workouts.workouts;
+            } else {
+              workouts = [workouts];
+            }
+          } else {
+            // If parsing failed to produce a usable structure, log and potentially create a default
+            console.error(
+              'Workouts variable is not an array or expected object after parsing/fallback, initializing as empty array.'
+            );
+            workouts = [];
+          }
+        }
+
+        // Check each workout body and generate if it's just a description
+        const processedWorkouts = []; // Use a new array to avoid async issues in loop
+        for (const workout of workouts) {
+          let currentWorkout = { ...workout }; // Clone workout object
+
+          if (
+            currentWorkout &&
+            typeof currentWorkout.body === 'string' &&
+            currentWorkout.body.trim().length > 0
+          ) {
+            try {
+              // Ask gpt-4o to classify the body content
+              const classificationResponse =
+                await openAiClient.chat.completions.create({
+                  model: 'gpt-4o',
+                  messages: [
+                    {
+                      role: 'user',
+                      content: `Text: \`\`\`${currentWorkout.body}\`\`\``,
+                    },
+                  ],
+                });
+              const classification =
+                classificationResponse.choices[0].message.content
+                  ?.trim()
+                  .toUpperCase();
+
+              if (classification === 'DESCRIPTION') {
+                console.log(
+                  `Workout body for \"${
+                    currentWorkout.title || 'Untitled'
+                  }\" identified as description. Generating plan...`
+                );
+                // If it's a description, generate a workout plan
+                const generationResponse =
+                  await openAiClient.chat.completions.create({
+                    model: 'gpt-4o', // Or potentially a stronger model if generation quality is low
+                    messages: [
+                      {
+                        role: 'system',
+                        content: `You are a helpful fitness assistant. Based on the title, tags, and description below, generate a plausible, detailed workout plan. Include specific sets, reps, movements, weights (if applicable), and rest periods. Format the workout clearly. Structure it section by section (e.g., Warm-up, Workout, Cool-down).\n\nTitle: ${
+                          currentWorkout.title || 'Untitled'
+                        }\nTags: ${(currentWorkout.tags || []).join(
+                          ', '
+                        )}\nDescription: \`\`\`${
+                          currentWorkout.body
+                        }\`\`\`\n\nGenerated Workout Plan:`,
+                      },
+                    ],
+                  });
+                const generatedPlan =
+                  generationResponse.choices[0].message.content?.trim();
+                if (generatedPlan) {
+                  currentWorkout.body = generatedPlan; // Replace description with generated plan
+                  console.log(
+                    `Generated plan for \"${
+                      currentWorkout.title || 'Untitled'
+                    }\":\n${generatedPlan}`
+                  );
+                } else {
+                  console.log(
+                    `Generation failed for \"${
+                      currentWorkout.title || 'Untitled'
+                    }\", keeping original body.`
+                  );
+                }
+              } else {
+                console.log(
+                  `Workout body for \"${
+                    currentWorkout.title || 'Untitled'
+                  }\" classified as PLAN.`
+                );
+              }
+            } catch (classificationError) {
+              console.error(
+                `Error classifying or generating workout body for \"${
+                  currentWorkout.title || 'Untitled'
+                }\":`,
+                classificationError
+              );
+              // Keep the original body on error
+            }
+          } else {
+            // Handle cases where body is missing or not a string
+            console.log(
+              `Workout \"${
+                currentWorkout.title || 'Untitled'
+              }\" has missing or invalid body, skipping generation.`
+            );
+            if (!currentWorkout.body)
+              currentWorkout.body = 'Workout details not available.'; // Provide a default
+          }
+          processedWorkouts.push(currentWorkout);
+        }
+        // Assign the processed workouts back
+        workouts = processedWorkouts;
       } else {
         // If no JSON found, have OpenAI format the response
         const formattingResponse = await openAiClient.chat.completions.create({
-          model: 'gpt-4',
+          model: 'gpt-4o',
           messages: [
             {
               role: 'system',
               content:
-                'Your task is to convert the following workout information into structured JSON. Format it as an array of workout objects, with each object having title, body, source, and tags fields.',
+                'Your task is to convert the following workout information into structured JSON. Format it as an array of workout objects, with each object having title, body, source, and tags fields. The "body" field MUST contain the full workout details (sets, reps, movements, rest periods, etc.), not just a summary.',
             },
             {
               role: 'user',
@@ -134,6 +254,126 @@ ${exampleWorkout}`
           ) {
             workouts = workouts.workouts;
           }
+
+          // Ensure workouts is an array before proceeding
+          if (!Array.isArray(workouts)) {
+            // If parsing resulted in a single object, wrap it in an array
+            if (
+              typeof workouts === 'object' &&
+              workouts !== null &&
+              !Array.isArray(workouts)
+            ) {
+              // Check if it's the structure { workouts: [...] }
+              if (workouts.workouts && Array.isArray(workouts.workouts)) {
+                workouts = workouts.workouts;
+              } else {
+                workouts = [workouts];
+              }
+            } else {
+              // If parsing failed to produce a usable structure, log and potentially create a default
+              console.error(
+                'Workouts variable is not an array or expected object after parsing/fallback, initializing as empty array.'
+              );
+              workouts = [];
+            }
+          }
+
+          // Check each workout body and generate if it's just a description
+          const processedWorkouts = []; // Use a new array to avoid async issues in loop
+          for (const workout of workouts) {
+            let currentWorkout = { ...workout }; // Clone workout object
+
+            if (
+              currentWorkout &&
+              typeof currentWorkout.body === 'string' &&
+              currentWorkout.body.trim().length > 0
+            ) {
+              try {
+                // Ask gpt-4o to classify the body content
+                const classificationResponse =
+                  await openAiClient.chat.completions.create({
+                    model: 'gpt-4o',
+                    messages: [
+                      {
+                        role: 'user',
+                        content: `Analyze the following workout body. Does it contain specific workout instructions (like sets, reps, time domains, specific movements listed in a sequence), or is it just a general summary or description? Respond ONLY with 'PLAN' if it has specific instructions, or 'DESCRIPTION' if it's just a summary.\n\nText: \`\`\`${currentWorkout.body}\`\`\``,
+                      },
+                    ],
+                  });
+                const classification =
+                  classificationResponse.choices[0].message.content
+                    ?.trim()
+                    .toUpperCase();
+
+                if (classification === 'DESCRIPTION') {
+                  console.log(
+                    `Workout body for \"${
+                      currentWorkout.title || 'Untitled'
+                    }\" identified as description. Generating plan...`
+                  );
+                  // If it's a description, generate a workout plan
+                  const generationResponse =
+                    await openAiClient.chat.completions.create({
+                      model: 'gpt-4o', // Or potentially a stronger model if generation quality is low
+                      messages: [
+                        {
+                          role: 'system',
+                          content: `You are a helpful fitness assistant. Based on the title, tags, and description below, generate a plausible, detailed workout plan. Include specific sets, reps, movements, weights (if applicable), and rest periods. Format the workout clearly. Structure it section by section (e.g., Warm-up, Workout, Cool-down).\n\nTitle: ${
+                            currentWorkout.title || 'Untitled'
+                          }\nTags: ${(currentWorkout.tags || []).join(
+                            ', '
+                          )}\nDescription: \`\`\`${
+                            currentWorkout.body
+                          }\`\`\`\n\nGenerated Workout Plan:`,
+                        },
+                      ],
+                    });
+                  const generatedPlan =
+                    generationResponse.choices[0].message.content?.trim();
+                  if (generatedPlan) {
+                    currentWorkout.body = generatedPlan; // Replace description with generated plan
+                    console.log(
+                      `Generated plan for \"${
+                        currentWorkout.title || 'Untitled'
+                      }\":\n${generatedPlan}`
+                    );
+                  } else {
+                    console.log(
+                      `Generation failed for \"${
+                        currentWorkout.title || 'Untitled'
+                      }\", keeping original body.`
+                    );
+                  }
+                } else {
+                  console.log(
+                    `Workout body for \"${
+                      currentWorkout.title || 'Untitled'
+                    }\" classified as PLAN.`
+                  );
+                }
+              } catch (classificationError) {
+                console.error(
+                  `Error classifying or generating workout body for \"${
+                    currentWorkout.title || 'Untitled'
+                  }\":`,
+                  classificationError
+                );
+                // Keep the original body on error
+              }
+            } else {
+              // Handle cases where body is missing or not a string
+              console.log(
+                `Workout \"${
+                  currentWorkout.title || 'Untitled'
+                }\" has missing or invalid body, skipping generation.`
+              );
+              if (!currentWorkout.body)
+                currentWorkout.body = 'Workout details not available.'; // Provide a default
+            }
+            processedWorkouts.push(currentWorkout);
+          }
+          // Assign the processed workouts back
+          workouts = processedWorkouts;
         }
       }
     } catch (error) {
