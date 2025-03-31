@@ -22,7 +22,7 @@ export const poppins = Poppins({
 export default function RootLayout({ children }) {
   return (
     <html className={`${nunitoSans.variable} ${poppins.variable}`} lang="en">
-      <body>
+      <body suppressHydrationWarning={true}>
         <AuthProvider>
           <OfficeProvider>
             <Navbar />

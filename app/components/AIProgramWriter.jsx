@@ -17,6 +17,10 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
   const [isLoading, setIsLoading] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
   const [referenceWorkouts, setReferenceWorkouts] = useState([]);
+  const [generationStage, setGenerationStage] = useState(null); // Track progress stage
+  const [loadingDuration, setLoadingDuration] = useState(0); // Track loading time
+  const [loadingTimer, setLoadingTimer] = useState(null); // Timer reference
+  const [serverStatus, setServerStatus] = useState(null); // Track server-side status
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -85,6 +89,25 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
 
         if (programError && programError.code !== 'PGRST116') {
           throw programError;
+        }
+
+        // Fetch reference workouts for this program
+        const { data: programReferenceWorkouts, error: referenceError } =
+          await supabase
+            .from('program_workouts')
+            .select('*')
+            .eq('program_id', programId)
+            .eq('is_reference', true)
+            .order('created_at', { ascending: false });
+
+        if (referenceError) {
+          console.error('Error fetching reference workouts:', referenceError);
+        } else {
+          console.log(
+            'Found reference workouts:',
+            programReferenceWorkouts?.length || 0
+          );
+          setReferenceWorkouts(programReferenceWorkouts || []);
         }
 
         // **Update form data based on loaded program settings**
@@ -448,6 +471,22 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
     setSuggestions([]);
     setError('');
     setSuccessMessage('');
+    setGenerationStage('preparing'); // Initial stage
+    setServerStatus(null);
+
+    // Start a timer to track loading duration
+    const startTime = Date.now();
+    const timer = setInterval(() => {
+      const elapsed = Math.floor((Date.now() - startTime) / 1000);
+      setLoadingDuration(elapsed);
+
+      // After 45 seconds, show warning about possible timeout
+      if (elapsed > 45 && generationStage === 'generating') {
+        setGenerationStage('longRunning');
+      }
+    }, 1000);
+
+    setLoadingTimer(timer);
 
     try {
       // Get the equipment names instead of IDs
@@ -471,12 +510,14 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
         program_type: formData.programType,
       };
 
-      const response = await fetch('/api/generate-program', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      setGenerationStage('generating'); // Update stage to generating
+
+      // Determine if we should use SSE or regular fetch
+      const useSSE = true; // We're supporting SSE by default now
+
+      if (useSSE) {
+        // For SSE, create an EventSource to handle the stream
+        const requestBody = JSON.stringify({
           // Only include programId if it's provided and not null/undefined
           ...(programId ? { programId } : {}),
           name: formData.name,
@@ -499,50 +540,310 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
           },
           session_details: formData.sessionDetails,
           program_overview: formData.programOverview,
-        }),
-      });
+        });
 
-      // Check for non-JSON response
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        throw new Error(
-          `Server returned non-JSON response: ${await response.text()}`
-        );
-      }
+        // Create a controller to abort the fetch if needed
+        const controller = new AbortController();
+        const signal = controller.signal;
 
-      let data;
-      try {
-        data = await response.json();
-      } catch (parseError) {
-        console.error('JSON Parse Error:', parseError);
-        throw new Error(
-          'Failed to parse server response. The response may be incomplete or invalid.'
-        );
-      }
+        // Set a timeout of 2.5 minutes (150 seconds)
+        const timeoutId = setTimeout(() => {
+          controller.abort();
+        }, 150000);
 
-      if (!response.ok) {
-        throw new Error(data.error || `Server error: ${response.status}`);
-      }
+        try {
+          const response = await fetch('/api/generate-program', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Accept: 'text/event-stream',
+            },
+            body: requestBody,
+            signal,
+          });
+          console.log('response', response);
 
-      if (data.suggestions && data.suggestions.length > 0) {
-        setSuggestions(data.suggestions);
+          if (!response.ok) {
+            throw new Error(`Server returned error: ${response.status}`);
+          }
 
-        // Show success message if we have a programId (which means it was saved)
-        if (programId) {
-          setSuccessMessage(
-            'Program generated and saved successfully! You can now add workouts to your calendar.'
-          );
-        } else {
-          setSuccessMessage('Program generated successfully!');
+          // Check if we got an event stream response
+          const contentType = response.headers.get('content-type');
+          if (contentType && contentType.includes('text/event-stream')) {
+            // Process the stream
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+
+            while (true) {
+              const { value, done } = await reader.read();
+              if (done) break;
+
+              // Decode the chunk and add to buffer
+              buffer += decoder.decode(value, { stream: true });
+
+              // Process complete messages from buffer
+              let messages = buffer.split('\n\n');
+              buffer = messages.pop() || ''; // Keep the last incomplete message in buffer
+
+              for (const message of messages) {
+                if (message.trim() && message.startsWith('data: ')) {
+                  try {
+                    const data = JSON.parse(message.substring(6));
+                    console.log('SSE update:', data);
+                    setServerStatus(data);
+
+                    // Update UI based on status
+                    if (data.status === 'ai_request') {
+                      setGenerationStage('generating');
+                    } else if (
+                      data.status === 'ai_response_received' ||
+                      data.status === 'parsing'
+                    ) {
+                      setGenerationStage('processing');
+                    } else if (
+                      data.status.includes('saving') ||
+                      data.status.includes('finalizing')
+                    ) {
+                      setGenerationStage('finalizing');
+                    } else if (data.status === 'complete') {
+                      // Process the final result
+                      if (data.suggestions && data.suggestions.length > 0) {
+                        // Update state with program information
+                        if (data.title) {
+                          setFormData((prev) => ({
+                            ...prev,
+                            name: data.title || prev.name,
+                          }));
+                        }
+
+                        if (data.description) {
+                          setFormData((prev) => ({
+                            ...prev,
+                            description: data.description || prev.description,
+                          }));
+                        }
+
+                        // Normalize workout format if needed
+                        const normalizedWorkouts = data.suggestions.map(
+                          (workout) => ({
+                            title: workout.title,
+                            description: workout.body || workout.description, // Support both field names
+                            suggestedDate:
+                              workout.date || workout.suggestedDate, // Support both field names
+                          })
+                        );
+
+                        setSuggestions(normalizedWorkouts);
+
+                        setSuccessMessage(
+                          programId
+                            ? 'Program generated and saved successfully! You can now add workouts to your calendar.'
+                            : 'Program generated successfully!'
+                        );
+                      }
+                      break;
+                    } else if (data.status === 'error') {
+                      throw new Error(
+                        data.details?.message ||
+                          'An error occurred during generation'
+                      );
+                    }
+                  } catch (e) {
+                    console.error('Error parsing SSE message:', e, message);
+                  }
+                }
+              }
+            }
+          } else {
+            // Process normal JSON response
+            const data = await response.json();
+
+            setGenerationStage('finalizing');
+
+            if (data.suggestions && data.suggestions.length > 0) {
+              // Update state with program information
+              if (data.title) {
+                setFormData((prev) => ({
+                  ...prev,
+                  name: data.title || prev.name,
+                }));
+              }
+
+              if (data.description) {
+                setFormData((prev) => ({
+                  ...prev,
+                  description: data.description || prev.description,
+                }));
+              }
+
+              // Normalize workout format if needed
+              const normalizedWorkouts = data.suggestions.map((workout) => ({
+                title: workout.title,
+                description: workout.body || workout.description, // Support both field names
+                suggestedDate: workout.date || workout.suggestedDate, // Support both field names
+              }));
+
+              setSuggestions(normalizedWorkouts);
+
+              // Show success message if we have a programId (which means it was saved)
+              if (programId) {
+                setSuccessMessage(
+                  'Program generated and saved successfully! You can now add workouts to your calendar.'
+                );
+              } else {
+                setSuccessMessage('Program generated successfully!');
+              }
+            } else {
+              setError('No program workouts were generated. Please try again.');
+            }
+          }
+        } catch (error) {
+          if (error.name === 'AbortError') {
+            throw new Error('Request timed out after 2.5 minutes');
+          } else {
+            throw error;
+          }
+        } finally {
+          clearTimeout(timeoutId);
         }
       } else {
-        setError('No program workouts were generated. Please try again.');
+        // Original non-SSE implementation
+        const fetchPromise = fetch('/api/generate-program', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            // Only include programId if it's provided and not null/undefined
+            ...(programId ? { programId } : {}),
+            name: formData.name,
+            description: formData.description,
+            goal: formData.goal,
+            difficulty: formData.difficulty,
+            focus_area: formData.focusArea,
+            personalization: formData.personalization,
+            workout_format: formData.workoutFormats,
+            duration_weeks: parseInt(formData.numberOfWeeks, 10),
+            days_per_week: parseInt(formData.daysPerWeek, 10),
+            // JSON fields structured to match database schema
+            gym_details: gymDetails,
+            periodization: periodizationData,
+            calendar_data: {
+              start_date: formData.startDate,
+              end_date: formData.endDate,
+              days_per_week: parseInt(formData.daysPerWeek, 10),
+              days_of_week: formData.daysOfWeek,
+            },
+            session_details: formData.sessionDetails,
+            program_overview: formData.programOverview,
+          }),
+        });
+
+        // Set a timeout of 2.5 minutes (150 seconds)
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(
+            () => reject(new Error('Request timed out after 2.5 minutes')),
+            150000
+          )
+        );
+
+        // Race the fetch against the timeout
+        const response = await Promise.race([fetchPromise, timeoutPromise]);
+
+        setGenerationStage('processing'); // Update stage to processing results
+
+        // Check for non-JSON response
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+          throw new Error(
+            `Server returned non-JSON response: ${await response.text()}`
+          );
+        }
+
+        let data;
+        try {
+          data = await response.json();
+        } catch (parseError) {
+          console.error('JSON Parse Error:', parseError);
+          throw new Error(
+            'Failed to parse server response. The response may be incomplete or invalid.'
+          );
+        }
+
+        if (!response.ok) {
+          throw new Error(data.error || `Server error: ${response.status}`);
+        }
+
+        setGenerationStage('finalizing'); // Final stage
+
+        if (data.suggestions && data.suggestions.length > 0) {
+          // Update state with program information
+          if (data.title) {
+            setFormData((prev) => ({
+              ...prev,
+              name: data.title || prev.name,
+            }));
+          }
+
+          if (data.description) {
+            setFormData((prev) => ({
+              ...prev,
+              description: data.description || prev.description,
+            }));
+          }
+
+          // Normalize workout format if needed
+          const normalizedWorkouts = data.suggestions.map((workout) => ({
+            title: workout.title,
+            description: workout.body || workout.description, // Support both field names
+            suggestedDate: workout.date || workout.suggestedDate, // Support both field names
+          }));
+
+          setSuggestions(normalizedWorkouts);
+
+          // Show success message if we have a programId (which means it was saved)
+          if (programId) {
+            setSuccessMessage(
+              'Program generated and saved successfully! You can now add workouts to your calendar.'
+            );
+          } else {
+            setSuccessMessage('Program generated successfully!');
+          }
+        } else {
+          setError('No program workouts were generated. Please try again.');
+        }
       }
     } catch (error) {
       console.error('Error:', error);
-      setError(`Program generation failed: ${error.message}`);
+
+      // More user-friendly error messages based on error type
+      if (error.message.includes('timed out')) {
+        setError(
+          `Program generation timed out. Please try again or generate a smaller program.`
+        );
+      } else if (
+        error.name === 'AbortError' ||
+        error.message.includes('network') ||
+        error.message.includes('fetch')
+      ) {
+        setError(
+          `Network error during program generation. Please check your connection and try again.`
+        );
+      } else {
+        setError(`Program generation failed: ${error.message}`);
+      }
     } finally {
+      // Clean up timer
+      if (loadingTimer) {
+        clearInterval(loadingTimer);
+        setLoadingTimer(null);
+      }
+
       setIsLoading(false);
+      setGenerationStage(null);
+      setLoadingDuration(0);
+      setServerStatus(null);
     }
   };
 
@@ -935,7 +1236,10 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
 
       setFormData((prev) => ({
         ...prev,
-        endDate: endDate.toISOString().split('T')[0],
+        endDate:
+          endDate && endDate instanceof Date && !isNaN(endDate)
+            ? endDate.toISOString().split('T')[0]
+            : '',
       }));
     }
   }, [formData.startDate, formData.numberOfWeeks, formData.daysOfWeek]);
@@ -1290,20 +1594,112 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
               {isLoading ? (
                 <>
                   <span className="loading loading-spinner loading-sm"></span>
-                  Generating Program...
+                  {generationStage === 'preparing' && 'Preparing request...'}
+                  {generationStage === 'generating' && 'Generating program...'}
+                  {generationStage === 'longRunning' &&
+                    `Still generating (${loadingDuration}s)...`}
+                  {generationStage === 'processing' && 'Processing results...'}
+                  {generationStage === 'finalizing' && 'Finalizing program...'}
                 </>
               ) : (
                 'Generate Program'
               )}
             </button>
           </div>
-
-          {error && <div className="text-error mt-2">{error}</div>}
-          {successMessage && (
-            <div className="text-success mt-2">{successMessage}</div>
-          )}
         </div>
       </div>
+
+      {/* Reference Workouts Section */}
+      {referenceWorkouts.length > 0 && (
+        <div className="mt-6 mb-4 border border-accent rounded-lg p-4 bg-accent/5">
+          <div className="flex justify-between items-center mb-3">
+            <div>
+              <h3 className="text-lg font-medium flex items-center gap-2">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5 text-accent"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+                Reference Workouts
+              </h3>
+              <p className="text-sm text-gray-600 mt-1">
+                These workouts will be used as inspiration when generating your
+                program.
+              </p>
+            </div>
+            <span className="badge badge-accent">
+              {referenceWorkouts.length} references
+            </span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {referenceWorkouts.map((workout) => (
+              <div
+                key={workout.id}
+                className="border border-accent/40 rounded-md p-3 bg-white hover:bg-accent/10 transition-colors"
+              >
+                <div className="flex justify-between items-start">
+                  <h4 className="font-semibold">{workout.title}</h4>
+                  <button
+                    className="btn btn-xs btn-ghost"
+                    onClick={async () => {
+                      if (confirm('Remove this reference workout?')) {
+                        try {
+                          const { error } = await supabase
+                            .from('program_workouts')
+                            .delete()
+                            .eq('id', workout.id);
+
+                          if (error) throw error;
+
+                          // Remove from state
+                          setReferenceWorkouts((prev) =>
+                            prev.filter((w) => w.id !== workout.id)
+                          );
+                        } catch (err) {
+                          console.error(
+                            'Error removing reference workout:',
+                            err
+                          );
+                          setError('Failed to remove reference workout');
+                        }
+                      }
+                    }}
+                  >
+                    ✕
+                  </button>
+                </div>
+                <div className="mt-2 text-sm max-h-20 overflow-y-auto">
+                  {workout.body.substring(0, 150)}
+                  {workout.body.length > 150 ? '...' : ''}
+                </div>
+                <div className="flex flex-wrap gap-1 mt-2">
+                  {workout.tags &&
+                    Object.entries(workout.tags)
+                      .filter(
+                        ([key, value]) =>
+                          key !== 'workoutDetails' && typeof value !== 'object'
+                      )
+                      .map(([key, value]) => (
+                        <span
+                          key={key}
+                          className="badge badge-outline badge-sm"
+                        >
+                          {key}: {value.toString()}
+                        </span>
+                      ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Results section */}
       {suggestions.length > 0 && (

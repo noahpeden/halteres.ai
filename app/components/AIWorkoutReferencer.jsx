@@ -21,6 +21,7 @@ export default function AIWorkoutReferencer({ programId }) {
     isWebSearch: false,
   });
   const [errorMessage, setErrorMessage] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
   const [searchText, setSearchText] = useState('');
   const [searchWorkoutResults, setSearchWorkoutResults] = useState([]);
   const [webSearchWorkoutResults, setWebSearchWorkoutResults] = useState([]);
@@ -174,6 +175,7 @@ export default function AIWorkoutReferencer({ programId }) {
     }`;
     setAddingWorkoutStates((prev) => ({ ...prev, [workoutKey]: true }));
     setErrorMessage('');
+    setSuccessMessage('');
 
     try {
       const response = await fetch('/api/add-workout-to-program', {
@@ -197,6 +199,16 @@ export default function AIWorkoutReferencer({ programId }) {
       }
 
       console.log('Workout added to program successfully:', workout.title);
+
+      setSuccessMessage(
+        `"${workout.title}" was added as ${
+          isReference ? 'a reference workout' : 'a program workout'
+        } successfully!`
+      );
+
+      setTimeout(() => {
+        setSuccessMessage('');
+      }, 5000);
     } catch (error) {
       console.error('Error adding workout to program:', error);
       setErrorMessage(error.message);
@@ -208,6 +220,31 @@ export default function AIWorkoutReferencer({ programId }) {
   return (
     <div className="bg-white rounded-lg shadow-md p-4">
       <h2 className="text-xl font-semibold mb-4">Find Reference Workouts</h2>
+
+      <div className="mb-4 p-3 border-l-4 border-accent bg-accent/5 rounded-r-md">
+        <h3 className="font-medium flex items-center gap-2">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-5 w-5 text-accent"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+          >
+            <path
+              fillRule="evenodd"
+              d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+              clipRule="evenodd"
+            />
+          </svg>
+          How Reference Workouts Work
+        </h3>
+        <p className="text-sm mt-1">
+          Reference workouts provide inspiration and context when generating
+          your program. Add workouts that have the style, format, and exercises
+          you'd like to see in your program. These will be used as examples for
+          the AI to follow when creating your custom program.
+        </p>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="md:col-span-3 space-y-4">
           <div className="flex items-center gap-3 py-2">
@@ -434,6 +471,9 @@ export default function AIWorkoutReferencer({ programId }) {
 
           {errorMessage && (
             <div className="text-error mt-2">{errorMessage}</div>
+          )}
+          {successMessage && (
+            <div className="text-success mt-2">{successMessage}</div>
           )}
         </div>
       </div>
