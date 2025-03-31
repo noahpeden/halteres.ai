@@ -19,6 +19,9 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
   const [referenceWorkouts, setReferenceWorkouts] = useState([]);
   const [selectedReference, setSelectedReference] = useState(null);
   const [formData, setFormData] = useState({
+    name: '',
+    description: '',
+    entityId: null, // for entity_id in the database
     goal: 'strength',
     difficulty: 'intermediate',
     equipment: [],
@@ -31,6 +34,10 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
     programType: 'linear',
     gymType: 'Crossfit Box',
     startDate: new Date().toISOString().split('T')[0],
+    sessionDetails: {}, // jsonb field from database
+    programOverview: {}, // jsonb field from database
+    gymDetails: {}, // jsonb field from database
+    periodization: {}, // jsonb field from database
   });
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
@@ -70,34 +77,100 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
       setSuccessMessage('');
 
       try {
-        // Fetch program details first (optional, but keeps existing form update logic)
+        // Fetch program details first
         const { data: program, error: programError } = await supabase
           .from('programs')
-          .select('*') // Select needed fields like calendar_data, generated_program
+          .select('*') // Select all fields to get saved settings
           .eq('id', programId)
           .single();
+        console.log(program);
 
         if (programError && programError.code !== 'PGRST116') {
-          // Ignore 'PGRST116' (No rows found) if program doesn't exist yet
           throw programError;
         }
 
-        // Update form based on program data if it exists
-        if (program && program.calendar_data) {
-          const { days_of_week = [], start_date } = program.calendar_data;
-          setFormData((prev) => ({
-            ...prev,
-            startDate: start_date || prev.startDate,
-            daysPerWeek: days_of_week.length.toString() || prev.daysPerWeek,
-          }));
+        // **Update form data based on loaded program settings**
+        if (program) {
+          setFormData((prev) => {
+            // Map saved equipment names back to IDs
+            let loadedEquipmentIds = prev.equipment; // Default to previous/initial state
+
+            // Look for equipment info in the gym_details JSON field
+            const savedEquipmentNames = program.gym_details?.equipment || [];
+
+            if (Array.isArray(savedEquipmentNames)) {
+              loadedEquipmentIds = savedEquipmentNames
+                .map((name) => {
+                  const equipmentItem = equipmentList.find(
+                    (item) => item.label === name
+                  );
+                  return equipmentItem ? equipmentItem.value : null;
+                })
+                .filter((id) => id !== null); // Filter out any nulls if names didn't match
+            }
+
+            // Get gym type from gym_details or fallback to older direct field
+            const loadedGymType =
+              program.gym_details?.gym_type || program.gym_type || prev.gymType;
+
+            // Get program type from periodization JSON if available
+            const loadedProgramType =
+              program.periodization?.program_type || prev.programType;
+
+            // Merge loaded data with previous state, prioritizing loaded data
+            return {
+              ...prev, // Keep existing state as base
+              name: program.name || prev.name,
+              description: program.description || prev.description,
+              entityId: program.entity_id || prev.entityId,
+              goal: program.goal || prev.goal,
+              difficulty: program.difficulty || prev.difficulty,
+              equipment: loadedEquipmentIds,
+              focusArea:
+                program.focus_area || program.focusArea || prev.focusArea, // Check common variations
+              additionalNotes:
+                program.additional_notes ||
+                program.additionalNotes ||
+                prev.additionalNotes,
+              workoutFormats:
+                program.workout_format ||
+                program.workout_formats ||
+                program.workoutFormats ||
+                prev.workoutFormats,
+              numberOfWeeks: (
+                program.duration_weeks ||
+                program.numberOfWeeks ||
+                prev.numberOfWeeks
+              ).toString(),
+              daysPerWeek: (
+                program.days_per_week ||
+                program.daysPerWeek ||
+                program.calendar_data?.days_of_week?.length ||
+                prev.daysPerWeek
+              ).toString(),
+              programType: loadedProgramType,
+              gymType: loadedGymType,
+              startDate:
+                program.start_date ||
+                program.calendar_data?.start_date ||
+                prev.startDate,
+              sessionDetails: program.session_details || prev.sessionDetails,
+              programOverview: program.program_overview || prev.programOverview,
+              gymDetails: program.gym_details || prev.gymDetails,
+              periodization: program.periodization || prev.periodization,
+              // Add personalization if it's saved:
+              // personalization: program.personalization || prev.personalization,
+            };
+          });
         }
+        // **End of form data update**
 
         // Fetch workouts directly from program_workouts as the primary source
         const { data: savedWorkouts, error: workoutsError } = await supabase
           .from('program_workouts')
-          .select('id, title, body, tags, created_at') // Add created_at for potential sorting
+          .select('id, title, body, tags, created_at')
           .eq('program_id', programId)
-          .order('created_at'); // Order by creation time
+          .order('created_at');
 
         if (workoutsError) {
           throw workoutsError;
@@ -111,15 +184,12 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
             savedWorkouts.length,
             'workouts from program_workouts'
           );
-          // Map saved workouts to the structure expected by the component
           finalSuggestions = savedWorkouts.map((sw) => ({
             savedWorkoutId: sw.id,
             title: sw.title,
             description: sw.body,
             tags: sw.tags || {},
-            // If workoutDetails are stored in tags, use them
             workoutDetails: sw.tags?.workoutDetails,
-            // We might need to reconstruct suggestedDate if it was stored elsewhere or determined by order/AI
           }));
 
           // Optional: Enhance with data from program.generated_program if it exists
@@ -130,35 +200,27 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
           ) {
             console.log('Found generated_program data, attempting to merge.');
             finalSuggestions = finalSuggestions.map((suggestion) => {
-              // Find corresponding workout in generated_program (matching by title or maybe tags)
               const generatedMatch = program.generated_program.find(
                 (gw) =>
                   gw.title === suggestion.title ||
                   (gw.tags?.week === suggestion.tags?.week &&
                     gw.tags?.day === suggestion.tags?.day)
-                // Add more matching logic if needed
               );
-
               if (generatedMatch) {
                 return {
                   ...suggestion,
-                  // Prioritize generated data for things like suggestedDate or potentially richer workoutDetails
                   suggestedDate:
                     generatedMatch.suggestedDate || suggestion.suggestedDate,
                   workoutDetails:
                     generatedMatch.workoutDetails || suggestion.workoutDetails,
-                  // Add other fields from generatedMatch if necessary
                 };
               }
               return suggestion;
             });
 
-            // Potentially add workouts from generated_program not found in program_workouts (less likely, but possible)
-            // This part might need refinement based on how generated_program is used
             program.generated_program.forEach((gw) => {
               const existsInSaved = finalSuggestions.some(
-                (suggestion) =>
-                  suggestion.title === gw.title /* or other matching logic */
+                (suggestion) => suggestion.title === gw.title
               );
               if (!existsInSaved) {
                 console.log(
@@ -166,8 +228,7 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
                   gw.title
                 );
                 finalSuggestions.push({
-                  ...gw, // Use the generated workout structure
-                  // Ensure description field exists if needed by downstream code
+                  ...gw,
                   description:
                     gw.description || gw.workoutDetails
                       ? 'See details'
@@ -182,11 +243,9 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
             `Loaded ${finalSuggestions.length} workouts successfully!`
           );
         } else {
-          // Handle case where no workouts exist in program_workouts
           console.log(
             'No workouts found in program_workouts for this program.'
           );
-          // Check if there's data *only* in generated_program (legacy or unsaved generation)
           if (
             program &&
             program.generated_program &&
@@ -209,7 +268,7 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
               'Loaded program from previous generation (not saved individually).'
             );
           } else {
-            setSuggestions([]); // No workouts found anywhere
+            setSuggestions([]);
           }
         }
       } catch (error) {
@@ -226,9 +285,22 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
   // Update equipment selection when gym type changes
   useEffect(() => {
     if (formData.gymType) {
+      const selectedEquipment = gymEquipmentPresets[formData.gymType] || [];
+
       setFormData((prev) => ({
         ...prev,
-        equipment: gymEquipmentPresets[formData.gymType] || [],
+        equipment: selectedEquipment,
+        // Also update the gym_details to reflect the change
+        gymDetails: {
+          ...prev.gymDetails,
+          gym_type: formData.gymType,
+          equipment: selectedEquipment
+            .map((id) => {
+              const equipment = equipmentList.find((item) => item.value === id);
+              return equipment ? equipment.label : null;
+            })
+            .filter(Boolean),
+        },
       }));
     }
   }, [formData.gymType]);
@@ -247,10 +319,31 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+
+    // Special handling for JSON fields
+    if (
+      name === 'sessionDetails' ||
+      name === 'programOverview' ||
+      name === 'gymDetails' ||
+      name === 'periodization'
+    ) {
+      try {
+        const parsedValue = value ? JSON.parse(value) : {};
+        setFormData((prev) => ({
+          ...prev,
+          [name]: parsedValue,
+        }));
+      } catch (error) {
+        // Don't update if invalid JSON
+        console.error(`Invalid JSON in ${name}`, error);
+      }
+    } else {
+      // Regular field handling
+      setFormData((prev) => ({
+        ...prev,
+        [name]: value,
+      }));
+    }
   };
 
   const handleEquipmentChange = (e) => {
@@ -260,10 +353,20 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
     // If "Select All" is clicked
     if (value === -1) {
       if (isChecked) {
+        // Get all equipment IDs
+        const allEquipmentIds = equipmentList.map((item) => item.value);
+        // Get all equipment names
+        const allEquipmentNames = equipmentList.map((item) => item.label);
+
         // Select all equipment
         setFormData((prev) => ({
           ...prev,
-          equipment: equipmentList.map((item) => item.value),
+          equipment: allEquipmentIds,
+          // Also update gym_details
+          gymDetails: {
+            ...prev.gymDetails,
+            equipment: allEquipmentNames,
+          },
         }));
         setAllEquipmentSelected(true);
       } else {
@@ -271,6 +374,11 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
         setFormData((prev) => ({
           ...prev,
           equipment: [],
+          // Also update gym_details
+          gymDetails: {
+            ...prev.gymDetails,
+            equipment: [],
+          },
         }));
         setAllEquipmentSelected(false);
       }
@@ -278,19 +386,33 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
     }
 
     setFormData((prev) => {
+      let newEquipment;
+
       if (isChecked) {
-        const newEquipment = [...prev.equipment, value];
-        return {
-          ...prev,
-          equipment: newEquipment,
-        };
+        // Add the equipment
+        newEquipment = [...prev.equipment, value];
       } else {
-        const newEquipment = prev.equipment.filter((item) => item !== value);
-        return {
-          ...prev,
-          equipment: newEquipment,
-        };
+        // Remove the equipment
+        newEquipment = prev.equipment.filter((item) => item !== value);
       }
+
+      // Map equipment IDs to names for gym_details
+      const newEquipmentNames = newEquipment
+        .map((id) => {
+          const equipment = equipmentList.find((item) => item.value === id);
+          return equipment ? equipment.label : null;
+        })
+        .filter(Boolean);
+
+      return {
+        ...prev,
+        equipment: newEquipment,
+        // Update gym_details with new equipment names
+        gymDetails: {
+          ...prev.gymDetails,
+          equipment: newEquipmentNames,
+        },
+      };
     });
   };
 
@@ -315,54 +437,6 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
     });
   };
 
-  // Search for reference workouts
-  const searchReferenceWorkouts = async () => {
-    setIsLoading(true);
-    try {
-      let query = supabase
-        .from('external_workouts')
-        .select('id, title, body, tags, difficulty');
-
-      if (searchQuery) {
-        const formattedQuery = searchQuery
-          .trim()
-          .split(/\s+/)
-          .map((term) => term + ':*')
-          .join(' & ');
-
-        query = query.textSearch('body', formattedQuery, {
-          type: 'plain',
-          config: 'english',
-        });
-      }
-
-      const { data, error } = await query.limit(10);
-
-      if (error) throw error;
-      setSearchResults(data || []);
-    } catch (error) {
-      console.error('Error searching workouts:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const selectReferenceWorkout = (workout) => {
-    setSelectedReference(workout);
-    setFormData((prev) => ({
-      ...prev,
-      exampleWorkout: workout.body,
-    }));
-  };
-
-  const clearSelectedReference = () => {
-    setSelectedReference(null);
-    setFormData((prev) => ({
-      ...prev,
-      exampleWorkout: '',
-    }));
-  };
-
   const generateProgram = async () => {
     setIsLoading(true);
     setSuggestions([]);
@@ -378,6 +452,19 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
         })
         .filter(Boolean);
 
+      // Prepare gym_details with equipment and gym type
+      const gymDetails = {
+        ...formData.gymDetails,
+        equipment: selectedEquipmentNames,
+        gym_type: formData.gymType,
+      };
+
+      // Prepare periodization with program type
+      const periodizationData = {
+        ...formData.periodization,
+        program_type: formData.programType,
+      };
+
       const response = await fetch('/api/generate-program', {
         method: 'POST',
         headers: {
@@ -386,18 +473,25 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
         body: JSON.stringify({
           // Only include programId if it's provided and not null/undefined
           ...(programId ? { programId } : {}),
+          name: formData.name,
+          description: formData.description,
           goal: formData.goal,
           difficulty: formData.difficulty,
-          equipment: selectedEquipmentNames,
-          focusArea: formData.focusArea,
+          focus_area: formData.focusArea,
           additionalNotes: formData.additionalNotes,
           personalization: formData.personalization,
-          workoutFormats: formData.workoutFormats,
-          numberOfWeeks: formData.numberOfWeeks,
-          daysPerWeek: formData.daysPerWeek,
-          programType: formData.programType,
-          gymType: formData.gymType,
-          startDate: formData.startDate,
+          workout_format: formData.workoutFormats,
+          duration_weeks: parseInt(formData.numberOfWeeks, 10),
+          days_per_week: parseInt(formData.daysPerWeek, 10),
+          // JSON fields structured to match database schema
+          gym_details: gymDetails,
+          periodization: periodizationData,
+          calendar_data: {
+            start_date: formData.startDate,
+            days_per_week: parseInt(formData.daysPerWeek, 10),
+          },
+          session_details: formData.sessionDetails,
+          program_overview: formData.programOverview,
         }),
       });
 
@@ -645,10 +739,11 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
     }));
   };
 
-  // Save the current program workouts to the database
+  // Save the current program workouts AND configuration to the database
   const saveProgram = async () => {
-    if (!programId || !suggestions || suggestions.length === 0) {
-      setError('No program ID or workouts to save');
+    if (!programId) {
+      // Allow saving even if suggestions are empty initially
+      setError('No program ID to save');
       return;
     }
 
@@ -656,24 +751,78 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
     setError('');
     setSuccessMessage('');
 
+    // Get equipment names for saving
+    const equipmentNamesToSave = formData.equipment
+      .map((id) => {
+        const equipment = equipmentList.find((item) => item.value === id);
+        return equipment ? equipment.label : null;
+      })
+      .filter(Boolean);
+
     try {
+      // Prepare gym_details - merge existing data with equipment info
+      const updatedGymDetails = {
+        ...formData.gymDetails,
+        equipment: equipmentNamesToSave,
+        gym_type: formData.gymType,
+      };
+
+      // Prepare periodization - include program type
+      const updatedPeriodization = {
+        ...formData.periodization,
+        program_type: formData.programType,
+      };
+
+      const updatePayload = {
+        // Program configuration fields (use database column names from schema)
+        name: formData.name,
+        description: formData.description,
+        entity_id: formData.entityId,
+        goal: formData.goal,
+        difficulty: formData.difficulty,
+        focus_area: formData.focusArea || null, // Send null if empty string
+        duration_weeks: parseInt(formData.numberOfWeeks, 10),
+        // Store gym type in the gym_details JSON
+        gym_details: updatedGymDetails,
+        // Move program_type to periodization JSON
+        periodization: updatedPeriodization,
+        // Using workout_format (singular) for workoutFormats (plural)
+        workout_format: formData.workoutFormats,
+        // Other json fields
+        session_details: formData.sessionDetails,
+        program_overview: formData.programOverview,
+        // calendar_data needs careful handling
+        calendar_data: {
+          start_date: formData.startDate,
+          days_per_week: parseInt(formData.daysPerWeek, 10),
+        },
+        // Save generated_program if we have suggestions
+        ...(suggestions && suggestions.length > 0
+          ? { generated_program: suggestions }
+          : {}),
+        updated_at: new Date().toISOString(),
+      };
+
+      console.log('Saving program with payload:', updatePayload);
+
       const { error: updateError } = await supabase
         .from('programs')
-        .update({
-          generated_program: suggestions,
-          updated_at: new Date().toISOString(),
-        })
+        .update(updatePayload) // Use the constructed payload
         .eq('id', programId);
 
       if (updateError) {
+        console.error('Supabase update error:', updateError);
         throw updateError;
       }
 
-      // Show success feedback
       setSuccessMessage('Program saved successfully!');
     } catch (error) {
       console.error('Error saving program:', error);
-      setError(`Failed to save program: ${error.message}`);
+      setError(
+        `Failed to save program: ${
+          error.message || error.details || 'Unknown error'
+        }`
+      );
     } finally {
       setIsLoading(false);
     }
@@ -696,8 +845,41 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Left column - Input form */}
-        <div className="md:col-span-2 space-y-4">
+        <div className="md:col-span-3 space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* New fields for name and description */}
+            <div>
+              <label className="form-control w-full">
+                <div className="label">
+                  <span className="label-text">Program Name</span>
+                </div>
+                <input
+                  type="text"
+                  name="name"
+                  className="input input-bordered w-full"
+                  value={formData.name}
+                  onChange={handleChange}
+                  placeholder="Enter program name"
+                />
+              </label>
+            </div>
+
+            <div>
+              <label className="form-control w-full">
+                <div className="label">
+                  <span className="label-text">Description</span>
+                </div>
+                <input
+                  type="text"
+                  name="description"
+                  className="input input-bordered w-full"
+                  value={formData.description}
+                  onChange={handleChange}
+                  placeholder="Brief program description"
+                />
+              </label>
+            </div>
+
             <div>
               <label className="form-control w-full">
                 <div className="label">
@@ -938,6 +1120,108 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
             </label>
           </div>
 
+          {/* Session Details, Program Overview, Gym Details, Periodization */}
+          <div className="border p-3 rounded-md">
+            <h3 className="font-medium mb-2">Advanced Settings</h3>
+            <div className="space-y-4">
+              {formData.entityId && (
+                <div>
+                  <label className="form-control w-full">
+                    <div className="label">
+                      <span className="label-text">Entity ID (Read-only)</span>
+                    </div>
+                    <input
+                      type="text"
+                      className="input input-bordered w-full font-mono text-xs"
+                      value={formData.entityId || ''}
+                      readOnly
+                    />
+                  </label>
+                </div>
+              )}
+
+              <div>
+                <label className="form-control w-full">
+                  <div className="label">
+                    <span className="label-text">Session Details (JSON)</span>
+                  </div>
+                  <textarea
+                    name="sessionDetails"
+                    className="textarea textarea-bordered w-full font-mono text-xs"
+                    placeholder='{"key": "value"}'
+                    value={
+                      formData.sessionDetails
+                        ? JSON.stringify(formData.sessionDetails, null, 2)
+                        : '{}'
+                    }
+                    onChange={handleChange}
+                    rows="3"
+                  ></textarea>
+                </label>
+              </div>
+
+              <div>
+                <label className="form-control w-full">
+                  <div className="label">
+                    <span className="label-text">Program Overview (JSON)</span>
+                  </div>
+                  <textarea
+                    name="programOverview"
+                    className="textarea textarea-bordered w-full font-mono text-xs"
+                    placeholder='{"key": "value"}'
+                    value={
+                      formData.programOverview
+                        ? JSON.stringify(formData.programOverview, null, 2)
+                        : '{}'
+                    }
+                    onChange={handleChange}
+                    rows="3"
+                  ></textarea>
+                </label>
+              </div>
+
+              <div>
+                <label className="form-control w-full">
+                  <div className="label">
+                    <span className="label-text">Gym Details (JSON)</span>
+                  </div>
+                  <textarea
+                    name="gymDetails"
+                    className="textarea textarea-bordered w-full font-mono text-xs"
+                    placeholder='{"key": "value"}'
+                    value={
+                      formData.gymDetails
+                        ? JSON.stringify(formData.gymDetails, null, 2)
+                        : '{}'
+                    }
+                    onChange={handleChange}
+                    rows="3"
+                  ></textarea>
+                </label>
+              </div>
+
+              <div>
+                <label className="form-control w-full">
+                  <div className="label">
+                    <span className="label-text">Periodization (JSON)</span>
+                  </div>
+                  <textarea
+                    name="periodization"
+                    className="textarea textarea-bordered w-full font-mono text-xs"
+                    placeholder='{"key": "value"}'
+                    value={
+                      formData.periodization
+                        ? JSON.stringify(formData.periodization, null, 2)
+                        : '{}'
+                    }
+                    onChange={handleChange}
+                    rows="3"
+                  ></textarea>
+                </label>
+              </div>
+            </div>
+          </div>
+
           {/* Generate button */}
           <div className="pt-2">
             <button
@@ -960,72 +1244,6 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
           {successMessage && (
             <div className="text-success mt-2">{successMessage}</div>
           )}
-        </div>
-
-        {/* Right column - Reference workouts */}
-        <div className="space-y-4">
-          <div>
-            <h3 className="text-lg font-medium mb-2">Reference Workouts</h3>
-            <div className="flex gap-2 mb-3">
-              <input
-                type="text"
-                placeholder="Search for workouts..."
-                className="input input-bordered input-sm flex-grow"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-              <button
-                className="btn btn-sm"
-                onClick={searchReferenceWorkouts}
-                disabled={isLoading}
-              >
-                Search
-              </button>
-            </div>
-
-            {selectedReference && (
-              <div className="mb-4 p-3 bg-blue-50 rounded-md">
-                <div className="flex justify-between items-start">
-                  <h4 className="font-medium">Selected Example:</h4>
-                  <button
-                    className="btn btn-xs btn-ghost"
-                    onClick={clearSelectedReference}
-                  >
-                    ✕
-                  </button>
-                </div>
-                <p className="text-sm mt-1">{selectedReference.title}</p>
-              </div>
-            )}
-
-            <div className="space-y-2 max-h-[500px] overflow-y-auto">
-              {searchResults.length > 0
-                ? searchResults.map((workout) => (
-                    <div
-                      key={workout.id}
-                      className="p-2 border rounded-md cursor-pointer hover:bg-blue-50"
-                      onClick={() => selectReferenceWorkout(workout)}
-                    >
-                      <h5 className="font-medium text-sm">{workout.title}</h5>
-                      <p className="text-xs text-gray-600 line-clamp-2">
-                        {workout.body}
-                      </p>
-                    </div>
-                  ))
-                : referenceWorkouts.map((workout) => (
-                    <div
-                      key={workout.id}
-                      className="p-2 border rounded-md cursor-pointer hover:bg-blue-50"
-                      onClick={() => selectReferenceWorkout(workout)}
-                    >
-                      <h5 className="font-medium text-sm">{workout.title}</h5>
-                      <p className="text-xs text-gray-600 line-clamp-2">
-                        {workout.body}
-                      </p>
-                    </div>
-                  ))}
-            </div>
-          </div>
         </div>
       </div>
 
