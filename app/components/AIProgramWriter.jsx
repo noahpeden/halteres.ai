@@ -17,7 +17,6 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
   const [isLoading, setIsLoading] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
   const [referenceWorkouts, setReferenceWorkouts] = useState([]);
-  const [selectedReference, setSelectedReference] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -26,14 +25,15 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
     difficulty: 'intermediate',
     equipment: [],
     focusArea: '',
-    additionalNotes: '',
     personalization: '',
     workoutFormats: [],
     numberOfWeeks: '4',
     daysPerWeek: '4',
+    daysOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'], // Default selection
     programType: 'linear',
     gymType: 'Crossfit Box',
     startDate: new Date().toISOString().split('T')[0],
+    endDate: '', // New field for end date
     sessionDetails: {}, // jsonb field from database
     programOverview: {}, // jsonb field from database
     gymDetails: {}, // jsonb field from database
@@ -41,8 +41,6 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
   });
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState([]);
   const [allEquipmentSelected, setAllEquipmentSelected] = useState(false);
   const [showEquipment, setShowEquipment] = useState(false);
   const [selectedWorkout, setSelectedWorkout] = useState(null);
@@ -117,6 +115,16 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
             const loadedProgramType =
               program.periodization?.program_type || prev.programType;
 
+            // Get days of week from calendar_data
+            const loadedDaysOfWeek =
+              program.calendar_data?.days_of_week || prev.daysOfWeek;
+
+            // Get end date from calendar_data
+            const loadedEndDate =
+              program.calendar_data?.end_date ||
+              program.end_date ||
+              prev.endDate;
+
             // Merge loaded data with previous state, prioritizing loaded data
             return {
               ...prev, // Keep existing state as base
@@ -128,10 +136,6 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
               equipment: loadedEquipmentIds,
               focusArea:
                 program.focus_area || program.focusArea || prev.focusArea, // Check common variations
-              additionalNotes:
-                program.additional_notes ||
-                program.additionalNotes ||
-                prev.additionalNotes,
               workoutFormats:
                 program.workout_format ||
                 program.workout_formats ||
@@ -148,12 +152,14 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
                 program.calendar_data?.days_of_week?.length ||
                 prev.daysPerWeek
               ).toString(),
+              daysOfWeek: loadedDaysOfWeek,
               programType: loadedProgramType,
               gymType: loadedGymType,
               startDate:
                 program.start_date ||
                 program.calendar_data?.start_date ||
                 prev.startDate,
+              endDate: loadedEndDate,
               sessionDetails: program.session_details || prev.sessionDetails,
               programOverview: program.program_overview || prev.programOverview,
               gymDetails: program.gym_details || prev.gymDetails,
@@ -478,7 +484,6 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
           goal: formData.goal,
           difficulty: formData.difficulty,
           focus_area: formData.focusArea,
-          additionalNotes: formData.additionalNotes,
           personalization: formData.personalization,
           workout_format: formData.workoutFormats,
           duration_weeks: parseInt(formData.numberOfWeeks, 10),
@@ -488,7 +493,9 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
           periodization: periodizationData,
           calendar_data: {
             start_date: formData.startDate,
+            end_date: formData.endDate,
             days_per_week: parseInt(formData.daysPerWeek, 10),
+            days_of_week: formData.daysOfWeek,
           },
           session_details: formData.sessionDetails,
           program_overview: formData.programOverview,
@@ -794,7 +801,9 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
         // calendar_data needs careful handling
         calendar_data: {
           start_date: formData.startDate,
+          end_date: formData.endDate,
           days_per_week: parseInt(formData.daysPerWeek, 10),
+          days_of_week: formData.daysOfWeek,
         },
         // Save generated_program if we have suggestions
         ...(suggestions && suggestions.length > 0
@@ -839,6 +848,150 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
     setIsModalOpen(false);
   };
 
+  // Handler for day of week selection
+  const handleDayOfWeekChange = (day) => {
+    setFormData((prev) => {
+      if (prev.daysOfWeek.includes(day)) {
+        // Remove the day if it's already selected
+        return {
+          ...prev,
+          daysOfWeek: prev.daysOfWeek.filter((d) => d !== day),
+          // Also update days per week count
+          daysPerWeek: (prev.daysOfWeek.length - 1).toString(),
+        };
+      } else {
+        // Add the day if it's not selected
+        return {
+          ...prev,
+          daysOfWeek: [...prev.daysOfWeek, day],
+          // Also update days per week count
+          daysPerWeek: (prev.daysOfWeek.length + 1).toString(),
+        };
+      }
+    });
+  };
+
+  // Calculate end date based on start date, number of weeks, and selected days of week
+  useEffect(() => {
+    if (
+      formData.startDate &&
+      formData.numberOfWeeks &&
+      formData.daysOfWeek.length > 0
+    ) {
+      const startDate = new Date(formData.startDate);
+      const weeksToAdd = parseInt(formData.numberOfWeeks, 10);
+
+      // Map day names to day numbers (0 = Sunday, 1 = Monday, etc.)
+      const dayMapping = {
+        Sunday: 0,
+        Monday: 1,
+        Tuesday: 2,
+        Wednesday: 3,
+        Thursday: 4,
+        Friday: 5,
+        Saturday: 6,
+      };
+
+      // Convert selected days to day numbers and sort them
+      const selectedDayNumbers = formData.daysOfWeek
+        .map((day) => dayMapping[day])
+        .sort((a, b) => a - b);
+
+      if (selectedDayNumbers.length === 0) {
+        return; // No days selected, can't calculate end date
+      }
+
+      // Find the last day of the week in the selected days
+      const lastDayOfWeek = Math.max(...selectedDayNumbers);
+
+      // Calculate the basic end date (start date + weeks)
+      const baseEndDate = new Date(startDate);
+      baseEndDate.setDate(startDate.getDate() + (weeksToAdd * 7 - 1));
+
+      // Adjust to the last selected day of the final week
+      const startDayOfWeek = startDate.getDay();
+      let endDate = new Date(baseEndDate);
+
+      // Calculate the day of the week for the current end date
+      const endDayOfWeek = endDate.getDay();
+
+      // Find the closest selected day that's <= endDayOfWeek
+      let targetDay = selectedDayNumbers[0]; // Default to first selected day
+
+      // Check if there's a selected day that falls on or before the current end day
+      for (let i = selectedDayNumbers.length - 1; i >= 0; i--) {
+        if (selectedDayNumbers[i] <= endDayOfWeek) {
+          targetDay = selectedDayNumbers[i];
+          break;
+        }
+      }
+
+      // If no day found earlier in the week, use the last selected day and go back one week
+      if (targetDay > endDayOfWeek) {
+        endDate.setDate(endDate.getDate() - (endDayOfWeek + 7 - targetDay));
+      } else {
+        endDate.setDate(endDate.getDate() - (endDayOfWeek - targetDay));
+      }
+
+      setFormData((prev) => ({
+        ...prev,
+        endDate: endDate.toISOString().split('T')[0],
+      }));
+    }
+  }, [formData.startDate, formData.numberOfWeeks, formData.daysOfWeek]);
+
+  // Update days per week when days of week selection changes
+  useEffect(() => {
+    setFormData((prev) => ({
+      ...prev,
+      daysPerWeek: prev.daysOfWeek.length.toString(),
+    }));
+  }, [formData.daysOfWeek.length]);
+
+  // Update days of week when days per week changes directly
+  useEffect(() => {
+    // Only run this effect when daysPerWeek changes directly via dropdown, not via daysOfWeek changes
+    const daysPerWeekNum = parseInt(formData.daysPerWeek);
+    const daysOfWeekLength = formData.daysOfWeek.length;
+
+    if (daysPerWeekNum !== daysOfWeekLength) {
+      // Default days of week options
+      const allDays = [
+        'Monday',
+        'Tuesday',
+        'Wednesday',
+        'Thursday',
+        'Friday',
+        'Saturday',
+        'Sunday',
+      ];
+
+      if (daysPerWeekNum > daysOfWeekLength) {
+        // Add days
+        const daysToAdd = allDays.filter(
+          (day) => !formData.daysOfWeek.includes(day)
+        );
+        const newDays = [
+          ...formData.daysOfWeek,
+          ...daysToAdd.slice(0, daysPerWeekNum - daysOfWeekLength),
+        ];
+
+        setFormData((prev) => ({
+          ...prev,
+          daysOfWeek: newDays,
+        }));
+      } else if (daysPerWeekNum < daysOfWeekLength) {
+        // Remove days from the end
+        const newDays = formData.daysOfWeek.slice(0, daysPerWeekNum);
+
+        setFormData((prev) => ({
+          ...prev,
+          daysOfWeek: newDays,
+        }));
+      }
+    }
+  }, [formData.daysPerWeek]);
+
   return (
     <div className="bg-white rounded-lg shadow-md p-4">
       <h2 className="text-xl font-semibold mb-4">Program Writer</h2>
@@ -860,22 +1013,6 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
                   value={formData.name}
                   onChange={handleChange}
                   placeholder="Enter program name"
-                />
-              </label>
-            </div>
-
-            <div>
-              <label className="form-control w-full">
-                <div className="label">
-                  <span className="label-text">Description</span>
-                </div>
-                <input
-                  type="text"
-                  name="description"
-                  className="input input-bordered w-full"
-                  value={formData.description}
-                  onChange={handleChange}
-                  placeholder="Brief program description"
                 />
               </label>
             </div>
@@ -981,25 +1118,32 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
                 </select>
               </label>
             </div>
-
+            {/* Days of Week Selector */}
             <div>
-              <label className="form-control w-full">
-                <div className="label">
-                  <span className="label-text">Days Per Week</span>
-                </div>
-                <select
-                  name="daysPerWeek"
-                  className="select select-bordered w-full"
-                  value={formData.daysPerWeek}
-                  onChange={handleChange}
-                >
-                  <option value="2">2 Days</option>
-                  <option value="3">3 Days</option>
-                  <option value="4">4 Days</option>
-                  <option value="5">5 Days</option>
-                  <option value="6">6 Days</option>
-                </select>
-              </label>
+              <div className="label">
+                <span className="label-text">Days of Week</span>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                {[
+                  'Monday',
+                  'Tuesday',
+                  'Wednesday',
+                  'Thursday',
+                  'Friday',
+                  'Saturday',
+                  'Sunday',
+                ].map((day) => (
+                  <label key={day} className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      className="checkbox checkbox-sm"
+                      checked={formData.daysOfWeek.includes(day)}
+                      onChange={() => handleDayOfWeekChange(day)}
+                    />
+                    <span>{day}</span>
+                  </label>
+                ))}
+              </div>
             </div>
 
             <div>
@@ -1034,6 +1178,22 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
                   value={formData.startDate}
                   onChange={handleChange}
                   min={new Date().toISOString().split('T')[0]}
+                />
+              </label>
+            </div>
+
+            <div>
+              <label className="form-control w-full">
+                <div className="label">
+                  <span className="label-text">End Date (Calculated)</span>
+                </div>
+                <input
+                  type="date"
+                  name="endDate"
+                  className="input input-bordered w-full"
+                  value={formData.endDate}
+                  readOnly
+                  disabled
                 />
               </label>
             </div>
@@ -1103,123 +1263,21 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
             )}
           </div>
 
-          {/* Additional notes */}
+          {/* Description */}
           <div>
             <label className="form-control w-full">
               <div className="label">
-                <span className="label-text">Additional Notes</span>
+                <span className="label-text">Description</span>
               </div>
               <textarea
-                name="additionalNotes"
+                name="description"
                 className="textarea textarea-bordered w-full"
-                placeholder="Enter any specific instructions or requirements for the program"
-                value={formData.additionalNotes}
+                placeholder="Detailed program description"
+                value={formData.description}
                 onChange={handleChange}
                 rows="3"
               ></textarea>
             </label>
-          </div>
-
-          {/* Session Details, Program Overview, Gym Details, Periodization */}
-          <div className="border p-3 rounded-md">
-            <h3 className="font-medium mb-2">Advanced Settings</h3>
-            <div className="space-y-4">
-              {formData.entityId && (
-                <div>
-                  <label className="form-control w-full">
-                    <div className="label">
-                      <span className="label-text">Entity ID (Read-only)</span>
-                    </div>
-                    <input
-                      type="text"
-                      className="input input-bordered w-full font-mono text-xs"
-                      value={formData.entityId || ''}
-                      readOnly
-                    />
-                  </label>
-                </div>
-              )}
-
-              <div>
-                <label className="form-control w-full">
-                  <div className="label">
-                    <span className="label-text">Session Details (JSON)</span>
-                  </div>
-                  <textarea
-                    name="sessionDetails"
-                    className="textarea textarea-bordered w-full font-mono text-xs"
-                    placeholder='{"key": "value"}'
-                    value={
-                      formData.sessionDetails
-                        ? JSON.stringify(formData.sessionDetails, null, 2)
-                        : '{}'
-                    }
-                    onChange={handleChange}
-                    rows="3"
-                  ></textarea>
-                </label>
-              </div>
-
-              <div>
-                <label className="form-control w-full">
-                  <div className="label">
-                    <span className="label-text">Program Overview (JSON)</span>
-                  </div>
-                  <textarea
-                    name="programOverview"
-                    className="textarea textarea-bordered w-full font-mono text-xs"
-                    placeholder='{"key": "value"}'
-                    value={
-                      formData.programOverview
-                        ? JSON.stringify(formData.programOverview, null, 2)
-                        : '{}'
-                    }
-                    onChange={handleChange}
-                    rows="3"
-                  ></textarea>
-                </label>
-              </div>
-
-              <div>
-                <label className="form-control w-full">
-                  <div className="label">
-                    <span className="label-text">Gym Details (JSON)</span>
-                  </div>
-                  <textarea
-                    name="gymDetails"
-                    className="textarea textarea-bordered w-full font-mono text-xs"
-                    placeholder='{"key": "value"}'
-                    value={
-                      formData.gymDetails
-                        ? JSON.stringify(formData.gymDetails, null, 2)
-                        : '{}'
-                    }
-                    onChange={handleChange}
-                    rows="3"
-                  ></textarea>
-                </label>
-              </div>
-
-              <div>
-                <label className="form-control w-full">
-                  <div className="label">
-                    <span className="label-text">Periodization (JSON)</span>
-                  </div>
-                  <textarea
-                    name="periodization"
-                    className="textarea textarea-bordered w-full font-mono text-xs"
-                    placeholder='{"key": "value"}'
-                    value={
-                      formData.periodization
-                        ? JSON.stringify(formData.periodization, null, 2)
-                        : '{}'
-                    }
-                    onChange={handleChange}
-                    rows="3"
-                  ></textarea>
-                </label>
-              </div>
-            </div>
           </div>
 
           {/* Generate button */}
@@ -1251,7 +1309,16 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
       {suggestions.length > 0 && (
         <div className="mt-6">
           <div className="flex justify-between items-center mb-3">
-            <h3 className="text-lg font-medium">Generated Program</h3>
+            <div>
+              <h3 className="text-lg font-medium">Generated Program</h3>
+              <p className="text-sm text-gray-600">
+                {suggestions.length} workout
+                {suggestions.length !== 1 ? 's' : ''} generated
+                {formData.daysPerWeek && formData.numberOfWeeks
+                  ? ` (${formData.daysPerWeek} days/week × ${formData.numberOfWeeks} weeks)`
+                  : ''}
+              </p>
+            </div>
             {programId && (
               <button
                 className="btn btn-sm btn-primary"

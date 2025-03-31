@@ -90,16 +90,19 @@ begin
         ew.id,
         ew.title,
         ew.body,
-        (
-            (ew.embedding_part1 <#> query_embedding_1) +
-            (ew.embedding_part2 <#> query_embedding_2)
+        1 - (
+            (ew.embedding_part1 <=> query_embedding_1) +
+            (ew.embedding_part2 <=> query_embedding_2)
         ) / 2 as similarity
     from external_workouts ew
-    where (
-        (ew.embedding_part1 <#> query_embedding_1) +
-        (ew.embedding_part2 <#> query_embedding_2)
-    ) / 2 < match_threshold
-    order by similarity
+    where 1 - (
+        (ew.embedding_part1 <=> query_embedding_1) +
+        (ew.embedding_part2 <=> query_embedding_2)
+    ) / 2 > match_threshold
+    order by (
+        (ew.embedding_part1 <=> query_embedding_1) +
+        (ew.embedding_part2 <=> query_embedding_2)
+    ) / 2 asc
     limit match_count;
 end;
 $$;
@@ -436,6 +439,16 @@ CREATE POLICY "Users can access workout generations for their programs" ON "publ
 
 
 ALTER TABLE "public"."external_workouts" ENABLE ROW LEVEL SECURITY;
+
+
+
+CREATE POLICY "Allow anonymous read access to external_workouts" ON "public"."external_workouts"
+  FOR SELECT
+  USING (true);
+
+CREATE POLICY "Allow anonymous insert access to external_workouts" ON "public"."external_workouts"
+  FOR INSERT
+  WITH CHECK (true);
 
 
 

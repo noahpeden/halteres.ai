@@ -354,23 +354,14 @@ export default function AIWorkoutSuggestions({ programId, onSelectWorkout }) {
 
     setIsLoading(true);
     try {
-      const response = await fetch('/api/search-workouts', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          query: searchQuery,
-        }),
+      const { data } = await supabase.rpc('match_similar_workouts', {
+        query_embedding_1: Array(1000).fill(0.1),
+        query_embedding_2: Array(1000).fill(0.1),
+        match_threshold: 0.1, // Try a very low threshold
+        match_count: 100,
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to search workouts');
-      }
-
-      const data = await response.json();
-      console.log('Search results:', data.workouts);
-      setSearchResults(data.workouts || []);
+      console.log('Direct test:', data);
+      setSearchResults(data || []);
     } catch (error) {
       console.error('Error searching with embeddings:', error);
       // Fall back to text search if embedding search fails

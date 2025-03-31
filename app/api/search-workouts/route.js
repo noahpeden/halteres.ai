@@ -2,31 +2,37 @@ import { createClient } from '@/utils/supabase/server';
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 
-async function computeQueryEmbeddings(queryText) {
+async function generateSearchEmbedding(searchText) {
   try {
     const openai = new OpenAI({
       apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY,
     });
 
     const response = await openai.embeddings.create({
-      model: 'text-embedding-3-small', // You can also use "text-embedding-3-large" for higher quality
-      input: queryText,
+      model: 'text-embedding-3-small',
+      input: searchText,
       encoding_format: 'float',
     });
 
     const embedding = response.data[0].embedding;
 
-    const middleIndex = Math.floor(embedding.length / 2);
-    const embeddingPartOne = embedding.slice(0, middleIndex);
-    const embeddingPartTwo = embedding.slice(middleIndex);
+    // Ensure the embedding is exactly 1536 dimensions
+    if (embedding.length > 1536) {
+      console.log(
+        `Trimming embedding from ${embedding.length} to 1536 dimensions`
+      );
+      return embedding.slice(0, 1536); // Take only the first 1536 dimensions
+    } else if (embedding.length < 1536) {
+      console.log(
+        `Padding embedding from ${embedding.length} to 1536 dimensions`
+      );
+      return [...embedding, ...Array(1536 - embedding.length).fill(0)]; // Pad with zeros
+    }
 
-    return {
-      embeddingPartOne,
-      embeddingPartTwo,
-    };
+    return embedding;
   } catch (error) {
-    console.error('Error generating embeddings:', error);
-    throw new Error(`Failed to generate embeddings: ${error.message}`);
+    console.error('Error generating search embedding:', error);
+    throw new Error(`Failed to generate search embedding: ${error.message}`);
   }
 }
 
@@ -35,53 +41,68 @@ export async function POST(request) {
   const requestBody = await request.json();
   const { goal, difficulty, focusArea, searchQuery } = requestBody;
 
-  const { data: sessionData } = await supabaseClient.auth.getSession();
-  if (!sessionData.session) {
-    return NextResponse.json(
-      { error: 'Authentication required' },
-      { status: 401 }
-    );
-  }
-
-  // Generate embeddings for the search query
-  const queryTextForEmbeddings = searchQuery || `${goal} ${focusArea}`;
+  console.log('New search request:', {
+    goal,
+    difficulty,
+    focusArea,
+    searchQuery,
+  });
 
   try {
-    const computedEmbeddings = await computeQueryEmbeddings(
+    // Generate embedding for the search query
+    const queryTextForEmbeddings = searchQuery
+      ? `${searchQuery} ${goal || ''} ${difficulty || ''} ${
+          focusArea || ''
+        }`.trim()
+      : `${goal || ''} ${difficulty || ''} ${focusArea || ''}`.trim();
+    console.log('Query text for embeddings:', queryTextForEmbeddings);
+
+    const queryEmbedding = await generateSearchEmbedding(
       queryTextForEmbeddings
     );
+    console.log(`Generated embedding with ${queryEmbedding.length} dimensions`);
 
-    // Search for similar workouts in the local database
-    const localWorkoutResponse = await supabaseClient.rpc(
-      'match_similar_workouts',
+    // Search for similar workouts using the new function
+    const searchResponse = await supabaseClient.rpc(
+      'match_workouts_embedding',
       {
-        query_embedding_1: computedEmbeddings.embeddingPartOne,
-        query_embedding_2: computedEmbeddings.embeddingPartTwo,
-        match_threshold: 0.5,
+        query_embedding: queryEmbedding,
+        match_threshold: 0.3,
         match_count: 10,
       }
     );
 
+    console.log('Search response:', {
+      error: searchResponse.error,
+      dataLength: searchResponse.data?.length,
+      status: searchResponse.status,
+    });
+
     let workouts = [];
-    if (localWorkoutResponse.error) {
-      console.error('Error searching workouts:', localWorkoutResponse.error);
+    if (searchResponse.error) {
+      console.error('Error searching workouts:', searchResponse.error);
     } else {
       // Format the workouts to match the expected structure
-      workouts = localWorkoutResponse.data.map((workout) => ({
+      workouts = searchResponse.data.map((workout) => ({
         id: workout.id,
         title: workout.title || 'Untitled Workout',
-        body: workout.body || workout.description || '',
+        body: workout.body || '',
         tags: workout.tags || [goal, difficulty, focusArea].filter(Boolean),
         difficulty: workout.difficulty || difficulty || 'intermediate',
-        source: 'Database Search',
+        similarity: workout.similarity,
+        source: 'New Embedding Search',
       }));
+
+      console.log(
+        `Found ${workouts.length} workouts with new embedding search`
+      );
     }
 
     return NextResponse.json({
       workouts: workouts,
     });
   } catch (error) {
-    console.error('Error in search-workouts:', error);
+    console.error('Error in search-workouts-new:', error);
     return NextResponse.json(
       { error: 'Failed to search for workouts', message: error.message },
       { status: 500 }
