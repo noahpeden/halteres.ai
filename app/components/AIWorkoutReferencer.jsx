@@ -16,10 +16,9 @@ export default function AIWorkoutReferencer({ programId }) {
     difficulty: 'intermediate',
     equipment: [],
     focusArea: '',
-    additionalNotes: '',
     workoutFormats: [],
     gymType: 'Crossfit Box',
-    includeWebSearch: false,
+    isWebSearch: false,
   });
   const [errorMessage, setErrorMessage] = useState('');
   const [searchText, setSearchText] = useState('');
@@ -112,32 +111,12 @@ export default function AIWorkoutReferencer({ programId }) {
 
   const searchWorkouts = async () => {
     setSearchLoading(true);
-    setWebSearchLoading(false);
     setSearchWorkoutResults([]);
     setWebSearchWorkoutResults([]);
     setErrorMessage('');
-    try {
-      const localResponse = await fetch('/api/search-workouts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          searchQuery: searchText,
-          goal: formInput.goal,
-          difficulty: formInput.difficulty,
-          focusArea: formInput.focusArea,
-          duration: formInput.duration,
-          equipment: formInput.equipment,
-          workoutFormats: formInput.workoutFormats,
-          gymType: formInput.gymType,
-        }),
-      });
-      const localData = await localResponse.json();
-      if (!localResponse.ok) {
-        throw new Error(localData.error || 'Failed to search local workouts');
-      }
-      setSearchWorkoutResults(localData.workouts || []);
 
-      if (formInput.includeWebSearch) {
+    try {
+      if (formInput.isWebSearch) {
         setWebSearchLoading(true);
         const webResponse = await fetch('/api/web-search-workouts', {
           method: 'POST',
@@ -151,22 +130,35 @@ export default function AIWorkoutReferencer({ programId }) {
             equipment: formInput.equipment,
             workoutFormats: formInput.workoutFormats,
             gymType: formInput.gymType,
-            additionalNotes: formInput.additionalNotes,
           }),
         });
         const webData = await webResponse.json();
         if (!webResponse.ok) {
           console.error('Web search error:', webData.error);
-          setErrorMessage(
-            (prev) =>
-              prev +
-              (prev ? '; ' : '') +
-              (webData.error || 'Failed to web search workouts')
-          );
-        } else {
-          setWebSearchWorkoutResults(webData.workouts || []);
+          throw new Error(webData.error || 'Failed to web search workouts');
         }
+        setWebSearchWorkoutResults(webData.workouts || []);
         setWebSearchLoading(false);
+      } else {
+        const localResponse = await fetch('/api/search-workouts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            searchQuery: searchText,
+            goal: formInput.goal,
+            difficulty: formInput.difficulty,
+            focusArea: formInput.focusArea,
+            duration: formInput.duration,
+            equipment: formInput.equipment,
+            workoutFormats: formInput.workoutFormats,
+            gymType: formInput.gymType,
+          }),
+        });
+        const localData = await localResponse.json();
+        if (!localResponse.ok) {
+          throw new Error(localData.error || 'Failed to search local workouts');
+        }
+        setSearchWorkoutResults(localData.workouts || []);
       }
     } catch (error) {
       console.error('Error searching workouts:', error);
@@ -217,7 +209,27 @@ export default function AIWorkoutReferencer({ programId }) {
     <div className="bg-white rounded-lg shadow-md p-4">
       <h2 className="text-xl font-semibold mb-4">Find Reference Workouts</h2>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="md:col-span-2 space-y-4">
+        <div className="md:col-span-3 space-y-4">
+          <div className="flex items-center gap-3 py-2">
+            <label className="cursor-pointer label">
+              <input
+                type="checkbox"
+                className="toggle toggle-primary"
+                checked={formInput.isWebSearch}
+                onChange={() =>
+                  setFormInput((prev) => ({
+                    ...prev,
+                    isWebSearch: !prev.isWebSearch,
+                  }))
+                }
+              />
+            </label>
+            <span
+              className={!formInput.isWebSearch ? 'opacity-50' : 'font-medium'}
+            >
+              Web Search
+            </span>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="form-control w-full">
@@ -388,40 +400,7 @@ export default function AIWorkoutReferencer({ programId }) {
               </div>
             )}
           </div>
-          <div>
-            <label className="form-control w-full">
-              <div className="label">
-                <span className="label-text">
-                  Additional Notes (for Web Search)
-                </span>
-              </div>
-              <textarea
-                name="additionalNotes"
-                className="textarea textarea-bordered w-full"
-                placeholder="Enter any specific instructions or requirements for the workout"
-                value={formInput.additionalNotes}
-                onChange={handleInputChange}
-                rows="3"
-              ></textarea>
-            </label>
-          </div>
-          <div>
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                className="checkbox"
-                name="includeWebSearch"
-                checked={formInput.includeWebSearch}
-                onChange={(event) =>
-                  setFormInput((previousInput) => ({
-                    ...previousInput,
-                    includeWebSearch: event.target.checked,
-                  }))
-                }
-              />
-              <span>Include Web Search</span>
-            </label>
-          </div>
+
           <div>
             <label className="form-control w-full">
               <div className="label">
@@ -438,7 +417,7 @@ export default function AIWorkoutReferencer({ programId }) {
           </div>
           <div className="pt-2">
             <button
-              className="btn btn-primary w-full"
+              className="btn btn-secondary w-full text-white"
               onClick={searchWorkouts}
               disabled={searchLoading || webSearchLoading}
             >
@@ -448,7 +427,7 @@ export default function AIWorkoutReferencer({ programId }) {
                   Searching...
                 </>
               ) : (
-                'Search Workouts'
+                `Search ${formInput.isWebSearch ? 'Web' : 'Library'}`
               )}
             </button>
           </div>
@@ -459,95 +438,91 @@ export default function AIWorkoutReferencer({ programId }) {
         </div>
       </div>
 
-      {webSearchLoading ||
-        (webSearchWorkoutResults.length > 0 && (
-          <div className="mt-6">
-            <h3 className="text-lg font-medium mb-3 flex items-center">
-              Web Search Results
-              {webSearchLoading && (
-                <span className="loading loading-spinner loading-sm ml-2"></span>
-              )}
-            </h3>
-            {webSearchWorkoutResults.length > 0 && (
-              <div className="grid grid-cols-1 gap-4">
-                {webSearchWorkoutResults.map((workoutItem, index) => {
-                  const workoutKey = workoutItem.id || `web-${index}`;
-                  const isAdding = addingWorkoutStates[`ref-${workoutKey}`];
-                  return (
-                    <div
-                      key={workoutKey}
-                      className="border rounded-md p-4 border-blue-200"
-                    >
-                      <div className="flex justify-between items-start">
-                        <h4 className="font-semibold">
-                          {workoutItem.title || `Web Workout ${index + 1}`}
-                        </h4>
-                        <span className="badge badge-secondary">
-                          {workoutItem.source || 'Web Search'}
-                        </span>
-                      </div>
-                      <div className="whitespace-pre-line mt-2">
-                        {workoutItem.body || workoutItem.description}
-                      </div>
-                      <div className="flex flex-wrap gap-1 mt-2">
-                        {workoutItem.tags &&
-                          workoutItem.tags.map((tag, tagIndex) => (
-                            <span
-                              key={tagIndex}
-                              className="badge badge-outline"
-                            >
-                              {tag}
-                            </span>
-                          ))}
-                      </div>
-                      <div className="flex flex-wrap gap-2 mt-3">
-                        <button
-                          className="btn btn-sm btn-outline btn-accent"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            handleAddWorkoutToProgram(workoutItem, true);
-                          }}
-                          disabled={isAdding}
-                        >
-                          {isAdding ? (
-                            <>
-                              <span className="loading loading-spinner loading-xs"></span>
-                              Adding Reference...
-                            </>
-                          ) : (
-                            'Add as Reference'
-                          )}
-                        </button>
-                        <button
-                          className="btn btn-sm btn-primary"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            handleAddWorkoutToProgram(workoutItem);
-                          }}
-                          disabled={addingWorkoutStates[`prog-${workoutKey}`]}
-                        >
-                          {addingWorkoutStates[`prog-${workoutKey}`] ? (
-                            <>
-                              <span className="loading loading-spinner loading-xs"></span>
-                              Adding...
-                            </>
-                          ) : (
-                            'Add to Program'
-                          )}
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+      {(webSearchLoading || webSearchWorkoutResults.length > 0) && (
+        <div className="mt-6">
+          <h3 className="text-lg font-medium mb-3 flex items-center">
+            Web Search Results
+            {webSearchLoading && (
+              <span className="loading loading-spinner loading-sm ml-2"></span>
             )}
-          </div>
-        ))}
+          </h3>
+          {webSearchWorkoutResults.length > 0 && (
+            <div className="grid grid-cols-1 gap-4">
+              {webSearchWorkoutResults.map((workoutItem, index) => {
+                const workoutKey = workoutItem.id || `web-${index}`;
+                const isAdding = addingWorkoutStates[`ref-${workoutKey}`];
+                return (
+                  <div
+                    key={workoutKey}
+                    className="border rounded-md p-4 border-blue-200"
+                  >
+                    <div className="flex justify-between items-start">
+                      <h4 className="font-semibold">
+                        {workoutItem.title || `Web Workout ${index + 1}`}
+                      </h4>
+                      <span className="badge badge-secondary">
+                        {workoutItem.source || 'Web Search'}
+                      </span>
+                    </div>
+                    <div className="whitespace-pre-line mt-2">
+                      {workoutItem.body || workoutItem.description}
+                    </div>
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {workoutItem.tags &&
+                        workoutItem.tags.map((tag, tagIndex) => (
+                          <span key={tagIndex} className="badge badge-outline">
+                            {tag}
+                          </span>
+                        ))}
+                    </div>
+                    <div className="flex flex-wrap gap-2 mt-3">
+                      <button
+                        className="btn btn-sm btn-outline btn-accent"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          handleAddWorkoutToProgram(workoutItem, true);
+                        }}
+                        disabled={isAdding}
+                      >
+                        {isAdding ? (
+                          <>
+                            <span className="loading loading-spinner loading-xs"></span>
+                            Adding Reference...
+                          </>
+                        ) : (
+                          'Add as Reference'
+                        )}
+                      </button>
+                      <button
+                        className="btn btn-sm btn-primary"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          handleAddWorkoutToProgram(workoutItem);
+                        }}
+                        disabled={addingWorkoutStates[`prog-${workoutKey}`]}
+                      >
+                        {addingWorkoutStates[`prog-${workoutKey}`] ? (
+                          <>
+                            <span className="loading loading-spinner loading-xs"></span>
+                            Adding...
+                          </>
+                        ) : (
+                          'Add to Program'
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
       {(searchLoading || searchWorkoutResults.length > 0) && (
         <div className="mt-6">
           <h3 className="text-lg font-medium mb-3 flex items-center">
-            Local Library Results
+            Library Results
             {searchLoading && !webSearchLoading && (
               <span className="loading loading-spinner loading-sm ml-2"></span>
             )}
