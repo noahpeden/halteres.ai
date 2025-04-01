@@ -7,7 +7,12 @@ import { useRouter } from 'next/navigation';
 export default function Dashboard() {
   const router = useRouter();
   const { user, supabase } = useAuth();
+
   const [programs, setPrograms] = useState([]);
+  const [entities, setEntities] = useState([]);
+  const [selectedEntityId, setSelectedEntityId] = useState('');
+  const [entityName, setEntityName] = useState('');
+  const [entityType, setEntityType] = useState('CLIENT'); // Default to CLIENT
   const [programName, setProgramName] = useState('');
   const [programDuration, setProgramDuration] = useState(4); // Default 4 weeks
   const [startDate, setStartDate] = useState(
@@ -15,6 +20,7 @@ export default function Dashboard() {
   ); // Default to today
   const [daysOfWeek, setDaysOfWeek] = useState([1, 3, 5]); // Default to Mon, Wed, Fri (where 0=Sun, 1=Mon, etc.)
   const [isLoading, setIsLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState('');
   const [stats, setStats] = useState({
     totalPrograms: 0,
     activeWorkouts: 0,
@@ -23,14 +29,26 @@ export default function Dashboard() {
 
   useEffect(() => {
     async function fetchData() {
-      if (!user) return;
-
       setIsLoading(true);
       try {
-        // Fetch programs
+        // Fetch entities first
+        const { data: entitiesData, error: entitiesError } = await supabase
+          .from('entities')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('name', { ascending: true });
+
+        if (entitiesError) throw entitiesError;
+        setEntities(entitiesData || []);
+
+        // Get array of entity IDs belonging to this user
+        const entityIds = entitiesData.map((entity) => entity.id);
+
+        // Fetch programs for all entities belonging to this user
         const { data: programsData, error: programsError } = await supabase
           .from('programs')
           .select('*')
+          .in('entity_id', entityIds.length > 0 ? entityIds : ['no-results'])
           .order('created_at', { ascending: false });
 
         if (programsError) throw programsError;
@@ -79,9 +97,58 @@ export default function Dashboard() {
     }
   };
 
+  async function createEntity(event) {
+    event.preventDefault();
+    if (!entityName.trim()) return;
+
+    if (!user || !user.id) {
+      setErrorMessage('User ID is missing. Please try logging in again.');
+      console.error('User ID is missing. Please try logging in again.', user);
+      return;
+    }
+
+    try {
+      setErrorMessage('');
+      const { data, error } = await supabase
+        .from('entities')
+        .insert([
+          {
+            name: entityName,
+            type: entityType,
+            user_id: user.id,
+          },
+        ])
+        .select();
+
+      if (error) throw error;
+
+      // Add the new entity to the list
+      setEntities([...entities, data[0]]);
+
+      // Select the newly created entity
+      setSelectedEntityId(data[0].id);
+
+      // Reset form
+      setEntityName('');
+
+      // Close entity modal and open program modal
+      document.getElementById('create-entity-modal').checked = false;
+      document.getElementById('create-program-modal').checked = true;
+    } catch (error) {
+      console.error('Error creating entity:', error);
+      setErrorMessage(error.message || 'Error creating entity');
+    }
+  }
+
   async function createProgram(event) {
     event.preventDefault();
-    if (!programName.trim() || daysOfWeek.length === 0) return;
+    if (!programName.trim() || daysOfWeek.length === 0 || !selectedEntityId)
+      return;
+
+    if (!user || !user.id) {
+      console.error('User not properly authenticated');
+      return;
+    }
 
     try {
       const response = await fetch('/api/CreateProgram', {
@@ -95,6 +162,8 @@ export default function Dashboard() {
           start_date: startDate,
           end_date: calculateEndDate(),
           days_of_week: daysOfWeek,
+          entity_id: selectedEntityId,
+          user_id: user.id,
         }),
       });
 
@@ -108,6 +177,7 @@ export default function Dashboard() {
         setProgramDuration(4);
         setStartDate(new Date().toISOString().split('T')[0]);
         setDaysOfWeek([1, 3, 5]);
+        setSelectedEntityId('');
         // Navigate to the program
         router.push(`/program/${result?.data[0].id}/calendar`);
       } else {
@@ -117,6 +187,12 @@ export default function Dashboard() {
       console.error('Error:', error);
     }
   }
+
+  // Clear form and error state when closing modal
+  const clearEntityModal = () => {
+    setEntityName('');
+    setErrorMessage('');
+  };
 
   if (isLoading) {
     return (
@@ -204,7 +280,7 @@ export default function Dashboard() {
       <div className="mb-8">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-semibold">Your Programs</h2>
-          <label htmlFor="create-program-modal" className="btn btn-primary">
+          <label htmlFor="entity-selection-modal" className="btn btn-primary">
             Create New Program
           </label>
         </div>
@@ -248,11 +324,165 @@ export default function Dashboard() {
             <p className="text-gray-600 mb-4">
               Create your first program to get started
             </p>
-            <label htmlFor="create-program-modal" className="btn btn-primary">
+            <label htmlFor="entity-selection-modal" className="btn btn-primary">
               Create Program
             </label>
           </div>
         )}
+      </div>
+
+      {/* Entity Selection/Creation Modal */}
+      <input
+        type="checkbox"
+        id="entity-selection-modal"
+        className="modal-toggle"
+      />
+      <div className="modal">
+        <div className="modal-box">
+          <h3 className="font-bold text-lg mb-4">Select Client/Class</h3>
+
+          {entities.length > 0 ? (
+            <div className="form-control mb-6">
+              <label className="label">
+                <span className="label-text">Choose a Client or Class</span>
+              </label>
+              <select
+                className="select select-bordered w-full"
+                value={selectedEntityId}
+                onChange={(e) => setSelectedEntityId(e.target.value)}
+              >
+                <option value="" disabled>
+                  Select a client or class
+                </option>
+                <optgroup label="Clients">
+                  {entities
+                    .filter((entity) => entity.type === 'CLIENT')
+                    .map((entity) => (
+                      <option key={entity.id} value={entity.id}>
+                        {entity.name}
+                      </option>
+                    ))}
+                </optgroup>
+                <optgroup label="Classes">
+                  {entities
+                    .filter((entity) => entity.type === 'CLASS')
+                    .map((entity) => (
+                      <option key={entity.id} value={entity.id}>
+                        {entity.name}
+                      </option>
+                    ))}
+                </optgroup>
+              </select>
+            </div>
+          ) : (
+            <p className="text-center py-4 mb-4">
+              No clients or classes yet. Create your first one below.
+            </p>
+          )}
+
+          <div className="flex justify-between items-center mb-2">
+            <span className="text-sm font-medium">
+              Or create a new client/class:
+            </span>
+            <label
+              htmlFor="create-entity-modal"
+              className="btn btn-sm btn-outline"
+            >
+              Create New
+            </label>
+          </div>
+
+          <div className="modal-action">
+            <label htmlFor="entity-selection-modal" className="btn btn-outline">
+              Cancel
+            </label>
+            <button
+              type="button"
+              className="btn btn-primary"
+              disabled={!selectedEntityId}
+              onClick={() => {
+                document.getElementById(
+                  'entity-selection-modal'
+                ).checked = false;
+                document.getElementById('create-program-modal').checked = true;
+              }}
+            >
+              Continue
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Create Entity Modal */}
+      <input
+        type="checkbox"
+        id="create-entity-modal"
+        className="modal-toggle"
+      />
+      <div className="modal">
+        <div className="modal-box">
+          <h3 className="font-bold text-lg mb-4">Create New Client/Class</h3>
+          {errorMessage && (
+            <div className="alert alert-error mb-4">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="stroke-current shrink-0 h-6 w-6"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              <span>{errorMessage}</span>
+            </div>
+          )}
+          <form onSubmit={createEntity}>
+            <div className="form-control mb-4">
+              <label className="label">
+                <span className="label-text">Name</span>
+              </label>
+              <input
+                type="text"
+                placeholder="Enter name"
+                className="input input-bordered w-full"
+                value={entityName}
+                onChange={(e) => setEntityName(e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="form-control mb-4">
+              <label className="label">
+                <span className="label-text">Type</span>
+              </label>
+              <select
+                className="select select-bordered w-full"
+                value={entityType}
+                onChange={(e) => setEntityType(e.target.value)}
+              >
+                <option value="CLIENT">Client (Individual)</option>
+                <option value="CLASS">Class (Group)</option>
+              </select>
+            </div>
+
+            <div className="modal-action">
+              <label
+                htmlFor="create-entity-modal"
+                className="btn btn-outline"
+                onClick={clearEntityModal}
+              >
+                Cancel
+              </label>
+              <button type="submit" className="btn btn-primary">
+                Create & Continue
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
 
       {/* Create Program Modal */}
@@ -264,6 +494,31 @@ export default function Dashboard() {
       <div className="modal">
         <div className="modal-box">
           <h3 className="font-bold text-lg mb-4">Create New Program</h3>
+          {selectedEntityId && (
+            <div className="mb-4 p-2 bg-base-200 rounded-md flex items-center justify-between">
+              <span>
+                Creating program for:
+                <strong className="ml-1">
+                  {entities.find((e) => e.id === selectedEntityId)?.name ||
+                    'Selected client/class'}
+                </strong>
+              </span>
+              <button
+                type="button"
+                className="btn btn-xs btn-ghost"
+                onClick={() => {
+                  document.getElementById(
+                    'create-program-modal'
+                  ).checked = false;
+                  document.getElementById(
+                    'entity-selection-modal'
+                  ).checked = true;
+                }}
+              >
+                Change
+              </button>
+            </div>
+          )}
           <form onSubmit={createProgram}>
             <div className="form-control mb-4">
               <label className="label">

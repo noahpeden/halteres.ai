@@ -14,9 +14,9 @@ export function AuthProvider({ children }) {
       setSession(session);
     });
 
-    supabase.auth.getUser().then((user) => {
-      if (user) {
-        setUser(user);
+    supabase.auth.getUser().then((userData) => {
+      if (userData && userData.data && userData.data.user) {
+        setUser(userData.data.user);
       }
     });
 
@@ -24,6 +24,17 @@ export function AuthProvider({ children }) {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
+
+      // Also update user when auth state changes
+      if (session) {
+        supabase.auth.getUser().then((userData) => {
+          if (userData && userData.data && userData.data.user) {
+            setUser(userData.data.user);
+          }
+        });
+      } else {
+        setUser(null);
+      }
     });
 
     return () => subscription.unsubscribe();
