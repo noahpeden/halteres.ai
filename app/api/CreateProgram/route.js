@@ -4,14 +4,22 @@ import { NextResponse } from 'next/server';
 export async function POST(req) {
   try {
     const body = await req.json();
-    const { name, duration_weeks, start_date, end_date, days_of_week } = body;
+    const {
+      name,
+      duration_weeks,
+      start_date,
+      end_date,
+      days_of_week,
+      entity_id,
+    } = body;
 
     if (
       !name ||
       !duration_weeks ||
       !start_date ||
       !days_of_week ||
-      days_of_week.length === 0
+      days_of_week.length === 0 ||
+      !entity_id
     ) {
       return NextResponse.json(
         { error: 'Missing required fields' },
@@ -38,34 +46,16 @@ export async function POST(req) {
       start_date,
       end_date,
       days_of_week,
+      entity_id,
     });
 
-    // First create an entity
-    console.log('Creating entity...');
-    const { data: entityData, error: entityError } = await supabase
-      .from('entities')
-      .insert({
-        name,
-        user_id: userId,
-        type: 'CLIENT',
-      })
-      .select()
-      .single();
-
-    if (entityError) {
-      console.error('Entity creation error:', entityError);
-      return NextResponse.json({ error: entityError.message }, { status: 500 });
-    }
-
-    console.log('Entity created:', entityData);
-
-    // Then create program
+    // Create program using the provided entity_id
     console.log('Creating program...');
     const { data, error } = await supabase
       .from('programs')
       .insert({
         name,
-        entity_id: entityData.id,
+        entity_id: entity_id,
         duration_weeks: duration_weeks,
         // Save calendar data as JSON
         calendar_data: {

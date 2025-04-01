@@ -142,6 +142,30 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
             const loadedDaysOfWeek =
               program.calendar_data?.days_of_week || prev.daysOfWeek;
 
+            // Convert numeric days to string day names if needed
+            const dayNumberToName = {
+              0: 'Sunday',
+              1: 'Monday',
+              2: 'Tuesday',
+              3: 'Wednesday',
+              4: 'Thursday',
+              5: 'Friday',
+              6: 'Saturday',
+            };
+
+            // Handle both number array format and string array format
+            const convertedDaysOfWeek = Array.isArray(loadedDaysOfWeek)
+              ? loadedDaysOfWeek.map((day) =>
+                  typeof day === 'number' ? dayNumberToName[day] : day
+                )
+              : prev.daysOfWeek;
+
+            // Ensure days of week is not empty
+            const validDaysOfWeek =
+              convertedDaysOfWeek && convertedDaysOfWeek.length > 0
+                ? convertedDaysOfWeek
+                : ['Monday']; // Default to Monday if empty
+
             // Get end date from calendar_data
             const loadedEndDate =
               program.calendar_data?.end_date ||
@@ -175,7 +199,7 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
                 program.calendar_data?.days_of_week?.length ||
                 prev.daysPerWeek
               ).toString(),
-              daysOfWeek: loadedDaysOfWeek,
+              daysOfWeek: validDaysOfWeek,
               programType: loadedProgramType,
               gymType: loadedGymType,
               startDate:
@@ -497,6 +521,21 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
         })
         .filter(Boolean);
 
+      // Convert day names to day numbers for API consistency
+      const dayNameToNumber = {
+        Sunday: 0,
+        Monday: 1,
+        Tuesday: 2,
+        Wednesday: 3,
+        Thursday: 4,
+        Friday: 5,
+        Saturday: 6,
+      };
+
+      const daysOfWeekNumbers = formData.daysOfWeek.map(
+        (day) => dayNameToNumber[day]
+      );
+
       // Prepare gym_details with equipment and gym type
       const gymDetails = {
         ...formData.gymDetails,
@@ -536,7 +575,7 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
             start_date: formData.startDate,
             end_date: formData.endDate,
             days_per_week: parseInt(formData.daysPerWeek, 10),
-            days_of_week: formData.daysOfWeek,
+            days_of_week: daysOfWeekNumbers,
           },
           session_details: formData.sessionDetails,
           program_overview: formData.programOverview,
@@ -561,7 +600,6 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
             body: requestBody,
             signal,
           });
-          console.log('response', response);
 
           if (!response.ok) {
             throw new Error(`Server returned error: ${response.status}`);
@@ -590,7 +628,6 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
                 if (message.trim() && message.startsWith('data: ')) {
                   try {
                     const data = JSON.parse(message.substring(6));
-                    console.log('SSE update:', data);
                     setServerStatus(data);
 
                     // Update UI based on status
@@ -733,7 +770,7 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
               start_date: formData.startDate,
               end_date: formData.endDate,
               days_per_week: parseInt(formData.daysPerWeek, 10),
-              days_of_week: formData.daysOfWeek,
+              days_of_week: daysOfWeekNumbers,
             },
             session_details: formData.sessionDetails,
             program_overview: formData.programOverview,
@@ -1068,6 +1105,21 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
       .filter(Boolean);
 
     try {
+      // Convert day names to day numbers for consistency with dashboard component
+      const dayNameToNumber = {
+        Sunday: 0,
+        Monday: 1,
+        Tuesday: 2,
+        Wednesday: 3,
+        Thursday: 4,
+        Friday: 5,
+        Saturday: 6,
+      };
+
+      const daysOfWeekNumbers = formData.daysOfWeek.map(
+        (day) => dayNameToNumber[day]
+      );
+
       // Prepare gym_details - merge existing data with equipment info
       const updatedGymDetails = {
         ...formData.gymDetails,
@@ -1104,7 +1156,7 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
           start_date: formData.startDate,
           end_date: formData.endDate,
           days_per_week: parseInt(formData.daysPerWeek, 10),
-          days_of_week: formData.daysOfWeek,
+          days_of_week: daysOfWeekNumbers,
         },
         // Save generated_program if we have suggestions
         ...(suggestions && suggestions.length > 0
@@ -1112,8 +1164,6 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
           : {}),
         updated_at: new Date().toISOString(),
       };
-
-      console.log('Saving program with payload:', updatePayload);
 
       const { error: updateError } = await supabase
         .from('programs')
@@ -1153,13 +1203,18 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
   const handleDayOfWeekChange = (day) => {
     setFormData((prev) => {
       if (prev.daysOfWeek.includes(day)) {
-        // Remove the day if it's already selected
-        return {
-          ...prev,
-          daysOfWeek: prev.daysOfWeek.filter((d) => d !== day),
-          // Also update days per week count
-          daysPerWeek: (prev.daysOfWeek.length - 1).toString(),
-        };
+        // Only allow removing if there will still be at least one day selected
+        if (prev.daysOfWeek.length > 1) {
+          // Remove the day if it's already selected and not the last day
+          return {
+            ...prev,
+            daysOfWeek: prev.daysOfWeek.filter((d) => d !== day),
+            // Also update days per week count
+            daysPerWeek: (prev.daysOfWeek.length - 1).toString(),
+          };
+        }
+        // If this is the last day, don't allow removal
+        return prev;
       } else {
         // Add the day if it's not selected
         return {
@@ -1171,6 +1226,18 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
       }
     });
   };
+
+  // Ensure days of week is never empty
+  useEffect(() => {
+    if (formData.daysOfWeek.length === 0) {
+      // If somehow days of week is empty, default to Monday
+      setFormData((prev) => ({
+        ...prev,
+        daysOfWeek: ['Monday'],
+        daysPerWeek: '1',
+      }));
+    }
+  }, [formData.daysOfWeek]);
 
   // Calculate end date based on start date, number of weeks, and selected days of week
   useEffect(() => {
@@ -1284,13 +1351,20 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
           ...prev,
           daysOfWeek: newDays,
         }));
-      } else if (daysPerWeekNum < daysOfWeekLength) {
-        // Remove days from the end
+      } else if (daysPerWeekNum < daysOfWeekLength && daysPerWeekNum > 0) {
+        // Remove days from the end, but ensure at least one day remains
         const newDays = formData.daysOfWeek.slice(0, daysPerWeekNum);
 
         setFormData((prev) => ({
           ...prev,
           daysOfWeek: newDays,
+        }));
+      } else if (daysPerWeekNum <= 0) {
+        // If user somehow selects 0 or negative, force to 1 day
+        setFormData((prev) => ({
+          ...prev,
+          daysPerWeek: '1',
+          daysOfWeek: ['Monday'],
         }));
       }
     }
@@ -1429,13 +1503,13 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                 {[
+                  'Sunday',
                   'Monday',
                   'Tuesday',
                   'Wednesday',
                   'Thursday',
                   'Friday',
                   'Saturday',
-                  'Sunday',
                 ].map((day) => (
                   <label key={day} className="flex items-center gap-2">
                     <input
@@ -1448,6 +1522,10 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
                   </label>
                 ))}
               </div>
+              <p className="text-xs text-gray-500 mt-1">
+                {formData.daysOfWeek.length} day
+                {formData.daysOfWeek.length !== 1 ? 's' : ''} selected
+              </p>
             </div>
 
             <div>
