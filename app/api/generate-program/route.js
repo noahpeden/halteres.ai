@@ -164,9 +164,10 @@ ${referenceWorkoutsContent ? `${referenceWorkoutsContent}` : ''}
 Format each workout with:
 1. A clear, descriptive title that includes the day/week and focus (e.g., "Week 1, Day 1: Lower Body Strength")
 2. Warm-up section with specific movements
-3. Main workout section with sets, reps, and rest periods clearly defined
-4. Cool-down/mobility work
-5. Performance notes or scaling options
+3. A strength section with sets, reps, and rest periods clearly defined as well as RX and Scaling options and weights
+4. A conditioning section with specific movements and sets, reps, and rest periods clearly defined as well as RX and Scaling options and weights
+5. A cool-down/mobility section with specific movements
+6. Performance notes or scaling options
 
 The program should follow logical progression based on the selected program type (${programType}).
 Ensure proper periodization, recovery, and exercise variation throughout the program.
@@ -180,7 +181,7 @@ Your response MUST be in this exact JSON format:
   "workouts": [
     {
       "title": "Week X, Day Y: [Focus Area]",
-      "body": "Detailed workout description including warm-up, main workout, cool-down",
+      "body": "Detailed workout description including warm-up, main workout with strength and conditioning sections, cool-down",
       "date": "YYYY-MM-DD"
     },
     ...more workouts

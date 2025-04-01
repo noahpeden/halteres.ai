@@ -1,0 +1,526 @@
+'use client';
+import { useState, useEffect } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import equipmentList from '@/utils/equipmentList';
+import { gymEquipmentPresets } from '../utils';
+import Toast from '../Toast';
+import {
+  formatDate,
+  processWorkoutDescription,
+  dayNameToNumber,
+  dayNumberToName,
+} from './utils';
+import {
+  generateProgram,
+  saveProgram,
+  handleAutoAssignDates,
+  handleDatePickerSave as datePickerSave,
+  deleteWorkout as deleteWorkoutAction,
+} from './programActions';
+
+// Import handlers from extracted modules
+import {
+  processWorkoutForDisplay,
+  updateFormDataFromProgram,
+  handleFormChange,
+  handleEquipmentChange,
+  handleWorkoutFormatChange,
+  handleDayOfWeekChange,
+  updateDaysOfWeekFromDaysPerWeek,
+  initializeEquipment,
+} from './formHandlers';
+import { calculateEndDate } from './dateHandlers';
+import {
+  handleViewWorkoutDetails,
+  handleDatePickerOpen,
+  handleCloseWorkoutModal,
+  handleCloseDatePickerModal,
+} from './modalHandlers';
+
+// Import subcomponents
+import ProgramForm from './ProgramForm';
+import EquipmentSelector from './EquipmentSelector';
+import ReferenceWorkouts from './ReferenceWorkouts';
+import WorkoutList from './WorkoutList';
+import WorkoutModal from './WorkoutModal';
+import DatePickerModal from './DatePickerModal';
+import LoadingState from './LoadingState';
+
+export default function AIProgramWriter({ programId, onSelectWorkout }) {
+  const { supabase } = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
+  const [suggestions, setSuggestions] = useState([]);
+  const [referenceWorkouts, setReferenceWorkouts] = useState([]);
+  const [generationStage, setGenerationStage] = useState(null);
+  const [loadingDuration, setLoadingDuration] = useState(0);
+  const [loadingTimer, setLoadingTimer] = useState(null);
+  const [serverStatus, setServerStatus] = useState(null);
+  const [formData, setFormData] = useState({
+    name: '',
+    description: '',
+    entityId: null,
+    goal: 'strength',
+    difficulty: 'intermediate',
+    equipment: gymEquipmentPresets['Crossfit Box'] || [],
+    focusArea: '',
+    personalization: '',
+    workoutFormats: [],
+    numberOfWeeks: '4',
+    daysPerWeek: '4',
+    daysOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+    programType: 'linear',
+    gymType: 'Crossfit Box',
+    startDate: new Date().toISOString().split('T')[0],
+    endDate: '',
+    sessionDetails: {},
+    programOverview: {},
+    gymDetails: {},
+    periodization: {},
+  });
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState('success');
+  const [allEquipmentSelected, setAllEquipmentSelected] = useState(false);
+  const [showEquipment, setShowEquipment] = useState(false);
+  const [selectedWorkout, setSelectedWorkout] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isDatePickerModalOpen, setIsDatePickerModalOpen] = useState(false);
+  const [selectedWorkoutForDate, setSelectedWorkoutForDate] = useState(null);
+  const [selectedDate, setSelectedDate] = useState(null);
+
+  // Toast helper function
+  const showToastMessage = (message, type = 'success') => {
+    setToastMessage(message);
+    setToastType(type);
+    setShowToast(true);
+    setTimeout(() => {
+      setShowToast(false);
+    }, 5000);
+  };
+
+  // Handle program generation
+  const handleGenerateProgram = () => {
+    generateProgram({
+      programId,
+      formData,
+      setIsLoading,
+      setSuggestions,
+      showToastMessage,
+      setGenerationStage,
+      setServerStatus,
+      setLoadingDuration,
+      setLoadingTimer,
+      setFormData,
+    });
+  };
+
+  // Handle program saving
+  const handleSaveProgram = () => {
+    saveProgram({
+      programId,
+      formData,
+      suggestions,
+      supabase,
+      setIsLoading,
+      showToastMessage,
+    });
+  };
+
+  // Handle auto-assigning dates
+  const handleAssignDates = () => {
+    handleAutoAssignDates({
+      programId,
+      formData,
+      suggestions,
+      supabase,
+      setIsLoading,
+      setSuggestions,
+      showToastMessage,
+    });
+  };
+
+  // Handle date picker save
+  const handleDatePickerSave = () => {
+    datePickerSave({
+      programId,
+      selectedWorkoutForDate,
+      selectedDate,
+      supabase,
+      setSuggestions,
+      handleDatePickerClose: () => {
+        setIsDatePickerModalOpen(false);
+        setSelectedWorkoutForDate(null);
+        setSelectedDate(null);
+      },
+      showToastMessage,
+    });
+  };
+
+  // Handle workout deletion
+  const handleDeleteWorkout = (workoutId, e) => {
+    deleteWorkoutAction({
+      workoutId,
+      supabase,
+      setSuggestions,
+      showToastMessage,
+      e,
+    });
+  };
+
+  // Fetch reference workouts on component mount
+  useEffect(() => {
+    async function fetchReferenceWorkouts() {
+      try {
+        const { data, error } = await supabase
+          .from('external_workouts')
+          .select('id, title, body, tags')
+          .limit(10);
+
+        if (error) throw error;
+        setReferenceWorkouts(data || []);
+      } catch (error) {
+        console.error('Error fetching reference workouts:', error);
+      }
+    }
+
+    fetchReferenceWorkouts();
+  }, [supabase]);
+
+  // Fetch program data when component mounts and programId is available
+  useEffect(() => {
+    async function fetchProgramData() {
+      if (!programId) return;
+
+      setIsLoading(true);
+
+      try {
+        // Fetch program details
+        const { data: program, error: programError } = await supabase
+          .from('programs')
+          .select('*')
+          .eq('id', programId)
+          .single();
+
+        if (programError && programError.code !== 'PGRST116') {
+          throw programError;
+        }
+
+        // Fetch reference workouts for this program
+        const { data: programReferenceWorkouts, error: referenceError } =
+          await supabase
+            .from('program_workouts')
+            .select('*')
+            .eq('program_id', programId)
+            .eq('is_reference', true)
+            .order('created_at', { ascending: false });
+
+        if (referenceError) {
+          console.error('Error fetching reference workouts:', referenceError);
+        } else {
+          setReferenceWorkouts(programReferenceWorkouts || []);
+        }
+
+        // Update form data if program exists
+        if (program) {
+          const updatedFormData = updateFormDataFromProgram(program, formData);
+          setFormData(updatedFormData);
+        }
+
+        // Fetch workouts
+        const { data: savedWorkouts, error: workoutsError } = await supabase
+          .from('program_workouts')
+          .select('id, title, body, tags, created_at')
+          .eq('program_id', programId)
+          .order('created_at');
+
+        if (workoutsError) throw workoutsError;
+
+        if (savedWorkouts && savedWorkouts.length > 0) {
+          const processedWorkouts = savedWorkouts.map(processWorkoutForDisplay);
+          setSuggestions(processedWorkouts);
+          showToastMessage(
+            `Loaded ${processedWorkouts.length} workouts successfully!`
+          );
+        } else if (program?.generated_program?.length > 0) {
+          // Fallback to generated_program if no workouts in program_workouts
+          const processedWorkouts = program.generated_program.map(
+            processWorkoutForDisplay
+          );
+          setSuggestions(processedWorkouts);
+          showToastMessage('Loaded program from previous generation.');
+        }
+      } catch (error) {
+        console.error('Error fetching program data:', error);
+        showToastMessage(
+          'Failed to load program data: ' + (error.message || 'Unknown error'),
+          'error'
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchProgramData();
+  }, [programId, supabase]);
+
+  // Handle wrapper for form change
+  const handleChange = (e) => {
+    handleFormChange(e, setFormData);
+  };
+
+  // Update equipment selection when gym type changes
+  useEffect(() => {
+    if (formData.gymType) {
+      setFormData((prev) => ({
+        ...prev,
+        equipment: gymEquipmentPresets[formData.gymType] || [],
+      }));
+    }
+  }, [formData.gymType]);
+
+  // Update gymDetails when equipment changes
+  useEffect(() => {
+    if (formData.equipment.length > 0) {
+      const equipmentNames = formData.equipment
+        .map((id) => {
+          const equipment = equipmentList.find((item) => item.value === id);
+          return equipment ? equipment.label : null;
+        })
+        .filter(Boolean);
+
+      setFormData((prev) => ({
+        ...prev,
+        gymDetails: {
+          ...prev.gymDetails,
+          gym_type: formData.gymType,
+          equipment: equipmentNames,
+        },
+      }));
+    }
+  }, [formData.equipment, formData.gymType]);
+
+  // Initialize equipment on mount
+  useEffect(() => {
+    initializeEquipment(formData, setFormData);
+  }, [gymEquipmentPresets, formData.gymType, formData.equipment.length]);
+
+  // Check if all equipment is selected
+  useEffect(() => {
+    setAllEquipmentSelected(
+      equipmentList.length > 0 &&
+        formData.equipment.length === equipmentList.length
+    );
+  }, [formData.equipment]);
+
+  // Wrapper for equipment change
+  const handleEquipmentChangeWrapper = (e) => {
+    const result = handleEquipmentChange(e, formData, setFormData);
+    if (result !== null) {
+      setAllEquipmentSelected(result);
+    }
+  };
+
+  // Wrapper for workout format change
+  const handleWorkoutFormatChangeWrapper = (e) => {
+    handleWorkoutFormatChange(e, setFormData);
+  };
+
+  // Wrapper for day of week change
+  const handleDayOfWeekChangeWrapper = (day) => {
+    handleDayOfWeekChange(day, setFormData);
+  };
+
+  // Update days per week when days of week selection changes
+  useEffect(() => {
+    setFormData((prev) => ({
+      ...prev,
+      daysPerWeek: prev.daysOfWeek.length.toString(),
+    }));
+  }, [formData.daysOfWeek.length]);
+
+  // Update days of week when days per week changes directly
+  useEffect(() => {
+    updateDaysOfWeekFromDaysPerWeek(
+      formData.daysPerWeek,
+      formData.daysOfWeek,
+      setFormData
+    );
+  }, [formData.daysPerWeek]);
+
+  // Calculate end date based on start date, number of weeks, and selected days of week
+  useEffect(() => {
+    const endDate = calculateEndDate(
+      formData.startDate,
+      formData.numberOfWeeks,
+      formData.daysOfWeek
+    );
+    if (endDate) {
+      setFormData((prev) => ({ ...prev, endDate }));
+    }
+  }, [formData.startDate, formData.numberOfWeeks, formData.daysOfWeek]);
+
+  // Handle selecting a workout
+  const handleSelectWorkout = (workout) => {
+    if (onSelectWorkout) {
+      const workoutWithDate = {
+        ...workout,
+        date: workout.suggestedDate || formData.startDate,
+      };
+      onSelectWorkout(workoutWithDate);
+    }
+  };
+
+  // Wrapper for viewing workout details
+  const handleViewWorkoutDetailsWrapper = (workout) => {
+    handleViewWorkoutDetails(workout, setSelectedWorkout, setIsModalOpen);
+  };
+
+  // Wrapper for date picker open
+  const handleDatePickerOpenWrapper = (workout) => {
+    handleDatePickerOpen(
+      workout,
+      setSelectedWorkoutForDate,
+      setSelectedDate,
+      setIsDatePickerModalOpen,
+      formData.startDate
+    );
+  };
+
+  // Wrapper for closing workout modal
+  const handleCloseWorkoutModalWrapper = () => {
+    handleCloseWorkoutModal(setIsModalOpen);
+  };
+
+  // Wrapper for closing date picker modal
+  const handleCloseDatePickerModalWrapper = () => {
+    handleCloseDatePickerModal(
+      setIsDatePickerModalOpen,
+      setSelectedWorkoutForDate,
+      setSelectedDate
+    );
+  };
+
+  // Handle removing reference workout
+  const handleRemoveReferenceWorkout = (workoutId) => {
+    setReferenceWorkouts((prev) => prev.filter((w) => w.id !== workoutId));
+  };
+
+  return (
+    <div className="bg-white rounded-lg shadow-md p-4">
+      <h2 className="text-xl font-semibold mb-4">Program Writer</h2>
+      {showToast && (
+        <Toast
+          message={toastMessage}
+          type={toastType}
+          onClose={() => setShowToast(false)}
+        />
+      )}
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Program Form */}
+        <ProgramForm
+          formData={formData}
+          handleChange={handleChange}
+          handleWorkoutFormatChange={handleWorkoutFormatChangeWrapper}
+          handleDayOfWeekChange={handleDayOfWeekChangeWrapper}
+          isLoading={isLoading}
+          generateProgram={handleGenerateProgram}
+          generationStage={generationStage}
+          loadingDuration={loadingDuration}
+          equipmentSelector={
+            <EquipmentSelector
+              equipment={formData.equipment}
+              onEquipmentChange={handleEquipmentChangeWrapper}
+              equipmentList={equipmentList}
+              allEquipmentSelected={allEquipmentSelected}
+              isVisible={showEquipment}
+              onToggleVisibility={() => setShowEquipment(!showEquipment)}
+            />
+          }
+        />
+      </div>
+
+      {/* Equipment Selector - Moved to Program Form */}
+
+      {/* Reference Workouts */}
+      <ReferenceWorkouts
+        workouts={referenceWorkouts}
+        supabase={supabase}
+        onRemove={handleRemoveReferenceWorkout}
+        showToastMessage={showToastMessage}
+      />
+
+      {/* Workout List */}
+      {suggestions.length > 0 && (
+        <div className="flex justify-between items-center mt-6">
+          <div className="flex-1">
+            {/* Title removed as it's already in WorkoutList component */}
+          </div>
+          <div className="flex gap-2">
+            <button
+              className="btn btn-sm btn-outline"
+              onClick={handleAssignDates}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <>
+                  <span className="loading loading-spinner loading-xs"></span>
+                  Assigning...
+                </>
+              ) : (
+                'Auto-assign Dates'
+              )}
+            </button>
+            {programId && (
+              <button
+                className="btn btn-sm btn-primary"
+                onClick={handleSaveProgram}
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <>
+                    <span className="loading loading-spinner loading-xs"></span>
+                    Saving...
+                  </>
+                ) : (
+                  'Save Program'
+                )}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      <WorkoutList
+        workouts={suggestions}
+        daysPerWeek={formData.daysPerWeek}
+        formatDate={formatDate}
+        onViewDetails={handleViewWorkoutDetailsWrapper}
+        onDatePick={handleDatePickerOpenWrapper}
+        onSelectWorkout={handleSelectWorkout}
+        onDeleteWorkout={handleDeleteWorkout}
+        isLoading={isLoading}
+      />
+
+      {/* Modals */}
+      <WorkoutModal
+        isOpen={isModalOpen}
+        workout={selectedWorkout}
+        onClose={handleCloseWorkoutModalWrapper}
+        onSelectWorkout={handleSelectWorkout}
+        formatDate={formatDate}
+      />
+
+      <DatePickerModal
+        isOpen={isDatePickerModalOpen}
+        workout={selectedWorkoutForDate}
+        selectedDate={selectedDate}
+        setSelectedDate={setSelectedDate}
+        onClose={handleCloseDatePickerModalWrapper}
+        onSave={handleDatePickerSave}
+        startDate={formData.startDate}
+        endDate={formData.endDate}
+      />
+    </div>
+  );
+}

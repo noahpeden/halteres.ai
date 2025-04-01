@@ -3,7 +3,7 @@ import { useState, useEffect, use } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSearchParams } from 'next/navigation';
 import ProgramCalendar from '@/components/ProgramCalendar';
-import AIProgramWriter from '@/components/AIProgramWriter';
+import AIProgramWriter from '@/components/AIProgramWriter/AIProgramWriter';
 import AIWorkoutReferencer from '@/components/AIWorkoutReferencer';
 import ClientMetricsSidebar from '@/components/ClientMetricsSidebar';
 import Link from 'next/link';
