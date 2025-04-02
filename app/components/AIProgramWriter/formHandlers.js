@@ -10,6 +10,7 @@ export const processWorkoutForDisplay = (workout) => {
     ...workout,
     savedWorkoutId: workout.id,
     title: workout.title,
+    body: workout.body || workout.description,
     description: processWorkoutDescription(workout.body || workout.description),
     tags: workout.tags || {},
     suggestedDate: workout.tags?.scheduled_date || workout.tags?.suggestedDate,

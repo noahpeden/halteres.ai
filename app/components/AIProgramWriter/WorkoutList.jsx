@@ -98,13 +98,10 @@ export default function WorkoutList({
                     )}
                   </div>
                 </div>
-                <div className="whitespace-pre-line mt-2 line-clamp-3">
-                  {typeof workout.description === 'string'
-                    ? workout.description
-                        .replace(/## (.*?)\n/g, '') // Remove section headers
-                        .replace(/\n\n/g, ' ') // Replace double newlines with space
-                        .trim()
-                    : 'No description available'}
+                <div className="whitespace-pre-line mt-2 overflow-auto max-h-80">
+                  {workout.body ||
+                    workout.description ||
+                    'No description available'}
                 </div>
                 <div className="flex gap-2 mt-3">
                   <button

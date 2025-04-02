@@ -86,7 +86,7 @@ export default function WorkoutModal({
           </div>
 
           <div className="mt-4 prose max-w-none">
-            {renderWorkoutContent(workout.description)}
+            {renderWorkoutContent(workout.body || workout.description)}
           </div>
 
           <div className="mt-6 flex justify-end">
