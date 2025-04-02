@@ -9,11 +9,6 @@ export const formatDate = (dateString) => {
 };
 
 export const processWorkoutDescription = (description) => {
-  if (!description || !description.includes('\n')) return description;
-
-  // If the description is already properly formatted with markdown headers, use it as is
-  if (description.includes('##')) return description;
-
   // Convert the plain text format into a markdown format
   const sections = description
     .split('\n')

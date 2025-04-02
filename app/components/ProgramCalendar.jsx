@@ -367,6 +367,107 @@ export default function ProgramCalendar({
             );
             return [...prevWorkouts, ...newWorkouts];
           });
+
+          // Now automatically add schedule entries for any workouts with suggestedDates
+          // We'll do this in a separate process to not block the UI
+          setTimeout(async () => {
+            try {
+              // Keep track of processed workouts to avoid duplicates
+              const processedWorkouts = new Set();
+
+              const workoutsWithDates = generatedWorkouts.filter(
+                (w) => w.suggestedDate && !w.isScheduled
+              );
+
+              if (workoutsWithDates.length > 0) {
+                console.log(
+                  `Found ${workoutsWithDates.length} workouts with suggested dates to schedule`
+                );
+
+                for (const workout of workoutsWithDates) {
+                  // Create a unique key for this workout based on title and date
+                  const workoutKey = `${workout.title}-${workout.suggestedDate}`;
+
+                  // Skip if we've already processed this workout
+                  if (processedWorkouts.has(workoutKey)) {
+                    console.log(`Skipping duplicate workout: ${workoutKey}`);
+                    continue;
+                  }
+
+                  // Mark as processed
+                  processedWorkouts.add(workoutKey);
+
+                  // Check if this workout already has a schedule entry with this date
+                  // Look for any workout with the same title and date
+                  const existingSchedule = scheduledWorkouts.find((s) => {
+                    // Get the workout details
+                    const existingWorkout = workouts.find(
+                      (w) => w.id === s.workout_id
+                    );
+                    if (!existingWorkout) return false;
+
+                    // Match by title and date
+                    return (
+                      existingWorkout.title === workout.title &&
+                      s.scheduled_date === workout.suggestedDate
+                    );
+                  });
+
+                  if (!existingSchedule) {
+                    try {
+                      // Create a workout in program_workouts if it doesn't exist with a real ID
+                      let workoutId = workout.id;
+
+                      // If it's a generated ID, create a real workout in the database
+                      if (workout.id.startsWith('generated-')) {
+                        const newWorkoutId = await createNewWorkout(
+                          workout,
+                          workout.suggestedDate
+                        );
+                        // Now schedule it
+                        await scheduleWorkout(
+                          newWorkoutId,
+                          workout.suggestedDate,
+                          workout.entity_id || null
+                        );
+                        console.log(
+                          `Created and scheduled workout for ${workout.suggestedDate}: ${workout.title}`
+                        );
+                      } else {
+                        // It's a real ID, just schedule it
+                        await scheduleWorkout(
+                          workoutId,
+                          workout.suggestedDate,
+                          workout.entity_id || null
+                        );
+                        console.log(
+                          `Scheduled existing workout for ${workout.suggestedDate}: ${workout.title}`
+                        );
+                      }
+
+                      // Mark as scheduled to avoid duplicate attempts
+                      workout.isScheduled = true;
+                    } catch (error) {
+                      console.error(
+                        `Error scheduling workout ${workout.title} for ${workout.suggestedDate}:`,
+                        error
+                      );
+                    }
+                  } else {
+                    console.log(
+                      `Workout "${workout.title}" already scheduled for ${workout.suggestedDate}`
+                    );
+                    workout.isScheduled = true;
+                  }
+                }
+              }
+            } catch (scheduleError) {
+              console.error(
+                'Error auto-scheduling workouts with dates:',
+                scheduleError
+              );
+            }
+          }, 1000); // Small delay to let the UI update first
         } else {
           console.log('No generated program found or it has no workouts');
         }
@@ -845,6 +946,30 @@ export default function ProgramCalendar({
       return scheduleDate === dateString;
     });
 
+    // Also check for any workouts that have a suggestedDate but might not be in the schedule yet
+    const unscheduledWorkoutsForDate = workouts.filter((workout) => {
+      // Skip if already in a schedule
+      const isAlreadyScheduled = schedulesForDate.some(
+        (schedule) => schedule.workout_id === workout.id
+      );
+      if (isAlreadyScheduled) return false;
+
+      // Check if the workout has a matching suggestedDate
+      const suggestedDate =
+        workout.suggestedDate ||
+        (workout.tags && workout.tags.date) ||
+        (workout.tags && workout.tags.suggestedDate);
+
+      if (!suggestedDate) return false;
+
+      // Normalize date for comparison
+      const normalizedSuggestedDate = new Date(suggestedDate)
+        .toISOString()
+        .split('T')[0];
+
+      return normalizedSuggestedDate === dateString;
+    });
+
     // Now get the actual workout data for each scheduled workout
     const workoutsForDate = schedulesForDate
       .map((schedule) => {
@@ -865,12 +990,36 @@ export default function ProgramCalendar({
       })
       .filter(Boolean); // Remove any null entries
 
+    // Add any unscheduled workouts with matching dates
+    const unscheduledForDisplay = unscheduledWorkoutsForDate.map((workout) => ({
+      ...workout,
+      // No scheduleId since it's not formally scheduled yet
+      // But we'll create a temporary one for React keys
+      scheduleId: `temp-${workout.id}-${dateString}`,
+      scheduled_date: dateString,
+      isTemporarySchedule: true, // Flag to indicate this isn't in workout_schedule yet
+    }));
+
+    // Combine both lists, but deduplicate by title to prevent showing the same workout multiple times
+    let combinedWorkouts = [...workoutsForDate];
+
+    // Only add unscheduled workouts if there's no scheduled workout with the same title
+    unscheduledForDisplay.forEach((unscheduledWorkout) => {
+      const isDuplicate = combinedWorkouts.some(
+        (existingWorkout) => existingWorkout.title === unscheduledWorkout.title
+      );
+
+      if (!isDuplicate) {
+        combinedWorkouts.push(unscheduledWorkout);
+      }
+    });
+
     // Only log if there are workouts for this date
-    if (workoutsForDate.length > 0) {
-      console.log(`Workouts for date ${dateString}:`, workoutsForDate);
+    if (combinedWorkouts.length > 0) {
+      console.log(`Workouts for date ${dateString}:`, combinedWorkouts);
     }
 
-    return workoutsForDate;
+    return combinedWorkouts;
   };
 
   // Copy a workout (create a new schedule entry for the same workout)
@@ -1011,7 +1160,9 @@ export default function ProgramCalendar({
                 {getWorkoutsForDate(day.date).map((event) => (
                   <div
                     key={event.scheduleId}
-                    className="bg-blue-100 p-1 rounded text-xs cursor-move flex justify-between items-center group"
+                    className={`${
+                      event.isTemporarySchedule ? 'bg-green-100' : 'bg-blue-100'
+                    } p-1 rounded text-xs cursor-move flex justify-between items-center group`}
                     draggable={!isPastDate}
                     onDragStart={() => handleDragStart(event)}
                   >
@@ -1038,27 +1189,29 @@ export default function ProgramCalendar({
                           />
                         </svg>
                       </button>
-                      <button
-                        onClick={(e) =>
-                          deleteScheduledWorkout(event.scheduleId, e)
-                        }
-                        className="text-red-500 hover:text-red-700"
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-3 w-3"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
+                      {!event.isTemporarySchedule && (
+                        <button
+                          onClick={(e) =>
+                            deleteScheduledWorkout(event.scheduleId, e)
+                          }
+                          className="text-red-500 hover:text-red-700"
                         >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                          />
-                        </svg>
-                      </button>
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="h-3 w-3"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                            />
+                          </svg>
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))}
