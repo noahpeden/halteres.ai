@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import equipmentList from '@/utils/equipmentList';
 import { gymEquipmentPresets } from '../utils';
@@ -87,6 +87,8 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
   const [isDatePickerModalOpen, setIsDatePickerModalOpen] = useState(false);
   const [selectedWorkoutForDate, setSelectedWorkoutForDate] = useState(null);
   const [selectedDate, setSelectedDate] = useState(null);
+  // Add a ref to track automatic updates
+  const isAutoUpdating = useRef(false);
 
   // Toast helper function
   const showToastMessage = (message, type = 'success') => {
@@ -332,20 +334,37 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
 
   // Update days per week when days of week selection changes
   useEffect(() => {
-    setFormData((prev) => ({
-      ...prev,
-      daysPerWeek: prev.daysOfWeek.length.toString(),
-    }));
-  }, [formData.daysOfWeek.length]);
+    // Skip if this is an automatic update from the other effect
+    if (isAutoUpdating.current) {
+      isAutoUpdating.current = false;
+      return;
+    }
+
+    // Only update daysPerWeek if it doesn't match daysOfWeek.length
+    if (parseInt(formData.daysPerWeek) !== formData.daysOfWeek.length) {
+      setFormData((prev) => ({
+        ...prev,
+        daysPerWeek: prev.daysOfWeek.length.toString(),
+      }));
+    }
+  }, [formData.daysOfWeek.length, formData.daysPerWeek]);
 
   // Update days of week when days per week changes directly
   useEffect(() => {
+    // Skip if the lengths already match to prevent unnecessary updates
+    if (parseInt(formData.daysPerWeek) === formData.daysOfWeek.length) {
+      return;
+    }
+
+    // Set flag that we're doing an automatic update
+    isAutoUpdating.current = true;
+
     updateDaysOfWeekFromDaysPerWeek(
       formData.daysPerWeek,
       formData.daysOfWeek,
       setFormData
     );
-  }, [formData.daysPerWeek]);
+  }, [formData.daysPerWeek, formData.daysOfWeek]);
 
   // Calculate end date based on start date, number of weeks, and selected days of week
   useEffect(() => {

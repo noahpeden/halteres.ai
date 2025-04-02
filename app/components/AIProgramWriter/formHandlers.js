@@ -212,7 +212,6 @@ export const handleDayOfWeekChange = (day, setFormData) => {
         return {
           ...prev,
           daysOfWeek: prev.daysOfWeek.filter((d) => d !== day),
-          daysPerWeek: (prev.daysOfWeek.length - 1).toString(),
         };
       }
       return prev; // Don't remove the last day
@@ -220,7 +219,6 @@ export const handleDayOfWeekChange = (day, setFormData) => {
       return {
         ...prev,
         daysOfWeek: [...prev.daysOfWeek, day],
-        daysPerWeek: (prev.daysOfWeek.length + 1).toString(),
       };
     }
   });
