@@ -473,7 +473,31 @@ export async function handleAutoAssignDates({
 
     // Create workout entries
     const workoutsToCreate = [];
-    workoutsToSchedule.forEach((workout, index) => {
+
+    // Sort workouts based on their title week and day (Week 1, Day 1 comes before Week 1, Day 2, etc.)
+    const sortedWorkouts = [...workoutsToSchedule].sort((a, b) => {
+      // Extract week and day numbers from titles
+      const weekDayA = a.title.match(/Week\s+(\d+),\s+Day\s+(\d+)/i);
+      const weekDayB = b.title.match(/Week\s+(\d+),\s+Day\s+(\d+)/i);
+
+      if (weekDayA && weekDayB) {
+        const weekA = parseInt(weekDayA[1]);
+        const dayA = parseInt(weekDayA[2]);
+        const weekB = parseInt(weekDayB[1]);
+        const dayB = parseInt(weekDayB[2]);
+
+        // Compare weeks first, then days
+        if (weekA !== weekB) {
+          return weekA - weekB;
+        }
+        return dayA - dayB;
+      }
+
+      // If pattern not found, keep original order
+      return 0;
+    });
+
+    sortedWorkouts.forEach((workout, index) => {
       if (index < workoutDates.length) {
         const scheduledDate = workoutDates[index];
 

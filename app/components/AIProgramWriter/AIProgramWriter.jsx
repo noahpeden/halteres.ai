@@ -70,7 +70,11 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
     daysOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
     programType: 'linear',
     gymType: 'Crossfit Box',
-    startDate: new Date().toISOString().split('T')[0],
+    startDate: (() => {
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      return tomorrow.toISOString().split('T')[0];
+    })(),
     endDate: '',
     sessionDetails: {},
     programOverview: {},

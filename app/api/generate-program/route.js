@@ -67,16 +67,38 @@ export async function POST(request) {
     // Calculate total number of workouts
     const totalWorkouts = parseInt(numberOfWeeks) * parseInt(daysPerWeek);
 
-    // Generate suggested dates array if needed
+    // Get selected days of the week from request data
+    const selectedDaysOfWeek = requestData.calendar_data?.days_of_week || [];
+
+    // Generate suggested dates array based on selected days of the week
     const suggestedDates = [];
     const today = new Date();
     const startingDate = startDate ? new Date(startDate) : today;
 
-    // Simple date generation for each workout
-    for (let i = 0; i < totalWorkouts; i++) {
-      const workoutDate = new Date(startingDate);
-      workoutDate.setDate(startingDate.getDate() + i); // Simple sequential dates
-      suggestedDates.push(workoutDate.toISOString().split('T')[0]); // YYYY-MM-DD format
+    // If we have selected days, use them to generate dates
+    if (selectedDaysOfWeek.length > 0) {
+      let currentDate = new Date(startingDate);
+      let workoutsAdded = 0;
+
+      // Keep going until we have enough workouts
+      while (workoutsAdded < totalWorkouts) {
+        const dayOfWeek = currentDate.getDay(); // 0 = Sunday, 1 = Monday, etc.
+
+        if (selectedDaysOfWeek.includes(dayOfWeek)) {
+          suggestedDates.push(currentDate.toISOString().split('T')[0]);
+          workoutsAdded++;
+        }
+
+        // Move to next day
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+    } else {
+      // Fallback: simple sequential dates if no days are selected
+      for (let i = 0; i < totalWorkouts; i++) {
+        const workoutDate = new Date(startingDate);
+        workoutDate.setDate(startingDate.getDate() + i);
+        suggestedDates.push(workoutDate.toISOString().split('T')[0]);
+      }
     }
 
     // Verify user access to the program
@@ -138,12 +160,27 @@ Draw inspiration from these reference workouts when designing this program. Use 
       }
     }
 
+    // Get the day names from the day numbers for the prompt
+    const dayNames = [
+      'Sunday',
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+    ];
+    const selectedDayNames = selectedDaysOfWeek
+      .map((dayNum) => dayNames[dayNum])
+      .join(', ');
+
     // Build the prompt with reference workouts included
     const prompt = `Generate a ${numberOfWeeks}-week training program with the following parameters:
 
 Goal: ${goal}
 Difficulty: ${difficulty}
 Days Per Week: ${daysPerWeek} days
+Selected Training Days: ${selectedDayNames}
 Total Length: ${numberOfWeeks} weeks
 ${focusArea ? `Focus Area: ${focusArea}` : ''}
 ${
@@ -172,6 +209,8 @@ Format each workout with:
 The program should follow logical progression based on the selected program type (${programType}).
 Ensure proper periodization, recovery, and exercise variation throughout the program.
 
+IMPORTANT: The workouts must be scheduled on specific dates according to the user's selected training days. DO NOT create workouts on days other than the ones specified.
+
 Your response MUST be in this exact JSON format:
 {
   "title": "Training Program for ${goal}",
@@ -198,7 +237,9 @@ ${suggestedDates
         Math.floor(index / parseInt(daysPerWeek)) + 1
       }, Day ${(index % parseInt(daysPerWeek)) + 1})`
   )
-  .join('\n')}`;
+  .join('\n')}
+
+IMPORTANT: Each workout MUST be assigned to one of the above dates. These dates strictly follow the user's selected training days of the week.`;
 
     logWithTimestamp('Prompt prepared', { promptLength: prompt.length });
 
