@@ -6,6 +6,7 @@ export default function ProgramCalendar({
   programId,
   initialDragWorkout = null,
   selectedDate = null,
+  onRender = () => {},
 }) {
   const { supabase } = useAuth();
   const [workouts, setWorkouts] = useState([]); // All workouts for this program
@@ -19,9 +20,18 @@ export default function ProgramCalendar({
   // Today's date for comparison with past dates
   const today = new Date();
   today.setHours(0, 0, 0, 0);
+  const [showWorkoutsSidebar, setShowWorkoutsSidebar] = useState(true);
 
   // Force refresh when props change
   const [forceUpdate, setForceUpdate] = useState(0);
+
+  // Ref to track if auto-scheduling has already run for this program session
+  const hasAutoScheduledRef = useRef(false);
+
+  // Call onRender after initial render
+  useEffect(() => {
+    onRender();
+  }, [onRender]);
 
   // Utility function to create a new workout
   const createNewWorkout = async (workout, date) => {
@@ -269,6 +279,11 @@ export default function ProgramCalendar({
 
   // Fetch workouts and scheduled workouts for this program
   useEffect(() => {
+    console.log(
+      'Calendar fetch effect running, auto-scheduled status:',
+      hasAutoScheduledRef.current
+    );
+
     async function fetchData() {
       if (!programId) return;
 
@@ -314,7 +329,8 @@ export default function ProgramCalendar({
         // If there's a generated program, add those workouts to the local state
         if (
           programData?.generated_program &&
-          Array.isArray(programData.generated_program)
+          Array.isArray(programData.generated_program) &&
+          programData.generated_program.length > 0
         ) {
           console.log(
             'Found generated program with workouts:',
@@ -356,118 +372,204 @@ export default function ProgramCalendar({
 
           // Add these to the workouts list if they're not already there
           setWorkouts((prevWorkouts) => {
+            // Create a map of existing workouts by title + description to detect semantic duplicates
+            const existingWorkoutMap = new Map();
+            prevWorkouts.forEach((w) => {
+              const key = `${w.title.toLowerCase().trim()}-${(w.body || '')
+                .substring(0, 50)
+                .toLowerCase()
+                .trim()}`;
+              existingWorkoutMap.set(key, w);
+            });
+
+            // Filter out workouts that already exist (by ID or by content)
             const existingIds = new Set(prevWorkouts.map((w) => w.id));
-            const newWorkouts = generatedWorkouts.filter(
-              (w) => !existingIds.has(w.id)
-            );
+            const newWorkouts = generatedWorkouts.filter((w) => {
+              if (existingIds.has(w.id)) return false;
+
+              // Check for duplicate by content
+              const contentKey = `${w.title.toLowerCase().trim()}-${(
+                w.body ||
+                w.description ||
+                ''
+              )
+                .substring(0, 50)
+                .toLowerCase()
+                .trim()}`;
+              return !existingWorkoutMap.has(contentKey);
+            });
+
             console.log(
               'Adding',
               newWorkouts.length,
               'new generated workouts to calendar'
             );
+
             return [...prevWorkouts, ...newWorkouts];
           });
 
           // Now automatically add schedule entries for any workouts with suggestedDates
-          // We'll do this in a separate process to not block the UI
-          setTimeout(async () => {
-            try {
-              // Keep track of processed workouts to avoid duplicates
-              const processedWorkouts = new Set();
+          // We'll do this in a separate process to not block the UI, but only if auto-scheduling hasn't run yet
+          if (!hasAutoScheduledRef.current) {
+            console.log(
+              '🚀 Auto-scheduling process starting for programId:',
+              programId,
+              '(first time)'
+            );
+            hasAutoScheduledRef.current = true;
 
-              const workoutsWithDates = generatedWorkouts.filter(
-                (w) => w.suggestedDate && !w.isScheduled
-              );
-
-              if (workoutsWithDates.length > 0) {
+            setTimeout(async () => {
+              try {
                 console.log(
-                  `Found ${workoutsWithDates.length} workouts with suggested dates to schedule`
+                  '⏳ Auto-scheduling timeout executing for programId:',
+                  programId
+                );
+                // Keep track of processed workouts to avoid duplicates
+                const processedWorkouts = new Set();
+
+                // Get the latest data for existing schedule entries
+                const { data: latestSchedules } = await supabase
+                  .from('workout_schedule')
+                  .select('*')
+                  .eq('program_id', programId);
+
+                const currentSchedules = latestSchedules || [];
+                console.log(
+                  `Found ${currentSchedules.length} existing schedule entries in the database`
                 );
 
-                for (const workout of workoutsWithDates) {
-                  // Create a unique key for this workout based on title and date
-                  const workoutKey = `${workout.title}-${workout.suggestedDate}`;
+                // Get the latest workout data to verify against
+                const { data: latestWorkouts } = await supabase
+                  .from('program_workouts')
+                  .select('*')
+                  .eq('program_id', programId);
 
-                  // Skip if we've already processed this workout
-                  if (processedWorkouts.has(workoutKey)) {
-                    console.log(`Skipping duplicate workout: ${workoutKey}`);
-                    continue;
+                const dbWorkouts = latestWorkouts || [];
+                console.log(
+                  `Found ${dbWorkouts.length} existing workouts in the database`
+                );
+
+                // Build a map of existing workout-to-date schedule pairs
+                const scheduledPairs = new Set();
+                currentSchedules.forEach((schedule) => {
+                  const workout = dbWorkouts.find(
+                    (w) => w.id === schedule.workout_id
+                  );
+                  if (workout) {
+                    scheduledPairs.add(
+                      `${workout.title}-${schedule.scheduled_date}`
+                    );
                   }
+                });
 
-                  // Mark as processed
-                  processedWorkouts.add(workoutKey);
+                console.log(
+                  `Found ${scheduledPairs.size} existing title-date pairs in the schedule`
+                );
 
-                  // Check if this workout already has a schedule entry with this date
-                  // Look for any workout with the same title and date
-                  const existingSchedule = scheduledWorkouts.find((s) => {
-                    // Get the workout details
-                    const existingWorkout = workouts.find(
-                      (w) => w.id === s.workout_id
+                const workoutsWithDates = generatedWorkouts.filter(
+                  (w) => w.suggestedDate && !w.isScheduled
+                );
+
+                if (workoutsWithDates.length > 0) {
+                  console.log(
+                    `Found ${workoutsWithDates.length} workouts with suggested dates to schedule`
+                  );
+
+                  for (const workout of workoutsWithDates) {
+                    // Create a unique key for this workout based on title and date
+                    const workoutKey = `${workout.title}-${workout.suggestedDate}`;
+
+                    // Skip if we've already processed this workout
+                    if (processedWorkouts.has(workoutKey)) {
+                      console.log(`Skipping duplicate workout: ${workoutKey}`);
+                      continue;
+                    }
+
+                    // Skip if this title-date pair already exists in the schedule
+                    if (scheduledPairs.has(workoutKey)) {
+                      console.log(
+                        `Skipping already scheduled workout: ${workoutKey}`
+                      );
+                      continue;
+                    }
+
+                    // Mark as processed
+                    processedWorkouts.add(workoutKey);
+
+                    // Look for a matching workout in the database by title
+                    const existingDbWorkout = dbWorkouts.find(
+                      (w) =>
+                        w.title.toLowerCase().trim() ===
+                        workout.title.toLowerCase().trim()
                     );
-                    if (!existingWorkout) return false;
 
-                    // Match by title and date
-                    return (
-                      existingWorkout.title === workout.title &&
-                      s.scheduled_date === workout.suggestedDate
-                    );
-                  });
+                    if (existingDbWorkout) {
+                      console.log(
+                        `Found existing workout in database with title "${workout.title}" (ID: ${existingDbWorkout.id})`
+                      );
 
-                  if (!existingSchedule) {
-                    try {
-                      // Create a workout in program_workouts if it doesn't exist with a real ID
-                      let workoutId = workout.id;
-
-                      // If it's a generated ID, create a real workout in the database
-                      if (workout.id.startsWith('generated-')) {
-                        const newWorkoutId = await createNewWorkout(
-                          workout,
-                          workout.suggestedDate
-                        );
-                        // Now schedule it
+                      // Just schedule the existing workout
+                      try {
                         await scheduleWorkout(
-                          newWorkoutId,
-                          workout.suggestedDate,
-                          workout.entity_id || null
-                        );
-                        console.log(
-                          `Created and scheduled workout for ${workout.suggestedDate}: ${workout.title}`
-                        );
-                      } else {
-                        // It's a real ID, just schedule it
-                        await scheduleWorkout(
-                          workoutId,
+                          existingDbWorkout.id,
                           workout.suggestedDate,
                           workout.entity_id || null
                         );
                         console.log(
                           `Scheduled existing workout for ${workout.suggestedDate}: ${workout.title}`
                         );
+                        // Add to our tracking set
+                        scheduledPairs.add(workoutKey);
+                      } catch (scheduleError) {
+                        console.error(
+                          `Error scheduling existing workout ${workout.title}:`,
+                          scheduleError
+                        );
                       }
+                    } else if (workout.id.startsWith('generated-')) {
+                      // Create a new workout in the database
+                      try {
+                        const newWorkoutId = await createNewWorkout(
+                          workout,
+                          workout.suggestedDate
+                        );
 
-                      // Mark as scheduled to avoid duplicate attempts
-                      workout.isScheduled = true;
-                    } catch (error) {
-                      console.error(
-                        `Error scheduling workout ${workout.title} for ${workout.suggestedDate}:`,
-                        error
-                      );
+                        // Now schedule it
+                        await scheduleWorkout(
+                          newWorkoutId,
+                          workout.suggestedDate,
+                          workout.entity_id || null
+                        );
+
+                        console.log(
+                          `Created and scheduled new workout for ${workout.suggestedDate}: ${workout.title}`
+                        );
+
+                        // Add to our tracking set
+                        scheduledPairs.add(workoutKey);
+                      } catch (error) {
+                        console.error(
+                          `Error creating/scheduling new workout ${workout.title}:`,
+                          error
+                        );
+                      }
                     }
-                  } else {
-                    console.log(
-                      `Workout "${workout.title}" already scheduled for ${workout.suggestedDate}`
-                    );
-                    workout.isScheduled = true;
                   }
                 }
+              } catch (scheduleError) {
+                console.error(
+                  'Error auto-scheduling workouts with dates:',
+                  scheduleError
+                );
               }
-            } catch (scheduleError) {
-              console.error(
-                'Error auto-scheduling workouts with dates:',
-                scheduleError
-              );
-            }
-          }, 1000); // Small delay to let the UI update first
+            }, 1000); // Small delay to let the UI update first
+          } else {
+            console.log(
+              '⏭️ Auto-scheduling process skipped for programId:',
+              programId,
+              '(already run)'
+            );
+          }
         } else {
           console.log('No generated program found or it has no workouts');
         }
@@ -689,7 +791,7 @@ export default function ProgramCalendar({
       setIsLoading(true);
 
       try {
-        // If the workout has a scheduleId, it means we're updating an existing scheduled workout
+        // Case 1: If the workout has a scheduleId, it means we're updating an existing scheduled workout
         if (workout.scheduleId) {
           console.log(
             'Updating existing scheduled workout:',
@@ -719,138 +821,37 @@ export default function ProgramCalendar({
           console.log('Updated schedule state:', updatedSchedules);
           setScheduledWorkouts(updatedSchedules);
         }
-        // If it has an ID but no scheduleId, it's an existing workout but not yet scheduled
-        else if (workout.id) {
-          // Check if this is a generated ID (not a valid UUID)
-          const isGeneratedId = workout.id.startsWith('generated-');
+        // Case 2: If we know the workout is already in the database, just schedule it
+        else if (workout.isStoredInDatabase === true) {
+          console.log('Using existing workout from database:', workout.id);
 
-          if (isGeneratedId) {
+          const workoutIdToUse =
+            typeof workout.id === 'string' ? workout.id : String(workout.id);
+
+          // Check if this workout is already scheduled for this date
+          const alreadyScheduled = scheduledWorkouts.some(
+            (sw) =>
+              sw.workout_id === workoutIdToUse &&
+              sw.scheduled_date === formattedDate
+          );
+
+          if (alreadyScheduled) {
             console.log(
-              'This is a generated ID, not a real UUID. Creating new workout instead of trying to verify.'
+              'Workout already scheduled for this date - nothing to do'
             );
-
-            try {
-              // Use our utility function to create a new workout
-              const workoutId = await createNewWorkout(workout, formattedDate);
-
-              // Then schedule it using our utility function
-              await scheduleWorkout(
-                workoutId,
-                formattedDate,
-                workout.entity_id || null
-              );
-
-              console.log(
-                'Successfully created and scheduled new workout from generated ID:',
-                workoutId
-              );
-            } catch (error) {
-              console.error(
-                'Error creating or scheduling workout from generated ID:',
-                error
-              );
-              throw error;
-            }
           } else {
-            // Regular UUID handling for normal workouts
-            console.log(
-              `Checking if workout ${workout.id} exists and belongs to program ${programId}`
-            );
-
-            // Fix for potential UUID format issues
-            const workoutIdToUse =
-              typeof workout.id === 'string' ? workout.id : String(workout.id);
-
-            const { data: verifyWorkout, error: verifyError } = await supabase
-              .from('program_workouts')
-              .select('id')
-              .eq('id', workoutIdToUse)
-              .maybeSingle();
-
-            if (verifyError) {
-              console.error('Error verifying workout:', verifyError);
-              throw new Error(
-                `Error verifying workout: ${verifyError.message}`
-              );
-            }
-
-            // If workout wasn't found, we need to create it first
-            let workoutId = workoutIdToUse;
-
-            if (!verifyWorkout) {
-              console.log(
-                'Workout not found in this program, creating it first'
-              );
-
-              // Create a copy of the workout in this program
-              const workoutData = {
-                program_id: programId,
-                title: workout.title || 'Untitled Workout',
-                body: workout.body || workout.description || '',
-                workout_type: workout.workout_type || workout.type || 'custom',
-                difficulty: workout.difficulty || 'intermediate',
-                tags: workout.tags || {
-                  type: workout.type || 'custom',
-                  focus: workout.focus || '',
-                  generated: true,
-                },
-              };
-
-              console.log('Creating workout copy with data:', workoutData);
-              const { data: newWorkout, error: createError } = await supabase
-                .from('program_workouts')
-                .insert(workoutData)
-                .select();
-
-              if (createError) {
-                console.error('Error creating workout copy:', createError);
-                throw new Error(
-                  `Unable to create workout: ${createError.message}`
-                );
-              }
-
-              if (!newWorkout || newWorkout.length === 0) {
-                throw new Error('Failed to create workout - no data returned');
-              }
-
-              workoutId = newWorkout[0].id;
-              console.log('Created new workout with ID:', workoutId);
-
-              // Add to local workouts array
-              setWorkouts([...workouts, newWorkout[0]]);
-            } else {
-              console.log(
-                'Workout exists in program, using existing ID:',
-                workoutId
-              );
-            }
-
-            // Verify the workout ID exists one more time as a safety check
-            const { data: finalCheck, error: finalCheckError } = await supabase
-              .from('program_workouts')
-              .select('id')
-              .eq('id', workoutId)
-              .maybeSingle();
-
-            if (finalCheckError || !finalCheck) {
-              console.error(
-                'Final workout verification failed:',
-                finalCheckError || 'No workout found'
-              );
-              throw new Error(
-                'Unable to find or create valid workout to schedule'
-              );
-            }
-
-            // Insert a new schedule entry
+            // Schedule the workout directly without creating a new one
             const scheduleData = {
               program_id: programId,
-              workout_id: workoutId,
-              entity_id: workout.entity_id || null, // Use entity_id if available
+              workout_id: workoutIdToUse,
+              entity_id: workout.entity_id || null,
               scheduled_date: formattedDate,
             };
 
-            console.log('Creating new schedule entry:', scheduleData);
+            console.log(
+              'Creating schedule entry for existing workout:',
+              scheduleData
+            );
             const { data, error } = await supabase
               .from('workout_schedule')
               .insert(scheduleData)
@@ -872,27 +873,117 @@ export default function ProgramCalendar({
             }
           }
         }
-        // If it's a new workout from AI generator, first create the workout, then schedule it
-        else {
-          try {
-            // Use our utility function to create a new workout
-            const workoutId = await createNewWorkout(workout, formattedDate);
+        // Case 3: Check if it has an ID, but we're not sure if it's in the database
+        else if (workout.id) {
+          // Check if this is a generated ID (not a valid UUID)
+          const isGeneratedId = workout.id.startsWith('generated-');
 
-            // Then schedule it using our utility function
-            await scheduleWorkout(
-              workoutId,
-              formattedDate,
-              workout.entity_id || null
-            );
-
+          if (isGeneratedId) {
             console.log(
-              'Successfully created and scheduled new workout:',
-              workoutId
+              'This is a generated ID from AI, creating a real workout'
             );
-          } catch (error) {
-            console.error('Error creating or scheduling new workout:', error);
-            throw error;
+
+            try {
+              // For generated workouts, we need to create them once in the database
+              const workoutId = await createNewWorkout(workout, formattedDate);
+
+              // Then schedule it
+              await scheduleWorkout(
+                workoutId,
+                formattedDate,
+                workout.entity_id || null
+              );
+
+              console.log(
+                'Successfully created and scheduled generated workout:',
+                workoutId
+              );
+            } catch (error) {
+              console.error('Error handling generated workout:', error);
+              throw error;
+            }
+          } else {
+            // For real IDs, just try to schedule the existing workout - NO DUPLICATION
+            console.log('Using existing workout ID:', workout.id);
+
+            const workoutIdToUse =
+              typeof workout.id === 'string' ? workout.id : String(workout.id);
+
+            // First verify the workout exists in our program
+            const { data: workoutExists, error: checkError } = await supabase
+              .from('program_workouts')
+              .select('id')
+              .eq('id', workoutIdToUse)
+              .eq('program_id', programId)
+              .maybeSingle();
+
+            if (checkError) {
+              console.error('Error checking if workout exists:', checkError);
+              throw new Error('Could not verify workout exists');
+            }
+
+            // If workout doesn't exist in this program, show an error
+            if (!workoutExists) {
+              console.error(
+                'Workout not found in this program:',
+                workoutIdToUse
+              );
+              alert(
+                'This workout does not belong to this program and cannot be scheduled'
+              );
+              return;
+            }
+
+            // Check if this workout is already scheduled for this date
+            const alreadyScheduled = scheduledWorkouts.some(
+              (sw) =>
+                sw.workout_id === workoutIdToUse &&
+                sw.scheduled_date === formattedDate
+            );
+
+            if (alreadyScheduled) {
+              console.log(
+                'Workout already scheduled for this date - nothing to do'
+              );
+            } else {
+              // Schedule the workout directly without creating a new one
+              const scheduleData = {
+                program_id: programId,
+                workout_id: workoutIdToUse,
+                entity_id: workout.entity_id || null,
+                scheduled_date: formattedDate,
+              };
+
+              console.log(
+                'Creating schedule entry for existing workout:',
+                scheduleData
+              );
+              const { data, error } = await supabase
+                .from('workout_schedule')
+                .insert(scheduleData)
+                .select();
+
+              if (error) {
+                console.error('Supabase error creating schedule:', error);
+                throw new Error(
+                  `Error creating schedule: ${error.message || error}`
+                );
+              }
+
+              console.log('Insert schedule response:', data);
+
+              if (data && data.length > 0) {
+                setScheduledWorkouts([...scheduledWorkouts, data[0]]);
+              } else {
+                console.error('No data returned from insert operation');
+              }
+            }
           }
+        }
+        // Case 4: Brand new workout with no ID (should be rare)
+        else {
+          console.log('New workout without ID - this should rarely happen');
+          alert('This workout needs to be saved first before scheduling');
         }
       } catch (error) {
         console.error('Error saving workout:', error);
@@ -929,30 +1020,61 @@ export default function ProgramCalendar({
   const getWorkoutsForDate = (date) => {
     const dateString = date.toISOString().split('T')[0];
 
-    // Make sure we have scheduledWorkouts array
-    if (!Array.isArray(scheduledWorkouts)) {
-      console.error('scheduledWorkouts is not an array:', scheduledWorkouts);
+    // Make sure we have valid arrays
+    if (!Array.isArray(scheduledWorkouts) || !Array.isArray(workouts)) {
+      console.error('Invalid arrays:', {
+        scheduledWorkouts: scheduledWorkouts,
+        workouts: workouts,
+      });
       return [];
     }
 
-    // Filter scheduled workouts for this date
+    // Track all workout IDs to prevent duplicates
+    const workoutMap = new Map();
+    const processedTitles = new Set();
+
+    // Step 1: Process scheduled workouts for this date (these take priority)
     const schedulesForDate = scheduledWorkouts.filter((schedule) => {
       if (!schedule.scheduled_date) return false;
 
-      // Normalize date strings to ensure matching format
+      // Normalize date for comparison
       const scheduleDate = new Date(schedule.scheduled_date)
         .toISOString()
         .split('T')[0];
+
       return scheduleDate === dateString;
     });
 
-    // Also check for any workouts that have a suggestedDate but might not be in the schedule yet
-    const unscheduledWorkoutsForDate = workouts.filter((workout) => {
-      // Skip if already in a schedule
-      const isAlreadyScheduled = schedulesForDate.some(
-        (schedule) => schedule.workout_id === workout.id
-      );
-      if (isAlreadyScheduled) return false;
+    // Convert schedules to workout objects with schedule info
+    schedulesForDate.forEach((schedule) => {
+      const workout = workouts.find((w) => w.id === schedule.workout_id);
+
+      if (!workout) {
+        console.warn(
+          `Workout not found for schedule ID ${schedule.id}, workout ID ${schedule.workout_id}`
+        );
+        return;
+      }
+
+      // Track by ID to prevent duplicates
+      workoutMap.set(workout.id, {
+        ...workout,
+        scheduleId: schedule.id,
+        scheduled_date: schedule.scheduled_date,
+        isScheduled: true,
+      });
+
+      // Also track titles to prevent similar workouts
+      processedTitles.add(workout.title.toLowerCase().trim());
+    });
+
+    // Step 2: Check for workouts with suggested dates that aren't scheduled yet
+    workouts.forEach((workout) => {
+      // Skip if this workout is already processed
+      if (workoutMap.has(workout.id)) return;
+
+      // Skip if there's already a workout with this title
+      if (processedTitles.has(workout.title.toLowerCase().trim())) return;
 
       // Check if the workout has a matching suggestedDate
       const suggestedDate =
@@ -960,75 +1082,50 @@ export default function ProgramCalendar({
         (workout.tags && workout.tags.date) ||
         (workout.tags && workout.tags.suggestedDate);
 
-      if (!suggestedDate) return false;
+      if (!suggestedDate) return;
 
       // Normalize date for comparison
       const normalizedSuggestedDate = new Date(suggestedDate)
         .toISOString()
         .split('T')[0];
 
-      return normalizedSuggestedDate === dateString;
+      if (normalizedSuggestedDate !== dateString) return;
+
+      // Add this workout as a temporary schedule
+      workoutMap.set(workout.id, {
+        ...workout,
+        scheduleId: `temp-${workout.id}-${dateString}`,
+        scheduled_date: dateString,
+        isTemporarySchedule: true,
+      });
+
+      // Track this title
+      processedTitles.add(workout.title.toLowerCase().trim());
     });
 
-    // Now get the actual workout data for each scheduled workout
-    const workoutsForDate = schedulesForDate
-      .map((schedule) => {
-        const workout = workouts.find((w) => w.id === schedule.workout_id);
-        if (!workout) {
-          console.warn(
-            `Workout not found for schedule ID ${schedule.id}, workout ID ${schedule.workout_id}`
-          );
-          return null;
-        }
-
-        // Return a combined object with both workout and schedule info
-        return {
-          ...workout,
-          scheduleId: schedule.id,
-          scheduled_date: schedule.scheduled_date,
-        };
-      })
-      .filter(Boolean); // Remove any null entries
-
-    // Add any unscheduled workouts with matching dates
-    const unscheduledForDisplay = unscheduledWorkoutsForDate.map((workout) => ({
-      ...workout,
-      // No scheduleId since it's not formally scheduled yet
-      // But we'll create a temporary one for React keys
-      scheduleId: `temp-${workout.id}-${dateString}`,
-      scheduled_date: dateString,
-      isTemporarySchedule: true, // Flag to indicate this isn't in workout_schedule yet
-    }));
-
-    // Combine both lists, but deduplicate by title to prevent showing the same workout multiple times
-    let combinedWorkouts = [...workoutsForDate];
-
-    // Only add unscheduled workouts if there's no scheduled workout with the same title
-    unscheduledForDisplay.forEach((unscheduledWorkout) => {
-      const isDuplicate = combinedWorkouts.some(
-        (existingWorkout) => existingWorkout.title === unscheduledWorkout.title
-      );
-
-      if (!isDuplicate) {
-        combinedWorkouts.push(unscheduledWorkout);
-      }
-    });
+    // Convert the map values to an array
+    const workoutsForDate = Array.from(workoutMap.values());
 
     // Only log if there are workouts for this date
-    if (combinedWorkouts.length > 0) {
-      console.log(`Workouts for date ${dateString}:`, combinedWorkouts);
+    if (workoutsForDate.length > 0) {
+      console.log(
+        `${workoutsForDate.length} unique workouts for date ${dateString}`
+      );
     }
 
-    return combinedWorkouts;
+    return workoutsForDate;
   };
 
   // Copy a workout (create a new schedule entry for the same workout)
   const copyWorkout = (event) => {
     // Make a copy for a new schedule entry, but keep the same workout ID
+    // This will not create a duplicate workout, just a new schedule entry
     const scheduleCopy = {
       ...event,
-      scheduleId: null,
+      scheduleId: null, // Remove scheduleId so it gets treated as a new schedule entry
     };
+
+    console.log('Preparing to schedule copy of workout:', event.title);
     setDraggedWorkout(scheduleCopy);
   };
 

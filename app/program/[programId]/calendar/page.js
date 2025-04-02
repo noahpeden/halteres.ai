@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, use } from 'react';
+import { useState, useEffect, use, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSearchParams } from 'next/navigation';
 import ProgramCalendar from '@/components/ProgramCalendar';
@@ -21,6 +21,8 @@ export default function ProgramCalendarPage(props) {
   const [sidebarWorkouts, setSidebarWorkouts] = useState([]);
   const [isLoadingSidebar, setIsLoadingSidebar] = useState(false);
   const [refreshRequired, setRefreshRequired] = useState(false);
+  // Add a ref to track first calendar load
+  const isFirstCalendarLoad = useRef(true);
 
   useEffect(() => {
     async function fetchProgram() {
@@ -185,11 +187,6 @@ export default function ProgramCalendarPage(props) {
 
     console.log('Set up subscriptions for program_id:', programId);
 
-    // Force refresh after a short delay to ensure initial data load
-    setTimeout(() => {
-      setRefreshRequired((prev) => !prev);
-    }, 500);
-
     return () => {
       console.log('Unsubscribing from channels');
       workoutsSubscription.unsubscribe();
@@ -277,7 +274,19 @@ export default function ProgramCalendarPage(props) {
         </button>
         <button
           className={`tab ${activeTab === 'calendar' ? 'tab-active' : ''}`}
-          onClick={() => setActiveTab('calendar')}
+          onClick={() => {
+            // Only trigger refresh on first calendar load
+            if (isFirstCalendarLoad.current) {
+              console.log(
+                'First calendar activation - triggering one-time refresh'
+              );
+              setRefreshRequired(true);
+              isFirstCalendarLoad.current = false;
+            } else {
+              console.log('Subsequent calendar activation - no refresh needed');
+            }
+            setActiveTab('calendar');
+          }}
         >
           Calendar
         </button>
@@ -308,8 +317,8 @@ export default function ProgramCalendarPage(props) {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        <div className="lg:col-span-4">
+      {activeTab !== 'calendar' && (
+        <div className="grid grid-cols-1 gap-6">
           {activeTab === 'program_writer' && (
             <AIProgramWriter
               programId={programId}
@@ -319,18 +328,13 @@ export default function ProgramCalendarPage(props) {
           {activeTab === 'workout_editor' && (
             <AIWorkoutReferencer programId={programId} />
           )}
-          {activeTab === 'calendar' && (
-            <ProgramCalendar
-              programId={programId}
-              initialDragWorkout={selectedWorkout}
-              selectedDate={selectedDate}
-              key={refreshRequired ? 'refresh' : 'normal'}
-            />
-          )}
         </div>
+      )}
 
-        {activeTab === 'calendar' && (
-          <div className="lg:col-span-1">
+      {activeTab === 'calendar' && (
+        <div className="flex flex-col lg:flex-row gap-6">
+          {/* Sidebar first (above on mobile, left on desktop) */}
+          <div className="w-full lg:w-80">
             <div className="card bg-base-100 shadow-md">
               <div className="card-body p-4">
                 <h2 className="card-title text-lg">Program Workouts</h2>
@@ -363,7 +367,16 @@ export default function ProgramCalendarPage(props) {
                                 workout.body || workout.description;
                             }
 
-                            const workoutJson = JSON.stringify(workout);
+                            // Make sure ID is properly handled
+                            const workoutToTransfer = {
+                              ...workout,
+                              // Ensure the workout maintains its database status
+                              isStoredInDatabase:
+                                !workout.id.startsWith('generated-'),
+                            };
+
+                            const workoutJson =
+                              JSON.stringify(workoutToTransfer);
                             console.log(
                               'Serialized workout data:',
                               workoutJson
@@ -383,7 +396,7 @@ export default function ProgramCalendarPage(props) {
                             }
 
                             // Store the workout in parent component state as fallback
-                            setSelectedWorkout(workout);
+                            setSelectedWorkout(workoutToTransfer);
 
                             // Set better drag image if possible
                             try {
@@ -451,12 +464,36 @@ export default function ProgramCalendarPage(props) {
               </div>
             </div>
 
-            <div className="mt-4">
+            <div className="mt-4 lg:block hidden">
               <ClientMetricsSidebar programId={programId} />
             </div>
           </div>
-        )}
-      </div>
+
+          {/* Calendar (below on mobile, right on desktop) */}
+          <div className="flex-grow">
+            <ProgramCalendar
+              programId={programId}
+              initialDragWorkout={selectedWorkout}
+              selectedDate={selectedDate}
+              key={`${activeTab}-${
+                refreshRequired ? `refresh-${Date.now()}` : 'normal'
+              }`}
+              onRender={() => {
+                // Reset refreshRequired after rendering
+                if (refreshRequired) {
+                  console.log('Calendar rendered with refresh, resetting flag');
+                  setRefreshRequired(false);
+                }
+              }}
+            />
+          </div>
+
+          {/* Metrics sidebar on mobile (below calendar) */}
+          <div className="mt-4 lg:hidden">
+            <ClientMetricsSidebar programId={programId} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
