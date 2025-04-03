@@ -1,6 +1,6 @@
 'use client';
 import equipmentList from '@/utils/equipmentList';
-import { processWorkoutDescription, dayNameToNumber } from './utils';
+import { dayNameToNumber } from './utils';
 
 // Generate program
 export async function generateProgram({
@@ -76,6 +76,7 @@ export async function generateProgram({
       workout_format: formData.workoutFormats,
       duration_weeks: parseInt(formData.numberOfWeeks, 10),
       days_per_week: parseInt(formData.daysPerWeek, 10),
+      entityId: formData.entityId,
       // JSON fields structured to match database schema
       gym_details: gymDetails,
       periodization: periodizationData,
@@ -172,9 +173,8 @@ export async function generateProgram({
                   const normalizedWorkouts = data.suggestions.map(
                     (workout) => ({
                       title: workout.title,
-                      description: processWorkoutDescription(
-                        workout.body || workout.description
-                      ),
+                      body: workout.body || workout.description,
+                      description: workout.body || workout.description,
                       suggestedDate: workout.date || workout.suggestedDate,
                     })
                   );
@@ -224,9 +224,8 @@ export async function generateProgram({
         // Normalize workout format
         const normalizedWorkouts = data.suggestions.map((workout) => ({
           title: workout.title,
-          description: processWorkoutDescription(
-            workout.body || workout.description
-          ),
+          body: workout.body || workout.description,
+          description: workout.body || workout.description,
           suggestedDate: workout.date || workout.suggestedDate,
         }));
 
@@ -378,7 +377,7 @@ export async function saveProgram({
       const workoutsToInsert = suggestions.map((workout) => ({
         program_id: programId,
         title: workout.title,
-        body: workout.description,
+        body: workout.body || workout.description,
         tags: {
           ...workout.tags,
           week: workout.tags?.week,
@@ -504,7 +503,7 @@ export async function handleAutoAssignDates({
         workoutsToCreate.push({
           program_id: programId,
           title: workout.title,
-          body: workout.description,
+          body: workout.body || workout.description,
           tags: {
             ...(workout.tags || {}),
             type: workout.type || 'generated',
@@ -588,7 +587,7 @@ export async function handleDatePickerSave({
       .insert({
         program_id: programId,
         title: selectedWorkoutForDate.title,
-        body: selectedWorkoutForDate.description,
+        body: selectedWorkoutForDate.body || selectedWorkoutForDate.description,
         tags: {
           ...(selectedWorkoutForDate.tags || {}),
           suggestedDate: selectedDate,

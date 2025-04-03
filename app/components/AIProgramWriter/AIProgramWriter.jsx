@@ -45,6 +45,7 @@ import WorkoutList from './WorkoutList';
 import WorkoutModal from './WorkoutModal';
 import DatePickerModal from './DatePickerModal';
 import LoadingState from './LoadingState';
+import ClientMetricsTab from '../ClientMetricsTab';
 
 export default function AIProgramWriter({ programId, onSelectWorkout }) {
   const { supabase } = useAuth();
@@ -55,6 +56,7 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
   const [loadingDuration, setLoadingDuration] = useState(0);
   const [loadingTimer, setLoadingTimer] = useState(null);
   const [serverStatus, setServerStatus] = useState(null);
+  const [activeTab, setActiveTab] = useState('program');
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -439,42 +441,63 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
         />
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Program Form */}
-        <ProgramForm
-          formData={formData}
-          handleChange={handleChange}
-          handleWorkoutFormatChange={handleWorkoutFormatChangeWrapper}
-          handleDayOfWeekChange={handleDayOfWeekChangeWrapper}
-          isLoading={isLoading}
-          generateProgram={handleGenerateProgram}
-          generationStage={generationStage}
-          loadingDuration={loadingDuration}
-          equipmentSelector={
-            <EquipmentSelector
-              equipment={formData.equipment}
-              onEquipmentChange={handleEquipmentChangeWrapper}
-              equipmentList={equipmentList}
-              allEquipmentSelected={allEquipmentSelected}
-              isVisible={showEquipment}
-              onToggleVisibility={() => setShowEquipment(!showEquipment)}
-            />
-          }
-        />
+      <div className="mb-6">
+        <div className="tabs tabs-boxed">
+          <button
+            className={`tab ${activeTab === 'program' ? 'tab-active' : ''}`}
+            onClick={() => setActiveTab('program')}
+          >
+            Program
+          </button>
+          <button
+            className={`tab ${activeTab === 'metrics' ? 'tab-active' : ''}`}
+            onClick={() => setActiveTab('metrics')}
+          >
+            Client Metrics
+          </button>
+        </div>
       </div>
 
-      {/* Equipment Selector - Moved to Program Form */}
+      {activeTab === 'program' && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Program Form */}
+          <ProgramForm
+            formData={formData}
+            handleChange={handleChange}
+            handleWorkoutFormatChange={handleWorkoutFormatChangeWrapper}
+            handleDayOfWeekChange={handleDayOfWeekChangeWrapper}
+            isLoading={isLoading}
+            generateProgram={handleGenerateProgram}
+            generationStage={generationStage}
+            loadingDuration={loadingDuration}
+            equipmentSelector={
+              <EquipmentSelector
+                equipment={formData.equipment}
+                onEquipmentChange={handleEquipmentChangeWrapper}
+                equipmentList={equipmentList}
+                allEquipmentSelected={allEquipmentSelected}
+                isVisible={showEquipment}
+                onToggleVisibility={() => setShowEquipment(!showEquipment)}
+              />
+            }
+          />
+        </div>
+      )}
+
+      {activeTab === 'metrics' && <ClientMetricsTab programId={programId} />}
 
       {/* Reference Workouts */}
-      <ReferenceWorkouts
-        workouts={referenceWorkouts}
-        supabase={supabase}
-        onRemove={handleRemoveReferenceWorkout}
-        showToastMessage={showToastMessage}
-      />
+      {activeTab === 'program' && (
+        <ReferenceWorkouts
+          workouts={referenceWorkouts}
+          supabase={supabase}
+          onRemove={handleRemoveReferenceWorkout}
+          showToastMessage={showToastMessage}
+        />
+      )}
 
       {/* Workout List */}
-      {suggestions.length > 0 && (
+      {suggestions.length > 0 && activeTab === 'program' && (
         <div className="flex justify-between items-center mt-6">
           <div className="flex-1">
             {/* Title removed as it's already in WorkoutList component */}
@@ -514,16 +537,18 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
         </div>
       )}
 
-      <WorkoutList
-        workouts={suggestions}
-        daysPerWeek={formData.daysPerWeek}
-        formatDate={formatDate}
-        onViewDetails={handleViewWorkoutDetailsWrapper}
-        onDatePick={handleDatePickerOpenWrapper}
-        onSelectWorkout={handleSelectWorkout}
-        onDeleteWorkout={handleDeleteWorkout}
-        isLoading={isLoading}
-      />
+      {activeTab === 'program' && (
+        <WorkoutList
+          workouts={suggestions}
+          daysPerWeek={formData.daysPerWeek}
+          formatDate={formatDate}
+          onViewDetails={handleViewWorkoutDetailsWrapper}
+          onDatePick={handleDatePickerOpenWrapper}
+          onSelectWorkout={handleSelectWorkout}
+          onDeleteWorkout={handleDeleteWorkout}
+          isLoading={isLoading}
+        />
+      )}
 
       {/* Modals */}
       <WorkoutModal

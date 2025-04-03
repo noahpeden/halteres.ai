@@ -12,54 +12,18 @@ export default function WorkoutModal({
   const renderWorkoutContent = (description) => {
     if (!description) return <p>No description available</p>;
 
+    // Simply split by newlines and render each line with appropriate spacing
     return description.split('\n').map((line, i) => {
-      // Handle main section headers (## Section)
-      if (line.startsWith('## ')) {
-        return (
-          <h3
-            key={i}
-            className="text-lg font-bold mt-6 mb-2 text-primary border-b pb-1"
-          >
-            {line.replace('## ', '')}
-          </h3>
-        );
-      }
-      // Handle subsection headers (### Subsection)
-      else if (line.startsWith('### ')) {
-        return (
-          <h4 key={i} className="text-md font-semibold mt-4 mb-2 text-accent">
-            {line.replace('### ', '')}
-          </h4>
-        );
-      }
       // Handle empty lines
-      else if (line.trim() === '') {
+      if (line.trim() === '') {
         return <br key={i} />;
       }
-      // Handle bullet points
-      else if (line.trim().startsWith('-')) {
-        return (
-          <p key={i} className="ml-4 mb-1">
-            • {line.trim().substring(1).trim()}
-          </p>
-        );
-      }
-      // Handle EMOM minutes
-      else if (line.toLowerCase().includes('minute') && line.includes(':')) {
-        return (
-          <p key={i} className="font-medium mb-2">
-            {line}
-          </p>
-        );
-      }
-      // Handle regular text
-      else {
-        return (
-          <p key={i} className="mb-2">
-            {line}
-          </p>
-        );
-      }
+      // Handle all other lines as paragraphs with proper spacing
+      return (
+        <p key={i} className="mb-2">
+          {line}
+        </p>
+      );
     });
   };
 

@@ -114,6 +114,75 @@ export async function POST(request) {
     }
     logWithTimestamp('Authentication successful', { userId: session.user.id });
 
+    // Fetch client metrics if program ID exists
+    let clientMetricsContent = '';
+    if (programId) {
+      try {
+        logWithTimestamp('Fetching client metrics', { programId });
+
+        // Get entity_id from the program
+        const { data: programData, error: programError } = await supabase
+          .from('programs')
+          .select('entity_id')
+          .eq('id', programId)
+          .single();
+
+        if (programError) {
+          logWithTimestamp('Error fetching program entity_id', {
+            error: programError,
+          });
+        } else if (programData && programData.entity_id) {
+          // Fetch metrics from entities table
+          const { data: entityData, error: entityError } = await supabase
+            .from('entities')
+            .select('*')
+            .eq('id', programData.entity_id)
+            .single();
+
+          if (entityError) {
+            logWithTimestamp('Error fetching client metrics', {
+              error: entityError,
+            });
+          } else if (entityData) {
+            logWithTimestamp('Found client metrics', { entityData });
+
+            // Format client metrics for the prompt
+            clientMetricsContent = `
+Client Metrics:
+${entityData.gender ? `Gender: ${entityData.gender}` : ''}
+${entityData.height_cm ? `Height: ${entityData.height_cm} cm` : ''}
+${entityData.weight_kg ? `Weight: ${entityData.weight_kg} kg` : ''}
+${entityData.bench_1rm ? `Bench Press 1RM: ${entityData.bench_1rm} kg` : ''}
+${entityData.squat_1rm ? `Squat 1RM: ${entityData.squat_1rm} kg` : ''}
+${entityData.deadlift_1rm ? `Deadlift 1RM: ${entityData.deadlift_1rm} kg` : ''}
+${entityData.mile_time ? `Mile Time: ${entityData.mile_time}` : ''}
+${
+  entityData.recovery_score
+    ? `Recovery Score: ${entityData.recovery_score}/10`
+    : ''
+}
+${
+  entityData.injury_history
+    ? `Injury History: ${
+        typeof entityData.injury_history === 'object'
+          ? JSON.stringify(entityData.injury_history)
+          : entityData.injury_history
+      }`
+    : ''
+}
+
+When calculating RX weights, scale them appropriately based on the client's strength metrics (bench, squat, deadlift) if available.
+For other movements, estimate appropriate weights based on the client's metrics, gender, and strength levels.
+If client metrics indicate specific limitations, provide appropriate scaling options.`;
+          }
+        }
+      } catch (err) {
+        logWithTimestamp('Error processing client metrics', {
+          error: err.message,
+        });
+      }
+    }
+
     // Fetch reference workouts if program ID exists
     let referenceWorkoutsContent = '';
     if (programId) {
@@ -174,7 +243,7 @@ Draw inspiration from these reference workouts when designing this program. Use 
       .map((dayNum) => dayNames[dayNum])
       .join(', ');
 
-    // Build the prompt with reference workouts included
+    // Build the prompt with reference workouts and client metrics included
     const prompt = `Generate a ${numberOfWeeks}-week training program with the following parameters:
 
 Goal: ${goal}
@@ -196,6 +265,7 @@ ${
 ${gymType ? `Gym Type: ${gymType}` : ''}
 ${additionalNotes ? `Additional Notes: ${additionalNotes}` : ''}
 ${personalization ? `Personalization: ${personalization}` : ''}
+${clientMetricsContent ? `${clientMetricsContent}` : ''}
 ${referenceWorkoutsContent ? `${referenceWorkoutsContent}` : ''}
 
 Format each workout with:

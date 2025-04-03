@@ -1,6 +1,6 @@
 'use client';
 import equipmentList from '@/utils/equipmentList';
-import { dayNumberToName } from './utils';
+import { dayNameToNumber, dayNumberToName } from './utils';
 import { gymEquipmentPresets } from '../utils';
 import { processWorkoutDescription } from './utils';
 
@@ -11,7 +11,7 @@ export const processWorkoutForDisplay = (workout) => {
     savedWorkoutId: workout.id,
     title: workout.title,
     body: workout.body || workout.description,
-    description: processWorkoutDescription(workout.body || workout.description),
+    description: workout.body || workout.description,
     tags: workout.tags || {},
     suggestedDate: workout.tags?.scheduled_date || workout.tags?.suggestedDate,
     workoutDetails: workout.tags?.workoutDetails,
@@ -19,84 +19,138 @@ export const processWorkoutForDisplay = (workout) => {
 };
 
 // Update form data from program
-export const updateFormDataFromProgram = (program, prevFormData) => {
-  // Map saved equipment names back to IDs
-  let loadedEquipmentIds = prevFormData.equipment;
-  const savedEquipmentNames = program.gym_details?.equipment || [];
+export function updateFormDataFromProgram(program, formData) {
+  // Create a copy of the current form data
+  const updatedData = { ...formData };
 
-  if (Array.isArray(savedEquipmentNames)) {
-    loadedEquipmentIds = savedEquipmentNames
-      .map((name) => {
-        const equipmentItem = equipmentList.find((item) => item.label === name);
-        return equipmentItem ? equipmentItem.value : null;
-      })
-      .filter((id) => id !== null);
+  // Update basic fields
+  updatedData.name = program.name || updatedData.name;
+  updatedData.description = program.description || updatedData.description;
+  updatedData.entityId = program.entity_id || updatedData.entityId;
+
+  // Update goal if available
+  if (program.goal) {
+    updatedData.goal = program.goal;
   }
 
-  // Get gym type
-  const loadedGymType =
-    program.gym_details?.gym_type || program.gym_type || prevFormData.gymType;
+  // Update difficulty if available
+  if (program.difficulty) {
+    updatedData.difficulty = program.difficulty;
+  }
 
-  // Get program type
-  const loadedProgramType =
-    program.periodization?.program_type || prevFormData.programType;
+  // Update focus area if available
+  if (program.focus_area) {
+    updatedData.focusArea = program.focus_area;
+  }
 
-  // Get and convert days of week
-  let loadedDaysOfWeek =
-    program.calendar_data?.days_of_week || prevFormData.daysOfWeek;
-  const convertedDaysOfWeek = Array.isArray(loadedDaysOfWeek)
-    ? loadedDaysOfWeek.map((day) =>
-        typeof day === 'number' ? dayNumberToName[day] : day
-      )
-    : prevFormData.daysOfWeek;
+  // Update program type if available
+  if (program.program_type) {
+    updatedData.programType = program.program_type;
+  }
 
-  const validDaysOfWeek =
-    convertedDaysOfWeek?.length > 0 ? convertedDaysOfWeek : ['Monday'];
+  // Update number of weeks if available
+  if (program.duration_weeks) {
+    updatedData.numberOfWeeks = program.duration_weeks.toString();
+  }
 
-  // Get end date
-  const loadedEndDate =
-    program.calendar_data?.end_date || program.end_date || prevFormData.endDate;
+  // Update days per week if available
+  if (program.days_per_week) {
+    updatedData.daysPerWeek = program.days_per_week.toString();
+  }
 
-  return {
-    ...prevFormData,
-    name: program.name || prevFormData.name,
-    description: program.description || prevFormData.description,
-    entityId: program.entity_id || prevFormData.entityId,
-    goal: program.goal || prevFormData.goal,
-    difficulty: program.difficulty || prevFormData.difficulty,
-    equipment: loadedEquipmentIds,
-    focusArea:
-      program.focus_area || program.focusArea || prevFormData.focusArea,
-    workoutFormats:
-      program.workout_format ||
-      program.workout_formats ||
-      program.workoutFormats ||
-      prevFormData.workoutFormats,
-    numberOfWeeks: (
-      program.duration_weeks ||
-      program.numberOfWeeks ||
-      prevFormData.numberOfWeeks
-    ).toString(),
-    daysPerWeek: (
-      program.days_per_week ||
-      program.daysPerWeek ||
-      program.calendar_data?.days_of_week?.length ||
-      prevFormData.daysPerWeek
-    ).toString(),
-    daysOfWeek: validDaysOfWeek,
-    programType: loadedProgramType,
-    gymType: loadedGymType,
-    startDate:
-      program.start_date ||
-      program.calendar_data?.start_date ||
-      prevFormData.startDate,
-    endDate: loadedEndDate,
-    sessionDetails: program.session_details || prevFormData.sessionDetails,
-    programOverview: program.program_overview || prevFormData.programOverview,
-    gymDetails: program.gym_details || prevFormData.gymDetails,
-    periodization: program.periodization || prevFormData.periodization,
-  };
-};
+  // Update days of week if available - handle both day names and day numbers
+  if (program.days_of_week && Array.isArray(program.days_of_week)) {
+    // Convert day numbers to day names if needed
+    updatedData.daysOfWeek = program.days_of_week.map((day) => {
+      if (typeof day === 'number') {
+        return dayNumberToName[day] || 'Monday';
+      }
+      return day;
+    });
+  } else if (
+    program.calendar_data?.days_of_week &&
+    Array.isArray(program.calendar_data.days_of_week)
+  ) {
+    // Convert day numbers from calendar_data to day names
+    updatedData.daysOfWeek = program.calendar_data.days_of_week.map((day) => {
+      if (typeof day === 'number') {
+        return dayNumberToName[day] || 'Monday';
+      }
+      return day;
+    });
+  }
+
+  // Update workout formats if available
+  if (program.workout_formats && Array.isArray(program.workout_formats)) {
+    updatedData.workoutFormats = program.workout_formats;
+  } else if (program.workout_format && Array.isArray(program.workout_format)) {
+    updatedData.workoutFormats = program.workout_format;
+  }
+
+  // Update start date if available
+  if (program.start_date) {
+    updatedData.startDate = program.start_date;
+  } else if (program.calendar_data?.start_date) {
+    updatedData.startDate = program.calendar_data.start_date;
+  }
+
+  // Update end date if available
+  if (program.end_date) {
+    updatedData.endDate = program.end_date;
+  } else if (program.calendar_data?.end_date) {
+    updatedData.endDate = program.calendar_data.end_date;
+  }
+
+  // Update gym type if available
+  if (program.gym_type) {
+    updatedData.gymType = program.gym_type;
+  }
+
+  // Update equipment if available
+  if (program.equipment && Array.isArray(program.equipment)) {
+    updatedData.equipment = program.equipment;
+  }
+
+  // Update gym details if available
+  if (program.gym_details && typeof program.gym_details === 'object') {
+    updatedData.gymDetails = program.gym_details;
+
+    // Also update gymType if available in gym_details
+    if (program.gym_details.gym_type) {
+      updatedData.gymType = program.gym_details.gym_type;
+    }
+
+    // Also update equipment if available in gym_details
+    if (
+      program.gym_details.equipment &&
+      Array.isArray(program.gym_details.equipment)
+    ) {
+      // Convert equipment names to IDs
+      const equipmentIds = program.gym_details.equipment
+        .map((name) => {
+          const equipment = equipmentList.find((item) => item.label === name);
+          return equipment ? equipment.value : null;
+        })
+        .filter(Boolean);
+
+      if (equipmentIds.length > 0) {
+        updatedData.equipment = equipmentIds;
+      }
+    }
+  }
+
+  // Update periodization if available
+  if (program.periodization && typeof program.periodization === 'object') {
+    updatedData.periodization = program.periodization;
+
+    // Also update programType if available in periodization
+    if (program.periodization.program_type) {
+      updatedData.programType = program.periodization.program_type;
+    }
+  }
+
+  return updatedData;
+}
 
 // Handle form change
 export const handleFormChange = (e, setFormData) => {
