@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import TodayWorkouts from '@/components/TodayWorkouts';
 
 export default function Dashboard() {
   const router = useRouter();
@@ -21,14 +22,24 @@ export default function Dashboard() {
   const [daysOfWeek, setDaysOfWeek] = useState([1, 3, 5]); // Default to Mon, Wed, Fri (where 0=Sun, 1=Mon, etc.)
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
+  const [authReady, setAuthReady] = useState(false);
   const [stats, setStats] = useState({
     totalPrograms: 0,
     activeWorkouts: 0,
     upcomingWorkouts: 0,
   });
 
+  // Check if auth is ready
+  useEffect(() => {
+    if (user !== null) {
+      setAuthReady(true);
+    }
+  }, [user]);
+
   useEffect(() => {
     async function fetchData() {
+      if (!user) return;
+
       setIsLoading(true);
       try {
         // Fetch entities first
@@ -56,20 +67,45 @@ export default function Dashboard() {
 
         // Calculate stats
         const today = new Date().toISOString().split('T')[0];
-        const { count: activeCount } = await supabase
-          .from('workout_schedule')
-          .select('*', { count: 'exact', head: true })
+
+        // Get count of workouts scheduled for today directly from program_workouts
+        const { data: todaysWorkouts, error: activeError } = await supabase
+          .from('program_workouts')
+          .select('*')
           .eq('scheduled_date', today);
 
-        const { count: upcomingCount } = await supabase
-          .from('workout_schedule')
-          .select('*', { count: 'exact', head: true })
+        if (activeError) {
+          console.error('Error fetching active workouts count:', activeError);
+        } else {
+          console.log(
+            `Found ${
+              todaysWorkouts?.length || 0
+            } workouts scheduled for today (${today}):`,
+            todaysWorkouts
+          );
+        }
+
+        // Get count of upcoming workouts
+        const { data: upcomingWorkouts, error: upcomingError } = await supabase
+          .from('program_workouts')
+          .select('*')
           .gt('scheduled_date', today);
+
+        if (upcomingError) {
+          console.error(
+            'Error fetching upcoming workouts count:',
+            upcomingError
+          );
+        } else {
+          console.log(
+            `Found ${upcomingWorkouts?.length || 0} upcoming workouts`
+          );
+        }
 
         setStats({
           totalPrograms: programsData?.length || 0,
-          activeWorkouts: activeCount || 0,
-          upcomingWorkouts: upcomingCount || 0,
+          activeWorkouts: todaysWorkouts?.length || 0,
+          upcomingWorkouts: upcomingWorkouts?.length || 0,
         });
       } catch (error) {
         console.error('Error fetching data:', error);
@@ -78,8 +114,10 @@ export default function Dashboard() {
       }
     }
 
-    fetchData();
-  }, [user, supabase]);
+    if (authReady) {
+      fetchData();
+    }
+  }, [user, supabase, authReady]);
 
   // Calculate end date based on start date and duration
   const calculateEndDate = () => {
@@ -194,6 +232,26 @@ export default function Dashboard() {
     setErrorMessage('');
   };
 
+  // If auth is not yet loaded, show a loading indicator
+  if (!authReady) {
+    return (
+      <div className="container mx-auto p-4 flex justify-center items-center min-h-[80vh]">
+        <span className="loading loading-spinner loading-lg"></span>
+        <p className="ml-4 text-lg">Loading authentication...</p>
+      </div>
+    );
+  }
+
+  // If auth is loaded but user is null, redirect to login
+  if (authReady && !user) {
+    router.push('/login');
+    return (
+      <div className="container mx-auto p-4 flex justify-center items-center min-h-[80vh]">
+        <p className="text-lg">Please log in to access the dashboard.</p>
+      </div>
+    );
+  }
+
   if (isLoading) {
     return (
       <div className="container mx-auto p-4 flex justify-center items-center min-h-[60vh]">
@@ -275,6 +333,14 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Today's Workouts Section */}
+      <div className="mb-8">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-semibold">Today's Workouts</h2>
+        </div>
+        <TodayWorkouts />
       </div>
 
       <div className="mb-8">
