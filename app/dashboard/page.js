@@ -371,7 +371,7 @@ export default function Dashboard() {
                       href={`/program/${program.id}/calendar`}
                       className="btn btn-primary btn-sm"
                     >
-                      Open Calendar
+                      Open Program
                     </Link>
                     <Link
                       href={`/program/${program.id}/workouts`}

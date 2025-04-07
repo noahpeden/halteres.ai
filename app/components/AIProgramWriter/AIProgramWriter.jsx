@@ -95,6 +95,9 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
   const [selectedDate, setSelectedDate] = useState(null);
   // Add a ref to track automatic updates
   const isAutoUpdating = useRef(false);
+  // State to store initial name and description
+  const [initialName, setInitialName] = useState('');
+  const [initialDescription, setInitialDescription] = useState('');
 
   // Toast helper function
   const showToastMessage = (message, type = 'success') => {
@@ -126,8 +129,15 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
   const handleSaveProgram = () => {
     saveProgram({
       programId,
-      formData,
-      suggestions,
+      // Pass specific name/description to prevent overwrites
+      programData: {
+        ...formData,
+        name: initialName || formData.name, // Use initial if available, else current form data (for new programs)
+        description: initialDescription || formData.description, // Use initial if available, else current form data
+        // Ensure suggestions are mapped correctly if needed by saveProgram
+        // Currently passing suggestions separately, which is fine
+      },
+      suggestions, // Pass suggestions separately for workout updates
       supabase,
       setIsLoading,
       showToastMessage,
@@ -232,6 +242,9 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
         if (program) {
           const updatedFormData = updateFormDataFromProgram(program, formData);
           setFormData(updatedFormData);
+          // Store initial values to prevent overwriting on save
+          setInitialName(program.name || '');
+          setInitialDescription(program.description || '');
         }
 
         // Fetch workouts

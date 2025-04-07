@@ -155,14 +155,14 @@ export async function generateProgram({
                 // Process the final result
                 if (data.suggestions && data.suggestions.length > 0) {
                   // Update state with program information
-                  if (data.title) {
+                  if (!programId && data.title) {
                     setFormData((prev) => ({
                       ...prev,
                       name: data.title || prev.name,
                     }));
                   }
 
-                  if (data.description) {
+                  if (!programId && data.description) {
                     setFormData((prev) => ({
                       ...prev,
                       description: data.description || prev.description,
@@ -207,14 +207,14 @@ export async function generateProgram({
 
       if (data.suggestions && data.suggestions.length > 0) {
         // Update state with program information
-        if (data.title) {
+        if (!programId && data.title) {
           setFormData((prev) => ({
             ...prev,
             name: data.title || prev.name,
           }));
         }
 
-        if (data.description) {
+        if (!programId && data.description) {
           setFormData((prev) => ({
             ...prev,
             description: data.description || prev.description,
@@ -283,126 +283,121 @@ export async function generateProgram({
 // Save program
 export async function saveProgram({
   programId,
-  formData,
+  programData,
   suggestions,
   supabase,
   setIsLoading,
   showToastMessage,
 }) {
   if (!programId) {
-    showToastMessage('No program ID to save');
+    showToastMessage(
+      'Cannot save program without a program ID. Generate or load a program first.',
+      'error'
+    );
     return;
   }
 
   setIsLoading(true);
+  showToastMessage('Saving program...');
 
   try {
-    // Get equipment names for saving
-    const equipmentNamesToSave = formData.equipment
-      .map((id) => {
-        const equipment = equipmentList.find((item) => item.value === id);
-        return equipment ? equipment.label : null;
-      })
-      .filter(Boolean);
-
-    // Convert day names to day numbers
-    const daysOfWeekNumbers = formData.daysOfWeek.map(
+    // Convert day names to day numbers for API consistency
+    const daysOfWeekNumbers = programData.daysOfWeek.map(
       (day) => dayNameToNumber[day]
     );
 
-    // Prepare gym_details
-    const updatedGymDetails = {
-      ...formData.gymDetails,
-      equipment: equipmentNamesToSave,
-      gym_type: formData.gymType,
+    // Prepare gym_details with equipment and gym type
+    const gymDetails = {
+      ...programData.gymDetails,
+      equipment: programData.equipment
+        .map((id) => {
+          const equipment = equipmentList.find((item) => item.value === id);
+          return equipment ? equipment.label : '';
+        })
+        .filter(Boolean),
+      gym_type: programData.gymType,
     };
 
-    // Prepare periodization
-    const updatedPeriodization = {
-      ...formData.periodization,
-      program_type: formData.programType,
+    // Prepare periodization with program type
+    const periodizationData = {
+      ...programData.periodization,
+      program_type: programData.programType,
     };
 
-    const updatePayload = {
-      name: formData.name,
-      description: formData.description,
-      entity_id: formData.entityId,
-      goal: formData.goal,
-      difficulty: formData.difficulty,
-      focus_area: formData.focusArea || null,
-      duration_weeks: parseInt(formData.numberOfWeeks, 10),
-      gym_details: updatedGymDetails,
-      periodization: updatedPeriodization,
-      workout_format: formData.workoutFormats,
-      session_details: formData.sessionDetails,
-      program_overview: formData.programOverview,
-      calendar_data: {
-        start_date: formData.startDate,
-        end_date: formData.endDate,
-        days_per_week: parseInt(formData.daysPerWeek, 10),
-        days_of_week: daysOfWeekNumbers,
-      },
-      ...(suggestions && suggestions.length > 0
-        ? { generated_program: suggestions }
-        : {}),
-      updated_at: new Date().toISOString(),
-    };
-
-    // Update the program details
-    const { error: updateError } = await supabase
+    // 1. Update the program details in the `programs` table
+    const { data: updatedProgram, error: programError } = await supabase
       .from('programs')
-      .update(updatePayload)
-      .eq('id', programId);
+      .update({
+        name: programData.name,
+        description: programData.description,
+        goal: programData.goal,
+        difficulty: programData.difficulty,
+        focus_area: programData.focusArea,
+        workout_format: programData.workoutFormats,
+        duration_weeks: parseInt(programData.numberOfWeeks, 10),
+        entity_id: programData.entityId,
+        gym_details: gymDetails,
+        periodization: periodizationData,
+        calendar_data: {
+          start_date: programData.startDate,
+          end_date: programData.endDate,
+          days_per_week: parseInt(programData.daysPerWeek, 10),
+          days_of_week: daysOfWeekNumbers,
+        },
+        session_details: programData.sessionDetails,
+        program_overview: programData.programOverview,
+        generated_program: suggestions.map((workout) => ({
+          title: workout.title,
+          body: workout.body || workout.description,
+          description: workout.body || workout.description,
+          tags: workout.tags || [],
+          suggestedDate: workout.suggestedDate,
+        })),
+      })
+      .eq('id', programId)
+      .select()
+      .single();
 
-    if (updateError) {
-      console.error('Supabase update error:', updateError);
-      throw updateError;
-    }
+    if (programError) throw programError;
 
-    // Save workouts to program_workouts
+    // 2. Update or insert individual workouts in `program_workouts` table
     if (suggestions && suggestions.length > 0) {
-      // Delete existing non-reference workouts
-      const { error: deleteError } = await supabase
-        .from('program_workouts')
-        .delete()
-        .eq('program_id', programId)
-        .eq('is_reference', false);
-
-      if (deleteError) {
-        console.error('Error deleting existing workouts:', deleteError);
-        throw deleteError;
-      }
-
-      // Insert all workouts
-      const workoutsToInsert = suggestions.map((workout) => ({
+      const workoutUpserts = suggestions.map((workout) => ({
         program_id: programId,
+        ...(workout.id && { id: workout.id }),
         title: workout.title,
         body: workout.body || workout.description,
         tags: {
-          ...workout.tags,
-          week: workout.tags?.week,
-          day: workout.tags?.day,
-          suggestedDate: workout.suggestedDate,
-          scheduled_date: workout.suggestedDate,
+          ...(workout.tags || {}),
+          suggestedDate: workout.suggestedDate || null,
         },
+        created_at: workout.created_at || new Date().toISOString(),
+        updated_at: new Date().toISOString(),
         is_reference: false,
       }));
 
-      const { error: insertError } = await supabase
+      const { error: workoutError } = await supabase
         .from('program_workouts')
-        .insert(workoutsToInsert);
+        .upsert(workoutUpserts, {
+          onConflict: 'id',
+        });
 
-      if (insertError) {
-        console.error('Error inserting workouts:', insertError);
-        throw insertError;
+      if (workoutError) {
+        console.error('Error saving individual workouts:', workoutError);
+        showToastMessage(
+          `Program details saved, but failed to save some workouts: ${workoutError.message}`,
+          'warning'
+        );
+      } else {
+        showToastMessage('Program saved successfully!');
       }
+    } else {
+      showToastMessage('Program details saved successfully!');
     }
-
-    showToastMessage('Program saved successfully!');
   } catch (error) {
     console.error('Error saving program:', error);
     showToastMessage(
-      'Failed to save program: ' + (error.message || 'Unknown error'),
+      `Failed to save program: ${error.message || 'Unknown error'}`,
       'error'
     );
   } finally {
