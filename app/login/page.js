@@ -11,7 +11,7 @@ export default function App() {
   useEffect(() => {
     if (session) {
       router.refresh();
-      router.push('/dashboard');
+      router.push(process.env.NEXT_PUBLIC_APP_URL + '/dashboard');
     }
   }, [session, router]);
 
@@ -21,7 +21,7 @@ export default function App() {
         supabaseClient={supabase}
         appearance={{ theme: ThemeSupa }}
         providers={['google']}
-        redirectTo="/dashboard"
+        redirectTo={process.env.NEXT_PUBLIC_APP_URL + '/dashboard'}
       />
     );
   }

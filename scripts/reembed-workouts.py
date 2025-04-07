@@ -12,11 +12,11 @@ load_dotenv(dotenv_path)
 # Supabase setup
 url: str = os.getenv("NEXT_PUBLIC_SUPABASE_URL")
 # Try to use service role key, fallback to anon key if not available
-key: str = os.getenv("SUPABASE_SERVICE_ROLE_KEY") or os.getenv("NEXT_PUBLIC_SUPABASE_ANON_KEY")
+key: str = os.getenv("SUPABASE_SERVICE_ROLE_KEY") or os.getenv("SUPABASE_ANON_KEY")
 
 if not url or not key:
     print("ERROR: Missing Supabase URL or key. Please check your .env.local file.")
-    print("Required variables: NEXT_PUBLIC_SUPABASE_URL and either SUPABASE_SERVICE_ROLE_KEY or NEXT_PUBLIC_SUPABASE_ANON_KEY")
+    print("Required variables: NEXT_PUBLIC_SUPABASE_URL and either SUPABASE_SERVICE_ROLE_KEY or SUPABASE_ANON_KEY")
     exit(1)
 
 print(f"Using Supabase URL: {url}")
@@ -25,7 +25,7 @@ print(f"Using key starting with: {key[:10]}...")
 supabase: Client = create_client(url, key)
 
 # OpenAI setup
-openai_client = OpenAI(api_key=os.getenv("NEXT_PUBLIC_OPENAI_API_KEY"))
+openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 # Create logs directory if it doesn't exist
 logs_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../logs")

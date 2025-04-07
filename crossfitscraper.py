@@ -10,10 +10,10 @@ load_dotenv()
 
 # Supabase setup
 url: str = os.getenv("NEXT_PUBLIC_SUPABASE_URL")
-key: str = os.getenv("NEXT_PUBLIC_SUPABASE_ANON_KEY")
+key: str = os.getenv("SUPABASE_ANON_KEY")
 supabase: Client = create_client(url, key)
 
-client = OpenAI(api_key=os.getenv("NEXT_PUBLIC_OPENAI_API_KEY"))
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 def get_embeddings(text):
     response = client.embeddings.create(
