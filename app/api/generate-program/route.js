@@ -183,6 +183,30 @@ If client metrics indicate specific limitations, provide appropriate scaling opt
       }
     }
 
+    // Check if injury history exists and is meaningful
+    let hasInjuryHistory = false;
+    if (
+      programId &&
+      typeof entityData !== 'undefined' &&
+      entityData &&
+      entityData.injury_history
+    ) {
+      if (
+        typeof entityData.injury_history === 'string' &&
+        entityData.injury_history.trim() !== ''
+      ) {
+        hasInjuryHistory = true;
+      } else if (
+        typeof entityData.injury_history === 'object' &&
+        Object.keys(entityData.injury_history).length > 0 &&
+        JSON.stringify(entityData.injury_history) !== '{}'
+      ) {
+        // Added check for empty object string representation
+        hasInjuryHistory = true;
+      }
+    }
+    logWithTimestamp('Injury history check', { hasInjuryHistory });
+
     // Fetch reference workouts if program ID exists
     let referenceWorkoutsContent = '';
     if (programId) {
@@ -243,6 +267,44 @@ Draw inspiration from these reference workouts when designing this program. Use 
       .map((dayNum) => dayNames[dayNum])
       .join(', ');
 
+    // Conditionally build scaling options sections
+    const includeScaling = ['Beginner', 'Intermediate'].includes(difficulty);
+    let scalingInstructions = '';
+    let scalingBodyStructure = '';
+    let coachingCueNumber = 7; // Default if scaling is included
+    let cooldownNumber = 8; // Default if scaling is included
+
+    if (includeScaling) {
+      scalingInstructions = `
+6. Scaling Options:
+   - Intermediate level scaling with specific weights and movement modifications
+   - Beginner level scaling with specific weights and movement modifications
+   ${
+     hasInjuryHistory
+       ? '- Injury considerations with alternative movements'
+       : ''
+   }`;
+
+      scalingBodyStructure = `
+## Scaling Options
+### Intermediate Option
+[Detailed intermediate scaling with specific weights and modifications]
+
+### Beginner Option
+[Detailed beginner scaling with specific weights and modifications]
+${
+  hasInjuryHistory
+    ? `
+### Injury Considerations
+[Modifications for common limitations]`
+    : ''
+}`;
+    } else {
+      // Adjust numbering if scaling is omitted
+      coachingCueNumber = 6;
+      cooldownNumber = 7;
+    }
+
     // Build the prompt with reference workouts and client metrics included
     const prompt = `Generate a ${numberOfWeeks}-week training program with the following parameters:
 
@@ -268,13 +330,34 @@ ${personalization ? `Personalization: ${personalization}` : ''}
 ${clientMetricsContent ? `${clientMetricsContent}` : ''}
 ${referenceWorkoutsContent ? `${referenceWorkoutsContent}` : ''}
 
-Format each workout with:
+For the program description, include:
+1. A concise overview of the program's goals and intended adaptations
+2. The periodization approach used and why it's appropriate
+3. Expected outcomes from following the program
+4. Recommendations for nutrition, recovery, and supplementary training
+
+Format each workout with the following sections:
 1. A clear, descriptive title that includes the day/week and focus (e.g., "Week 1, Day 1: Lower Body Strength")
-2. Warm-up section with specific movements
-3. A strength section with sets, reps, and rest periods clearly defined as well as RX and Scaling options and weights
-4. A conditioning section with specific movements and sets, reps, and rest periods clearly defined as well as RX and Scaling options and weights
-5. A cool-down/mobility section with specific movements
-6. Performance notes or scaling options
+2. Warm-up section with specific movements (include duration, reps, and brief explanations)
+3. Strength Work - detailed with:
+   - Clear exercise format (Sets x Reps, EMOM, etc.)
+   - Specific movements, sets, reps, and rest periods
+   - Exact weights for RX (men and women) and scaling options
+   - Loading percentages when appropriate (e.g., "75% of 1RM")
+4. Conditioning Work - detailed with:
+   - Clear exercise format (AMRAP, For Time, etc.)
+   - Specific movements, sets, reps, and rest periods
+   - Exact weights for RX (men and women) and scaling options
+   - Target time domains or goal times when applicable
+5. Stimulus and Strategy section:
+   - Explain the intended stimulus for both strength and conditioning portions
+   - Provide pacing guidance for each section
+   - Explain how to approach the workout (e.g., "Break the handstand push-ups into sets of 3 early")${scalingInstructions}
+${coachingCueNumber}. Coaching Cues:
+   - 3-5 specific technical cues for the most complex movements in the workout
+   - Form tips to maximize efficiency and safety
+   - Common errors to avoid
+${cooldownNumber}. Cool-down/mobility section with specific movements and durations
 
 The program should follow logical progression based on the selected program type (${programType}).
 Ensure proper periodization, recovery, and exercise variation throughout the program.
@@ -284,18 +367,41 @@ IMPORTANT: The workouts must be scheduled on specific dates according to the use
 Your response MUST be in this exact JSON format:
 {
   "title": "Training Program for ${goal}",
-  "description": "A ${numberOfWeeks}-week ${difficulty} training program focused on ${
+  "description": "A comprehensive ${numberOfWeeks}-week ${difficulty} training program focused on ${
       focusArea || goal
-    }",
+    } that includes detailed weekly progression, nutrition guidance, and recovery recommendations",
+  "overview": "A detailed explanation of the program methodology, periodization approach, expected outcomes, and supplementary recommendations",
   "workouts": [
     {
       "title": "Week X, Day Y: [Focus Area]",
-      "body": "Detailed workout description including warm-up, main workout with strength and conditioning sections, cool-down",
+      "body": "Detailed workout description including all required sections",
       "date": "YYYY-MM-DD"
     },
     ...more workouts
   ]
 }
+
+For each workout's "body" field, use this structure:
+\`\`\`
+## Warm-up
+[Detailed warm-up protocol with specific movements, sets, reps]
+
+## Main Workout
+[Format: For Time, AMRAP, etc.]
+[Complete workout with movements, reps, weights]
+
+♀ [Women's RX weight details]
+♂ [Men's RX weight details]
+
+## Stimulus and Strategy
+[Detailed explanation of workout stimulus and strategy approach]${scalingBodyStructure}
+
+## Coaching Cues
+[3-5 specific technical cues for key movements]
+
+## Cool-down
+[Detailed cool-down protocol]
+\`\`\`
 
 The "workouts" array should contain exactly ${totalWorkouts} workouts, organized in a progressive sequence.
 
@@ -303,15 +409,25 @@ Use the following dates for each workout:
 ${suggestedDates
   .map(
     (date, index) =>
-      `Workout ${index + 1}: ${date} (Week ${
-        Math.floor(index / parseInt(daysPerWeek)) + 1
-      }, Day ${(index % parseInt(daysPerWeek)) + 1})`
+      'Workout ' +
+      (index + 1) +
+      ': ' +
+      date +
+      ' (Week ' +
+      (Math.floor(index / parseInt(daysPerWeek)) + 1) +
+      ', Day ' +
+      ((index % parseInt(daysPerWeek)) + 1) +
+      ')'
   )
-  .join('\n')}
+  .join('\\n')}\
 
 IMPORTANT: Each workout MUST be assigned to one of the above dates. These dates strictly follow the user's selected training days of the week.`;
 
     logWithTimestamp('Prompt prepared', { promptLength: prompt.length });
+
+    // Updated system prompt
+    const systemPrompt =
+      'You are an expert strength and conditioning coach who specializes in creating effective, periodized training programs. Create professional, CrossFit-style workouts with precise stimulus explanations, detailed scaling options, and specific coaching cues. Each workout should include clear RX weights (for men and women), proper warm-up and cool-down protocols, and actionable strategy recommendations. Follow sound exercise science principles with appropriate progression, variation, and specificity. Provide responses EXACTLY in the JSON format specified in the prompt.';
 
     // Call OpenAI with required response format
     try {
@@ -320,8 +436,7 @@ IMPORTANT: Each workout MUST be assigned to one of the above dates. These dates 
         messages: [
           {
             role: 'system',
-            content:
-              'You are an expert strength and conditioning coach who specializes in creating effective, periodized training programs. Create programs that follow sound exercise science principles with appropriate progression, variation, and specificity. Provide responses EXACTLY in the JSON format specified in the prompt.',
+            content: systemPrompt,
           },
           {
             role: 'user',
@@ -439,6 +554,7 @@ IMPORTANT: Each workout MUST be assigned to one of the above dates. These dates 
           message: 'Program generated successfully',
           title: programTitle,
           description: programDescription,
+          overview: parsedContent.overview || 'No overview provided',
           suggestions: workouts,
         },
         { status: 200 }
