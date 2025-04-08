@@ -13,13 +13,14 @@ function logWithTimestamp(message, data = null) {
 }
 
 export async function POST(request) {
-  logWithTimestamp('API route started');
+  logWithTimestamp('API route started (Deepseek)');
 
   try {
-    const openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
+    const deepseek = new OpenAI({
+      baseURL: 'https://api.deepseek.com',
+      apiKey: process.env.DEEPSEEK_API_KEY,
     });
-    logWithTimestamp('OpenAI client initialized');
+    logWithTimestamp('Deepseek client initialized');
 
     const supabase = await createClient();
     logWithTimestamp('Supabase client initialized');
@@ -116,6 +117,7 @@ export async function POST(request) {
 
     // Fetch client metrics if program ID exists
     let clientMetricsContent = '';
+    let entityData;
     if (programId) {
       try {
         logWithTimestamp('Fetching client metrics', { programId });
@@ -133,7 +135,7 @@ export async function POST(request) {
           });
         } else if (programData && programData.entity_id) {
           // Fetch metrics from entities table
-          const { data: entityData, error: entityError } = await supabase
+          const { data: entityResult, error: entityError } = await supabase
             .from('entities')
             .select('*')
             .eq('id', programData.entity_id)
@@ -143,7 +145,8 @@ export async function POST(request) {
             logWithTimestamp('Error fetching client metrics', {
               error: entityError,
             });
-          } else if (entityData) {
+          } else if (entityResult) {
+            entityData = entityResult;
             logWithTimestamp('Found client metrics', { entityData });
 
             // Format client metrics for the prompt
@@ -308,14 +311,7 @@ ${
     // Build the prompt with reference workouts and client metrics included
     const prompt = `Generate a ${numberOfWeeks}-week training program with the following parameters:
 
-${
-  additionalNotes
-    ? `IMPORTANT REQUIREMENTS FROM THE CLIENT: ${additionalNotes}
-Please prioritize these specific requirements above all else in program design.
-
-`
-    : ''
-}Goal: ${goal}
+Goal: ${goal}
 Difficulty: ${difficulty}
 Days Per Week: ${daysPerWeek} days
 Selected Training Days: ${selectedDayNames}
@@ -332,6 +328,7 @@ ${
     : ''
 }
 ${gymType ? `Gym Type: ${gymType}` : ''}
+${additionalNotes ? `Additional Notes: ${additionalNotes}` : ''}
 ${personalization ? `Personalization: ${personalization}` : ''}
 ${clientMetricsContent ? `${clientMetricsContent}` : ''}
 ${referenceWorkoutsContent ? `${referenceWorkoutsContent}` : ''}
@@ -341,6 +338,29 @@ For the program description, include:
 2. The periodization approach used and why it's appropriate
 3. Expected outcomes from following the program
 4. Recommendations for nutrition, recovery, and supplementary training
+
+Format each workout with the following sections:
+1. A clear, descriptive title that includes the day/week and focus (e.g., "Week 1, Day 1: Lower Body Strength")
+2. Warm-up section with specific movements (include duration, reps, and brief explanations)
+3. Strength Work - detailed with:
+   - Clear exercise format (Sets x Reps, EMOM, etc.)
+   - Specific movements, sets, reps, and rest periods
+   - Exact weights for RX (men and women) and scaling options
+   - Loading percentages when appropriate (e.g., "75% of 1RM")
+4. Conditioning Work - detailed with:
+   - Clear exercise format (AMRAP, For Time, etc.)
+   - Specific movements, sets, reps, and rest periods
+   - Exact weights for RX (men and women) and scaling options
+   - Target time domains or goal times when applicable
+5. Stimulus and Strategy section:
+   - Explain the intended stimulus for both strength and conditioning portions
+   - Provide pacing guidance for each section
+   - Explain how to approach the workout (e.g., "Break the handstand push-ups into sets of 3 early")${scalingInstructions}
+${coachingCueNumber}. Coaching Cues:
+   - 3-5 specific technical cues for the most complex movements in the workout
+   - Form tips to maximize efficiency and safety
+   - Common errors to avoid
+${cooldownNumber}. Cool-down/mobility section with specific movements and durations
 
 The program should follow logical progression based on the selected program type (${programType}).
 Ensure proper periodization, recovery, and exercise variation throughout the program.
@@ -356,7 +376,7 @@ Your response MUST be in this exact JSON format:
   "overview": "A detailed explanation of the program methodology, periodization approach, expected outcomes, and supplementary recommendations",
   "workouts": [
     {
-      "title": "Week X, Day Y: [Focus Area] and [Creative Title]",
+      "title": "Week X, Day Y: [Focus Area]",
       "body": "Detailed workout description including all required sections",
       "date": "YYYY-MM-DD"
     },
@@ -366,41 +386,24 @@ Your response MUST be in this exact JSON format:
 
 For each workout's "body" field, use this structure:
 \`\`\`
-## Stimulus and Strategy
-[Detailed explanation of workout stimulus and strategy approach]
-- Explain the intended stimulus for both strength and conditioning portions
-- Provide pacing guidance for each section
-- Explain how to approach the workout (e.g., "Break the handstand push-ups into sets of 3 early")${scalingBodyStructure}
-
 ## Warm-up
 [Detailed warm-up protocol with specific movements, sets, reps]
-- Include duration, reps, and brief explanations
-- Focus on movement preparation and activation
 
-## Strength Work
-[Complete strength workout with movements, sets, reps, specific weights]
-- Clear exercise format (Sets x Reps, EMOM, etc.)
-- Specific movements, sets, reps, and rest periods
-- Exact weights for RX (men and women) and scaling options
-- Loading percentages when appropriate (e.g., "75% of 1RM")
+## Main Workout
+[Format: For Time, AMRAP, etc.]
+[Complete workout with movements, reps, weights]
 
-## Conditioning Work
-[Complete conditioning workout with movements, sets, reps, specific weights]
-- Clear exercise format (AMRAP, For Time, etc.)
-- Specific movements, sets, reps, and rest periods
-- Exact weights for RX (men and women) and scaling options
-- Target time domains or goal times when applicable
+♀ [Women's RX weight details]
+♂ [Men's RX weight details]
 
-## Cool-down
-[Detailed cool-down protocol]
-- Include specific movements and durations
-- Focus on recovery and mobility work
+## Stimulus and Strategy
+[Detailed explanation of workout stimulus and strategy approach]${scalingBodyStructure}
 
 ## Coaching Cues
 [3-5 specific technical cues for key movements]
-- Technical cues for the most complex movements
-- Form tips to maximize efficiency and safety
-- Common errors to avoid
+
+## Cool-down
+[Detailed cool-down protocol]
 \`\`\`
 
 The "workouts" array should contain exactly ${totalWorkouts} workouts, organized in a progressive sequence.
@@ -427,12 +430,12 @@ IMPORTANT: Each workout MUST be assigned to one of the above dates. These dates 
 
     // Updated system prompt
     const systemPrompt =
-      "You are an expert strength and conditioning coach who specializes in creating effective, periodized training programs. Create professional, functional fitness-style workouts with precise stimulus explanations, detailed scaling options, and specific coaching cues. Each workout should include clear RX weights, proper warm-up and cool-down protocols, and actionable strategy recommendations. Follow sound exercise science principles with appropriate progression, variation, and specificity. VERY IMPORTANT: Always prioritize the client's specific requirements from their description field above all other considerations - these are their must-have elements and should be incorporated throughout the program. Provide responses EXACTLY in the JSON format specified in the prompt.";
+      'You are an expert strength and conditioning coach who specializes in creating effective, periodized training programs. Create professional, CrossFit-style workouts with precise stimulus explanations, detailed scaling options, and specific coaching cues. Each workout should include clear RX weights (for men and women), proper warm-up and cool-down protocols, and actionable strategy recommendations. Follow sound exercise science principles with appropriate progression, variation, and specificity. Provide responses EXACTLY in the JSON format specified in the prompt.';
 
-    // Call OpenAI with required response format
+    // Call Deepseek with required response format
     try {
-      const response = await openai.chat.completions.create({
-        model: 'gpt-4o',
+      const response = await deepseek.chat.completions.create({
+        model: 'deepseek-chat',
         messages: [
           {
             role: 'system',
@@ -443,17 +446,18 @@ IMPORTANT: Each workout MUST be assigned to one of the above dates. These dates 
             content: prompt,
           },
         ],
-        response_format: { type: 'json_object' },
+        temperature: 0.7,
+        max_tokens: 4000,
       });
 
-      logWithTimestamp('Received response from OpenAI');
+      logWithTimestamp('Received response from Deepseek');
 
       if (
         !response.choices ||
         !response.choices[0] ||
         !response.choices[0].message
       ) {
-        logWithTimestamp('Invalid response format from OpenAI', response);
+        logWithTimestamp('Invalid response format from Deepseek', response);
         return NextResponse.json(
           { error: 'Failed to generate a valid program: Invalid API response' },
           { status: 500 }
@@ -551,21 +555,22 @@ IMPORTANT: Each workout MUST be assigned to one of the above dates. These dates 
       // Return the generated program data with consistent format
       return NextResponse.json(
         {
-          message: 'Program generated successfully',
+          message: 'Program generated successfully with Deepseek',
           title: programTitle,
           description: programDescription,
           overview: parsedContent.overview || 'No overview provided',
           suggestions: workouts,
+          model: 'deepseek',
         },
         { status: 200 }
       );
-    } catch (openaiError) {
-      logWithTimestamp('OpenAI API error', {
-        error: openaiError.message,
-        stack: openaiError.stack,
+    } catch (deepseekError) {
+      logWithTimestamp('Deepseek API error', {
+        error: deepseekError.message,
+        stack: deepseekError.stack,
       });
       return NextResponse.json(
-        { error: 'OpenAI API error: ' + openaiError.message },
+        { error: 'Deepseek API error: ' + deepseekError.message },
         { status: 500 }
       );
     }

@@ -57,6 +57,7 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
   const [loadingTimer, setLoadingTimer] = useState(null);
   const [serverStatus, setServerStatus] = useState(null);
   const [activeTab, setActiveTab] = useState('program');
+  const [generatedDescription, setGeneratedDescription] = useState('');
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -122,6 +123,7 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
       setLoadingDuration,
       setLoadingTimer,
       setFormData,
+      setGeneratedDescription,
     });
   };
 
@@ -141,6 +143,7 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
       supabase,
       setIsLoading,
       showToastMessage,
+      generatedDescription,
     });
   };
 
@@ -245,6 +248,13 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
           // Store initial values to prevent overwriting on save
           setInitialName(program.name || '');
           setInitialDescription(program.description || '');
+
+          // Set generated description if it exists in program_overview
+          if (program.program_overview?.generated_description) {
+            setGeneratedDescription(
+              program.program_overview.generated_description
+            );
+          }
         }
 
         // Fetch workouts
@@ -498,6 +508,35 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
       )}
 
       {activeTab === 'metrics' && <ClientMetricsTab programId={programId} />}
+
+      {/* Generated Description */}
+      {generatedDescription && activeTab === 'program' && (
+        <div className="mt-6 mb-4">
+          <div className="collapse collapse-arrow bg-base-200">
+            <input type="checkbox" />
+            <div className="collapse-title font-medium">
+              Generated Program Description
+            </div>
+            <div className="collapse-content">
+              <div className="p-2 bg-white rounded-md">
+                <p className="whitespace-pre-line">{generatedDescription}</p>
+                <button
+                  className="btn btn-xs btn-outline mt-2"
+                  onClick={() => {
+                    setFormData((prev) => ({
+                      ...prev,
+                      description: generatedDescription,
+                    }));
+                    showToastMessage('Description copied to form field');
+                  }}
+                >
+                  Use This Description
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Reference Workouts */}
       {activeTab === 'program' && (

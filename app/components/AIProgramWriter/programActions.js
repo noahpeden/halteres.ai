@@ -14,6 +14,7 @@ export async function generateProgram({
   setLoadingDuration,
   setLoadingTimer,
   setFormData,
+  setGeneratedDescription,
 }) {
   setIsLoading(true);
   setSuggestions([]);
@@ -163,10 +164,7 @@ export async function generateProgram({
                   }
 
                   if (!programId && data.description) {
-                    setFormData((prev) => ({
-                      ...prev,
-                      description: data.description || prev.description,
-                    }));
+                    setGeneratedDescription(data.description);
                   }
 
                   // Normalize workout format
@@ -215,10 +213,7 @@ export async function generateProgram({
         }
 
         if (!programId && data.description) {
-          setFormData((prev) => ({
-            ...prev,
-            description: data.description || prev.description,
-          }));
+          setGeneratedDescription(data.description);
         }
 
         // Normalize workout format
@@ -288,6 +283,7 @@ export async function saveProgram({
   supabase,
   setIsLoading,
   showToastMessage,
+  generatedDescription,
 }) {
   if (!programId) {
     showToastMessage(
@@ -324,6 +320,23 @@ export async function saveProgram({
       program_type: programData.programType,
     };
 
+    // Delete existing program workouts (except reference workouts) before saving new ones
+    const { error: deleteWorkoutsError } = await supabase
+      .from('program_workouts')
+      .delete()
+      .eq('program_id', programId)
+      .eq('is_reference', false);
+
+    if (deleteWorkoutsError) {
+      console.error('Error deleting existing workouts:', deleteWorkoutsError);
+      showToastMessage(
+        `Failed to clean up old workouts: ${deleteWorkoutsError.message}`,
+        'error'
+      );
+      setIsLoading(false);
+      return;
+    }
+
     // 1. Update the program details in the `programs` table
     const { data: updatedProgram, error: programError } = await supabase
       .from('programs')
@@ -345,7 +358,10 @@ export async function saveProgram({
           days_of_week: daysOfWeekNumbers,
         },
         session_details: programData.sessionDetails,
-        program_overview: programData.programOverview,
+        program_overview: {
+          ...programData.programOverview,
+          generated_description: generatedDescription || null,
+        },
         generated_program: suggestions.map((workout) => ({
           title: workout.title,
           body: workout.body || workout.description,

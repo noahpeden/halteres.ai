@@ -276,15 +276,20 @@ export default function ProgramForm({
         <div>
           <label className="form-control w-full">
             <div className="label">
-              <span className="label-text">Description</span>
+              <span className="label-text font-medium">
+                Program Description (High Priority)
+              </span>
+              <span className="label-text-alt text-accent">
+                Given top priority in program design
+              </span>
             </div>
             <textarea
               name="description"
               className="textarea textarea-bordered w-full"
-              placeholder="Detailed program description"
+              placeholder="Specific requirements for your program (will be given highest priority during generation)"
               value={formData.description}
               onChange={handleChange}
-              rows="3"
+              rows="4"
             ></textarea>
           </label>
         </div>

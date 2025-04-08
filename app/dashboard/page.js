@@ -28,6 +28,8 @@ export default function Dashboard() {
     activeWorkouts: 0,
     upcomingWorkouts: 0,
   });
+  const [selectedProgramId, setSelectedProgramId] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Check if auth is ready
   useEffect(() => {
@@ -232,6 +234,49 @@ export default function Dashboard() {
     setErrorMessage('');
   };
 
+  async function deleteProgram() {
+    if (!selectedProgramId) return;
+
+    setIsDeleting(true);
+    try {
+      const response = await fetch('/api/DeleteProgram', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          programId: selectedProgramId,
+          userId: user.id,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to delete program');
+      }
+
+      // Update programs list by removing the deleted program
+      setPrograms(
+        programs.filter((program) => program.id !== selectedProgramId)
+      );
+
+      // Update stats
+      setStats({
+        ...stats,
+        totalPrograms: stats.totalPrograms - 1,
+      });
+
+      // Close the modal
+      document.getElementById('delete-program-modal').checked = false;
+    } catch (error) {
+      console.error('Error deleting program:', error);
+      alert('Error deleting program: ' + error.message);
+    } finally {
+      setIsDeleting(false);
+      setSelectedProgramId(null);
+    }
+  }
+
   // If auth is not yet loaded, show a loading indicator
   if (!authReady) {
     return (
@@ -379,6 +424,17 @@ export default function Dashboard() {
                     >
                       Manage Workouts
                     </Link>
+                    <button
+                      onClick={() => {
+                        setSelectedProgramId(program.id);
+                        document.getElementById(
+                          'delete-program-modal'
+                        ).checked = true;
+                      }}
+                      className="btn btn-error btn-sm btn-outline"
+                    >
+                      Delete
+                    </button>
                   </div>
                 </div>
               </div>
@@ -682,6 +738,41 @@ export default function Dashboard() {
               </button>
             </div>
           </form>
+        </div>
+      </div>
+
+      {/* Delete Program Confirmation Modal */}
+      <input
+        type="checkbox"
+        id="delete-program-modal"
+        className="modal-toggle"
+      />
+      <div className="modal">
+        <div className="modal-box">
+          <h3 className="font-bold text-lg mb-4">Delete Program</h3>
+          <p className="mb-6">
+            Are you sure you want to delete this program? This will also delete
+            all associated workouts and cannot be undone.
+          </p>
+          <div className="modal-action">
+            <label
+              htmlFor="delete-program-modal"
+              className="btn btn-outline"
+              onClick={() => setSelectedProgramId(null)}
+            >
+              Cancel
+            </label>
+            <button
+              className="btn btn-error"
+              onClick={deleteProgram}
+              disabled={isDeleting}
+            >
+              {isDeleting ? (
+                <span className="loading loading-spinner loading-xs mr-2"></span>
+              ) : null}
+              Delete
+            </button>
+          </div>
         </div>
       </div>
     </div>
