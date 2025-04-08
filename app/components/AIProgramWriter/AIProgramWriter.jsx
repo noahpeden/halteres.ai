@@ -509,35 +509,6 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
 
       {activeTab === 'metrics' && <ClientMetricsTab programId={programId} />}
 
-      {/* Generated Description */}
-      {generatedDescription && activeTab === 'program' && (
-        <div className="mt-6 mb-4">
-          <div className="collapse collapse-arrow bg-base-200">
-            <input type="checkbox" />
-            <div className="collapse-title font-medium">
-              Generated Program Description
-            </div>
-            <div className="collapse-content">
-              <div className="p-2 bg-white rounded-md">
-                <p className="whitespace-pre-line">{generatedDescription}</p>
-                <button
-                  className="btn btn-xs btn-outline mt-2"
-                  onClick={() => {
-                    setFormData((prev) => ({
-                      ...prev,
-                      description: generatedDescription,
-                    }));
-                    showToastMessage('Description copied to form field');
-                  }}
-                >
-                  Use This Description
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Reference Workouts */}
       {activeTab === 'program' && (
         <ReferenceWorkouts
