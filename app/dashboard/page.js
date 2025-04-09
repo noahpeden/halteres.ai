@@ -486,11 +486,41 @@ export default function Dashboard() {
 
       {/* Friends & Family Feedback Section */}
       <div className="bg-white p-6 rounded-lg shadow mb-8">
+        <h2 className="text-xl font-semibold mb-2">
+          Friends & Family Release Feedback
+        </h2>
+
+        <div className="mb-6">
+          <h3 className="font-medium mb-2">Watch our introduction video:</h3>
+          <div
+            className="rounded-lg"
+            style={{
+              position: 'relative',
+              paddingBottom: '56.25%',
+              height: 0,
+              overflow: 'hidden',
+            }}
+          >
+            <iframe
+              src="https://www.loom.com/embed/6801ad2fe833438aa5d039d06621f638?sid=17f926a7-7ccd-4ab4-9159-7ca472ed0b71"
+              frameBorder="0"
+              webkitallowfullscreen="true"
+              mozallowfullscreen="true"
+              allowFullScreen
+              className="rounded-lg"
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                height: '100%',
+              }}
+            ></iframe>
+          </div>
+        </div>
+
         <div className="flex flex-col md:flex-row justify-between items-center">
           <div>
-            <h2 className="text-xl font-semibold mb-2">
-              Friends & Family Release Feedback
-            </h2>
             <p className="text-gray-600 mb-4">
               We value your feedback! Please share your thoughts on our
               platform.

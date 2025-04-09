@@ -20,18 +20,22 @@ export default function Navbar() {
   return (
     <div className="fixed top-0 z-50 w-full flex items-center justify-between bg-white text-blue-300 py-4 px-6 border-b border-gray-200">
       <Link href="/">
-        <Image
-          src={img}
-          alt="Halteres.ai Logo"
-          height={50}
-          width={50}
-          className="self-start"
-        />
+        <span>
+          <Image
+            src={img}
+            alt="Halteres.ai Logo"
+            height={50}
+            width={50}
+            className="self-start"
+          />
+        </span>
       </Link>
       <div className="flex items-center gap-4">
         {session && (
-          <Link href="/dashboard" className="btn btn-accent text-white">
-            <Home />
+          <Link href="/dashboard">
+            <span className="btn btn-accent text-white">
+              <Home />
+            </span>
           </Link>
         )}
         {session ? (
@@ -39,8 +43,10 @@ export default function Navbar() {
             <LogOut />
           </button>
         ) : (
-          <Link href="/login" className="btn btn-secondary text-white">
-            Sign up or Log in
+          <Link href="/login">
+            <span className="btn btn-secondary text-white">
+              Sign up or Log in
+            </span>
           </Link>
         )}
       </div>
