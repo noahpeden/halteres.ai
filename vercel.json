@@ -1,0 +1,15 @@
+{
+  "functions": {
+    "app/api/**": {
+      "maxDuration": 300
+    }
+  },
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/$1",
+      "methods": ["GET", "POST", "OPTIONS"],
+      "continue": true
+    }
+  ]
+}

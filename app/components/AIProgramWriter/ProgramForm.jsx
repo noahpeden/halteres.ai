@@ -28,6 +28,9 @@ export default function ProgramForm({
         `Still generating (${loadingDuration}s)...`}
       {generationStage === 'processing' && 'Processing results...'}
       {generationStage === 'finalizing' && 'Finalizing program...'}
+      {generationStage === 'retrying' && (
+        <span className="text-warning">Retrying request...</span>
+      )}
     </>
   );
 
