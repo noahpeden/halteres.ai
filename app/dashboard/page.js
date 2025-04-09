@@ -501,12 +501,13 @@ export default function Dashboard() {
               overflow: 'hidden',
             }}
           >
+            {' '}
             <iframe
-              src="https://www.loom.com/embed/6801ad2fe833438aa5d039d06621f638?sid=17f926a7-7ccd-4ab4-9159-7ca472ed0b71"
-              frameBorder="0"
-              webkitallowfullscreen="true"
-              mozallowfullscreen="true"
-              allowFullScreen
+              src="https://www.loom.com/embed/01378252e9da4a789b31a35afd848b6f?sid=ace0ecdc-e214-4dd2-a083-6eed26a5a2ef"
+              frameborder="0"
+              webkitallowfullscreen
+              mozallowfullscreen
+              allowfullscreen
               className="rounded-lg"
               style={{
                 position: 'absolute',
