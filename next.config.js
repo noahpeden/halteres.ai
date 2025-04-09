@@ -2,11 +2,11 @@
 const nextConfig = {
   // Set longer timeouts for serverless functions (5 minutes)
   experimental: {
-    serverComponentsExternalPackages: ['sharp'],
     serverActions: {
       bodySizeLimit: '4mb',
     },
   },
+  serverExternalPackages: ['sharp'],
   async headers() {
     return [
       {
