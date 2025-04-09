@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import ProgramCalendar from '@/components/ProgramCalendar';
 import AIProgramWriter from '@/components/AIProgramWriter/AIProgramWriter';
 import AIWorkoutReferencer from '@/components/AIWorkoutReferencer';
-import ClientMetricsSidebar from '@/components/ClientMetricsSidebar';
+import ClientMetricsTab from '@/components/ClientMetricsTab';
 import Link from 'next/link';
 
 export default function ProgramCalendarPage(props) {
@@ -226,10 +226,10 @@ export default function ProgramCalendarPage(props) {
       <div className="mb-6">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
-            <h1 className="text-2xl font-bold">
+            <h1 className="text-2xl font-bold text-primary">
               {program?.name || 'Program Calendar'}
             </h1>
-            <p className="text-gray-600">
+            <p className="text-practical-gray">
               {program?.description || 'Manage your program schedule'}
             </p>
           </div>
@@ -248,9 +248,6 @@ export default function ProgramCalendarPage(props) {
             >
               Metrics
             </Link> */}
-            <Link href="/dashboard" className="btn btn-outline btn-sm">
-              Back to Dashboard
-            </Link>
           </div>
         </div>
       </div>
@@ -258,7 +255,9 @@ export default function ProgramCalendarPage(props) {
       <div className="tabs tabs-boxed mb-6">
         <button
           className={`tab ${
-            activeTab === 'program_writer' ? 'tab-active' : ''
+            activeTab === 'program_writer'
+              ? 'tab-active bg-primary text-white'
+              : ''
           }`}
           onClick={() => setActiveTab('program_writer')}
         >
@@ -266,14 +265,28 @@ export default function ProgramCalendarPage(props) {
         </button>
         <button
           className={`tab ${
-            activeTab === 'workout_editor' ? 'tab-active' : ''
+            activeTab === 'workout_editor'
+              ? 'tab-active bg-primary text-white'
+              : ''
           }`}
           onClick={() => setActiveTab('workout_editor')}
         >
           Workout Referencer
         </button>
         <button
-          className={`tab ${activeTab === 'calendar' ? 'tab-active' : ''}`}
+          className={`tab ${
+            activeTab === 'client_metrics'
+              ? 'tab-active bg-primary text-white'
+              : ''
+          }`}
+          onClick={() => setActiveTab('client_metrics')}
+        >
+          Client Metrics
+        </button>
+        {/* <button
+          className={`tab ${
+            activeTab === 'calendar' ? 'tab-active bg-primary text-white' : ''
+          }`}
           onClick={() => {
             // Only trigger refresh on first calendar load
             if (isFirstCalendarLoad.current) {
@@ -289,33 +302,8 @@ export default function ProgramCalendarPage(props) {
           }}
         >
           Calendar
-        </button>
+        </button> */}
       </div>
-
-      {selectedWorkout && (
-        <div className="mb-4 p-3 border rounded-md bg-blue-50 flex justify-between items-center">
-          <div>
-            <h3 className="font-medium">
-              Selected Workout: {selectedWorkout.title}
-            </h3>
-            <p className="text-sm text-gray-600">
-              {selectedDate
-                ? `Scheduled for ${formatDate(selectedDate)}. `
-                : ''}
-              Drag this workout to a date on the calendar to schedule it
-            </p>
-          </div>
-          <button
-            className="btn btn-sm btn-ghost"
-            onClick={() => {
-              setSelectedWorkout(null);
-              setSelectedDate(null);
-            }}
-          >
-            ✕
-          </button>
-        </div>
-      )}
 
       {activeTab !== 'calendar' && (
         <div className="grid grid-cols-1 gap-6">
@@ -328,148 +316,14 @@ export default function ProgramCalendarPage(props) {
           {activeTab === 'workout_editor' && (
             <AIWorkoutReferencer programId={programId} />
           )}
+          {activeTab === 'client_metrics' && (
+            <ClientMetricsTab programId={programId} />
+          )}
         </div>
       )}
 
-      {activeTab === 'calendar' && (
+      {/* {activeTab === 'calendar' && (
         <div className="flex flex-col lg:flex-row gap-6">
-          {/* Sidebar first (above on mobile, left on desktop) */}
-          <div className="w-full lg:w-80">
-            <div className="card bg-base-100 shadow-md">
-              <div className="card-body p-4">
-                <h2 className="card-title text-lg">Program Workouts</h2>
-                <p className="text-sm text-gray-500 mb-3">
-                  Available workouts - drag to calendar days to schedule
-                </p>
-
-                {isLoadingSidebar ? (
-                  <div className="flex justify-center py-4">
-                    <span className="loading loading-spinner loading-md"></span>
-                  </div>
-                ) : sidebarWorkouts.length > 0 ? (
-                  <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
-                    {sidebarWorkouts.map((workout) => (
-                      <div
-                        key={workout.id}
-                        className={`p-3 rounded-md cursor-move hover:bg-base-300 transition-colors ${
-                          workout.isGenerated ? 'bg-blue-50' : 'bg-base-200'
-                        }`}
-                        draggable="true"
-                        onDragStart={(e) => {
-                          console.log(
-                            'Sidebar drag start with workout:',
-                            workout
-                          );
-                          try {
-                            // For generated workouts, make sure description is in body field
-                            if (workout.isGenerated && workout.description) {
-                              workout.body =
-                                workout.body || workout.description;
-                            }
-
-                            // Make sure ID is properly handled
-                            const workoutToTransfer = {
-                              ...workout,
-                              // Ensure the workout maintains its database status
-                              isStoredInDatabase:
-                                !workout.id.startsWith('generated-'),
-                            };
-
-                            const workoutJson =
-                              JSON.stringify(workoutToTransfer);
-                            console.log(
-                              'Serialized workout data:',
-                              workoutJson
-                            );
-
-                            // Set data using multiple mime types for compatibility
-                            e.dataTransfer.setData('text/plain', workoutJson);
-
-                            // Some browsers have issues with custom mime types, so try/catch this
-                            try {
-                              e.dataTransfer.setData('workout', workoutJson);
-                            } catch (customTypeError) {
-                              console.warn(
-                                'Could not set custom mime type:',
-                                customTypeError
-                              );
-                            }
-
-                            // Store the workout in parent component state as fallback
-                            setSelectedWorkout(workoutToTransfer);
-
-                            // Set better drag image if possible
-                            try {
-                              const dragEl = e.target.cloneNode(true);
-                              dragEl.style.width = '200px';
-                              dragEl.style.backgroundColor =
-                                'rgba(59, 130, 246, 0.5)';
-                              document.body.appendChild(dragEl);
-                              e.dataTransfer.setDragImage(dragEl, 10, 10);
-                              setTimeout(
-                                () => document.body.removeChild(dragEl),
-                                0
-                              );
-                            } catch (dragImgError) {
-                              console.warn(
-                                'Could not set drag image:',
-                                dragImgError
-                              );
-                            }
-                          } catch (error) {
-                            console.error('Error setting drag data:', error);
-                          }
-                        }}
-                      >
-                        <div className="flex justify-between items-start">
-                          <h3 className="font-medium text-sm">
-                            {workout.title}
-                          </h3>
-                          {workout.isGenerated && (
-                            <span className="badge badge-sm badge-info">
-                              AI Generated
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-xs text-gray-600 truncate">
-                          {workout.body || workout.description || ''}
-                        </p>
-                        {workout.suggestedDate && (
-                          <p className="text-xs text-gray-500 mt-1">
-                            Suggested date: {formatDate(workout.suggestedDate)}
-                          </p>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-4 text-gray-500">
-                    <p>No workouts found</p>
-                    <div className="flex flex-col gap-2 mt-2">
-                      <button
-                        onClick={() => setActiveTab('program_writer')}
-                        className="btn btn-sm btn-primary"
-                      >
-                        Generate Program
-                      </button>
-                      <Link
-                        href={`/program/${programId}/workouts`}
-                        className="btn btn-sm btn-outline"
-                      >
-                        Create Individual Workouts
-                      </Link>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="mt-4 lg:block hidden">
-              <ClientMetricsSidebar programId={programId} />
-            </div>
-          </div>
-
-          {/* Calendar (below on mobile, right on desktop) */}
           <div className="flex-grow">
             <ProgramCalendar
               programId={programId}
@@ -479,7 +333,6 @@ export default function ProgramCalendarPage(props) {
                 refreshRequired ? `refresh-${Date.now()}` : 'normal'
               }`}
               onRender={() => {
-                // Reset refreshRequired after rendering
                 if (refreshRequired) {
                   console.log('Calendar rendered with refresh, resetting flag');
                   setRefreshRequired(false);
@@ -487,13 +340,8 @@ export default function ProgramCalendarPage(props) {
               }}
             />
           </div>
-
-          {/* Metrics sidebar on mobile (below calendar) */}
-          <div className="mt-4 lg:hidden">
-            <ClientMetricsSidebar programId={programId} />
-          </div>
         </div>
-      )}
+      )} */}
     </div>
   );
 }

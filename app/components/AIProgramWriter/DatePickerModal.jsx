@@ -17,7 +17,7 @@ export default function DatePickerModal({
       <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
         <div className="p-6">
           <div className="flex justify-between items-start mb-4">
-            <h3 className="text-xl font-bold">Schedule Workout</h3>
+            <h3 className="text-xl font-bold">Adjust Workout Date</h3>
             <button
               onClick={onClose}
               className="btn btn-sm btn-circle btn-ghost"
@@ -29,7 +29,7 @@ export default function DatePickerModal({
           <div className="mb-4">
             <h4 className="font-medium mb-2">{workout.title}</h4>
             <p className="text-sm text-gray-600">
-              Select a date to schedule this workout
+              Select a date for this workout
             </p>
           </div>
 
@@ -52,11 +52,11 @@ export default function DatePickerModal({
               Cancel
             </button>
             <button
-              className="btn btn-primary"
+              className="btn btn-primary text-white"
               onClick={onSave}
               disabled={!selectedDate}
             >
-              Schedule Workout
+              Save Date
             </button>
           </div>
         </div>

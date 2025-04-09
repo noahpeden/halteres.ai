@@ -43,7 +43,9 @@ export default function WorkoutModal({
 
           <div className="mb-2">
             <span className="badge badge-primary">
-              {workout.suggestedDate
+              {workout.tags?.suggestedDate
+                ? formatDate(workout.tags.suggestedDate)
+                : workout.suggestedDate
                 ? formatDate(workout.suggestedDate)
                 : 'Not scheduled'}
             </span>
@@ -55,13 +57,13 @@ export default function WorkoutModal({
 
           <div className="mt-6 flex justify-end">
             <button
-              className="btn btn-primary"
+              className="btn btn-primary text-white"
               onClick={() => {
                 onSelectWorkout(workout);
                 onClose();
               }}
             >
-              Add to Calendar
+              Adjust Date
             </button>
           </div>
         </div>

@@ -5,6 +5,8 @@ import Image from 'next/image';
 import { useAuth } from '../contexts/AuthContext';
 import { usePathname } from 'next/navigation';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { Home } from 'lucide-react';
+import { LogOut } from 'lucide-react';
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -26,15 +28,24 @@ export default function Navbar() {
           className="self-start"
         />
       </Link>
-      {session ? (
-        <button onClick={handleLogout} className="btn btn-secondary text-white">
-          Logout
-        </button>
-      ) : (
-        <Link href="/login">
-          <button className="btn btn-secondary text-white">Login</button>
-        </Link>
-      )}
+      <div className="flex items-center gap-4">
+        {session && (
+          <Link href="/dashboard">
+            <button className="btn btn-accent  text-white">
+              <Home />
+            </button>
+          </Link>
+        )}
+        {session ? (
+          <button onClick={handleLogout} className="btn btn-error text-white">
+            <LogOut />
+          </button>
+        ) : (
+          <Link href="/login">
+            <button className="btn btn-secondary text-white">Login</button>
+          </Link>
+        )}
+      </div>
     </div>
   );
 }

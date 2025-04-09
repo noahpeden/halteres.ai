@@ -1,5 +1,5 @@
 {
-  "name": "halteres",
+  "name": "halteres-ai",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -17,6 +17,7 @@
     "@supabase/ssr": "^0.0.10",
     "@supabase/supabase-js": "^2.39.7",
     "jspdf": "^2.5.1",
+    "lucide-react": "^0.487.0",
     "mammoth": "^1.8.0",
     "next": "15.2.4",
     "openai": "^4.90.0",

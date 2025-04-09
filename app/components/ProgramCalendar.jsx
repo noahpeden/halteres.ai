@@ -12,28 +12,21 @@ export default function ProgramCalendar({
   const [workouts, setWorkouts] = useState([]); // All workouts for this program
   const [scheduledWorkouts, setScheduledWorkouts] = useState([]); // Scheduled workouts (from workout_schedule table)
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [draggedWorkout, setDraggedWorkout] = useState(null);
+  const [draggedWorkout, setDraggedWorkout] = useState(null); // Initialize draggedWorkout state
   const [calendarDays, setCalendarDays] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [highlightedDate, setHighlightedDate] = useState(null);
   const calendarRef = useRef(null);
-  // Today's date for comparison with past dates
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const [showWorkoutsSidebar, setShowWorkoutsSidebar] = useState(true);
-
-  // Force refresh when props change
   const [forceUpdate, setForceUpdate] = useState(0);
-
-  // Ref to track if auto-scheduling has already run for this program session
   const hasAutoScheduledRef = useRef(false);
+  const [isDragging, setIsDragging] = useState(false); // Add state for drag status
 
-  // Call onRender after initial render
   useEffect(() => {
     onRender();
   }, [onRender]);
 
-  // Utility function to create a new workout
   const createNewWorkout = async (workout, date) => {
     try {
       const workoutData = {
@@ -81,7 +74,6 @@ export default function ProgramCalendar({
     }
   };
 
-  // Utility function to schedule a workout
   const scheduleWorkout = async (workoutId, date, entityId = null) => {
     try {
       const formattedDate =
@@ -671,16 +663,10 @@ export default function ProgramCalendar({
   // Handle drag start from calendar cells
   const handleDragStart = (event) => {
     console.log('Calendar drag start with event:', event);
-    // Get the workout data from the scheduled event
-    const workout = workouts.find((w) => w.id === event.workout_id);
-    if (!workout) {
-      console.error('Could not find workout for scheduled event:', event);
-      return;
-    }
 
-    // Add the schedule information to the workout for easy access
+    // The event object is already the workout data with schedule info
     const workoutWithSchedule = {
-      ...workout,
+      ...event,
       scheduleId: event.id,
       scheduled_date: event.scheduled_date,
     };
@@ -702,6 +688,11 @@ export default function ProgramCalendar({
     } catch (error) {
       console.error('Error setting drag data in handleDragStart:', error);
     }
+  };
+
+  // Handle drag end
+  const handleDragEnd = () => {
+    // Don't clear the dragged workout here, let the drop handler do it
   };
 
   // Handle drag over
@@ -782,10 +773,6 @@ export default function ProgramCalendar({
         workout.title = 'Untitled Workout';
       }
 
-      // Debugging: Check the actual structure of the workout data
-      console.log('Final workout to save:', workout);
-      console.log('Workout ID type:', typeof workout.id);
-
       const formattedDate = date.toISOString().split('T')[0];
       console.log('Saving workout to date:', formattedDate);
       setIsLoading(true);
@@ -797,29 +784,27 @@ export default function ProgramCalendar({
             'Updating existing scheduled workout:',
             workout.scheduleId
           );
-          const { data, error } = await supabase
+
+          // Update the existing schedule entry
+          const { data: updatedSchedule, error: updateError } = await supabase
             .from('workout_schedule')
             .update({ scheduled_date: formattedDate })
             .eq('id', workout.scheduleId)
             .select();
 
-          if (error) {
-            console.error('Supabase error updating schedule:', error);
-            throw new Error(
-              `Error updating schedule: ${error.message || error}`
-            );
+          if (updateError) {
+            console.error('Error updating schedule:', updateError);
+            throw new Error(`Error updating schedule: ${updateError.message}`);
           }
 
-          console.log('Update response:', data);
-
           // Update local state
-          const updatedSchedules = scheduledWorkouts.map((sw) =>
-            sw.id === workout.scheduleId
-              ? { ...sw, scheduled_date: formattedDate }
-              : sw
+          setScheduledWorkouts((prev) =>
+            prev.map((sw) =>
+              sw.id === workout.scheduleId
+                ? { ...sw, scheduled_date: formattedDate }
+                : sw
+            )
           );
-          console.log('Updated schedule state:', updatedSchedules);
-          setScheduledWorkouts(updatedSchedules);
         }
         // Case 2: If we know the workout is already in the database, just schedule it
         else if (workout.isStoredInDatabase === true) {
@@ -829,49 +814,37 @@ export default function ProgramCalendar({
             typeof workout.id === 'string' ? workout.id : String(workout.id);
 
           // Check if this workout is already scheduled for this date
-          const alreadyScheduled = scheduledWorkouts.some(
+          const existingSchedule = scheduledWorkouts.find(
             (sw) =>
               sw.workout_id === workoutIdToUse &&
               sw.scheduled_date === formattedDate
           );
 
-          if (alreadyScheduled) {
-            console.log(
-              'Workout already scheduled for this date - nothing to do'
-            );
-          } else {
-            // Schedule the workout directly without creating a new one
-            const scheduleData = {
-              program_id: programId,
-              workout_id: workoutIdToUse,
-              entity_id: workout.entity_id || null,
-              scheduled_date: formattedDate,
-            };
-
-            console.log(
-              'Creating schedule entry for existing workout:',
-              scheduleData
-            );
-            const { data, error } = await supabase
-              .from('workout_schedule')
-              .insert(scheduleData)
-              .select();
-
-            if (error) {
-              console.error('Supabase error creating schedule:', error);
-              throw new Error(
-                `Error creating schedule: ${error.message || error}`
-              );
-            }
-
-            console.log('Insert schedule response:', data);
-
-            if (data && data.length > 0) {
-              setScheduledWorkouts([...scheduledWorkouts, data[0]]);
-            } else {
-              console.error('No data returned from insert operation');
-            }
+          if (existingSchedule) {
+            console.log('Workout already scheduled for this date');
+            return;
           }
+
+          // Schedule the workout
+          const scheduleData = {
+            program_id: programId,
+            workout_id: workoutIdToUse,
+            entity_id: workout.entity_id || null,
+            scheduled_date: formattedDate,
+          };
+
+          const { data: newSchedule, error: insertError } = await supabase
+            .from('workout_schedule')
+            .insert(scheduleData)
+            .select();
+
+          if (insertError) {
+            console.error('Error creating schedule:', insertError);
+            throw new Error(`Error creating schedule: ${insertError.message}`);
+          }
+
+          // Update local state
+          setScheduledWorkouts((prev) => [...prev, newSchedule[0]]);
         }
         // Case 3: Check if it has an ID, but we're not sure if it's in the database
         else if (workout.id) {
@@ -903,90 +876,50 @@ export default function ProgramCalendar({
               throw error;
             }
           } else {
-            // For real IDs, just try to schedule the existing workout - NO DUPLICATION
+            // For real IDs, just try to schedule the existing workout
             console.log('Using existing workout ID:', workout.id);
 
             const workoutIdToUse =
               typeof workout.id === 'string' ? workout.id : String(workout.id);
 
-            // First verify the workout exists in our program
-            const { data: workoutExists, error: checkError } = await supabase
-              .from('program_workouts')
-              .select('id')
-              .eq('id', workoutIdToUse)
-              .eq('program_id', programId)
-              .maybeSingle();
-
-            if (checkError) {
-              console.error('Error checking if workout exists:', checkError);
-              throw new Error('Could not verify workout exists');
-            }
-
-            // If workout doesn't exist in this program, show an error
-            if (!workoutExists) {
-              console.error(
-                'Workout not found in this program:',
-                workoutIdToUse
-              );
-              alert(
-                'This workout does not belong to this program and cannot be scheduled'
-              );
-              return;
-            }
-
             // Check if this workout is already scheduled for this date
-            const alreadyScheduled = scheduledWorkouts.some(
+            const existingSchedule = scheduledWorkouts.find(
               (sw) =>
                 sw.workout_id === workoutIdToUse &&
                 sw.scheduled_date === formattedDate
             );
 
-            if (alreadyScheduled) {
-              console.log(
-                'Workout already scheduled for this date - nothing to do'
-              );
-            } else {
-              // Schedule the workout directly without creating a new one
-              const scheduleData = {
-                program_id: programId,
-                workout_id: workoutIdToUse,
-                entity_id: workout.entity_id || null,
-                scheduled_date: formattedDate,
-              };
-
-              console.log(
-                'Creating schedule entry for existing workout:',
-                scheduleData
-              );
-              const { data, error } = await supabase
-                .from('workout_schedule')
-                .insert(scheduleData)
-                .select();
-
-              if (error) {
-                console.error('Supabase error creating schedule:', error);
-                throw new Error(
-                  `Error creating schedule: ${error.message || error}`
-                );
-              }
-
-              console.log('Insert schedule response:', data);
-
-              if (data && data.length > 0) {
-                setScheduledWorkouts([...scheduledWorkouts, data[0]]);
-              } else {
-                console.error('No data returned from insert operation');
-              }
+            if (existingSchedule) {
+              console.log('Workout already scheduled for this date');
+              return;
             }
+
+            // Schedule the workout
+            const scheduleData = {
+              program_id: programId,
+              workout_id: workoutIdToUse,
+              entity_id: workout.entity_id || null,
+              scheduled_date: formattedDate,
+            };
+
+            const { data: newSchedule, error: insertError } = await supabase
+              .from('workout_schedule')
+              .insert(scheduleData)
+              .select();
+
+            if (insertError) {
+              console.error('Error creating schedule:', insertError);
+              throw new Error(
+                `Error creating schedule: ${insertError.message}`
+              );
+            }
+
+            // Update local state
+            setScheduledWorkouts((prev) => [...prev, newSchedule[0]]);
           }
         }
-        // Case 4: Brand new workout with no ID (should be rare)
-        else {
-          console.log('New workout without ID - this should rarely happen');
-          alert('This workout needs to be saved first before scheduling');
-        }
       } catch (error) {
-        console.error('Error saving workout:', error);
+        console.error('Error in handleDrop:', error);
         alert(`Failed to schedule workout: ${error.message}`);
       } finally {
         setIsLoading(false);
@@ -1106,13 +1039,6 @@ export default function ProgramCalendar({
     // Convert the map values to an array
     const workoutsForDate = Array.from(workoutMap.values());
 
-    // Only log if there are workouts for this date
-    if (workoutsForDate.length > 0) {
-      console.log(
-        `${workoutsForDate.length} unique workouts for date ${dateString}`
-      );
-    }
-
     return workoutsForDate;
   };
 
@@ -1127,6 +1053,7 @@ export default function ProgramCalendar({
 
     console.log('Preparing to schedule copy of workout:', event.title);
     setDraggedWorkout(scheduleCopy);
+    setIsDragging(true);
   };
 
   // Delete a scheduled workout
@@ -1262,6 +1189,7 @@ export default function ProgramCalendar({
                     } p-1 rounded text-xs cursor-move flex justify-between items-center group`}
                     draggable={!isPastDate}
                     onDragStart={() => handleDragStart(event)}
+                    onDragEnd={handleDragEnd}
                   >
                     <span className="truncate">
                       {event.title || 'Untitled Workout'}

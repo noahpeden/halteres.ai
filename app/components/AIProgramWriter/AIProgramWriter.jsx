@@ -44,8 +44,7 @@ import ReferenceWorkouts from './ReferenceWorkouts';
 import WorkoutList from './WorkoutList';
 import WorkoutModal from './WorkoutModal';
 import DatePickerModal from './DatePickerModal';
-import LoadingState from './LoadingState';
-import ClientMetricsTab from '../ClientMetricsTab';
+import RescheduleModal from './RescheduleModal';
 
 export default function AIProgramWriter({ programId, onSelectWorkout }) {
   const { supabase } = useAuth();
@@ -56,7 +55,6 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
   const [loadingDuration, setLoadingDuration] = useState(0);
   const [loadingTimer, setLoadingTimer] = useState(null);
   const [serverStatus, setServerStatus] = useState(null);
-  const [activeTab, setActiveTab] = useState('program');
   const [generatedDescription, setGeneratedDescription] = useState('');
   const [formData, setFormData] = useState({
     name: '',
@@ -94,6 +92,13 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
   const [isDatePickerModalOpen, setIsDatePickerModalOpen] = useState(false);
   const [selectedWorkoutForDate, setSelectedWorkoutForDate] = useState(null);
   const [selectedDate, setSelectedDate] = useState(null);
+  // New state for rescheduling modal
+  const [isRescheduleModalOpen, setIsRescheduleModalOpen] = useState(false);
+  const [newStartDate, setNewStartDate] = useState(() => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return tomorrow.toISOString().split('T')[0];
+  });
   // Add a ref to track automatic updates
   const isAutoUpdating = useRef(false);
   // State to store initial name and description
@@ -119,11 +124,11 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
       setSuggestions,
       showToastMessage,
       setGenerationStage,
-      setServerStatus,
-      setLoadingDuration,
-      setLoadingTimer,
       setFormData,
       setGeneratedDescription,
+      setLoadingTimer,
+      setServerStatus,
+      setLoadingDuration,
     });
   };
 
@@ -157,6 +162,26 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
       setIsLoading,
       setSuggestions,
       showToastMessage,
+    });
+  };
+
+  // Handle program rescheduling
+  const handleRescheduleProgram = () => {
+    if (!newStartDate) {
+      showToastMessage('Please select a new start date', 'error');
+      return;
+    }
+
+    handleAutoAssignDates({
+      programId,
+      formData,
+      suggestions,
+      supabase,
+      setIsLoading,
+      setSuggestions,
+      showToastMessage,
+      newStartDate,
+      setFormData,
     });
   };
 
@@ -407,7 +432,6 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
     }
   }, [formData.startDate, formData.numberOfWeeks, formData.daysOfWeek]);
 
-  // Handle selecting a workout
   const handleSelectWorkout = (workout) => {
     if (onSelectWorkout) {
       const workoutWithDate = {
@@ -418,12 +442,10 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
     }
   };
 
-  // Wrapper for viewing workout details
   const handleViewWorkoutDetailsWrapper = (workout) => {
     handleViewWorkoutDetails(workout, setSelectedWorkout, setIsModalOpen);
   };
 
-  // Wrapper for date picker open
   const handleDatePickerOpenWrapper = (workout) => {
     handleDatePickerOpen(
       workout,
@@ -434,12 +456,10 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
     );
   };
 
-  // Wrapper for closing workout modal
   const handleCloseWorkoutModalWrapper = () => {
     handleCloseWorkoutModal(setIsModalOpen);
   };
 
-  // Wrapper for closing date picker modal
   const handleCloseDatePickerModalWrapper = () => {
     handleCloseDatePickerModal(
       setIsDatePickerModalOpen,
@@ -448,14 +468,12 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
     );
   };
 
-  // Handle removing reference workout
   const handleRemoveReferenceWorkout = (workoutId) => {
     setReferenceWorkouts((prev) => prev.filter((w) => w.id !== workoutId));
   };
 
   return (
     <div className="bg-white rounded-lg shadow-md p-4">
-      <h2 className="text-xl font-semibold mb-4">Program Writer</h2>
       {showToast && (
         <Toast
           message={toastMessage}
@@ -464,114 +482,60 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
         />
       )}
 
-      <div className="mb-6">
-        <div className="tabs tabs-boxed">
-          <button
-            className={`tab ${activeTab === 'program' ? 'tab-active' : ''}`}
-            onClick={() => setActiveTab('program')}
-          >
-            Program
-          </button>
-          <button
-            className={`tab ${activeTab === 'metrics' ? 'tab-active' : ''}`}
-            onClick={() => setActiveTab('metrics')}
-          >
-            Client Metrics
-          </button>
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Program Form */}
+        <ProgramForm
+          formData={formData}
+          handleChange={handleChange}
+          handleWorkoutFormatChange={handleWorkoutFormatChangeWrapper}
+          handleDayOfWeekChange={handleDayOfWeekChangeWrapper}
+          isLoading={isLoading}
+          generateProgram={handleGenerateProgram}
+          generationStage={generationStage}
+          loadingDuration={loadingDuration}
+          equipmentSelector={
+            <EquipmentSelector
+              equipment={formData.equipment}
+              onEquipmentChange={handleEquipmentChangeWrapper}
+              equipmentList={equipmentList}
+              allEquipmentSelected={allEquipmentSelected}
+              isVisible={showEquipment}
+              onToggleVisibility={() => setShowEquipment(!showEquipment)}
+            />
+          }
+        />
       </div>
 
-      {activeTab === 'program' && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Program Form */}
-          <ProgramForm
-            formData={formData}
-            handleChange={handleChange}
-            handleWorkoutFormatChange={handleWorkoutFormatChangeWrapper}
-            handleDayOfWeekChange={handleDayOfWeekChangeWrapper}
-            isLoading={isLoading}
-            generateProgram={handleGenerateProgram}
-            generationStage={generationStage}
-            loadingDuration={loadingDuration}
-            equipmentSelector={
-              <EquipmentSelector
-                equipment={formData.equipment}
-                onEquipmentChange={handleEquipmentChangeWrapper}
-                equipmentList={equipmentList}
-                allEquipmentSelected={allEquipmentSelected}
-                isVisible={showEquipment}
-                onToggleVisibility={() => setShowEquipment(!showEquipment)}
-              />
-            }
-          />
-        </div>
-      )}
-
-      {activeTab === 'metrics' && <ClientMetricsTab programId={programId} />}
-
-      {/* Generated Description */}
-      {generatedDescription && activeTab === 'program' && (
-        <div className="mt-6 mb-4">
-          <div className="collapse collapse-arrow bg-base-200">
-            <input type="checkbox" />
-            <div className="collapse-title font-medium">
-              Generated Program Description
-            </div>
-            <div className="collapse-content">
-              <div className="p-2 bg-white rounded-md">
-                <p className="whitespace-pre-line">{generatedDescription}</p>
-                <button
-                  className="btn btn-xs btn-outline mt-2"
-                  onClick={() => {
-                    setFormData((prev) => ({
-                      ...prev,
-                      description: generatedDescription,
-                    }));
-                    showToastMessage('Description copied to form field');
-                  }}
-                >
-                  Use This Description
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Reference Workouts */}
-      {activeTab === 'program' && (
-        <ReferenceWorkouts
-          workouts={referenceWorkouts}
-          supabase={supabase}
-          onRemove={handleRemoveReferenceWorkout}
-          showToastMessage={showToastMessage}
-        />
-      )}
+      <ReferenceWorkouts
+        workouts={referenceWorkouts}
+        supabase={supabase}
+        onRemove={handleRemoveReferenceWorkout}
+        showToastMessage={showToastMessage}
+      />
 
       {/* Workout List */}
-      {suggestions.length > 0 && activeTab === 'program' && (
+      {suggestions.length > 0 && (
         <div className="flex justify-between items-center mt-6">
-          <div className="flex-1">
-            {/* Title removed as it's already in WorkoutList component */}
-          </div>
+          <div className="flex-1" />
           <div className="flex gap-2">
             <button
-              className="btn btn-sm btn-outline"
-              onClick={handleAssignDates}
+              className="btn btn-sm btn-outline btn-secondary"
+              onClick={() => setIsRescheduleModalOpen(true)}
               disabled={isLoading}
             >
               {isLoading ? (
                 <>
                   <span className="loading loading-spinner loading-xs"></span>
-                  Assigning...
+                  Rescheduling...
                 </>
               ) : (
-                'Auto-assign Dates'
+                'Re-Schedule Program'
               )}
             </button>
             {programId && (
               <button
-                className="btn btn-sm btn-primary"
+                className="btn btn-sm btn-primary text-white"
                 onClick={handleSaveProgram}
                 disabled={isLoading}
               >
@@ -589,7 +553,7 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
         </div>
       )}
 
-      {activeTab === 'program' && (
+      {suggestions.length > 0 && (
         <WorkoutList
           workouts={suggestions}
           daysPerWeek={formData.daysPerWeek}
@@ -599,6 +563,7 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
           onSelectWorkout={handleSelectWorkout}
           onDeleteWorkout={handleDeleteWorkout}
           isLoading={isLoading}
+          generatedDescription={generatedDescription}
         />
       )}
 
@@ -620,6 +585,22 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
         onSave={handleDatePickerSave}
         startDate={formData.startDate}
         endDate={formData.endDate}
+      />
+
+      <RescheduleModal
+        isOpen={isRescheduleModalOpen}
+        currentStartDate={formData.startDate}
+        currentEndDate={formData.endDate}
+        onClose={() => {
+          setIsRescheduleModalOpen(false);
+          // Reset to tomorrow's date
+          const tomorrow = new Date();
+          tomorrow.setDate(tomorrow.getDate() + 1);
+          setNewStartDate(tomorrow.toISOString().split('T')[0]);
+        }}
+        onSave={handleRescheduleProgram}
+        setNewStartDate={setNewStartDate}
+        newStartDate={newStartDate}
       />
     </div>
   );

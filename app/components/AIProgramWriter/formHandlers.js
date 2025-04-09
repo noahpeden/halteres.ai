@@ -6,6 +6,12 @@ import { processWorkoutDescription } from './utils';
 
 // Process workout for display
 export const processWorkoutForDisplay = (workout) => {
+  // Determine the suggested date from various possible sources
+  const suggestedDate =
+    workout.tags?.scheduled_date ||
+    workout.tags?.suggestedDate ||
+    workout.scheduled_date;
+
   return {
     ...workout,
     savedWorkoutId: workout.id,
@@ -13,7 +19,7 @@ export const processWorkoutForDisplay = (workout) => {
     body: workout.body || workout.description,
     description: workout.body || workout.description,
     tags: workout.tags || {},
-    suggestedDate: workout.tags?.scheduled_date || workout.tags?.suggestedDate,
+    suggestedDate: suggestedDate,
     workoutDetails: workout.tags?.workoutDetails,
   };
 };

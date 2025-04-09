@@ -1,11 +1,22 @@
 export const formatDate = (dateString) => {
+  if (!dateString) return 'Not scheduled';
+
   const options = {
     weekday: 'long',
     month: 'short',
     day: 'numeric',
     year: 'numeric',
   };
-  return new Date(dateString).toLocaleDateString(undefined, options);
+
+  // Parse the date parts to avoid timezone issues
+  const [year, month, day] = dateString
+    .split('-')
+    .map((num) => parseInt(num, 10));
+
+  // Create a date object with the exact date (months are 0-indexed in JS Date)
+  const date = new Date(year, month - 1, day);
+
+  return date.toLocaleDateString(undefined, options);
 };
 
 export const processWorkoutDescription = (description) => {
