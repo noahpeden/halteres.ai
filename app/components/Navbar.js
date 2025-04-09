@@ -9,12 +9,12 @@ import { Home } from 'lucide-react';
 import { LogOut } from 'lucide-react';
 
 export default function Navbar() {
-  const pathname = usePathname();
   const { session } = useAuth();
   const supabase = createClientComponentClient();
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
+    window.location.href = '/login';
   };
 
   return (
@@ -30,10 +30,8 @@ export default function Navbar() {
       </Link>
       <div className="flex items-center gap-4">
         {session && (
-          <Link href="/dashboard">
-            <button className="btn btn-accent  text-white">
-              <Home />
-            </button>
+          <Link href="/dashboard" className="btn btn-accent text-white">
+            <Home />
           </Link>
         )}
         {session ? (
@@ -41,8 +39,8 @@ export default function Navbar() {
             <LogOut />
           </button>
         ) : (
-          <Link href="/login">
-            <button className="btn btn-secondary text-white">Login</button>
+          <Link href="/login" className="btn btn-secondary text-white">
+            Sign up or Log in
           </Link>
         )}
       </div>

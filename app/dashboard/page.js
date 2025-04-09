@@ -64,7 +64,7 @@ export default function Dashboard() {
         const { data: programsData, error: programsError } = await supabase
           .from('programs')
           .select('*')
-          .in('entity_id', entityIds.length > 0 ? entityIds : ['no-results'])
+          .in('entity_id', entityIds.length > 0 ? entityIds : [])
           .order('created_at', { ascending: false });
 
         if (programsError) throw programsError;
@@ -482,6 +482,39 @@ export default function Dashboard() {
           <h2 className="text-xl font-semibold">Upcoming Workouts</h2>
         </div>
         <UpcomingWorkouts />
+      </div>
+
+      {/* Friends & Family Feedback Section */}
+      <div className="bg-white p-6 rounded-lg shadow mb-8">
+        <div className="flex flex-col md:flex-row justify-between items-center">
+          <div>
+            <h2 className="text-xl font-semibold mb-2">
+              Friends & Family Release Feedback
+            </h2>
+            <p className="text-gray-600 mb-4">
+              We value your feedback! Please share your thoughts on our
+              platform.
+            </p>
+            <a
+              href="https://docs.google.com/forms/d/e/1FAIpQLScwKMmjHLqIq4bmOlFKaVHFIowqX1-CwZ3HRNXWZyxpBb3VVw/viewform?usp=dialog"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-primary"
+            >
+              Give Feedback
+            </a>
+          </div>
+          <div className="mt-4 md:mt-0 bg-blue-50 p-4 rounded-lg">
+            <h3 className="font-medium mb-2">Questions or issues?</h3>
+            <p className="text-sm">Contact our co-founder Ben:</p>
+            <p className="text-sm">
+              <span className="font-medium">Phone:</span> (314) 827-4744
+            </p>
+            <p className="text-sm">
+              <span className="font-medium">Email:</span> ben@halteres.ai
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Entity Selection/Creation Modal */}

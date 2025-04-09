@@ -119,27 +119,73 @@ export default function AIWorkoutReferencer({ programId }) {
     try {
       if (formInput.isWebSearch) {
         setWebSearchLoading(true);
-        const webResponse = await fetch('/api/web-search-workouts', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            searchQuery: searchText,
-            goal: formInput.goal,
-            difficulty: formInput.difficulty,
-            focusArea: formInput.focusArea,
-            duration: formInput.duration,
-            equipment: formInput.equipment,
-            workoutFormats: formInput.workoutFormats,
-            gymType: formInput.gymType,
-          }),
-        });
-        const webData = await webResponse.json();
-        if (!webResponse.ok) {
-          console.error('Web search error:', webData.error);
-          throw new Error(webData.error || 'Failed to web search workouts');
+        try {
+          const abortController = new AbortController();
+          const timeoutId = setTimeout(() => abortController.abort(), 60000); // 60 second timeout
+
+          const webResponse = await fetch('/api/web-search-workouts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              searchQuery: searchText,
+              goal: formInput.goal,
+              difficulty: formInput.difficulty,
+              focusArea: formInput.focusArea,
+              duration: formInput.duration,
+              equipment: formInput.equipment,
+              workoutFormats: formInput.workoutFormats,
+              gymType: formInput.gymType,
+            }),
+            signal: abortController.signal,
+          });
+
+          clearTimeout(timeoutId);
+
+          if (!webResponse.ok) {
+            const statusCode = webResponse.status;
+            if (statusCode === 504) {
+              throw new Error(
+                'Web search timed out. Please try again or use library search instead.'
+              );
+            }
+
+            let errorMessage;
+            try {
+              const errorData = await webResponse.json();
+              errorMessage =
+                errorData.error ||
+                `Error searching workouts (Status: ${statusCode})`;
+            } catch (jsonError) {
+              const textError = await webResponse.text().catch(() => null);
+              errorMessage =
+                textError || `Error searching workouts (Status: ${statusCode})`;
+            }
+
+            throw new Error(errorMessage);
+          }
+
+          let webData;
+          try {
+            webData = await webResponse.json();
+          } catch (jsonError) {
+            console.error('JSON parsing error:', jsonError);
+            throw new Error(
+              'Failed to parse workout results. The server might be overloaded.'
+            );
+          }
+
+          setWebSearchWorkoutResults(webData.workouts || []);
+        } catch (webError) {
+          console.error('Web search error:', webError);
+          if (webError.name === 'AbortError') {
+            throw new Error(
+              'Web search timed out. Please try a more specific search or use the Library search instead.'
+            );
+          }
+          throw webError;
+        } finally {
+          setWebSearchLoading(false);
         }
-        setWebSearchWorkoutResults(webData.workouts || []);
-        setWebSearchLoading(false);
       } else {
         const localResponse = await fetch('/api/search-workouts', {
           method: 'POST',
@@ -155,15 +201,31 @@ export default function AIWorkoutReferencer({ programId }) {
             gymType: formInput.gymType,
           }),
         });
-        const localData = await localResponse.json();
+
         if (!localResponse.ok) {
-          throw new Error(localData.error || 'Failed to search local workouts');
+          let errorMessage;
+          try {
+            const errorData = await localResponse.json();
+            errorMessage = errorData.error || 'Failed to search local workouts';
+          } catch (jsonError) {
+            errorMessage = `Failed to search local workouts (Status: ${localResponse.status})`;
+          }
+          throw new Error(errorMessage);
         }
-        setSearchWorkoutResults(localData.workouts || []);
+
+        try {
+          const localData = await localResponse.json();
+          setSearchWorkoutResults(localData.workouts || []);
+        } catch (jsonError) {
+          console.error('JSON parsing error:', jsonError);
+          throw new Error('Failed to parse local workout results');
+        }
       }
     } catch (error) {
       console.error('Error searching workouts:', error);
-      setErrorMessage(error.message);
+      setErrorMessage(
+        error.message || 'An unexpected error occurred while searching workouts'
+      );
     } finally {
       setSearchLoading(false);
     }
@@ -467,6 +529,13 @@ export default function AIWorkoutReferencer({ programId }) {
                 `Search ${formInput.isWebSearch ? 'Web' : 'Library'}`
               )}
             </button>
+            {formInput.isWebSearch && (
+              <div className="text-xs text-gray-500 mt-1">
+                Web search uses AI to find workouts online and may take up to 60
+                seconds. If you experience timeouts, try using more specific
+                search terms or switch to Library search.
+              </div>
+            )}
           </div>
 
           {errorMessage && (
