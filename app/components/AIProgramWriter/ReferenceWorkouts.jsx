@@ -51,7 +51,9 @@ export default function ReferenceWorkouts({
             program.
           </p>
         </div>
-        <span className="badge badge-accent">{workouts.length} references</span>
+        <span className="badge badge-accent text-white">
+          {workouts.length} references
+        </span>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {workouts.map((workout) => (

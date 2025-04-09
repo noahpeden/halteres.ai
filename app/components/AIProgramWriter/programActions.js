@@ -873,3 +873,56 @@ export async function deleteWorkout({
     showToastMessage('Failed to delete workout. Please try again.', 'error');
   }
 }
+
+// Edit workout
+export async function editWorkout({
+  workout,
+  supabase,
+  setSuggestions,
+  showToastMessage,
+  setIsLoading,
+}) {
+  if (!workout || !workout.id) {
+    showToastMessage('Cannot edit workout: Missing workout ID', 'error');
+    return;
+  }
+
+  setIsLoading(true);
+
+  try {
+    // Update the workout in the database
+    const { data, error } = await supabase
+      .from('program_workouts')
+      .update({
+        title: workout.title,
+        body: workout.body,
+      })
+      .eq('id', workout.id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    // Update the local state
+    setSuggestions((prev) =>
+      prev.map((w) =>
+        w.id === workout.id
+          ? {
+              ...w,
+              title: workout.title,
+              body: workout.body,
+            }
+          : w
+      )
+    );
+
+    showToastMessage('Workout updated successfully');
+    return true;
+  } catch (error) {
+    console.error('Error updating workout:', error);
+    showToastMessage('Failed to update workout. Please try again.', 'error');
+    return false;
+  } finally {
+    setIsLoading(false);
+  }
+}

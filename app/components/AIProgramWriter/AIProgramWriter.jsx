@@ -16,6 +16,7 @@ import {
   handleAutoAssignDates,
   handleDatePickerSave as datePickerSave,
   deleteWorkout as deleteWorkoutAction,
+  editWorkout as editWorkoutAction,
 } from './programActions';
 
 // Import handlers from extracted modules
@@ -45,6 +46,7 @@ import WorkoutList from './WorkoutList';
 import WorkoutModal from './WorkoutModal';
 import DatePickerModal from './DatePickerModal';
 import RescheduleModal from './RescheduleModal';
+import EditWorkoutModal from './EditWorkoutModal';
 
 export default function AIProgramWriter({ programId, onSelectWorkout }) {
   const { supabase } = useAuth();
@@ -104,6 +106,8 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
   // State to store initial name and description
   const [initialName, setInitialName] = useState('');
   const [initialDescription, setInitialDescription] = useState('');
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedWorkoutForEdit, setSelectedWorkoutForEdit] = useState(null);
 
   // Toast helper function
   const showToastMessage = (message, type = 'success') => {
@@ -211,6 +215,31 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
       showToastMessage,
       e,
     });
+  };
+
+  // Handle workout editing
+  const handleEditWorkout = (workout) => {
+    setSelectedWorkoutForEdit(workout);
+    setIsEditModalOpen(true);
+  };
+
+  const handleCloseEditModal = () => {
+    setIsEditModalOpen(false);
+    setSelectedWorkoutForEdit(null);
+  };
+
+  const handleSaveEditedWorkout = async (editedWorkout) => {
+    const success = await editWorkoutAction({
+      workout: editedWorkout,
+      supabase,
+      setSuggestions,
+      showToastMessage,
+      setIsLoading,
+    });
+
+    if (success) {
+      handleCloseEditModal();
+    }
   };
 
   // Fetch reference workouts on component mount
@@ -562,6 +591,7 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
           onDatePick={handleDatePickerOpenWrapper}
           onSelectWorkout={handleSelectWorkout}
           onDeleteWorkout={handleDeleteWorkout}
+          onEditWorkout={handleEditWorkout}
           isLoading={isLoading}
           generatedDescription={generatedDescription}
         />
@@ -601,6 +631,14 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
         onSave={handleRescheduleProgram}
         setNewStartDate={setNewStartDate}
         newStartDate={newStartDate}
+      />
+
+      <EditWorkoutModal
+        isOpen={isEditModalOpen}
+        workout={selectedWorkoutForEdit}
+        onClose={handleCloseEditModal}
+        onSave={handleSaveEditedWorkout}
+        isLoading={isLoading}
       />
     </div>
   );

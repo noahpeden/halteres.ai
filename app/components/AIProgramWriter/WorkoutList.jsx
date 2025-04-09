@@ -1,5 +1,5 @@
 'use client';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Pencil } from 'lucide-react';
 export default function WorkoutList({
   workouts,
   daysPerWeek,
@@ -8,6 +8,7 @@ export default function WorkoutList({
   onDatePick,
   onSelectWorkout,
   onDeleteWorkout,
+  onEditWorkout,
   generatedDescription,
   setFormData,
   showToastMessage,
@@ -84,8 +85,7 @@ export default function WorkoutList({
             {weekGroup.workouts.map((workout, index) => (
               <div
                 key={`${weekGroup.week}-${index}`}
-                className="border rounded-md p-4 hover:bg-blue-50 cursor-pointer"
-                onClick={() => onViewDetails(workout)}
+                className="border rounded-md p-4 "
                 draggable
                 onDragStart={(e) => {
                   e.dataTransfer.setData('workout', JSON.stringify(workout));
@@ -98,21 +98,40 @@ export default function WorkoutList({
                       `Week ${weekGroup.week}, Day ${index + 1}`}
                   </h4>
                   <div className="flex gap-2 items-center">
-                    <span className="badge badge-primary">
+                    <button
+                      className="badge badge-neutral text-white cursor-pointer"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDatePick(workout);
+                      }}
+                      title="Adjust date"
+                    >
                       {workout.tags?.suggestedDate
                         ? formatDate(workout.tags.suggestedDate)
                         : workout.suggestedDate
                         ? formatDate(workout.suggestedDate)
                         : 'Not scheduled'}
-                    </span>
+                    </button>
                     {workout.id && (
-                      <button
-                        className="btn btn-sm btn-ghost btn-square text-error"
-                        onClick={(e) => onDeleteWorkout(workout.id, e)}
-                        title="Delete workout"
-                      >
-                        <Trash2 className="h-5 w-5" />
-                      </button>
+                      <>
+                        <button
+                          className="btn btn-sm btn-ghost btn-square text-accent"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onEditWorkout(workout);
+                          }}
+                          title="Edit workout"
+                        >
+                          <Pencil className="h-5 w-5" />
+                        </button>
+                        <button
+                          className="btn btn-sm btn-ghost btn-square text-error"
+                          onClick={(e) => onDeleteWorkout(workout.id, e)}
+                          title="Delete workout"
+                        >
+                          <Trash2 className="h-5 w-5" />
+                        </button>
+                      </>
                     )}
                   </div>
                 </div>
