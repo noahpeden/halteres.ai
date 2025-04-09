@@ -43,7 +43,9 @@ export default function WorkoutModal({
 
           <div className="mb-2">
             <span className="badge badge-primary">
-              {workout.suggestedDate
+              {workout.tags?.suggestedDate
+                ? formatDate(workout.tags.suggestedDate)
+                : workout.suggestedDate
                 ? formatDate(workout.suggestedDate)
                 : 'Not scheduled'}
             </span>

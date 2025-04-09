@@ -5,7 +5,6 @@ import { useSearchParams } from 'next/navigation';
 import ProgramCalendar from '@/components/ProgramCalendar';
 import AIProgramWriter from '@/components/AIProgramWriter/AIProgramWriter';
 import AIWorkoutReferencer from '@/components/AIWorkoutReferencer';
-import ClientMetricsSidebar from '@/components/ClientMetricsSidebar';
 import Link from 'next/link';
 
 export default function ProgramCalendarPage(props) {
@@ -463,10 +462,6 @@ export default function ProgramCalendarPage(props) {
                 )}
               </div>
             </div>
-
-            <div className="mt-4 lg:block hidden">
-              <ClientMetricsSidebar programId={programId} />
-            </div>
           </div>
 
           {/* Calendar (below on mobile, right on desktop) */}
@@ -486,11 +481,6 @@ export default function ProgramCalendarPage(props) {
                 }
               }}
             />
-          </div>
-
-          {/* Metrics sidebar on mobile (below calendar) */}
-          <div className="mt-4 lg:hidden">
-            <ClientMetricsSidebar programId={programId} />
           </div>
         </div>
       )}

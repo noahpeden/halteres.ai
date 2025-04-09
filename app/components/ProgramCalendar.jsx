@@ -17,23 +17,15 @@ export default function ProgramCalendar({
   const [isLoading, setIsLoading] = useState(false);
   const [highlightedDate, setHighlightedDate] = useState(null);
   const calendarRef = useRef(null);
-  // Today's date for comparison with past dates
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const [showWorkoutsSidebar, setShowWorkoutsSidebar] = useState(true);
-
-  // Force refresh when props change
   const [forceUpdate, setForceUpdate] = useState(0);
-
-  // Ref to track if auto-scheduling has already run for this program session
   const hasAutoScheduledRef = useRef(false);
 
-  // Call onRender after initial render
   useEffect(() => {
     onRender();
   }, [onRender]);
 
-  // Utility function to create a new workout
   const createNewWorkout = async (workout, date) => {
     try {
       const workoutData = {
@@ -81,7 +73,6 @@ export default function ProgramCalendar({
     }
   };
 
-  // Utility function to schedule a workout
   const scheduleWorkout = async (workoutId, date, entityId = null) => {
     try {
       const formattedDate =

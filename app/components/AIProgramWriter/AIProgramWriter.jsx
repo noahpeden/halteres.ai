@@ -509,35 +509,6 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
 
       {activeTab === 'metrics' && <ClientMetricsTab programId={programId} />}
 
-      {/* Generated Description */}
-      {generatedDescription && activeTab === 'program' && (
-        <div className="mt-6 mb-4">
-          <div className="collapse collapse-arrow bg-base-200">
-            <input type="checkbox" />
-            <div className="collapse-title font-medium">
-              Generated Program Description
-            </div>
-            <div className="collapse-content">
-              <div className="p-2 bg-white rounded-md">
-                <p className="whitespace-pre-line">{generatedDescription}</p>
-                <button
-                  className="btn btn-xs btn-outline mt-2"
-                  onClick={() => {
-                    setFormData((prev) => ({
-                      ...prev,
-                      description: generatedDescription,
-                    }));
-                    showToastMessage('Description copied to form field');
-                  }}
-                >
-                  Use This Description
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Reference Workouts */}
       {activeTab === 'program' && (
         <ReferenceWorkouts
@@ -551,9 +522,6 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
       {/* Workout List */}
       {suggestions.length > 0 && activeTab === 'program' && (
         <div className="flex justify-between items-center mt-6">
-          <div className="flex-1">
-            {/* Title removed as it's already in WorkoutList component */}
-          </div>
           <div className="flex gap-2">
             <button
               className="btn btn-sm btn-outline"
@@ -589,7 +557,7 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
         </div>
       )}
 
-      {activeTab === 'program' && (
+      {activeTab === 'program' && suggestions.length > 0 && (
         <WorkoutList
           workouts={suggestions}
           daysPerWeek={formData.daysPerWeek}
@@ -599,6 +567,7 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
           onSelectWorkout={handleSelectWorkout}
           onDeleteWorkout={handleDeleteWorkout}
           isLoading={isLoading}
+          generatedDescription={generatedDescription}
         />
       )}
 
