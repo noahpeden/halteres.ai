@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import TodayWorkouts from '@/components/TodayWorkouts';
 import UpcomingWorkouts from '@/components/UpcomingWorkouts';
+import { Clock } from 'lucide-react';
+import { Calendar } from 'lucide-react';
 
 export default function Dashboard() {
   const router = useRouter();
@@ -342,16 +344,6 @@ export default function Dashboard() {
     }
   }
 
-  // If auth is not yet loaded, show a loading indicator
-  if (!authReady) {
-    return (
-      <div className="container mx-auto p-4 flex justify-center items-center min-h-[80vh]">
-        <span className="loading loading-spinner loading-lg"></span>
-        <p className="ml-4 text-lg">Loading authentication...</p>
-      </div>
-    );
-  }
-
   // If auth is loaded but user is null, redirect to login
   if (authReady && !user) {
     router.push('/login');
@@ -398,92 +390,82 @@ export default function Dashboard() {
           </div>
 
           <div className="stat bg-white shadow rounded-lg">
-            <div className="stat-figure text-secondary">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-8 w-8"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                />
-              </svg>
-            </div>
             <div className="stat-title">Today's Workouts</div>
-            <div className="stat-value text-secondary">
-              {stats.activeWorkouts}
+            <div className="flex items-center justify-between">
+              <div className="stat-value text-secondary">
+                {stats.activeWorkouts}
+              </div>
+              <div className="stat-figure text-secondary">
+                <Calendar className="h-8 w-8" />
+              </div>
             </div>
           </div>
 
           <div className="stat bg-white shadow rounded-lg">
-            <div className="stat-figure text-accent">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-8 w-8"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-            </div>
-            <div className="stat-title">Upcoming Workouts</div>
-            <div className="stat-value text-accent">
-              {stats.upcomingWorkouts}
+            <div className="stat-title">This Week's Workouts</div>
+            <div className="flex items-center justify-between">
+              <div className="stat-value text-accent">
+                {stats.upcomingWorkouts}
+              </div>
+              <div className="stat-figure text-accent">
+                <Clock className="h-8 w-8" />
+              </div>
             </div>
           </div>
         </div>
       </div>
       {programs.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {programs.map((program) => (
-            <div
-              key={program.id}
-              className="card bg-white shadow-md hover:shadow-lg transition-shadow"
+        <div className="mb-8">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold">Your Programs</h2>
+            <label
+              htmlFor="entity-selection-modal"
+              className="btn btn-primary text-white"
             >
-              <div className="card-body">
-                <h3 className="card-title">{program.name}</h3>
-                <p className="text-gray-600 text-sm">
-                  Created: {new Date(program.created_at).toLocaleDateString()}
-                </p>
-                <p className="mt-2">
-                  {program.description || 'No description available'}
-                </p>
-                <div className="card-actions justify-end mt-4">
-                  <Link
-                    href={`/program/${program.id}/calendar`}
-                    className="btn btn-primary btn-sm"
-                  >
-                    Open
-                  </Link>
-                  <button
-                    onClick={() => {
-                      setSelectedProgramId(program.id);
-                      document.getElementById(
-                        'delete-program-modal'
-                      ).checked = true;
-                    }}
-                    className="btn btn-error btn-sm btn-outline"
-                  >
-                    Delete
-                  </button>
+              Create New Program
+            </label>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+            {programs.map((program) => (
+              <div
+                key={program.id}
+                className="card bg-white shadow-md hover:shadow-lg transition-shadow"
+              >
+                <div className="card-body">
+                  <h3 className="card-title">{program.name}</h3>
+                  <p className="text-gray-600 text-sm">
+                    Created: {new Date(program.created_at).toLocaleDateString()}
+                  </p>
+                  <p className="mt-2">
+                    {program.description || 'No description available'}
+                  </p>
+                  <div className="card-actions justify-end mt-4">
+                    <Link
+                      href={`/program/${program.id}/calendar`}
+                      className="btn btn-primary btn-sm"
+                    >
+                      Open
+                    </Link>
+                    <button
+                      onClick={() => {
+                        setSelectedProgramId(program.id);
+                        document.getElementById(
+                          'delete-program-modal'
+                        ).checked = true;
+                      }}
+                      className="btn btn-error btn-sm btn-outline"
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       ) : (
-        <div className="text-center py-12 bg-white rounded-lg shadow">
+        <div className="text-center py-12 bg-white rounded-lg shadow mb-8">
           <h3 className="text-lg font-medium mb-2">No Programs Yet</h3>
           <p className="text-gray-600 mb-4">
             Create your first program to get started
@@ -493,13 +475,6 @@ export default function Dashboard() {
           </label>
         </div>
       )}
-      {/* Today's Workouts Section */}
-      <div className="mb-8">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold">Today's Workouts</h2>
-        </div>
-        <TodayWorkouts />
-      </div>
 
       {/* Upcoming Workouts Section */}
       <div className="mb-8">
@@ -507,15 +482,6 @@ export default function Dashboard() {
           <h2 className="text-xl font-semibold">Upcoming Workouts</h2>
         </div>
         <UpcomingWorkouts />
-      </div>
-
-      <div className="mb-8">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold">Your Programs</h2>
-          <label htmlFor="entity-selection-modal" className="btn btn-primary">
-            Create New Program
-          </label>
-        </div>
       </div>
 
       {/* Entity Selection/Creation Modal */}
