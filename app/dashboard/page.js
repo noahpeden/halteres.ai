@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import TodayWorkouts from '@/components/TodayWorkouts';
+import UpcomingWorkouts from '@/components/UpcomingWorkouts';
 
 export default function Dashboard() {
   const router = useRouter();
@@ -68,47 +69,111 @@ export default function Dashboard() {
         setPrograms(programsData || []);
 
         // Calculate stats
-        const today = new Date().toISOString().split('T')[0];
-
-        // Get count of workouts scheduled for today directly from program_workouts
-        const { data: todaysWorkouts, error: activeError } = await supabase
-          .from('program_workouts')
-          .select('*')
-          .eq('scheduled_date', today);
-
-        if (activeError) {
-          console.error('Error fetching active workouts count:', activeError);
-        } else {
-          console.log(
-            `Found ${
-              todaysWorkouts?.length || 0
-            } workouts scheduled for today (${today}):`,
-            todaysWorkouts
-          );
-        }
+        const today = new Date();
+        const todayStr = today.toISOString().split('T')[0];
 
         // Get count of upcoming workouts
-        const { data: upcomingWorkouts, error: upcomingError } = await supabase
+        const { data: allWorkouts, error: workoutsError } = await supabase
           .from('program_workouts')
-          .select('*')
-          .gt('scheduled_date', today);
+          .select('*');
 
-        if (upcomingError) {
-          console.error(
-            'Error fetching upcoming workouts count:',
-            upcomingError
-          );
+        if (workoutsError) {
+          console.error('Error fetching workouts:', workoutsError);
         } else {
-          console.log(
-            `Found ${upcomingWorkouts?.length || 0} upcoming workouts`
-          );
-        }
+          console.log(`Retrieved ${allWorkouts?.length || 0} total workouts`);
 
-        setStats({
-          totalPrograms: programsData?.length || 0,
-          activeWorkouts: todaysWorkouts?.length || 0,
-          upcomingWorkouts: upcomingWorkouts?.length || 0,
-        });
+          // Filter for today's workouts
+          const todaysWorkouts = (allWorkouts || []).filter((workout) => {
+            // Check both scheduled_date and tags fields
+            const scheduledDate = workout.scheduled_date;
+            const tagDate =
+              workout.tags?.scheduled_date ||
+              workout.tags?.suggestedDate ||
+              workout.tags?.date;
+
+            let workoutDate = null;
+
+            // Try scheduled_date
+            if (scheduledDate) {
+              try {
+                const date = new Date(scheduledDate);
+                if (!isNaN(date.getTime())) {
+                  workoutDate = date.toISOString().split('T')[0];
+                }
+              } catch (e) {
+                /* invalid date */
+              }
+            }
+
+            // Try tags date if scheduled_date didn't work
+            if (!workoutDate && tagDate) {
+              try {
+                const date = new Date(tagDate);
+                if (!isNaN(date.getTime())) {
+                  workoutDate = date.toISOString().split('T')[0];
+                }
+              } catch (e) {
+                /* invalid date */
+              }
+            }
+
+            // Check if workout is scheduled for today
+            return workoutDate === today.toISOString().split('T')[0];
+          });
+
+          // Filter for upcoming workouts (next 7 days, not including today)
+          const nextWeek = new Date(today);
+          nextWeek.setDate(today.getDate() + 7);
+          const nextWeekStr = nextWeek.toISOString().split('T')[0];
+
+          const upcomingWorkouts = (allWorkouts || []).filter((workout) => {
+            // Check both scheduled_date and tags fields
+            const scheduledDate = workout.scheduled_date;
+            const tagDate =
+              workout.tags?.scheduled_date ||
+              workout.tags?.suggestedDate ||
+              workout.tags?.date;
+
+            let workoutDate = null;
+
+            // Try scheduled_date
+            if (scheduledDate) {
+              try {
+                const date = new Date(scheduledDate);
+                if (!isNaN(date.getTime())) {
+                  workoutDate = date.toISOString().split('T')[0];
+                }
+              } catch (e) {
+                /* invalid date */
+              }
+            }
+
+            // Try tags date if scheduled_date didn't work
+            if (!workoutDate && tagDate) {
+              try {
+                const date = new Date(tagDate);
+                if (!isNaN(date.getTime())) {
+                  workoutDate = date.toISOString().split('T')[0];
+                }
+              } catch (e) {
+                /* invalid date */
+              }
+            }
+
+            // Check if workout is in the future (after today but before or on next week)
+            return workoutDate > todayStr && workoutDate <= nextWeekStr;
+          });
+
+          console.log(
+            `Found ${todaysWorkouts.length} workouts for today and ${upcomingWorkouts.length} upcoming workouts`
+          );
+
+          setStats({
+            totalPrograms: programsData?.length || 0,
+            activeWorkouts: todaysWorkouts.length,
+            upcomingWorkouts: upcomingWorkouts.length,
+          });
+        }
       } catch (error) {
         console.error('Error fetching data:', error);
       } finally {
@@ -379,13 +444,69 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
-
+      {programs.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {programs.map((program) => (
+            <div
+              key={program.id}
+              className="card bg-white shadow-md hover:shadow-lg transition-shadow"
+            >
+              <div className="card-body">
+                <h3 className="card-title">{program.name}</h3>
+                <p className="text-gray-600 text-sm">
+                  Created: {new Date(program.created_at).toLocaleDateString()}
+                </p>
+                <p className="mt-2">
+                  {program.description || 'No description available'}
+                </p>
+                <div className="card-actions justify-end mt-4">
+                  <Link
+                    href={`/program/${program.id}/calendar`}
+                    className="btn btn-primary btn-sm"
+                  >
+                    Open
+                  </Link>
+                  <button
+                    onClick={() => {
+                      setSelectedProgramId(program.id);
+                      document.getElementById(
+                        'delete-program-modal'
+                      ).checked = true;
+                    }}
+                    className="btn btn-error btn-sm btn-outline"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-12 bg-white rounded-lg shadow">
+          <h3 className="text-lg font-medium mb-2">No Programs Yet</h3>
+          <p className="text-gray-600 mb-4">
+            Create your first program to get started
+          </p>
+          <label htmlFor="entity-selection-modal" className="btn btn-primary">
+            Create Program
+          </label>
+        </div>
+      )}
       {/* Today's Workouts Section */}
       <div className="mb-8">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-semibold">Today's Workouts</h2>
         </div>
         <TodayWorkouts />
+      </div>
+
+      {/* Upcoming Workouts Section */}
+      <div className="mb-8">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-semibold">Upcoming Workouts</h2>
+        </div>
+        <UpcomingWorkouts />
       </div>
 
       <div className="mb-8">
@@ -395,62 +516,6 @@ export default function Dashboard() {
             Create New Program
           </label>
         </div>
-
-        {programs.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {programs.map((program) => (
-              <div
-                key={program.id}
-                className="card bg-white shadow-md hover:shadow-lg transition-shadow"
-              >
-                <div className="card-body">
-                  <h3 className="card-title">{program.name}</h3>
-                  <p className="text-gray-600 text-sm">
-                    Created: {new Date(program.created_at).toLocaleDateString()}
-                  </p>
-                  <p className="mt-2">
-                    {program.description || 'No description available'}
-                  </p>
-                  <div className="card-actions justify-end mt-4">
-                    <Link
-                      href={`/program/${program.id}/calendar`}
-                      className="btn btn-primary btn-sm"
-                    >
-                      Open Program
-                    </Link>
-                    <Link
-                      href={`/program/${program.id}/workouts`}
-                      className="btn btn-outline btn-sm"
-                    >
-                      Manage Workouts
-                    </Link>
-                    <button
-                      onClick={() => {
-                        setSelectedProgramId(program.id);
-                        document.getElementById(
-                          'delete-program-modal'
-                        ).checked = true;
-                      }}
-                      className="btn btn-error btn-sm btn-outline"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-12 bg-white rounded-lg shadow">
-            <h3 className="text-lg font-medium mb-2">No Programs Yet</h3>
-            <p className="text-gray-600 mb-4">
-              Create your first program to get started
-            </p>
-            <label htmlFor="entity-selection-modal" className="btn btn-primary">
-              Create Program
-            </label>
-          </div>
-        )}
       </div>
 
       {/* Entity Selection/Creation Modal */}
