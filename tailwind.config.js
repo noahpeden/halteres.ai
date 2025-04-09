@@ -107,14 +107,28 @@ module.exports = {
           error: '#e74444', // error-red
           '--btn-primary': '#1771dc',
           '--btn-primary-text': '#ffffff',
-          '--rounded-box': '1rem', // Default rounded box (optional)
-          '--rounded-btn': '0.5rem', // Default rounded button (optional)
-          '--rounded-badge': '1.9rem', // Default rounded badge (optional)
+          '--btn-secondary': '#ea7f49',
+          '--btn-secondary-text': '#ffffff',
+          '--btn-accent': '#3c8f73',
+          '--btn-accent-text': '#ffffff',
+          '--btn-neutral': '#6f879a',
+          '--btn-neutral-text': '#ffffff',
+          '--btn-info': '#deebfd',
+          '--btn-info-text': '#000000',
+          '--btn-success': '#188038',
+          '--btn-success-text': '#ffffff',
+          '--btn-warning': '#ffcc7b',
+          '--btn-warning-text': '#000000',
+          '--btn-error': '#e74444',
+          '--btn-error-text': '#ffffff',
+          '--rounded-box': '1rem',
+          '--rounded-btn': '0.5rem',
+          '--rounded-badge': '1.9rem',
         },
       },
     ],
-    utils: true, // adds responsive and modifier utility classes
-    prefix: '', // prefix for daisyUI classnames (components, modifiers and responsive class names. Not colors)
+    utils: true,
+    prefix: '',
     themeRoot: ':root',
   },
 };

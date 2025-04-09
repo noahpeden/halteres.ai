@@ -301,7 +301,7 @@ export default function ProgramForm({
       {/* Generate button */}
       <div className="pt-2">
         <button
-          className="btn btn-primary w-full"
+          className="btn btn-accent w-full text-white"
           onClick={generateProgram}
           disabled={isLoading}
         >

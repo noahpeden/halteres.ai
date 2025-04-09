@@ -1,6 +1,7 @@
 'use client';
 import equipmentList from '@/utils/equipmentList';
 import { dayNameToNumber } from './utils';
+import { calculateEndDate } from './dateHandlers';
 
 // Generate program
 export async function generateProgram({
@@ -430,22 +431,69 @@ export async function handleAutoAssignDates({
   setIsLoading,
   setSuggestions,
   showToastMessage,
+  newStartDate,
+  setFormData,
 }) {
-  if (!formData.startDate || !formData.endDate || !formData.daysOfWeek.length) {
-    showToastMessage(
-      'Please set start date, end date, and days of week first.',
-      'error'
-    );
+  if (!formData.daysOfWeek.length) {
+    showToastMessage('Please set days of week first.', 'error');
     return;
   }
+
+  // Log the input days
+  console.log('Input days of week:', formData.daysOfWeek);
+
+  // Use the new start date if provided, otherwise use the current start date
+  const startDateToUse = newStartDate || formData.startDate;
+  console.log('Start date:', startDateToUse);
 
   setIsLoading(true);
 
   try {
-    // Convert day names to numbers
+    // Convert day names to numbers and ensure they're properly sorted
     const selectedDayNumbers = formData.daysOfWeek
-      .map((day) => dayNameToNumber[day])
+      .map((day) => {
+        const dayNum = dayNameToNumber[day];
+        // If the day number is undefined, log an error
+        if (dayNum === undefined) {
+          console.error(`Invalid day name: ${day}`);
+          return null;
+        }
+        return dayNum;
+      })
+      .filter((num) => num !== null)
       .sort((a, b) => a - b);
+
+    if (selectedDayNumbers.length === 0) {
+      throw new Error('No valid days selected');
+    }
+
+    console.log('Selected day numbers:', selectedDayNumbers);
+
+    // Adjust start date to the first selected day of the week if needed
+    const startDate = new Date(startDateToUse);
+    const startDayOfWeek = startDate.getDay();
+
+    // Convert startDayOfWeek to match our selectedDayNumbers format (1-5 for Mon-Fri)
+    const adjustedStartDay = startDayOfWeek === 0 ? 7 : startDayOfWeek;
+
+    // Find the next available selected day
+    let daysToAdd = 0;
+    if (!selectedDayNumbers.includes(adjustedStartDay)) {
+      // Find the next day in our selected days
+      for (let i = 1; i <= 7; i++) {
+        const nextDay = ((adjustedStartDay + i - 1) % 7) + 1;
+        if (selectedDayNumbers.includes(nextDay)) {
+          daysToAdd = i;
+          break;
+        }
+      }
+      // Adjust the start date
+      startDate.setDate(startDate.getDate() + daysToAdd);
+      console.log(
+        'Adjusted start date to next available day:',
+        startDate.toISOString().split('T')[0]
+      );
+    }
 
     const workoutsToSchedule = suggestions.filter((w) => !w.is_reference);
 
@@ -466,25 +514,86 @@ export async function handleAutoAssignDates({
 
     if (deleteWorkoutsError) throw deleteWorkoutsError;
 
+    // Calculate the new end date based on the new start date
+    const newEndDate = calculateEndDate(
+      startDate,
+      formData.numberOfWeeks,
+      formData.daysOfWeek
+    );
+
+    if (!newEndDate) {
+      throw new Error('Failed to calculate new end date');
+    }
+
+    // Update formData with new start and end dates if needed
+    if (newStartDate && setFormData) {
+      setFormData((prev) => ({
+        ...prev,
+        startDate: startDate.toISOString().split('T')[0],
+        endDate: newEndDate,
+      }));
+    }
+
     // Calculate all dates that should have workouts
-    const startDate = new Date(formData.startDate);
-    const endDate = new Date(formData.endDate);
+    const endDate = new Date(newEndDate);
     let currentDate = new Date(startDate);
 
     // Pre-calculate all dates
     const workoutDates = [];
-    while (currentDate <= endDate) {
+    let weekCounter = 0;
+    let daysThisWeek = 0;
+    const daysPerWeek = parseInt(formData.daysPerWeek);
+
+    while (
+      currentDate <= endDate &&
+      weekCounter < parseInt(formData.numberOfWeeks)
+    ) {
       const dayOfWeek = currentDate.getDay();
+
+      // Add debug logging
+      console.log(
+        'Checking date:',
+        currentDate.toISOString().split('T')[0],
+        'Day of week:',
+        dayOfWeek,
+        'Day name:',
+        Object.keys(dayNameToNumber).find(
+          (key) => dayNameToNumber[key] === dayOfWeek
+        ),
+        'Selected days:',
+        selectedDayNumbers,
+        'Is selected:',
+        selectedDayNumbers.includes(dayOfWeek),
+        'Days this week:',
+        daysThisWeek
+      );
+
       if (selectedDayNumbers.includes(dayOfWeek)) {
-        workoutDates.push(currentDate.toISOString().split('T')[0]);
+        // Only add the date if we haven't hit our days per week limit
+        if (daysThisWeek < daysPerWeek) {
+          workoutDates.push(currentDate.toISOString().split('T')[0]);
+          daysThisWeek++;
+        }
       }
+
+      // Move to the next day
       currentDate.setDate(currentDate.getDate() + 1);
+
+      // Check if we've moved to a new week (Sunday is the start of a new week)
+      if (currentDate.getDay() === 0) {
+        if (daysThisWeek > 0) {
+          weekCounter++;
+        }
+        daysThisWeek = 0;
+      }
     }
+
+    console.log('Final workout dates:', workoutDates);
 
     // Create workout entries
     const workoutsToCreate = [];
 
-    // Sort workouts based on their title week and day (Week 1, Day 1 comes before Week 1, Day 2, etc.)
+    // Sort workouts based on their title week and day
     const sortedWorkouts = [...workoutsToSchedule].sort((a, b) => {
       // Extract week and day numbers from titles
       const weekDayA = a.title.match(/Week\s+(\d+),\s+Day\s+(\d+)/i);
@@ -507,6 +616,7 @@ export async function handleAutoAssignDates({
       return 0;
     });
 
+    // Create workout entries for each workout
     sortedWorkouts.forEach((workout, index) => {
       if (index < workoutDates.length) {
         const scheduledDate = workoutDates[index];
@@ -558,6 +668,8 @@ export async function handleAutoAssignDates({
           idx < newWorkouts.length
             ? {
                 ...w,
+                id: newWorkouts[idx].id,
+                savedWorkoutId: newWorkouts[idx].id,
                 suggestedDate: newWorkouts[idx].tags.scheduled_date,
                 tags: {
                   ...(w.tags || {}),
@@ -570,10 +682,17 @@ export async function handleAutoAssignDates({
       );
     }
 
-    showToastMessage('Successfully reassigned all workout dates!');
+    showToastMessage(
+      `Successfully rescheduled program to start on ${
+        startDate.toISOString().split('T')[0]
+      }!`
+    );
   } catch (error) {
-    console.error('Error reassigning dates:', error);
-    showToastMessage('Failed to reassign dates. Please try again.', 'error');
+    console.error('Error rescheduling program:', error);
+    showToastMessage(
+      'Failed to reschedule program. Please try again.',
+      'error'
+    );
   } finally {
     setIsLoading(false);
   }
@@ -592,44 +711,126 @@ export async function handleDatePickerSave({
   if (!selectedWorkoutForDate || !selectedDate) return;
 
   try {
-    // Create a new workout in the database
-    const { data: newWorkout, error: workoutError } = await supabase
-      .from('program_workouts')
-      .insert({
-        program_id: programId,
-        title: selectedWorkoutForDate.title,
-        body: selectedWorkoutForDate.body || selectedWorkoutForDate.description,
-        tags: {
-          ...(selectedWorkoutForDate.tags || {}),
-          suggestedDate: selectedDate,
-          scheduled_date: selectedDate,
-        },
-        is_reference: false,
-      })
+    // First, check if the workout already exists in the database
+    const workoutId =
+      selectedWorkoutForDate.id || selectedWorkoutForDate.savedWorkoutId;
+    let newWorkoutId;
+
+    if (workoutId) {
+      // Update the existing workout
+      const { data, error: updateError } = await supabase
+        .from('program_workouts')
+        .update({
+          tags: {
+            ...(selectedWorkoutForDate.tags || {}),
+            suggestedDate: selectedDate,
+            scheduled_date: selectedDate,
+          },
+        })
+        .eq('id', workoutId)
+        .select()
+        .single();
+
+      if (updateError) throw updateError;
+      newWorkoutId = workoutId;
+
+      // Update the local state for existing workout
+      setSuggestions((prev) =>
+        prev.map((w) =>
+          w.id === workoutId || w.savedWorkoutId === workoutId
+            ? {
+                ...w,
+                suggestedDate: selectedDate,
+                tags: {
+                  ...(w.tags || {}),
+                  suggestedDate: selectedDate,
+                  scheduled_date: selectedDate,
+                },
+              }
+            : w
+        )
+      );
+    } else {
+      // Create a new workout in the database if it doesn't exist
+      const { data: newWorkout, error: workoutError } = await supabase
+        .from('program_workouts')
+        .insert({
+          program_id: programId,
+          title: selectedWorkoutForDate.title,
+          body:
+            selectedWorkoutForDate.body || selectedWorkoutForDate.description,
+          tags: {
+            ...(selectedWorkoutForDate.tags || {}),
+            suggestedDate: selectedDate,
+            scheduled_date: selectedDate,
+          },
+          is_reference: false,
+        })
+        .select()
+        .single();
+
+      if (workoutError) throw workoutError;
+      newWorkoutId = newWorkout.id;
+
+      // Update the local state for new workout
+      setSuggestions((prev) =>
+        prev.map((w) =>
+          w === selectedWorkoutForDate
+            ? {
+                ...w,
+                id: newWorkout.id,
+                savedWorkoutId: newWorkout.id,
+                suggestedDate: selectedDate,
+                tags: {
+                  ...(w.tags || {}),
+                  suggestedDate: selectedDate,
+                  scheduled_date: selectedDate,
+                },
+              }
+            : w
+        )
+      );
+    }
+
+    // Update or create the workout_schedule entry
+    // First, check if there's an existing schedule entry
+    const { data: existingSchedule, error: scheduleCheckError } = await supabase
+      .from('workout_schedule')
       .select()
+      .eq('workout_id', newWorkoutId)
       .single();
 
-    if (workoutError) throw workoutError;
+    if (scheduleCheckError && scheduleCheckError.code !== 'PGRST116') {
+      // PGRST116 is "no rows returned" which is fine, other errors need handling
+      throw scheduleCheckError;
+    }
 
-    // Schedule the workout
-    const { error: scheduleError } = await supabase
-      .from('workout_schedule')
-      .insert({
-        program_id: programId,
-        workout_id: newWorkout.id,
-        scheduled_date: selectedDate,
-      });
+    // Either update or insert the schedule
+    if (existingSchedule) {
+      // Update the existing schedule
+      const { error: updateScheduleError } = await supabase
+        .from('workout_schedule')
+        .update({
+          scheduled_date: selectedDate,
+        })
+        .eq('id', existingSchedule.id);
 
-    if (scheduleError) throw scheduleError;
+      if (updateScheduleError) throw updateScheduleError;
+    } else {
+      // Create a new schedule entry
+      const { error: scheduleError } = await supabase
+        .from('workout_schedule')
+        .insert({
+          program_id: programId,
+          workout_id: newWorkoutId,
+          scheduled_date: selectedDate,
+        });
 
-    // Update the local state
-    setSuggestions((prev) =>
-      prev.map((w) =>
-        w === selectedWorkoutForDate ? { ...w, suggestedDate: selectedDate } : w
-      )
-    );
+      if (scheduleError) throw scheduleError;
+    }
 
     handleDatePickerClose();
+    showToastMessage('Workout scheduled successfully!');
   } catch (error) {
     console.error('Error scheduling workout:', error);
     showToastMessage('Failed to schedule workout. Please try again.', 'error');

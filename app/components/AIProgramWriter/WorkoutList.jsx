@@ -1,5 +1,5 @@
 'use client';
-
+import { Trash2 } from 'lucide-react';
 export default function WorkoutList({
   workouts,
   daysPerWeek,
@@ -97,7 +97,7 @@ export default function WorkoutList({
                     {workout.title ||
                       `Week ${weekGroup.week}, Day ${index + 1}`}
                   </h4>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 items-center">
                     <span className="badge badge-primary">
                       {workout.tags?.suggestedDate
                         ? formatDate(workout.tags.suggestedDate)
@@ -111,20 +111,7 @@ export default function WorkoutList({
                         onClick={(e) => onDeleteWorkout(workout.id, e)}
                         title="Delete workout"
                       >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-5 w-5"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                          />
-                        </svg>
+                        <Trash2 className="h-5 w-5" />
                       </button>
                     )}
                   </div>
@@ -134,25 +121,27 @@ export default function WorkoutList({
                     workout.description ||
                     'No description available'}
                 </div>
-                <div className="flex gap-2 mt-3">
-                  <button
-                    className="btn btn-sm btn-primary"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDatePick(workout);
-                    }}
-                  >
-                    Add to Calendar
-                  </button>
-                  <button
-                    className="btn btn-sm btn-outline"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onViewDetails(workout);
-                    }}
-                  >
-                    View Details
-                  </button>
+                <div className="flex justify-end items-center mt-2">
+                  <div className="flex gap-2 mt-3">
+                    <button
+                      className="btn btn-sm btn-outline btn-primary"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDatePick(workout);
+                      }}
+                    >
+                      Adjust Date
+                    </button>
+                    <button
+                      className="btn btn-sm text-white btn-primary"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onViewDetails(workout);
+                      }}
+                    >
+                      View Details
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}

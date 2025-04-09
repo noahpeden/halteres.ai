@@ -57,13 +57,13 @@ export default function WorkoutModal({
 
           <div className="mt-6 flex justify-end">
             <button
-              className="btn btn-primary"
+              className="btn btn-primary text-white"
               onClick={() => {
                 onSelectWorkout(workout);
                 onClose();
               }}
             >
-              Add to Calendar
+              Adjust Date
             </button>
           </div>
         </div>
