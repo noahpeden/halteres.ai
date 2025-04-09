@@ -903,14 +903,16 @@ export async function editWorkout({
 
     if (error) throw error;
 
-    // Update the local state
+    // Update the local state while preserving workout position and all properties
     setSuggestions((prev) =>
       prev.map((w) =>
         w.id === workout.id
           ? {
-              ...w,
+              ...w, // Keep all original properties
               title: workout.title,
               body: workout.body,
+              // Keep original dates and metadata
+              updated_at: new Date().toISOString(),
             }
           : w
       )
