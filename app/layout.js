@@ -1,9 +1,7 @@
-'use client';
 import './globals.css';
-import { OfficeProvider } from './contexts/OfficeContext';
-import { AuthProvider } from './contexts/AuthContext';
-import Navbar from './components/Navbar';
 import { Nunito_Sans, Poppins } from 'next/font/google';
+import { metadata } from './simple-metadata';
+import ClientProviders from './client-providers';
 
 export const nunitoSans = Nunito_Sans({
   weight: ['300', '400', '600', '700'],
@@ -19,19 +17,14 @@ export const poppins = Poppins({
   variable: '--font-poppins',
 });
 
+// Export the static metadata
+export { metadata };
+
 export default function RootLayout({ children }) {
   return (
     <html className={`${nunitoSans.variable} ${poppins.variable}`} lang="en">
-      <body suppressHydrationWarning={true}>
-        <AuthProvider>
-          <OfficeProvider>
-            <Navbar />
-
-            <main className={`mt-12 p-[2rem] pt-[4rem] bg-white-100`}>
-              {children}
-            </main>
-          </OfficeProvider>
-        </AuthProvider>
+      <body>
+        <ClientProviders>{children}</ClientProviders>
       </body>
     </html>
   );
