@@ -1,0 +1,9 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+
+# Your rule content
+
+Remember to always use source ~/.nvm/nvm.sh && nvm use 20 before running npm commands for this project, as it requires Node.js 20 to run correctly

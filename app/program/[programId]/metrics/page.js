@@ -2,7 +2,6 @@
 import { useState, useEffect, use } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import ClientMetricsSidebar from '@/components/ClientMetricsSidebar';
-import Link from 'next/link';
 
 export default function ProgramMetricsPage(props) {
   const params = use(props.params);
@@ -60,43 +59,21 @@ export default function ProgramMetricsPage(props) {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto p-4 flex justify-center items-center min-h-[60vh]">
+      <div className="flex justify-center items-center min-h-[60vh]">
         <span className="loading loading-spinner loading-lg"></span>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto p-4">
+    <div>
       <div className="mb-6">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div>
-            <h1 className="text-2xl font-bold">
-              {program?.name || 'Program Metrics'}
-            </h1>
-            <p className="text-gray-600">
-              {program?.description || 'Client data and recovery insights'}
-            </p>
-          </div>
-
-          <div className="flex gap-2">
-            <Link
-              href={`/program/${programId}/calendar`}
-              className="btn btn-outline btn-sm"
-            >
-              Calendar
-            </Link>
-            <Link
-              href={`/program/${programId}/workouts`}
-              className="btn btn-outline btn-sm"
-            >
-              Workouts
-            </Link>
-            <Link href="/dashboard" className="btn btn-outline btn-sm">
-              Back to Dashboard
-            </Link>
-          </div>
-        </div>
+        <h1 className="text-2xl font-bold">
+          {program?.name || 'Program Metrics'}
+        </h1>
+        <p className="text-gray-600">
+          {program?.description || 'Client data and recovery insights'}
+        </p>
       </div>
 
       <div className="tabs tabs-boxed mb-6">
