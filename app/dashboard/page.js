@@ -504,10 +504,9 @@ export default function Dashboard() {
             {' '}
             <iframe
               src="https://www.loom.com/embed/01378252e9da4a789b31a35afd848b6f?sid=ace0ecdc-e214-4dd2-a083-6eed26a5a2ef"
-              frameborder="0"
-              webkitallowfullscreen
-              mozallowfullscreen
-              allowfullscreen
+              webkitAllowFullScreen
+              mozAllowFullScreen
+              allowFullScreen
               className="rounded-lg"
               style={{
                 position: 'absolute',

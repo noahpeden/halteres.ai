@@ -482,6 +482,7 @@ export async function saveProgram({
     if (suggestions && suggestions.length > 0) {
       const workoutUpserts = suggestions.map((workout) => ({
         program_id: programId,
+        entity_id: programData.entityId,
         ...(workout.id && { id: workout.id }),
         title: workout.title,
         body: workout.body || workout.description,

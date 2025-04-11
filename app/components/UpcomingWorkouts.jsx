@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
 import EditWorkoutModal from '@/components/AIProgramWriter/EditWorkoutModal';
+import WorkoutModal from '@/components/AIProgramWriter/WorkoutModal';
 
 export default function UpcomingWorkouts() {
   const { supabase, user } = useAuth();
@@ -16,6 +17,10 @@ export default function UpcomingWorkouts() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedWorkout, setSelectedWorkout] = useState(null);
   const [isSavingWorkout, setIsSavingWorkout] = useState(false);
+
+  // View Modal state
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [selectedWorkoutForView, setSelectedWorkoutForView] = useState(null);
 
   // Check if auth is ready
   useEffect(() => {
@@ -50,11 +55,31 @@ export default function UpcomingWorkouts() {
           `Looking for workouts between ${todayStr} and ${nextWeekStr}`
         );
 
-        // Instead of using date filters which might not work properly with the JSONB tags field,
-        // get all workouts and filter on the client side
-        const { data: allWorkouts, error: workoutsError } = await supabase.from(
-          'program_workouts'
-        ).select(`
+        // 1. Get the entity IDs for the current user
+        const { data: entitiesData, error: entitiesError } = await supabase
+          .from('entities')
+          .select('id')
+          .eq('user_id', user.id);
+
+        if (entitiesError) {
+          console.error('Error fetching user entities:', entitiesError);
+          throw entitiesError;
+        }
+
+        const userEntityIds = entitiesData.map((entity) => entity.id);
+
+        if (userEntityIds.length === 0) {
+          console.log('User has no entities, no workouts to fetch.');
+          setWorkouts([]);
+          setIsLoading(false);
+          return;
+        }
+
+        // 2. Get program_workouts ONLY for the user's entities
+        const { data: allWorkouts, error: workoutsError } = await supabase
+          .from('program_workouts')
+          .select(
+            `
             id,
             program_id,
             entity_id,
@@ -74,7 +99,9 @@ export default function UpcomingWorkouts() {
               name,
               type
             )
-          `);
+          `
+          )
+          .in('entity_id', userEntityIds);
 
         if (workoutsError) {
           console.error('Error fetching workouts:', workoutsError);
@@ -157,6 +184,14 @@ export default function UpcomingWorkouts() {
       const formattedWorkouts = workoutsData
         .filter((workout) => workout.title) // Filter out any invalid entries
         .map((workout) => {
+          // Log the raw workout object, focusing on the entities part
+          console.log(
+            'Processing workout:',
+            workout.id,
+            'Entities:',
+            workout.entities
+          );
+
           // Get the date from either scheduled_date or tags
           const scheduledDate = workout.scheduled_date;
           const tagDate =
@@ -310,6 +345,12 @@ export default function UpcomingWorkouts() {
     }
   };
 
+  // Handle opening view modal
+  const handleViewWorkoutDetails = (workout) => {
+    setSelectedWorkoutForView(workout);
+    setIsViewModalOpen(true);
+  };
+
   // Format the date to display
   const formatDate = (dateString) => {
     try {
@@ -382,130 +423,133 @@ export default function UpcomingWorkouts() {
 
   if (isLoading) {
     return (
-      <div className="flex justify-center p-4">
-        <span className="loading loading-spinner loading-md"></span>
+      <div className="text-center py-8">
+        <span className="loading loading-spinner loading-lg"></span>
+        <p>Loading upcoming workouts...</p>
       </div>
     );
   }
 
-  if (workouts.length === 0) {
+  // Get all upcoming workouts directly, sorted by date
+  const upcomingSortedWorkouts = workouts
+    .slice() // Create a shallow copy to avoid mutating the original state
+    .sort((a, b) => new Date(a.scheduled_date) - new Date(b.scheduled_date));
+
+  if (upcomingSortedWorkouts.length === 0) {
     return (
-      <div className="text-center p-6 bg-white rounded-lg shadow">
-        <h3 className="text-lg font-medium mb-2">No Upcoming Workouts</h3>
-        <p className="text-gray-600">
-          You don't have any workouts scheduled for the next week.
+      <div className="text-center py-8 bg-base-100 rounded-lg shadow">
+        <p className="text-gray-500">
+          No upcoming workouts scheduled for this week.
         </p>
       </div>
     );
   }
 
-  const dateGroups = groupWorkoutsByDate();
-
   return (
     <div>
-      {dateGroups.map((group) => (
-        <div key={group.date} className="mb-6">
-          <h3 className="text-md font-semibold mb-3 p-2 bg-base-200 rounded-md">
-            {group.formattedDate}
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {group.workouts.map((workout) => (
-              <div
-                key={workout.id}
-                className={`card bg-white shadow-md hover:shadow-lg transition-shadow ${
-                  completionStates[workout.id]
-                    ? 'border-l-4 border-green-500'
-                    : ''
-                }`}
-              >
-                <div className="card-body">
-                  <div className="flex justify-between items-start">
-                    <h3 className="card-title">{workout.title}</h3>
-                    <span className="badge badge-primary">{workout.type}</span>
-                  </div>
-
-                  <div className="flex flex-wrap gap-1 text-gray-600 text-sm mb-2">
-                    <span>Program: {workout.programName}</span>
-                    <span className="mx-1">•</span>
-                    <span>
-                      {workout.entityType === 'CLIENT' ? 'Client: ' : 'Class: '}
-                      {workout.entityName}
-                    </span>
-                  </div>
-
-                  <div className="text-sm mb-4 overflow-hidden max-h-28">
-                    {workout.body.substring(0, 150)}
-                    {workout.body.length > 150 ? '...' : ''}
-                  </div>
-
-                  <div className="flex flex-wrap gap-2 mb-2">
-                    {workout.difficulty && (
-                      <span className="badge badge-secondary">
-                        {workout.difficulty}
-                      </span>
-                    )}
-                    <span
-                      className={`badge ${
-                        completionStates[workout.id]
-                          ? 'badge-success'
-                          : 'badge-outline'
-                      }`}
+      <div className="flex overflow-x-auto space-x-4 pb-4">
+        {upcomingSortedWorkouts.map((workout) => (
+          <div
+            key={workout.id}
+            className="card bg-white shadow min-w-[300px] flex-shrink-0"
+          >
+            <div className="card-body p-4">
+              <div className="flex justify-between items-start mb-2">
+                <div>
+                  <p className="text-sm font-semibold text-gray-500">
+                    {formatDate(workout.scheduled_date)}
+                  </p>
+                  <h4 className="card-title text-base leading-tight">
+                    {workout.title}
+                  </h4>
+                  <p className="text-xs text-gray-500">
+                    {workout.entityName} ({workout.entityType})
+                  </p>
+                </div>
+                <div className="dropdown dropdown-end">
+                  <label tabIndex={0} className="btn btn-ghost btn-xs">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      className="inline-block w-4 h-4 stroke-current"
                     >
-                      {completionStates[workout.id]
-                        ? 'Completed'
-                        : 'Not Completed'}
-                    </span>
-                  </div>
-
-                  <div className="card-actions justify-end mt-4">
-                    <button
-                      className={`btn btn-sm ${
-                        completionStates[workout.id]
-                          ? 'btn-success'
-                          : 'btn-outline'
-                      }`}
-                      onClick={() => toggleWorkoutCompletion(workout.id)}
-                      disabled={updatingWorkout === workout.id}
-                    >
-                      {updatingWorkout === workout.id ? (
-                        <span className="loading loading-spinner loading-xs"></span>
-                      ) : completionStates[workout.id] ? (
-                        'Completed ✓'
-                      ) : (
-                        'Mark as Completed'
-                      )}
-                    </button>
-                    <Link
-                      href={`/program/${workout.programId}/calendar`}
-                      className="btn btn-primary btn-sm"
-                    >
-                      View
-                    </Link>
-                    <button
-                      onClick={() => handleEditWorkout(workout)}
-                      className="btn btn-outline btn-sm"
-                    >
-                      Edit
-                    </button>
-                  </div>
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M5 12h.01M12 12h.01M19 12h.01M6 12a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z"
+                      ></path>
+                    </svg>
+                  </label>
+                  <ul
+                    tabIndex={0}
+                    className="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-32"
+                  >
+                    <li>
+                      <a onClick={() => handleEditWorkout(workout)}>Edit</a>
+                    </li>
+                    {/* Add other actions like Delete if needed */}
+                  </ul>
                 </div>
               </div>
-            ))}
+
+              {/* Add more workout details if desired, e.g., workout.body */}
+              {/* <p className="text-xs mb-3 line-clamp-2">{workout.body}</p> */}
+
+              <div className="card-actions justify-between items-center">
+                <button
+                  onClick={() => handleViewWorkoutDetails(workout)}
+                  className="btn btn-primary btn-xs"
+                >
+                  View Details
+                </button>
+                <div className="form-control">
+                  <label className="label cursor-pointer p-0">
+                    <span className="label-text text-xs mr-2">Completed</span>
+                    <input
+                      type="checkbox"
+                      className={`checkbox checkbox-success checkbox-xs ${
+                        updatingWorkout === workout.id ? 'opacity-50' : ''
+                      }`}
+                      checked={completionStates[workout.id] || false}
+                      onChange={() => toggleWorkoutCompletion(workout.id)}
+                      disabled={updatingWorkout === workout.id}
+                    />
+                  </label>
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
-      ))}
+        ))}
+      </div>
 
       {/* Edit Workout Modal */}
-      <EditWorkoutModal
-        isOpen={isEditModalOpen}
-        workout={selectedWorkout}
-        onClose={() => {
-          setIsEditModalOpen(false);
-          setSelectedWorkout(null);
-        }}
-        onSave={handleSaveWorkout}
-        isLoading={isSavingWorkout}
-      />
+      {selectedWorkout && (
+        <EditWorkoutModal
+          isOpen={isEditModalOpen}
+          onClose={() => {
+            setIsEditModalOpen(false);
+            setSelectedWorkout(null);
+          }}
+          workoutData={selectedWorkout}
+          onSave={handleSaveWorkout}
+          isLoading={isSavingWorkout}
+        />
+      )}
+
+      {/* View Workout Modal */}
+      {selectedWorkoutForView && (
+        <WorkoutModal
+          isOpen={isViewModalOpen}
+          workout={selectedWorkoutForView}
+          onClose={() => {
+            setIsViewModalOpen(false);
+            setSelectedWorkoutForView(null);
+          }}
+          formatDate={formatDate}
+        />
+      )}
     </div>
   );
 }
