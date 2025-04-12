@@ -1,5 +1,11 @@
-import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs';
+import { createServerClient } from '@supabase/ssr';
 import { NextResponse } from 'next/server';
+
+// Helper function to read cookies (from @supabase/ssr docs)
+function readCookie(request, name) {
+  const cookie = request.cookies.get(name);
+  return cookie ? cookie.value : null;
+}
 
 // --- Configuration ---
 // Replace with your actual domains
@@ -21,16 +27,45 @@ const PROTECTED_PATHS_PREFIX = ['/dashboard', '/program'];
 // --- End Configuration ---
 
 export async function middleware(req) {
-  const res = NextResponse.next();
-  const supabase = createMiddlewareClient(
-    { req, res },
+  // Create an unmodified response object first
+  let response = NextResponse.next({
+    request: {
+      headers: new Headers(req.headers),
+    },
+  });
+
+  // Instantiate Supabase client using createServerClient from @supabase/ssr
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     {
+      cookies: {
+        // Define how cookies are read from the request
+        get(name) {
+          return readCookie(req, name); // Use helper
+        },
+        // Define how cookies are set on the response
+        set(name, value, options) {
+          // If the response is modified, cookies must be set on it
+          response.cookies.set({ name, value, ...options });
+        },
+        // Define how cookies are removed from the response
+        remove(name, options) {
+          // If the response is modified, cookies must be removed from it
+          response.cookies.set({ name, value: '', ...options });
+        },
+      },
+      // IMPORTANT: Ensure cross-domain cookie options are set here too
       cookieOptions: { domain: '.halteres.ai', path: '/' },
     }
   );
+
+  // Crucial: Refresh session AND get session data.
+  // This also handles reading the cookie correctly via the 'get' method defined above.
   const {
     data: { session },
   } = await supabase.auth.getSession();
+
   const { pathname } = req.nextUrl;
   let hostname = req.headers.get('host'); // Get hostname from headers
 
@@ -71,7 +106,7 @@ export async function middleware(req) {
       return NextResponse.redirect(url);
     }
     // Allow all other localhost access
-    return res;
+    return response;
   }
 
   // If on the app domain (app.halteres.ai)
@@ -97,7 +132,7 @@ export async function middleware(req) {
       return NextResponse.redirect(dashboardUrl);
     }
     // Allow access to protected routes or any other path on app domain if logged in
-    return res;
+    return response;
   }
 
   // If on the main domain (www.halteres.ai)
@@ -116,7 +151,7 @@ export async function middleware(req) {
         return NextResponse.redirect(appUrl);
       }
       // Allow access to public paths on main domain even if logged in
-      return res;
+      return response;
     } else {
       // Logged out on main domain
       if (isProtectedRoute) {
@@ -129,7 +164,7 @@ export async function middleware(req) {
         return NextResponse.redirect(loginUrl);
       }
       // Allow access to public paths if logged out
-      return res;
+      return response;
     }
   }
 
