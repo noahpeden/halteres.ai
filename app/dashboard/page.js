@@ -344,16 +344,6 @@ export default function Dashboard() {
     }
   }
 
-  // If auth is loaded but user is null, redirect to login
-  if (authReady && !user) {
-    router.push('/login');
-    return (
-      <div className="container mx-auto p-4 flex justify-center items-center min-h-[80vh]">
-        <p className="text-lg">Please log in to access the dashboard.</p>
-      </div>
-    );
-  }
-
   if (isLoading) {
     return (
       <div className="container mx-auto p-4 flex justify-center items-center min-h-[60vh]">
