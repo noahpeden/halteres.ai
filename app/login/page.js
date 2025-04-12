@@ -26,30 +26,14 @@ export default function App() {
     if (session && !isRedirecting) {
       setIsRedirecting(true);
 
-      // Clear any existing auth cookies with the correct domain to ensure clean state
-      document.cookie =
-        'sb-access-token=; domain=.halteres.ai; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
-      document.cookie =
-        'sb-refresh-token=; domain=.halteres.ai; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
-
-      // Force a refresh of the session cookies
-      supabase.auth.refreshSession().then(() => {
-        router.refresh();
-
-        // Handle redirection
-        setTimeout(() => {
-          // If returnTo exists, directly navigate to that URL
-          if (returnTo) {
-            window.location.href = returnTo;
-          } else {
-            // Otherwise redirect to the app dashboard
-            window.location.href =
-              process.env.NEXT_PUBLIC_APP_URL + '/dashboard';
-          }
-        }, 500); // Small delay to ensure cookies are set
-      });
+      // Handle redirection
+      if (returnTo) {
+        window.location.href = returnTo;
+      } else {
+        window.location.href = process.env.NEXT_PUBLIC_APP_URL + '/dashboard';
+      }
     }
-  }, [session, router, returnTo, supabase, isRedirecting]);
+  }, [session, returnTo, isRedirecting]);
 
   if (!session) {
     return (
