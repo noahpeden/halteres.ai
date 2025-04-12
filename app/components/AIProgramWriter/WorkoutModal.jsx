@@ -1,4 +1,5 @@
 'use client';
+import { Trash2, Pencil } from 'lucide-react';
 
 export default function WorkoutModal({
   isOpen,
@@ -6,6 +7,8 @@ export default function WorkoutModal({
   onClose,
   onSelectWorkout,
   formatDate,
+  onDeleteWorkout,
+  onEditWorkout,
 }) {
   if (!isOpen || !workout) return null;
 
@@ -32,10 +35,33 @@ export default function WorkoutModal({
       <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
         <div className="p-6">
           <div className="flex justify-between items-start mb-4">
-            <h3 className="text-xl font-bold">{workout.title}</h3>
+            <h3 className="text-xl font-bold mr-4">{workout.title}</h3>
+            <div className="flex items-center gap-2 justify-end">
+              {onEditWorkout && (
+                <button
+                  className="btn btn-secondary btn-outline btn-square btn-sm group"
+                  onClick={() => {
+                    onClose();
+                    onEditWorkout(workout);
+                  }}
+                  aria-label="Edit Workout"
+                >
+                  <Pencil className="h-4 w-4 group-hover:text-white" />
+                </button>
+              )}
+              {onDeleteWorkout && (
+                <button
+                  className="btn btn-error btn-outline btn-square btn-sm group"
+                  onClick={() => onDeleteWorkout(workout.id)}
+                  aria-label="Delete Workout"
+                >
+                  <Trash2 className="h-4 w-4 group-hover:text-white" />
+                </button>
+              )}
+            </div>
             <button
               onClick={onClose}
-              className="btn btn-sm btn-circle btn-ghost"
+              className="btn btn-sm btn-circle btn-ghost ml-auto"
             >
               ✕
             </button>
@@ -53,18 +79,6 @@ export default function WorkoutModal({
 
           <div className="mt-4 prose max-w-none">
             {renderWorkoutContent(workout.body || workout.description)}
-          </div>
-
-          <div className="mt-6 flex justify-end">
-            <button
-              className="btn btn-primary text-white"
-              onClick={() => {
-                onSelectWorkout(workout);
-                onClose();
-              }}
-            >
-              Adjust Date
-            </button>
           </div>
         </div>
       </div>

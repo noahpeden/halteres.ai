@@ -442,7 +442,7 @@ export default function Dashboard() {
                   </p>
                   <div className="card-actions justify-end mt-4">
                     <Link
-                      href={`/program/${program.id}/calendar`}
+                      href={`/program/${program.id}/writer`}
                       className="btn btn-primary btn-sm"
                     >
                       Open
@@ -504,10 +504,9 @@ export default function Dashboard() {
             {' '}
             <iframe
               src="https://www.loom.com/embed/01378252e9da4a789b31a35afd848b6f?sid=ace0ecdc-e214-4dd2-a083-6eed26a5a2ef"
-              frameborder="0"
-              webkitallowfullscreen
-              mozallowfullscreen
-              allowfullscreen
+              webkitAllowFullScreen
+              mozAllowFullScreen
+              allowFullScreen
               className="rounded-lg"
               style={{
                 position: 'absolute',

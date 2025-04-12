@@ -4,8 +4,7 @@ export const metadata = {
   description:
     'AI-Powered Fitness Programming for fitness professionals and gyms',
   icons: {
-    icon: '/favicon.ico',
-    shortcut: '/favicon.ico',
-    apple: '/favicon.ico',
+    icon: [{ url: '/icon.png', sizes: '32x32', type: 'image/png' }],
+    apple: [{ url: '/apple-icon.png', sizes: '180x180', type: 'image/png' }],
   },
 };

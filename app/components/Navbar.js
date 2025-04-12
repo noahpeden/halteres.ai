@@ -67,63 +67,73 @@ export default function Navbar() {
 
         <div className="navbar-center hidden lg:flex">
           <ul className="menu menu-horizontal px-1 space-x-2">
-            <li>
-              <NavLink href="/">Home</NavLink>
-            </li>
+            {!session && (
+              <>
+                <li>
+                  <NavLink href="/">Home</NavLink>
+                </li>
 
-            <li>
-              <details>
-                <summary>Product</summary>
-                <ul className="p-2 bg-base-100 w-48 z-50">
-                  {productItems.map((item, index) => (
-                    <li key={index}>
-                      <NavLink href={item.href}>
-                        <div className="flex items-center">
-                          {item.icon && <item.icon className="mr-2 h-4 w-4" />}
-                          {item.label}
-                        </div>
-                      </NavLink>
-                    </li>
-                  ))}
-                </ul>
-              </details>
-            </li>
+                <li>
+                  <details>
+                    <summary>Product</summary>
+                    <ul className="p-2 bg-base-100 w-48 z-50">
+                      {productItems.map((item, index) => (
+                        <li key={index}>
+                          <NavLink href={item.href}>
+                            <div className="flex items-center">
+                              {item.icon && (
+                                <item.icon className="mr-2 h-4 w-4" />
+                              )}
+                              {item.label}
+                            </div>
+                          </NavLink>
+                        </li>
+                      ))}
+                    </ul>
+                  </details>
+                </li>
 
-            <li>
-              <details>
-                <summary>Resources</summary>
-                <ul className="p-2 bg-base-100 w-48 z-50">
-                  {resourcesItems.map((item, index) => (
-                    <li key={index}>
-                      <NavLink href={item.href}>
-                        <div className="flex items-center">
-                          {item.icon && <item.icon className="mr-2 h-4 w-4" />}
-                          {item.label}
-                        </div>
-                      </NavLink>
-                    </li>
-                  ))}
-                </ul>
-              </details>
-            </li>
+                <li>
+                  <details>
+                    <summary>Resources</summary>
+                    <ul className="p-2 bg-base-100 w-48 z-50">
+                      {resourcesItems.map((item, index) => (
+                        <li key={index}>
+                          <NavLink href={item.href}>
+                            <div className="flex items-center">
+                              {item.icon && (
+                                <item.icon className="mr-2 h-4 w-4" />
+                              )}
+                              {item.label}
+                            </div>
+                          </NavLink>
+                        </li>
+                      ))}
+                    </ul>
+                  </details>
+                </li>
 
-            <li>
-              <details>
-                <summary>About</summary>
-                <ul className="p-2 bg-base-100 w-48 z-50">
-                  {aboutItems.map((item, index) => (
-                    <li key={index}>
-                      <NavLink href={item.href}>
-                        <div className="flex items-center">
-                          {item.icon && <item.icon className="mr-2 h-4 w-4" />}
-                          {item.label}
-                        </div>
-                      </NavLink>
-                    </li>
-                  ))}
-                </ul>
-              </details>
-            </li>
+                <li>
+                  <details>
+                    <summary>About</summary>
+                    <ul className="p-2 bg-base-100 w-48 z-50">
+                      {aboutItems.map((item, index) => (
+                        <li key={index}>
+                          <NavLink href={item.href}>
+                            <div className="flex items-center">
+                              {item.icon && (
+                                <item.icon className="mr-2 h-4 w-4" />
+                              )}
+                              {item.label}
+                            </div>
+                          </NavLink>
+                        </li>
+                      ))}
+                    </ul>
+                  </details>
+                </li>
+              </>
+            )}
 
             {session && (
               <li>
@@ -164,69 +174,73 @@ export default function Navbar() {
               className="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-52"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             >
-              <li>
-                <NavLink href="/">Home</NavLink>
-              </li>
+              {!session && (
+                <>
+                  <li>
+                    <NavLink href="/">Home</NavLink>
+                  </li>
 
-              <li>
-                <details>
-                  <summary>Product</summary>
-                  <ul>
-                    {productItems.map((item, index) => (
-                      <li key={index}>
-                        <NavLink href={item.href}>
-                          <div className="flex items-center">
-                            {item.icon && (
-                              <item.icon className="mr-2 h-4 w-4" />
-                            )}
-                            {item.label}
-                          </div>
-                        </NavLink>
-                      </li>
-                    ))}
-                  </ul>
-                </details>
-              </li>
+                  <li>
+                    <details>
+                      <summary>Product</summary>
+                      <ul>
+                        {productItems.map((item, index) => (
+                          <li key={index}>
+                            <NavLink href={item.href}>
+                              <div className="flex items-center">
+                                {item.icon && (
+                                  <item.icon className="mr-2 h-4 w-4" />
+                                )}
+                                {item.label}
+                              </div>
+                            </NavLink>
+                          </li>
+                        ))}
+                      </ul>
+                    </details>
+                  </li>
 
-              <li>
-                <details>
-                  <summary>Resources</summary>
-                  <ul>
-                    {resourcesItems.map((item, index) => (
-                      <li key={index}>
-                        <NavLink href={item.href}>
-                          <div className="flex items-center">
-                            {item.icon && (
-                              <item.icon className="mr-2 h-4 w-4" />
-                            )}
-                            {item.label}
-                          </div>
-                        </NavLink>
-                      </li>
-                    ))}
-                  </ul>
-                </details>
-              </li>
+                  <li>
+                    <details>
+                      <summary>Resources</summary>
+                      <ul>
+                        {resourcesItems.map((item, index) => (
+                          <li key={index}>
+                            <NavLink href={item.href}>
+                              <div className="flex items-center">
+                                {item.icon && (
+                                  <item.icon className="mr-2 h-4 w-4" />
+                                )}
+                                {item.label}
+                              </div>
+                            </NavLink>
+                          </li>
+                        ))}
+                      </ul>
+                    </details>
+                  </li>
 
-              <li>
-                <details>
-                  <summary>About</summary>
-                  <ul>
-                    {aboutItems.map((item, index) => (
-                      <li key={index}>
-                        <NavLink href={item.href}>
-                          <div className="flex items-center">
-                            {item.icon && (
-                              <item.icon className="mr-2 h-4 w-4" />
-                            )}
-                            {item.label}
-                          </div>
-                        </NavLink>
-                      </li>
-                    ))}
-                  </ul>
-                </details>
-              </li>
+                  <li>
+                    <details>
+                      <summary>About</summary>
+                      <ul>
+                        {aboutItems.map((item, index) => (
+                          <li key={index}>
+                            <NavLink href={item.href}>
+                              <div className="flex items-center">
+                                {item.icon && (
+                                  <item.icon className="mr-2 h-4 w-4" />
+                                )}
+                                {item.label}
+                              </div>
+                            </NavLink>
+                          </li>
+                        ))}
+                      </ul>
+                    </details>
+                  </li>
+                </>
+              )}
 
               {session && (
                 <li>
