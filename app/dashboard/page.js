@@ -442,7 +442,7 @@ export default function Dashboard() {
                   </p>
                   <div className="card-actions justify-end mt-4">
                     <Link
-                      href={`/program/${program.id}/calendar`}
+                      href={`/program/${program.id}/writer`}
                       className="btn btn-primary btn-sm"
                     >
                       Open

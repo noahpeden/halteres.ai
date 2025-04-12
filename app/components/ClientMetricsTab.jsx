@@ -25,9 +25,14 @@ export default function ClientMetricsTab({ programId }) {
   const [editedData, setEditedData] = useState({});
   const [isLoading, setIsLoading] = useState(true);
   const [isNewEntity, setIsNewEntity] = useState(false);
-  const [useImperial, setUseImperial] = useState(false);
+  const [useImperial, setUseImperial] = useState(true);
   const [heightFeet, setHeightFeet] = useState(0);
   const [heightInches, setHeightInches] = useState(0);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   useEffect(() => {
     async function fetchClientData() {
@@ -315,6 +320,18 @@ export default function ClientMetricsTab({ programId }) {
     );
   }
 
+  // Only render the main content if the component has mounted
+  if (!isMounted) {
+    // Render nothing or a minimal placeholder during the initial client render pass
+    // to match the server render before hydration completes.
+    // Returning the loading spinner here too ensures consistency if loading is fast.
+    return (
+      <div className="bg-white rounded-lg shadow-md p-4 h-full flex justify-center items-center">
+        <span className="loading loading-spinner loading-md"></span>
+      </div>
+    );
+  }
+
   // Show immediate edit mode if this is a new entity with no data
   const showEditByDefault = isNewEntity && !isEditing;
 
@@ -339,7 +356,10 @@ export default function ClientMetricsTab({ programId }) {
   return (
     <div className="bg-white rounded-lg shadow-md p-4 w-full">
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-semibold">Client Metrics</h2>
+        <h2 className="text-xl font-semibold">
+          {clientData?.metrics?.name ? `${clientData.metrics.name} - ` : ''}
+          Client Metrics
+        </h2>
         <div className="flex space-x-2 items-center">
           <div className="form-control">
             <label className="label cursor-pointer">

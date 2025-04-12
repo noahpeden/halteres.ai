@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext'; // Assuming useAuth provides user/session info
+import { use } from 'react';
 import {
   LayoutDashboard,
   CalendarDays,
@@ -14,7 +15,7 @@ import {
 } from 'lucide-react';
 
 export default function ProgramLayout({ children, params }) {
-  const { programId } = params;
+  const { programId } = use(params);
   const pathname = usePathname();
   const { session } = useAuth(); // Get session state
 
