@@ -13,12 +13,40 @@ const APP_HOSTNAME = 'app.halteres.ai';
 const MAIN_HOSTNAME = 'www.halteres.ai';
 
 export async function middleware(req) {
+  // Handle OPTIONS requests (preflight) properly with CORS headers
+  if (req.method === 'OPTIONS') {
+    const response = new NextResponse(null, { status: 204 });
+    response.headers.set(
+      'Access-Control-Allow-Origin',
+      `https://${MAIN_HOSTNAME}`
+    );
+    response.headers.set(
+      'Access-Control-Allow-Methods',
+      'GET, POST, PUT, DELETE, OPTIONS'
+    );
+    response.headers.set(
+      'Access-Control-Allow-Headers',
+      'Content-Type, Authorization'
+    );
+    response.headers.set('Access-Control-Max-Age', '86400');
+    response.headers.set('Vary', 'Origin');
+    return response;
+  }
+
   // Create response object
   let response = NextResponse.next({
     request: {
       headers: new Headers(req.headers),
     },
   });
+
+  // Add CORS headers to all responses
+  response.headers.set(
+    'Access-Control-Allow-Origin',
+    `https://${MAIN_HOSTNAME}, https://${APP_HOSTNAME}`
+  );
+  response.headers.set('Access-Control-Allow-Credentials', 'true');
+  response.headers.set('Vary', 'Origin');
 
   const { pathname } = req.nextUrl;
   let hostname = req.headers.get('host'); // Get hostname from headers
@@ -32,6 +60,13 @@ export async function middleware(req) {
   const isAppDomain = hostname === APP_HOSTNAME;
   const isMainDomain = hostname === MAIN_HOSTNAME;
   const isLocalhost = hostname === 'localhost'; // Explicitly check for localhost
+
+  // Check if this is a Next.js prefetch request
+  const isNextJsPrefetch =
+    req.headers.get('purpose') === 'prefetch' ||
+    req.headers.get('sec-fetch-mode') === 'cors' ||
+    req.headers.get('x-middleware-prefetch') === '1' ||
+    req.url.includes('_rsc=');
 
   // If this is localhost, pass through all requests
   if (isLocalhost) {
@@ -68,6 +103,11 @@ export async function middleware(req) {
     data: { session },
   } = await supabase.auth.getSession();
 
+  // Skip cross-domain redirects for Next.js prefetches to avoid CORS issues
+  if (isNextJsPrefetch) {
+    return response;
+  }
+
   // If on the app domain (app.halteres.ai)
   if (isAppDomain) {
     // If dashboard or program path but no session, redirect to login
@@ -96,10 +136,19 @@ export async function middleware(req) {
       session &&
       (pathname.startsWith('/dashboard') || pathname.startsWith('/program'))
     ) {
-      // Redirect to app domain
+      // For page loads (not prefetch), redirect to app domain
       const appUrl = new URL(req.url);
       appUrl.hostname = APP_HOSTNAME;
-      return NextResponse.redirect(appUrl);
+
+      // Create a redirect response with CORS headers
+      const redirectResponse = NextResponse.redirect(appUrl);
+      redirectResponse.headers.set(
+        'Access-Control-Allow-Origin',
+        `https://${MAIN_HOSTNAME}`
+      );
+      redirectResponse.headers.set('Access-Control-Allow-Credentials', 'true');
+
+      return redirectResponse;
     }
 
     // Allow all other paths
