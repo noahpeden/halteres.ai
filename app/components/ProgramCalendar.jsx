@@ -82,6 +82,12 @@ export default function ProgramCalendar({
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState('success');
 
+  // State for controlled calendar
+  const [currentDate, setCurrentDate] = useState(
+    selectedDate ? new Date(selectedDate + 'T00:00:00') : new Date()
+  );
+  const [currentView, setCurrentView] = useState(Views.MONTH);
+
   useEffect(() => {
     onRender();
   }, [onRender]);
@@ -344,10 +350,15 @@ export default function ProgramCalendar({
     [supabase, setWorkouts, handleCloseModal, showToastMessage]
   ); // Added handleCloseModal dependency
 
-  // Set default date based on selectedDate prop or today
-  const defaultDate = useMemo(() => {
-    return selectedDate ? new Date(selectedDate + 'T00:00:00') : new Date();
-  }, [selectedDate]);
+  // Handlers for controlled calendar
+  const handleNavigate = useCallback(
+    (newDate) => setCurrentDate(newDate),
+    [setCurrentDate]
+  );
+  const handleViewChange = useCallback(
+    (newView) => setCurrentView(newView),
+    [setCurrentView]
+  );
 
   // console.log('Rendering Calendar with myEvents:', myEvents);
 
@@ -371,8 +382,10 @@ export default function ProgramCalendar({
         <DragAndDropCalendar
           localizer={localizer}
           events={myEvents}
-          defaultView={Views.MONTH}
-          defaultDate={defaultDate}
+          date={currentDate}
+          view={currentView}
+          onNavigate={handleNavigate}
+          onView={handleViewChange}
           onEventDrop={moveEvent}
           onEventResize={resizeEvent}
           onSelectEvent={handleSelectEvent}
