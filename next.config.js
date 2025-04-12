@@ -45,18 +45,9 @@ const nextConfig = {
       },
     ];
   },
-  // Enable CORS for API routes
+  // Enable CORS without using the unsupported method condition
   async rewrites() {
-    return {
-      beforeFiles: [
-        // Handle OPTIONS preflight requests
-        {
-          source: '/:path*',
-          has: [{ type: 'method', value: 'OPTIONS' }],
-          destination: '/api/cors',
-        },
-      ],
-    };
+    return [];
   },
 };
 

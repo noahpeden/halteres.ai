@@ -16,20 +16,17 @@ export async function middleware(req) {
   // Handle OPTIONS requests (preflight) properly with CORS headers
   if (req.method === 'OPTIONS') {
     const response = new NextResponse(null, { status: 204 });
-    response.headers.set(
-      'Access-Control-Allow-Origin',
-      `https://${MAIN_HOSTNAME}`
-    );
+    response.headers.set('Access-Control-Allow-Origin', '*');
     response.headers.set(
       'Access-Control-Allow-Methods',
       'GET, POST, PUT, DELETE, OPTIONS'
     );
     response.headers.set(
       'Access-Control-Allow-Headers',
-      'Content-Type, Authorization'
+      'Content-Type, Authorization, X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Date, X-Api-Version'
     );
     response.headers.set('Access-Control-Max-Age', '86400');
-    response.headers.set('Vary', 'Origin');
+    response.headers.set('Access-Control-Allow-Credentials', 'true');
     return response;
   }
 
@@ -41,12 +38,8 @@ export async function middleware(req) {
   });
 
   // Add CORS headers to all responses
-  response.headers.set(
-    'Access-Control-Allow-Origin',
-    `https://${MAIN_HOSTNAME}, https://${APP_HOSTNAME}`
-  );
+  response.headers.set('Access-Control-Allow-Origin', '*');
   response.headers.set('Access-Control-Allow-Credentials', 'true');
-  response.headers.set('Vary', 'Origin');
 
   const { pathname } = req.nextUrl;
   let hostname = req.headers.get('host'); // Get hostname from headers
@@ -61,11 +54,10 @@ export async function middleware(req) {
   const isMainDomain = hostname === MAIN_HOSTNAME;
   const isLocalhost = hostname === 'localhost'; // Explicitly check for localhost
 
-  // Check if this is a Next.js prefetch request
+  // Check if this is a Next.js prefetch request to avoid CORS issues
   const isNextJsPrefetch =
     req.headers.get('purpose') === 'prefetch' ||
     req.headers.get('sec-fetch-mode') === 'cors' ||
-    req.headers.get('x-middleware-prefetch') === '1' ||
     req.url.includes('_rsc=');
 
   // If this is localhost, pass through all requests
@@ -103,7 +95,7 @@ export async function middleware(req) {
     data: { session },
   } = await supabase.auth.getSession();
 
-  // Skip cross-domain redirects for Next.js prefetches to avoid CORS issues
+  // For prefetch requests, just return without redirects to avoid CORS issues
   if (isNextJsPrefetch) {
     return response;
   }
@@ -115,14 +107,20 @@ export async function middleware(req) {
       (pathname.startsWith('/dashboard') || pathname.startsWith('/program')) &&
       !session
     ) {
-      return NextResponse.redirect(
+      const redirect = NextResponse.redirect(
         `https://${MAIN_HOSTNAME}/login?returnTo=${encodeURIComponent(req.url)}`
       );
+      redirect.headers.set('Access-Control-Allow-Origin', '*');
+      redirect.headers.set('Access-Control-Allow-Credentials', 'true');
+      return redirect;
     }
 
     // For home path, redirect to dashboard
     if (pathname === '/') {
-      return NextResponse.redirect(new URL('/dashboard', req.url));
+      const redirect = NextResponse.redirect(new URL('/dashboard', req.url));
+      redirect.headers.set('Access-Control-Allow-Origin', '*');
+      redirect.headers.set('Access-Control-Allow-Credentials', 'true');
+      return redirect;
     }
 
     // Allow all other paths
@@ -142,10 +140,7 @@ export async function middleware(req) {
 
       // Create a redirect response with CORS headers
       const redirectResponse = NextResponse.redirect(appUrl);
-      redirectResponse.headers.set(
-        'Access-Control-Allow-Origin',
-        `https://${MAIN_HOSTNAME}`
-      );
+      redirectResponse.headers.set('Access-Control-Allow-Origin', '*');
       redirectResponse.headers.set('Access-Control-Allow-Credentials', 'true');
 
       return redirectResponse;
@@ -156,7 +151,10 @@ export async function middleware(req) {
   }
 
   // Unknown domain - redirect to main site
-  return NextResponse.redirect(`https://${MAIN_HOSTNAME}/`);
+  const redirect = NextResponse.redirect(`https://${MAIN_HOSTNAME}/`);
+  redirect.headers.set('Access-Control-Allow-Origin', '*');
+  redirect.headers.set('Access-Control-Allow-Credentials', 'true');
+  return redirect;
 }
 
 export const config = {
