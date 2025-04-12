@@ -7,11 +7,6 @@ function readCookie(request, name) {
   return cookie ? cookie.value : null;
 }
 
-// --- Configuration ---
-// Replace with your actual domains
-const APP_HOSTNAME = 'app.halteres.ai';
-const MAIN_HOSTNAME = 'www.halteres.ai';
-
 export async function middleware(req) {
   // Handle OPTIONS requests (preflight) properly with CORS headers
   if (req.method === 'OPTIONS') {
@@ -42,17 +37,12 @@ export async function middleware(req) {
   response.headers.set('Access-Control-Allow-Credentials', 'true');
 
   const { pathname } = req.nextUrl;
-  let hostname = req.headers.get('host'); // Get hostname from headers
+  let hostname = req.headers.get('host');
 
   // Handle potential port (localhost:3000 -> localhost)
   if (hostname.includes(':')) {
     hostname = hostname.split(':')[0];
   }
-
-  // Determine if we are on the app, main, or localhost domain
-  const isAppDomain = hostname === APP_HOSTNAME;
-  const isMainDomain = hostname === MAIN_HOSTNAME;
-  const isLocalhost = hostname === 'localhost'; // Explicitly check for localhost
 
   // Check if this is a Next.js prefetch request to avoid CORS issues
   const isNextJsPrefetch =
@@ -61,7 +51,7 @@ export async function middleware(req) {
     req.url.includes('_rsc=');
 
   // If this is localhost, pass through all requests
-  if (isLocalhost) {
+  if (hostname === 'localhost') {
     return response;
   }
 
@@ -82,7 +72,7 @@ export async function middleware(req) {
         },
       },
       cookieOptions: {
-        domain: '.halteres.ai', // Share cookies across all subdomains
+        domain: '.halteres.ai',
         path: '/',
         sameSite: 'Lax',
         secure: true,
@@ -100,61 +90,28 @@ export async function middleware(req) {
     return response;
   }
 
-  // If on the app domain (app.halteres.ai)
-  if (isAppDomain) {
-    // If dashboard or program path but no session, redirect to login
-    if (
-      (pathname.startsWith('/dashboard') || pathname.startsWith('/program')) &&
-      !session
-    ) {
-      const redirect = NextResponse.redirect(
-        `https://${MAIN_HOSTNAME}/login?returnTo=${encodeURIComponent(req.url)}`
-      );
-      redirect.headers.set('Access-Control-Allow-Origin', '*');
-      redirect.headers.set('Access-Control-Allow-Credentials', 'true');
-      return redirect;
-    }
-
-    // For home path, redirect to dashboard
-    if (pathname === '/') {
-      const redirect = NextResponse.redirect(new URL('/dashboard', req.url));
-      redirect.headers.set('Access-Control-Allow-Origin', '*');
-      redirect.headers.set('Access-Control-Allow-Credentials', 'true');
-      return redirect;
-    }
-
-    // Allow all other paths
-    return response;
+  // If trying to access protected routes without session, redirect to login
+  if (
+    (pathname.startsWith('/dashboard') || pathname.startsWith('/program')) &&
+    !session
+  ) {
+    const redirect = NextResponse.redirect(
+      `https://www.halteres.ai/login?returnTo=${encodeURIComponent(req.url)}`
+    );
+    redirect.headers.set('Access-Control-Allow-Origin', '*');
+    redirect.headers.set('Access-Control-Allow-Credentials', 'true');
+    return redirect;
   }
 
-  // If on the main domain (www.halteres.ai)
-  if (isMainDomain) {
-    // If user has a session and trying to access dashboard or program path
-    if (
-      session &&
-      (pathname.startsWith('/dashboard') || pathname.startsWith('/program'))
-    ) {
-      // For page loads (not prefetch), redirect to app domain
-      const appUrl = new URL(req.url);
-      appUrl.hostname = APP_HOSTNAME;
-
-      // Create a redirect response with CORS headers
-      const redirectResponse = NextResponse.redirect(appUrl);
-      redirectResponse.headers.set('Access-Control-Allow-Origin', '*');
-      redirectResponse.headers.set('Access-Control-Allow-Credentials', 'true');
-
-      return redirectResponse;
-    }
-
-    // Allow all other paths
-    return response;
+  // For home path, redirect to dashboard if logged in
+  if (pathname === '/' && session) {
+    const redirect = NextResponse.redirect(new URL('/dashboard', req.url));
+    redirect.headers.set('Access-Control-Allow-Origin', '*');
+    redirect.headers.set('Access-Control-Allow-Credentials', 'true');
+    return redirect;
   }
 
-  // Unknown domain - redirect to main site
-  const redirect = NextResponse.redirect(`https://${MAIN_HOSTNAME}/`);
-  redirect.headers.set('Access-Control-Allow-Origin', '*');
-  redirect.headers.set('Access-Control-Allow-Credentials', 'true');
-  return redirect;
+  return response;
 }
 
 export const config = {

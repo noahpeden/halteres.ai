@@ -17,7 +17,12 @@ export default function App() {
       const params = new URLSearchParams(window.location.search);
       const returnToParam = params.get('returnTo');
       if (returnToParam) {
-        setReturnTo(returnToParam);
+        // Remove any app.halteres.ai references from returnTo
+        const cleanReturnTo = returnToParam.replace(
+          'app.halteres.ai',
+          'www.halteres.ai'
+        );
+        setReturnTo(cleanReturnTo);
       }
     }
   }, []);
@@ -30,7 +35,7 @@ export default function App() {
       if (returnTo) {
         window.location.href = returnTo;
       } else {
-        window.location.href = process.env.NEXT_PUBLIC_APP_URL + '/dashboard';
+        window.location.href = '/dashboard';
       }
     }
   }, [session, returnTo, isRedirecting]);
@@ -43,9 +48,7 @@ export default function App() {
             supabaseClient={supabase}
             appearance={{ theme: ThemeSupa }}
             providers={['google']}
-            redirectTo={
-              returnTo || process.env.NEXT_PUBLIC_APP_URL + '/dashboard'
-            }
+            redirectTo={returnTo || '/dashboard'}
           />
         </div>
       </div>
