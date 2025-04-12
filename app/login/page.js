@@ -2,14 +2,24 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { Auth } from '@supabase/auth-ui-react';
 import { ThemeSupa } from '@supabase/auth-ui-shared';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
 export default function App() {
   const { session, supabase } = useAuth();
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const returnTo = searchParams.get('returnTo');
+  const [returnTo, setReturnTo] = useState(null);
+
+  // Get the returnTo parameter safely on the client side
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const returnToParam = params.get('returnTo');
+      if (returnToParam) {
+        setReturnTo(returnToParam);
+      }
+    }
+  }, []);
 
   useEffect(() => {
     if (session) {
