@@ -48,6 +48,13 @@ import DatePickerModal from './DatePickerModal';
 import RescheduleModal from './RescheduleModal';
 import EditWorkoutModal from './EditWorkoutModal';
 
+// For tracking auto-save state
+const AUTO_SAVE_STATES = {
+  IDLE: 'idle',
+  SAVING: 'saving',
+  DONE: 'done',
+};
+
 export default function AIProgramWriter({ programId, onSelectWorkout }) {
   const { supabase } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
@@ -58,6 +65,8 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
   const [loadingTimer, setLoadingTimer] = useState(null);
   const [serverStatus, setServerStatus] = useState(null);
   const [generatedDescription, setGeneratedDescription] = useState('');
+  // Add state to track auto-save status
+  const [autoSaveState, setAutoSaveState] = useState(AUTO_SAVE_STATES.IDLE);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -260,6 +269,82 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
 
     fetchReferenceWorkouts();
   }, [supabase]);
+
+  // Auto-save generated workouts to program_workouts
+  useEffect(() => {
+    async function autoSaveGeneratedWorkouts() {
+      if (
+        !programId ||
+        autoSaveState !== AUTO_SAVE_STATES.IDLE ||
+        suggestions.length === 0 ||
+        isLoading
+      ) {
+        return;
+      }
+
+      // Check if these are suggestions loaded from generated_program
+      const areFromGeneratedProgram = suggestions.every(
+        (workout) => !workout.id
+      );
+      if (!areFromGeneratedProgram) {
+        return;
+      }
+
+      setAutoSaveState(AUTO_SAVE_STATES.SAVING);
+      setIsLoading(true);
+
+      try {
+        const workoutInserts = suggestions.map((workout) => ({
+          program_id: programId,
+          entity_id: formData.entityId,
+          title: workout.title,
+          body: workout.body || workout.description,
+          tags: {
+            ...(workout.tags || {}),
+            suggestedDate: workout.suggestedDate || null,
+          },
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          is_reference: false,
+        }));
+
+        const { data: newWorkouts, error } = await supabase
+          .from('program_workouts')
+          .insert(workoutInserts)
+          .select();
+
+        if (error) throw error;
+
+        // Update suggestions with the saved workout IDs
+        if (newWorkouts && newWorkouts.length > 0) {
+          setSuggestions((prev) =>
+            prev.map((workout, index) => ({
+              ...workout,
+              id: newWorkouts[index]?.id,
+              savedWorkoutId: newWorkouts[index]?.id,
+            }))
+          );
+
+          showToastMessage('Auto-saved workouts to your program');
+        }
+      } catch (error) {
+        console.error('Error auto-saving workouts:', error);
+        // Don't show error toast to avoid confusion, just log
+      } finally {
+        setIsLoading(false);
+        setAutoSaveState(AUTO_SAVE_STATES.DONE);
+      }
+    }
+
+    autoSaveGeneratedWorkouts();
+  }, [
+    programId,
+    suggestions,
+    supabase,
+    autoSaveState,
+    isLoading,
+    formData.entityId,
+  ]);
 
   // Fetch program data when component mounts and programId is available
   useEffect(() => {
