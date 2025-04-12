@@ -41,6 +41,7 @@ const nextConfig = {
               'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization',
           },
           { key: 'Vary', value: 'Origin' },
+          { key: 'Permissions-Policy', value: 'interest-cohort=()' },
         ],
       },
     ];
