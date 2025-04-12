@@ -56,7 +56,12 @@ export async function middleware(req) {
         },
       },
       // IMPORTANT: Ensure cross-domain cookie options are set here too
-      cookieOptions: { domain: '.halteres.ai', path: '/' },
+      cookieOptions: {
+        domain: '.halteres.ai',
+        path: '/',
+        sameSite: 'Lax', // Explicitly set SameSite
+        secure: true, // Explicitly set Secure
+      },
     }
   );
 

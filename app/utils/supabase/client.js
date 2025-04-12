@@ -9,6 +9,8 @@ export function createClient() {
         // Set cookie to be accessible across subdomains
         domain: '.halteres.ai',
         path: '/',
+        sameSite: 'Lax',
+        secure: true,
       },
     }
   );
