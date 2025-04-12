@@ -143,15 +143,6 @@ export default function WorkoutList({
                 <div className="flex justify-end items-center mt-2">
                   <div className="flex gap-2 mt-3">
                     <button
-                      className="btn btn-sm btn-outline btn-primary"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onDatePick(workout);
-                      }}
-                    >
-                      Adjust Date
-                    </button>
-                    <button
                       className="btn btn-sm text-white btn-primary"
                       onClick={(e) => {
                         e.stopPropagation();

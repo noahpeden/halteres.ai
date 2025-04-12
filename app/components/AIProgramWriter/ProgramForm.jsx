@@ -18,6 +18,8 @@ export default function ProgramForm({
   generationStage,
   loadingDuration,
   equipmentSelector,
+  programId,
+  suggestions,
 }) {
   const LoadingButton = () => (
     <>
@@ -302,13 +304,21 @@ export default function ProgramForm({
         <div className="mt-4 mb-4">{equipmentSelector}</div>
       )}
       {/* Generate button */}
-      <div className="pt-2">
+      <div className="flex justify-between items-center mt-6">
         <button
-          className="btn btn-accent w-full text-white"
+          className={`btn btn-primary text-white w-full${
+            isLoading ? 'btn-disabled' : ''
+          }`}
           onClick={generateProgram}
           disabled={isLoading}
         >
-          {isLoading ? <LoadingButton /> : 'Generate Program'}
+          {isLoading ? (
+            <LoadingButton />
+          ) : suggestions && suggestions.length > 0 ? (
+            'Re-Generate Program'
+          ) : (
+            'Generate Program'
+          )}
         </button>
       </div>
     </div>

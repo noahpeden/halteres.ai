@@ -9,6 +9,7 @@ import startOfWeek from 'date-fns/startOfWeek';
 import getDay from 'date-fns/getDay';
 import enUS from 'date-fns/locale/en-US';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
+import { parseISO, isValid } from 'date-fns';
 
 import WorkoutModal from './AIProgramWriter/WorkoutModal';
 import EditWorkoutModal from './AIProgramWriter/EditWorkoutModal';
@@ -30,21 +31,29 @@ const localizer = dateFnsLocalizer({
 const DragAndDropCalendar = withDragAndDrop(Calendar);
 
 const mapWorkoutToEvent = (workout) => {
-  const workoutDateStr = workout.tags?.suggestedDate;
+  const workoutDateStr = workout.scheduled_date;
   if (!workoutDateStr) {
-    console.warn(
-      `Workout ID ${workout.id} has no tags.suggestedDate, skipping.`
-    );
+    console.warn(`Workout ID ${workout.id} has no scheduled_date, skipping.`);
     return null;
   }
 
   let workoutDate;
   try {
-    workoutDate = parse(workoutDateStr, 'yyyy-MM-dd', new Date());
-    if (isNaN(workoutDate.getTime())) {
-      throw new Error('Invalid date format');
+    // Attempt to parse as full ISO string first
+    let parsedDate = parseISO(workoutDateStr);
+
+    // If parseISO fails or produces an invalid date, AND it looks like 'YYYY-MM-DD',
+    // try parsing it explicitly as local time.
+    if (!isValid(parsedDate) && /^\d{4}-\d{2}-\d{2}$/.test(workoutDateStr)) {
+      // Append T00:00:00 to treat it as local midnight
+      parsedDate = new Date(workoutDateStr + 'T00:00:00');
     }
-    workoutDate.setHours(0, 0, 0, 0);
+
+    // Final check if we have a valid date
+    if (!isValid(parsedDate)) {
+      throw new Error(`Invalid date string after attempts: ${workoutDateStr}`);
+    }
+    workoutDate = parsedDate;
   } catch (e) {
     console.error(
       `Error parsing date string "${workoutDateStr}" for workout ID ${workout.id}:`,
@@ -103,12 +112,15 @@ export default function ProgramCalendar({
           .eq('program_id', programId);
         if (workoutsError) throw workoutsError;
 
-        // Filter out workouts without a date in tags before setting state
+        // Filter out workouts without a scheduled_date before setting state
         const validWorkouts = (workoutsData || []).filter(
-          (w) => w.tags?.suggestedDate
+          (w) => w.scheduled_date
         );
         setWorkouts(validWorkouts);
-        console.log('Fetched valid workoutsData:', validWorkouts);
+        console.log(
+          'Fetched valid workoutsData (using scheduled_date):',
+          validWorkouts
+        );
 
         // Removed fetch for workout_schedule
       } catch (error) {
@@ -167,12 +179,15 @@ export default function ProgramCalendar({
 
   const moveEvent = useCallback(
     async ({ event, start, end, isAllDay }) => {
-      const workoutId = event.id; // Event ID is now workout ID
-      const formattedDate = format(start, 'yyyy-MM-dd');
+      const workoutId = event.id;
+      const newFormattedDate = format(start, 'yyyy-MM-dd'); // Date from drag operation
       const originalWorkout = workouts.find((w) => w.id === workoutId);
 
-      if (!originalWorkout) {
-        console.error('Original workout not found for event:', event);
+      if (!originalWorkout || !originalWorkout.scheduled_date) {
+        console.error(
+          'Original workout or its scheduled_date not found for event:',
+          event
+        );
         return;
       }
 
@@ -185,43 +200,72 @@ export default function ProgramCalendar({
         return;
       }
 
+      // Format the original date for comparison (use robust parsing here too)
+      let originalFormattedDate;
+      try {
+        let originalDate = parseISO(originalWorkout.scheduled_date);
+        if (
+          !isValid(originalDate) &&
+          /^\d{4}-\d{2}-\d{2}$/.test(originalWorkout.scheduled_date)
+        ) {
+          originalDate = new Date(originalWorkout.scheduled_date + 'T00:00:00');
+        }
+        if (!isValid(originalDate)) {
+          throw new Error('Invalid original date string');
+        }
+        originalFormattedDate = format(originalDate, 'yyyy-MM-dd');
+      } catch (e) {
+        console.error(
+          'Error parsing original scheduled_date:',
+          originalWorkout.scheduled_date,
+          e
+        );
+        return; // Don't proceed if the original date is invalid
+      }
+
       // Prevent moving if the date hasn't changed
-      // Compare against tags.suggestedDate
-      if (originalWorkout.tags?.suggestedDate === formattedDate) {
+      // Compare formatted dates (yyyy-MM-dd)
+      if (originalFormattedDate === newFormattedDate) {
         console.log("Date hasn't changed, not updating.");
         return;
       }
 
       setIsLoading(true);
       try {
-        // Construct the new tags object, preserving existing tags
-        const newTags = {
-          ...(originalWorkout.tags || {}),
-          suggestedDate: formattedDate,
-          scheduled_date: formattedDate, // Keep the nested one consistent too
-        };
-
-        // Update the tags column in the program_workouts table
+        // Update the scheduled_date column directly using 'yyyy-MM-dd' format
         const { error } = await supabase
           .from('program_workouts')
-          .update({ tags: newTags })
+          .update({ scheduled_date: newFormattedDate }) // Update DB with 'yyyy-MM-dd'
           .eq('id', workoutId);
 
         if (error) throw error;
 
-        // Update local workouts state optimistically, modifying the tags
+        // Optimistic Update: Update local state with the full ISO string
+        // representation of the *start* of the day in the local timezone.
+        // This ensures mapWorkoutToEvent can parse it consistently later.
+        const newStartOfDayISO = format(start, "yyyy-MM-dd'T00:00:00'");
+
         setWorkouts((prev) =>
-          prev.map((w) => (w.id === workoutId ? { ...w, tags: newTags } : w))
+          prev.map((w) =>
+            w.id === workoutId
+              ? { ...w, scheduled_date: newStartOfDayISO } // Update local state with consistent ISO format
+              : w
+          )
         );
         // The mapping effect will automatically update myEvents
       } catch (error) {
-        console.error('Error moving event (updating program_workout):', error);
-        setMyEvents((prev) => [...prev]); // Force re-render with original data
+        console.error(
+          'Error moving event (updating program_workout scheduled_date):',
+          error
+        );
+        // Consider a more robust error handling/revert mechanism if needed
+        // For now, just log and prevent UI snapping back by NOT forcing re-render
+        // setMyEvents((prev) => [...prev]); // Removing this line - let state update handle it
       } finally {
         setIsLoading(false);
       }
     },
-    [supabase, workouts, setWorkouts, setMyEvents] // Updated dependencies
+    [supabase, workouts, setWorkouts] // Keep dependencies minimal
   );
 
   // Placeholder for resizing logic - likely needs adapting if used
@@ -284,12 +328,14 @@ export default function ProgramCalendar({
       setIsLoading(true);
       try {
         // Only update fields that are likely changed in the edit modal
+        // Do NOT update scheduled_date here, as it's handled by drag-and-drop
         const { error } = await supabase
           .from('program_workouts')
           .update({
             title: editedWorkout.title,
             body: editedWorkout.body,
             // Potentially other fields if the edit modal allows
+            // Ensure scheduled_date is NOT updated here unless intended
           })
           .eq('id', editedWorkout.id);
 
@@ -364,6 +410,13 @@ export default function ProgramCalendar({
 
   return (
     <div className="bg-white rounded-lg shadow-md p-4 relative">
+      {/* Add global style override for calendar popup */}
+      <style jsx global>{`
+        .rbc-overlay {
+          z-index: 1000 !important; /* Ensure this is lower than modal's z-index (currently 9999) */
+        }
+      `}</style>
+
       {/* Toast Container */}
       {showToast && (
         <Toast

@@ -43,8 +43,16 @@ export default function EditWorkoutModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+    <div
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-[9999] p-4 pt-20"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+    >
+      <div
+        className="bg-white backdrop-blur-sm rounded-lg shadow-2xl max-w-3xl w-full max-h-[85vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
         <form onSubmit={handleSubmit}>
           <div className="p-6">
             <div className="flex justify-between items-start mb-4">
@@ -78,7 +86,7 @@ export default function EditWorkoutModal({
                 name="body"
                 value={editedWorkout.body}
                 onChange={handleChange}
-                className="textarea textarea-bordered w-full h-64"
+                className="textarea textarea-bordered w-full h-96"
                 required
               />
             </div>

@@ -13,6 +13,12 @@ export const generateMetadata = () => {
 export default function UpdatesPage() {
   const updates = [
     {
+      title: 'Enhanced Program Calendar and Workout Management',
+      date: 'April 13, 2025',
+      description:
+        "We've made your workout planning experience smoother and more reliable! Our latest update improves how dates are handled in the calendar, making it easier to schedule and view your workout sessions. We've also added helpful visual indicators that show when your work is being saved, confirmation prompts to prevent accidental changes, and enhanced the overall look and feel for better accessibility. These improvements ensure your fitness programs are easier to create, manage, and maintain without unexpected issues.",
+    },
+    {
       title: 'Friends and Family Release',
       date: 'April 10, 2025',
       description:

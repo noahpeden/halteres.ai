@@ -1,25 +1,21 @@
 'use client';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import equipmentList from '@/utils/equipmentList';
 import { gymEquipmentPresets } from '../utils';
 import Toast from '../Toast';
-import {
-  formatDate,
-  processWorkoutDescription,
-  dayNameToNumber,
-  dayNumberToName,
-} from './utils';
+import { formatDate } from './utils';
 import {
   generateProgram,
   saveProgram,
+  autoSaveProgramDetails,
   handleAutoAssignDates,
   handleDatePickerSave as datePickerSave,
   deleteWorkout as deleteWorkoutAction,
   editWorkout as editWorkoutAction,
+  createProgramRecord,
 } from './programActions';
 
-// Import handlers from extracted modules
 import {
   processWorkoutForDisplay,
   updateFormDataFromProgram,
@@ -38,7 +34,6 @@ import {
   handleCloseDatePickerModal,
 } from './modalHandlers';
 
-// Import subcomponents
 import ProgramForm from './ProgramForm';
 import EquipmentSelector from './EquipmentSelector';
 import ReferenceWorkouts from './ReferenceWorkouts';
@@ -47,17 +42,53 @@ import WorkoutModal from './WorkoutModal';
 import DatePickerModal from './DatePickerModal';
 import RescheduleModal from './RescheduleModal';
 import EditWorkoutModal from './EditWorkoutModal';
+import AutoSaveStatusIndicator from './AutoSaveStatusIndicator';
+import { InfoIcon } from 'lucide-react';
 
-// For tracking auto-save state
 const AUTO_SAVE_STATES = {
   IDLE: 'idle',
+  DIRTY: 'dirty',
   SAVING: 'saving',
   DONE: 'done',
+  ERROR: 'error',
 };
 
-export default function AIProgramWriter({ programId, onSelectWorkout }) {
+// Simple Confirmation Modal Component
+function ConfirmationModal({ isOpen, onClose, onConfirm, content }) {
+  if (!isOpen) return null;
+
+  return (
+    <dialog
+      id="confirmation_modal"
+      className="modal modal-open modal-bottom sm:modal-middle"
+    >
+      <div className="modal-box">
+        <h3 className="font-bold text-lg">{content.title}</h3>
+        <p className="py-4">{content.message}</p>
+        <div className="modal-action">
+          <button className="btn" onClick={onClose}>
+            Cancel
+          </button>
+          <button className="btn btn-primary" onClick={onConfirm}>
+            {content.confirmText}
+          </button>
+        </div>
+      </div>
+      {/* Optional: Close modal when clicking backdrop */}
+      {/* <form method="dialog" className="modal-backdrop">
+        <button onClick={onClose}>close</button>
+      </form> */}
+    </dialog>
+  );
+}
+
+export default function AIProgramWriter({
+  programId: initialProgramId,
+  onSelectWorkout,
+}) {
   const { supabase } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+  const [programId, setProgramId] = useState(initialProgramId);
   const [suggestions, setSuggestions] = useState([]);
   const [referenceWorkouts, setReferenceWorkouts] = useState([]);
   const [generationStage, setGenerationStage] = useState(null);
@@ -65,7 +96,6 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
   const [loadingTimer, setLoadingTimer] = useState(null);
   const [serverStatus, setServerStatus] = useState(null);
   const [generatedDescription, setGeneratedDescription] = useState('');
-  // Add state to track auto-save status
   const [autoSaveState, setAutoSaveState] = useState(AUTO_SAVE_STATES.IDLE);
   const [formData, setFormData] = useState({
     name: '',
@@ -103,22 +133,29 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
   const [isDatePickerModalOpen, setIsDatePickerModalOpen] = useState(false);
   const [selectedWorkoutForDate, setSelectedWorkoutForDate] = useState(null);
   const [selectedDate, setSelectedDate] = useState(null);
-  // New state for rescheduling modal
   const [isRescheduleModalOpen, setIsRescheduleModalOpen] = useState(false);
   const [newStartDate, setNewStartDate] = useState(() => {
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
     return tomorrow.toISOString().split('T')[0];
   });
-  // Add a ref to track automatic updates
   const isAutoUpdating = useRef(false);
-  // State to store initial name and description
-  const [initialName, setInitialName] = useState('');
-  const [initialDescription, setInitialDescription] = useState('');
+  const [initialFormData, setInitialFormData] = useState(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedWorkoutForEdit, setSelectedWorkoutForEdit] = useState(null);
+  const debounceTimerRef = useRef(null);
+  const [isDirty, setIsDirty] = useState(false);
+  const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false);
+  const [confirmationModalContent, setConfirmationModalContent] = useState({
+    title: '',
+    message: '',
+    confirmText: '',
+  });
 
-  // Toast helper function
+  useEffect(() => {
+    setProgramId(initialProgramId);
+  }, [initialProgramId]);
+
   const showToastMessage = (message, type = 'success') => {
     setToastMessage(message);
     setToastType(type);
@@ -128,10 +165,35 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
     }, 5000);
   };
 
-  // Handle program generation
-  const handleGenerateProgram = () => {
+  const handleGenerateClick = () => {
+    const isReGenerating = suggestions && suggestions.length > 0;
+    setConfirmationModalContent({
+      title: isReGenerating
+        ? 'Re-generate Program Workouts?'
+        : 'Generate Program Workouts?',
+      message: isReGenerating
+        ? 'This will replace the currently generated workouts for this program with new ones based on the current settings. Are you sure?'
+        : 'Ready to generate the initial set of workouts for this program based on your settings?',
+      confirmText: isReGenerating
+        ? 'Re-generate Workouts'
+        : 'Generate Workouts',
+    });
+    setIsConfirmationModalOpen(true);
+  };
+
+  const handleConfirmGenerate = async () => {
+    setIsConfirmationModalOpen(false);
+    if (!programId) {
+      showToastMessage(
+        'Cannot generate workouts: Program ID is missing. Please save the form first.',
+        'error'
+      );
+      console.error('Attempted to generate workouts without a programId.');
+      return;
+    }
+
     generateProgram({
-      programId,
+      programId: programId,
       formData,
       setIsLoading,
       setSuggestions,
@@ -145,19 +207,15 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
     });
   };
 
-  // Handle program saving
   const handleSaveProgram = () => {
     saveProgram({
       programId,
-      // Pass specific name/description to prevent overwrites
       programData: {
         ...formData,
-        name: initialName || formData.name, // Use initial if available, else current form data (for new programs)
-        description: initialDescription || formData.description, // Use initial if available, else current form data
-        // Ensure suggestions are mapped correctly if needed by saveProgram
-        // Currently passing suggestions separately, which is fine
+        name: initialFormData?.name || formData.name,
+        description: initialFormData?.description || formData.description,
       },
-      suggestions, // Pass suggestions separately for workout updates
+      suggestions,
       supabase,
       setIsLoading,
       showToastMessage,
@@ -165,7 +223,6 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
     });
   };
 
-  // Handle auto-assigning dates
   const handleAssignDates = () => {
     handleAutoAssignDates({
       programId,
@@ -178,7 +235,6 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
     });
   };
 
-  // Handle program rescheduling
   const handleRescheduleProgram = () => {
     if (!newStartDate) {
       showToastMessage('Please select a new start date', 'error');
@@ -198,7 +254,6 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
     });
   };
 
-  // Handle date picker save
   const handleDatePickerSave = () => {
     datePickerSave({
       programId,
@@ -215,7 +270,6 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
     });
   };
 
-  // Handle workout deletion
   const handleDeleteWorkout = (workoutId, e) => {
     deleteWorkoutAction({
       workoutId,
@@ -226,7 +280,6 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
     });
   };
 
-  // Handle workout editing
   const handleEditWorkout = (workout) => {
     setSelectedWorkoutForEdit(workout);
     setIsEditModalOpen(true);
@@ -251,7 +304,6 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
     }
   };
 
-  // Fetch reference workouts on component mount
   useEffect(() => {
     async function fetchReferenceWorkouts() {
       try {
@@ -270,7 +322,6 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
     fetchReferenceWorkouts();
   }, [supabase]);
 
-  // Auto-save generated workouts to program_workouts
   useEffect(() => {
     async function autoSaveGeneratedWorkouts() {
       if (
@@ -282,7 +333,6 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
         return;
       }
 
-      // Check if these are suggestions loaded from generated_program
       const areFromGeneratedProgram = suggestions.every(
         (workout) => !workout.id
       );
@@ -294,19 +344,55 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
       setIsLoading(true);
 
       try {
-        const workoutInserts = suggestions.map((workout) => ({
-          program_id: programId,
-          entity_id: formData.entityId,
-          title: workout.title,
-          body: workout.body || workout.description,
-          tags: {
-            ...(workout.tags || {}),
-            suggestedDate: workout.suggestedDate || null,
-          },
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          is_reference: false,
-        }));
+        // Delete existing non-reference workouts for this program BEFORE inserting new ones
+        console.log(
+          `[AutoSave] Deleting old workouts for programId: ${programId}`
+        );
+        const { error: deleteError } = await supabase
+          .from('program_workouts')
+          .delete()
+          .eq('program_id', programId)
+          .eq('is_reference', false); // Ensure we don't delete reference workouts
+
+        if (deleteError) {
+          console.error('[AutoSave] Error deleting old workouts:', deleteError);
+          // Decide if we should stop or continue. For now, let's log and continue,
+          // but show an error toast later.
+          showToastMessage(
+            `Warning: Failed to clear old workouts before auto-saving: ${deleteError.message}`,
+            'warning'
+          );
+          // Optionally, set an error state or throw to stop insertion
+          // setAutoSaveState(AUTO_SAVE_STATES.ERROR);
+          // setIsLoading(false);
+          // return;
+        }
+
+        const workoutInserts = suggestions.map((workout) => {
+          const tagsWithoutDate = { ...(workout.tags || {}) };
+          // Clean up potentially conflicting date fields from tags
+          delete tagsWithoutDate.suggestedDate;
+          delete tagsWithoutDate.scheduled_date; // Ensure lowercase version is also deleted
+
+          // Get the suggested date, assuming it's in 'YYYY-MM-DD' format or similar parseable by new Date()
+          const dateValue = workout.suggestedDate || null;
+
+          return {
+            program_id: programId,
+            entity_id: formData.entityId,
+            title: workout.title,
+            body: workout.body || workout.description,
+            tags: tagsWithoutDate, // Insert tags without the date fields
+            // Convert date string to ISO 8601 format for timestamptz column.
+            // If dateValue is null, insert null.
+            scheduled_date: dateValue
+              ? new Date(dateValue).toISOString()
+              : null,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            is_reference: false,
+          };
+        });
 
         const { data: newWorkouts, error } = await supabase
           .from('program_workouts')
@@ -315,7 +401,6 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
 
         if (error) throw error;
 
-        // Update suggestions with the saved workout IDs
         if (newWorkouts && newWorkouts.length > 0) {
           setSuggestions((prev) =>
             prev.map((workout, index) => ({
@@ -328,11 +413,20 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
           showToastMessage('Auto-saved workouts to your program');
         }
       } catch (error) {
-        console.error('Error auto-saving workouts:', error);
-        // Don't show error toast to avoid confusion, just log
+        console.error('[AutoSave] Error auto-saving workouts:', error);
+        // Set error state here if any operation failed (delete or insert)
+        setAutoSaveState(AUTO_SAVE_STATES.ERROR);
+        showToastMessage(
+          `Auto-save failed during workout insertion: ${error.message}`,
+          'error'
+        );
       } finally {
-        setIsLoading(false);
-        setAutoSaveState(AUTO_SAVE_STATES.DONE);
+        // Only set loading to false and state to DONE if no error occurred
+        // If an error happened above, state is already ERROR.
+        if (autoSaveState !== AUTO_SAVE_STATES.ERROR) {
+          setIsLoading(false);
+          setAutoSaveState(AUTO_SAVE_STATES.DONE);
+        }
       }
     }
 
@@ -346,7 +440,6 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
     formData.entityId,
   ]);
 
-  // Fetch program data when component mounts and programId is available
   useEffect(() => {
     async function fetchProgramData() {
       if (!programId) return;
@@ -354,7 +447,6 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
       setIsLoading(true);
 
       try {
-        // Fetch program details
         const { data: program, error: programError } = await supabase
           .from('programs')
           .select('*')
@@ -365,7 +457,6 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
           throw programError;
         }
 
-        // Fetch reference workouts for this program
         const { data: programReferenceWorkouts, error: referenceError } =
           await supabase
             .from('program_workouts')
@@ -380,15 +471,10 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
           setReferenceWorkouts(programReferenceWorkouts || []);
         }
 
-        // Update form data if program exists
         if (program) {
           const updatedFormData = updateFormDataFromProgram(program, formData);
           setFormData(updatedFormData);
-          // Store initial values to prevent overwriting on save
-          setInitialName(program.name || '');
-          setInitialDescription(program.description || '');
 
-          // Set generated description if it exists in program_overview
           if (program.program_overview?.generated_description) {
             setGeneratedDescription(
               program.program_overview.generated_description
@@ -396,12 +482,12 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
           }
         }
 
-        // Fetch workouts
         const { data: savedWorkouts, error: workoutsError } = await supabase
           .from('program_workouts')
-          .select('id, title, body, tags, created_at')
+          .select('id, title, body, tags, created_at, scheduled_date') // Select the new column
           .eq('program_id', programId)
-          .order('created_at');
+          // Order by the actual scheduled_date column now
+          .order('scheduled_date', { ascending: true, nullsFirst: true });
 
         if (workoutsError) throw workoutsError;
 
@@ -412,7 +498,6 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
             `Loaded ${processedWorkouts.length} workouts successfully!`
           );
         } else if (program?.generated_program?.length > 0) {
-          // Fallback to generated_program if no workouts in program_workouts
           const processedWorkouts = program.generated_program.map(
             processWorkoutForDisplay
           );
@@ -427,18 +512,134 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
         );
       } finally {
         setIsLoading(false);
+        setInitialFormData(JSON.parse(JSON.stringify(formData)));
       }
     }
 
     fetchProgramData();
   }, [programId, supabase]);
 
-  // Handle wrapper for form change
+  const debouncedAutoSave = useCallback(async () => {
+    console.log('[AutoSave] Entering debouncedAutoSave...');
+    console.log('[AutoSave] Current state:', {
+      isDirty,
+      autoSaveState,
+      initialFormDataExists: !!initialFormData,
+      programIdExists: !!programId,
+      isLoading,
+    });
+    if (!isDirty || autoSaveState === AUTO_SAVE_STATES.SAVING) {
+      console.log('[AutoSave] Exiting early: Not dirty or already saving.');
+      return;
+    }
+
+    if (!initialFormData || !programId) {
+      console.log(
+        '[AutoSave] Exiting early: Initial data or programId missing.',
+        initialFormData,
+        programId
+      );
+      return;
+    }
+
+    if (isLoading && autoSaveState === AUTO_SAVE_STATES.IDLE) {
+      console.log(
+        '[AutoSave] Exiting early: isLoading is true while state is IDLE.'
+      );
+      return;
+    }
+
+    console.log('[AutoSave] Proceeding to save...');
+    setAutoSaveState(AUTO_SAVE_STATES.SAVING);
+    let success = false;
+    try {
+      console.log('[AutoSave] Calling autoSaveProgramDetails...');
+      success = await autoSaveProgramDetails({
+        programId,
+        formData,
+        supabase,
+        showToastMessage,
+        generatedDescription,
+      });
+
+      if (success) {
+        setInitialFormData(JSON.parse(JSON.stringify(formData)));
+        setIsDirty(false);
+        setAutoSaveState(AUTO_SAVE_STATES.IDLE);
+      } else {
+        setAutoSaveState(AUTO_SAVE_STATES.ERROR);
+      }
+    } catch (error) {
+      console.error('Error calling autoSaveProgramDetails:', error);
+      setAutoSaveState(AUTO_SAVE_STATES.ERROR);
+      showToastMessage(
+        'An unexpected error occurred during auto-save.',
+        'error'
+      );
+    }
+  }, [
+    programId,
+    formData,
+    initialFormData,
+    supabase,
+    showToastMessage,
+    generatedDescription,
+    isLoading,
+    autoSaveState,
+    isDirty,
+  ]);
+
+  useEffect(() => {
+    // Guard clause: Don't run the dirty check/auto-save logic until
+    // initialFormData has been populated by the data fetching effect.
+    if (!initialFormData) {
+      return;
+    }
+
+    if (JSON.stringify(formData) !== JSON.stringify(initialFormData)) {
+      if (!isDirty) {
+        setIsDirty(true);
+        setAutoSaveState(AUTO_SAVE_STATES.DIRTY);
+      }
+
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+
+      debounceTimerRef.current = setTimeout(() => {
+        debouncedAutoSave();
+      }, 1500);
+    }
+
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, [formData, programId, initialFormData, debouncedAutoSave, isDirty]);
+
+  useEffect(() => {
+    const handleBeforeUnload = (event) => {
+      if (isDirty) {
+        const message =
+          'You have unsaved changes. Are you sure you want to leave?';
+        event.preventDefault();
+        event.returnValue = message;
+        return message;
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [isDirty]);
+
   const handleChange = (e) => {
     handleFormChange(e, setFormData);
   };
 
-  // Update equipment selection when gym type changes
   useEffect(() => {
     if (formData.gymType) {
       setFormData((prev) => ({
@@ -448,7 +649,6 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
     }
   }, [formData.gymType]);
 
-  // Update gymDetails when equipment changes
   useEffect(() => {
     if (formData.equipment.length > 0) {
       const equipmentNames = formData.equipment
@@ -469,12 +669,10 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
     }
   }, [formData.equipment, formData.gymType]);
 
-  // Initialize equipment on mount
   useEffect(() => {
     initializeEquipment(formData, setFormData);
   }, [gymEquipmentPresets, formData.gymType, formData.equipment.length]);
 
-  // Check if all equipment is selected
   useEffect(() => {
     setAllEquipmentSelected(
       equipmentList.length > 0 &&
@@ -482,7 +680,6 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
     );
   }, [formData.equipment]);
 
-  // Wrapper for equipment change
   const handleEquipmentChangeWrapper = (e) => {
     const result = handleEquipmentChange(e, formData, setFormData);
     if (result !== null) {
@@ -490,25 +687,20 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
     }
   };
 
-  // Wrapper for workout format change
   const handleWorkoutFormatChangeWrapper = (e) => {
     handleWorkoutFormatChange(e, setFormData);
   };
 
-  // Wrapper for day of week change
   const handleDayOfWeekChangeWrapper = (day) => {
     handleDayOfWeekChange(day, setFormData);
   };
 
-  // Update days per week when days of week selection changes
   useEffect(() => {
-    // Skip if this is an automatic update from the other effect
     if (isAutoUpdating.current) {
       isAutoUpdating.current = false;
       return;
     }
 
-    // Only update daysPerWeek if it doesn't match daysOfWeek.length
     if (parseInt(formData.daysPerWeek) !== formData.daysOfWeek.length) {
       setFormData((prev) => ({
         ...prev,
@@ -517,14 +709,11 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
     }
   }, [formData.daysOfWeek.length, formData.daysPerWeek]);
 
-  // Update days of week when days per week changes directly
   useEffect(() => {
-    // Skip if the lengths already match to prevent unnecessary updates
     if (parseInt(formData.daysPerWeek) === formData.daysOfWeek.length) {
       return;
     }
 
-    // Set flag that we're doing an automatic update
     isAutoUpdating.current = true;
 
     updateDaysOfWeekFromDaysPerWeek(
@@ -534,7 +723,6 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
     );
   }, [formData.daysPerWeek, formData.daysOfWeek]);
 
-  // Calculate end date based on start date, number of weeks, and selected days of week
   useEffect(() => {
     const endDate = calculateEndDate(
       formData.startDate,
@@ -596,15 +784,44 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
         />
       )}
 
+      <AutoSaveStatusIndicator
+        autoSaveState={autoSaveState}
+        isDirty={isDirty}
+      />
+      {programId && (
+        <div className="flex justify-end items-center mt-6">
+          <div
+            className="tooltip tooltip-top tooltip-info mr-2"
+            data-tip="Your changes are automatically saved, but you can use this to manually save."
+          >
+            <InfoIcon className="w-4 h-4 text-primary bg-white rounded-full" />
+          </div>
+          <button
+            className="btn btn-sm btn-primary text-white"
+            onClick={handleSaveProgram}
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <>
+                <span className="loading loading-spinner loading-xs"></span>
+                Saving...
+              </>
+            ) : (
+              'Save Program'
+            )}
+          </button>
+        </div>
+      )}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Program Form */}
         <ProgramForm
           formData={formData}
           handleChange={handleChange}
           handleWorkoutFormatChange={handleWorkoutFormatChangeWrapper}
           handleDayOfWeekChange={handleDayOfWeekChangeWrapper}
           isLoading={isLoading}
-          generateProgram={handleGenerateProgram}
+          programId={programId}
+          suggestions={suggestions}
+          generateProgram={handleGenerateClick}
           generationStage={generationStage}
           loadingDuration={loadingDuration}
           equipmentSelector={
@@ -620,7 +837,6 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
         />
       </div>
 
-      {/* Reference Workouts */}
       <ReferenceWorkouts
         workouts={referenceWorkouts}
         supabase={supabase}
@@ -628,12 +844,12 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
         showToastMessage={showToastMessage}
       />
 
-      {/* Workout List */}
       {suggestions.length > 0 && (
         <div className="flex justify-between items-center mt-6">
           <div className="flex-1" />
           <div className="flex gap-2">
-            <button
+            {/* TODO: Add reschedule program button later when we validate with users */}
+            {/* <button
               className="btn btn-sm btn-outline btn-secondary"
               onClick={() => setIsRescheduleModalOpen(true)}
               disabled={isLoading}
@@ -646,23 +862,7 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
               ) : (
                 'Re-Schedule Program'
               )}
-            </button>
-            {programId && (
-              <button
-                className="btn btn-sm btn-primary text-white"
-                onClick={handleSaveProgram}
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <>
-                    <span className="loading loading-spinner loading-xs"></span>
-                    Saving...
-                  </>
-                ) : (
-                  'Save Program'
-                )}
-              </button>
-            )}
+            </button> */}
           </div>
         </div>
       )}
@@ -689,6 +889,8 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
         onClose={handleCloseWorkoutModalWrapper}
         onSelectWorkout={handleSelectWorkout}
         formatDate={formatDate}
+        onDeleteWorkout={handleDeleteWorkout}
+        onEditWorkout={handleEditWorkout}
       />
 
       <DatePickerModal
@@ -708,7 +910,6 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
         currentEndDate={formData.endDate}
         onClose={() => {
           setIsRescheduleModalOpen(false);
-          // Reset to tomorrow's date
           const tomorrow = new Date();
           tomorrow.setDate(tomorrow.getDate() + 1);
           setNewStartDate(tomorrow.toISOString().split('T')[0]);
@@ -724,6 +925,13 @@ export default function AIProgramWriter({ programId, onSelectWorkout }) {
         onClose={handleCloseEditModal}
         onSave={handleSaveEditedWorkout}
         isLoading={isLoading}
+      />
+
+      <ConfirmationModal
+        isOpen={isConfirmationModalOpen}
+        onClose={() => setIsConfirmationModalOpen(false)}
+        onConfirm={handleConfirmGenerate}
+        content={confirmationModalContent}
       />
     </div>
   );

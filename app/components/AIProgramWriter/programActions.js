@@ -478,22 +478,29 @@ export async function saveProgram({
 
     if (programError) throw programError;
 
-    // 2. Update or insert individual workouts in `program_workouts` table
     if (suggestions && suggestions.length > 0) {
-      const workoutUpserts = suggestions.map((workout) => ({
-        program_id: programId,
-        entity_id: programData.entityId,
-        ...(workout.id && { id: workout.id }),
-        title: workout.title,
-        body: workout.body || workout.description,
-        tags: {
-          ...(workout.tags || {}),
-          suggestedDate: workout.suggestedDate || null,
-        },
-        created_at: workout.created_at || new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        is_reference: false,
-      }));
+      const workoutUpserts = suggestions.map((workout) => {
+        const tagsWithoutDate = { ...(workout.tags || {}) };
+        delete tagsWithoutDate.suggestedDate;
+        delete tagsWithoutDate.scheduled_date; // Use lowercase key consistent with DB
+
+        // Get the date value
+        const dateValue = workout.suggestedDate || null;
+
+        return {
+          program_id: programId,
+          entity_id: programData.entityId,
+          ...(workout.id && { id: workout.id }), // Keep ID for upsert
+          title: workout.title,
+          body: workout.body || workout.description,
+          tags: tagsWithoutDate, // Use cleaned tags
+          // Populate the correct column
+          scheduled_date: dateValue ? new Date(dateValue).toISOString() : null,
+          created_at: workout.created_at || new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          is_reference: false,
+        };
+      });
 
       const { error: workoutError } = await supabase
         .from('program_workouts')
@@ -521,6 +528,155 @@ export async function saveProgram({
     );
   } finally {
     setIsLoading(false);
+  }
+}
+
+// Auto-save program details (without workouts)
+export async function autoSaveProgramDetails({
+  programId,
+  formData,
+  supabase,
+  showToastMessage,
+  generatedDescription,
+}) {
+  if (!programId) {
+    // No Program ID yet, nothing to save.
+    return false; // Indicate failure: no ID
+  }
+
+  try {
+    // Convert day names to day numbers for API consistency
+    const daysOfWeekNumbers = formData.daysOfWeek.map(
+      (day) => dayNameToNumber[day]
+    );
+
+    // Get equipment names
+    const selectedEquipmentNames = formData.equipment
+      .map((id) => {
+        const equipment = equipmentList.find((item) => item.value === id);
+        return equipment ? equipment.label : '';
+      })
+      .filter(Boolean);
+
+    // Prepare gym_details
+    const gymDetails = {
+      ...formData.gymDetails,
+      equipment: selectedEquipmentNames,
+      gym_type: formData.gymType,
+    };
+
+    // Prepare periodization
+    const periodizationData = {
+      ...formData.periodization,
+      program_type: formData.programType,
+    };
+
+    // Update only the program details in the `programs` table
+    const { error } = await supabase
+      .from('programs')
+      .update({
+        name: formData.name,
+        description: formData.description,
+        goal: formData.goal,
+        difficulty: formData.difficulty,
+        focus_area: formData.focusArea,
+        workout_format: formData.workoutFormats,
+        duration_weeks: parseInt(formData.numberOfWeeks, 10),
+        entity_id: formData.entityId,
+        gym_details: gymDetails,
+        periodization: periodizationData,
+        calendar_data: {
+          start_date: formData.startDate,
+          end_date: formData.endDate,
+          days_per_week: parseInt(formData.daysPerWeek, 10),
+          days_of_week: daysOfWeekNumbers,
+        },
+        session_details: formData.sessionDetails,
+        program_overview: {
+          ...formData.programOverview,
+          generated_description: generatedDescription || null,
+        },
+        // Do NOT update generated_program here
+      })
+      .eq('id', programId);
+
+    if (error) throw error;
+
+    console.log('Program details auto-saved successfully');
+    return true; // Indicate success
+  } catch (error) {
+    console.error('Error auto-saving program details:', error);
+    showToastMessage(
+      `Auto-save failed: ${error.message || 'Unknown error'}`,
+      'error'
+    );
+    return false; // Indicate failure
+  }
+  // No setIsLoading changes here, as this runs in the background
+}
+
+// Create initial program record
+export async function createProgramRecord({
+  formData,
+  supabase,
+  showToastMessage,
+}) {
+  console.log('Creating initial program record...');
+  try {
+    // Prepare minimal data for the initial insert
+    // We will update this with more details later after generation/saving
+    const initialProgramData = {
+      name: formData.name || 'Untitled Program', // Default name if empty
+      description: formData.description || '',
+      entity_id: formData.entityId, // Make sure entityId is available
+      // Add other non-nullable or essential default fields if necessary
+      // For JSONB fields, provide empty objects or default structures
+      goal: formData.goal || 'strength',
+      difficulty: formData.difficulty || 'intermediate',
+      duration_weeks: parseInt(formData.numberOfWeeks, 10) || 4,
+      gym_details: {},
+      periodization: {},
+      calendar_data: {},
+      session_details: {},
+      program_overview: {},
+      // Mark as draft or indicate it's newly created if needed
+      // status: 'draft',
+    };
+
+    // Validate entityId
+    if (!initialProgramData.entity_id) {
+      showToastMessage(
+        'Cannot create program: Missing required user information (entityId).',
+        'error'
+      );
+      console.error('Missing entityId in formData:', formData);
+      return null;
+    }
+
+    const { data, error } = await supabase
+      .from('programs')
+      .insert(initialProgramData)
+      .select('id') // Select only the ID
+      .single(); // Expecting a single record
+
+    if (error) {
+      throw error;
+    }
+
+    if (data && data.id) {
+      showToastMessage('Initial program record created.', 'info');
+      console.log('New program record created with ID:', data.id);
+      return data.id; // Return the new program ID
+    } else {
+      throw new Error('Failed to retrieve ID after program creation.');
+    }
+  } catch (error) {
+    console.error('Error creating initial program record:', error);
+    showToastMessage(
+      `Failed to create program record: ${error.message || 'Unknown error'}`,
+      'error'
+    );
+    return null; // Return null on failure
   }
 }
 
@@ -722,19 +878,28 @@ export async function handleAutoAssignDates({
     sortedWorkouts.forEach((workout, index) => {
       if (index < workoutDates.length) {
         const scheduledDate = workoutDates[index];
+        // Clean potential date fields from tags
+        const tagsWithoutDate = { ...(workout.tags || {}) };
+        delete tagsWithoutDate.suggestedDate;
+        delete tagsWithoutDate.scheduled_date;
 
         workoutsToCreate.push({
           program_id: programId,
           title: workout.title,
           body: workout.body || workout.description,
           tags: {
-            ...(workout.tags || {}),
+            // Keep existing non-date tags
+            ...(tagsWithoutDate || {}),
             type: workout.type || 'generated',
             focus: workout.focus || '',
             generated: true,
             ai_generated: true,
-            scheduled_date: scheduledDate,
+            // Remove scheduled_date from here
           },
+          // Add scheduled_date at the top level
+          scheduled_date: scheduledDate
+            ? new Date(scheduledDate).toISOString()
+            : null,
           is_reference: false,
         });
       }
@@ -753,7 +918,8 @@ export async function handleAutoAssignDates({
       const schedulesToCreate = newWorkouts.map((workout) => ({
         program_id: programId,
         workout_id: workout.id,
-        scheduled_date: workout.tags.scheduled_date,
+        // Use the top-level scheduled_date from the newly inserted workout
+        scheduled_date: workout.scheduled_date, // Corrected source
       }));
 
       if (schedulesToCreate.length > 0) {
@@ -766,21 +932,31 @@ export async function handleAutoAssignDates({
 
       // Update local state
       setSuggestions((prev) =>
-        prev.map((w, idx) =>
-          idx < newWorkouts.length
-            ? {
-                ...w,
-                id: newWorkouts[idx].id,
-                savedWorkoutId: newWorkouts[idx].id,
-                suggestedDate: newWorkouts[idx].tags.scheduled_date,
-                tags: {
-                  ...(w.tags || {}),
-                  scheduled_date: newWorkouts[idx].tags.scheduled_date,
-                  suggestedDate: newWorkouts[idx].tags.scheduled_date,
-                },
-              }
-            : w
-        )
+        prev.map((w, idx) => {
+          // Find the corresponding new workout data based on the original suggestion order
+          const matchingNewWorkout =
+            idx < newWorkouts.length ? newWorkouts[idx] : null;
+          if (matchingNewWorkout) {
+            // Clean potential date fields from existing tags
+            const tagsWithoutDate = { ...(w.tags || {}) };
+            delete tagsWithoutDate.suggestedDate;
+            delete tagsWithoutDate.scheduled_date;
+
+            return {
+              ...w,
+              id: matchingNewWorkout.id,
+              savedWorkoutId: matchingNewWorkout.id,
+              // Use the top-level scheduled_date from the DB result
+              suggestedDate: matchingNewWorkout.scheduled_date
+                ? new Date(matchingNewWorkout.scheduled_date)
+                    .toISOString()
+                    .split('T')[0]
+                : null,
+              tags: tagsWithoutDate, // Use cleaned tags
+            };
+          }
+          return w;
+        })
       );
     }
 
@@ -823,11 +999,12 @@ export async function handleDatePickerSave({
       const { data, error: updateError } = await supabase
         .from('program_workouts')
         .update({
-          tags: {
-            ...(selectedWorkoutForDate.tags || {}),
-            suggestedDate: selectedDate,
-            scheduled_date: selectedDate,
-          },
+          // Update the top-level scheduled_date column
+          scheduled_date: selectedDate
+            ? new Date(selectedDate).toISOString()
+            : null,
+          // Clean the tags column by removing date fields
+          tags: supabase.sql`(tags - 'suggestedDate' - 'scheduled_date')`,
         })
         .eq('id', workoutId)
         .select()
@@ -838,21 +1015,27 @@ export async function handleDatePickerSave({
 
       // Update the local state for existing workout
       setSuggestions((prev) =>
-        prev.map((w) =>
-          w.id === workoutId || w.savedWorkoutId === workoutId
-            ? {
-                ...w,
-                suggestedDate: selectedDate,
-                tags: {
-                  ...(w.tags || {}),
-                  suggestedDate: selectedDate,
-                  scheduled_date: selectedDate,
-                },
-              }
-            : w
-        )
+        prev.map((w) => {
+          if (w.id === workoutId || w.savedWorkoutId === workoutId) {
+            // Clean potential date fields from existing tags
+            const tagsWithoutDate = { ...(w.tags || {}) };
+            delete tagsWithoutDate.suggestedDate;
+            delete tagsWithoutDate.scheduled_date;
+            return {
+              ...w,
+              suggestedDate: selectedDate, // Keep suggestedDate in local state for display?
+              tags: tagsWithoutDate, // Use cleaned tags
+            };
+          }
+          return w;
+        })
       );
     } else {
+      // Clean potential date fields from tags before insert
+      const tagsWithoutDate = { ...(selectedWorkoutForDate.tags || {}) };
+      delete tagsWithoutDate.suggestedDate;
+      delete tagsWithoutDate.scheduled_date;
+
       // Create a new workout in the database if it doesn't exist
       const { data: newWorkout, error: workoutError } = await supabase
         .from('program_workouts')
@@ -861,11 +1044,11 @@ export async function handleDatePickerSave({
           title: selectedWorkoutForDate.title,
           body:
             selectedWorkoutForDate.body || selectedWorkoutForDate.description,
-          tags: {
-            ...(selectedWorkoutForDate.tags || {}),
-            suggestedDate: selectedDate,
-            scheduled_date: selectedDate,
-          },
+          tags: tagsWithoutDate, // Insert cleaned tags
+          // Insert into the top-level scheduled_date column
+          scheduled_date: selectedDate
+            ? new Date(selectedDate).toISOString()
+            : null,
           is_reference: false,
         })
         .select()
@@ -876,21 +1059,22 @@ export async function handleDatePickerSave({
 
       // Update the local state for new workout
       setSuggestions((prev) =>
-        prev.map((w) =>
-          w === selectedWorkoutForDate
-            ? {
-                ...w,
-                id: newWorkout.id,
-                savedWorkoutId: newWorkout.id,
-                suggestedDate: selectedDate,
-                tags: {
-                  ...(w.tags || {}),
-                  suggestedDate: selectedDate,
-                  scheduled_date: selectedDate,
-                },
-              }
-            : w
-        )
+        prev.map((w) => {
+          if (w === selectedWorkoutForDate) {
+            // Clean potential date fields from existing tags
+            const tagsWithoutDate = { ...(w.tags || {}) };
+            delete tagsWithoutDate.suggestedDate;
+            delete tagsWithoutDate.scheduled_date;
+            return {
+              ...w,
+              id: newWorkout.id,
+              savedWorkoutId: newWorkout.id,
+              suggestedDate: selectedDate, // Keep suggestedDate in local state for display?
+              tags: tagsWithoutDate, // Use cleaned tags
+            };
+          }
+          return w;
+        })
       );
     }
 
