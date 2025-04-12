@@ -57,10 +57,11 @@ export async function middleware(req) {
       },
       // IMPORTANT: Ensure cross-domain cookie options are set here too
       cookieOptions: {
-        domain: '.halteres.ai',
+        domain:
+          process.env.NODE_ENV === 'production' ? '.halteres.ai' : undefined,
         path: '/',
         sameSite: 'Lax', // Explicitly set SameSite
-        secure: true, // Explicitly set Secure
+        secure: process.env.NODE_ENV === 'production', // Only set secure in production
       },
     }
   );
@@ -120,6 +121,8 @@ export async function middleware(req) {
     if (!session) {
       // Logged out on app domain? Redirect to main domain login.
       const mainLoginUrl = new URL('/login', `https://${MAIN_HOSTNAME}`);
+      // Include a returnTo parameter to send the user back to the app domain after login
+      mainLoginUrl.searchParams.append('returnTo', req.url);
       console.log(
         'APP DOMAIN (Logged Out): Redirecting to main login:',
         mainLoginUrl.toString()
@@ -149,11 +152,31 @@ export async function middleware(req) {
         // Trying to access protected path? Redirect to app domain.
         const appUrl = new URL(pathname, `https://${APP_HOSTNAME}`);
         appUrl.search = req.nextUrl.search; // Preserve query params
+
+        // Before redirecting, make sure to set cookies that will be available on the app domain
+        const redirectResponse = NextResponse.redirect(appUrl);
+
+        // Copy any auth cookies to ensure they're available on the app domain
+        const sbAuthCookie = req.cookies.get('sb-auth-token');
+        if (sbAuthCookie) {
+          redirectResponse.cookies.set({
+            name: 'sb-auth-token',
+            value: sbAuthCookie.value,
+            domain:
+              process.env.NODE_ENV === 'production'
+                ? '.halteres.ai'
+                : undefined,
+            path: '/',
+            sameSite: 'Lax',
+            secure: process.env.NODE_ENV === 'production',
+          });
+        }
+
         console.log(
           'MAIN DOMAIN (Logged In): Redirecting protected path to app domain:',
           appUrl.toString()
         );
-        return NextResponse.redirect(appUrl);
+        return redirectResponse;
       }
       // Allow access to public paths on main domain even if logged in
       return response;
