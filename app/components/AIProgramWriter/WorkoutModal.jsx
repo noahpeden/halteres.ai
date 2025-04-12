@@ -67,14 +67,14 @@ export default function WorkoutModal({
             </button>
           </div>
 
-          <div className="mb-2">
-            <span className="badge badge-primary">
-              {workout.tags?.suggestedDate
-                ? formatDate(workout.tags.suggestedDate)
-                : workout.suggestedDate
-                ? formatDate(workout.suggestedDate)
-                : 'Not scheduled'}
-            </span>
+          <div className="flex gap-2 mb-2">
+            <div className="badge badge-ghost text-sm">
+              {workout.tags?.date
+                ? formatDate(workout.tags.date)
+                : workout.date
+                ? formatDate(workout.date)
+                : 'No date assigned'}
+            </div>
           </div>
 
           <div className="mt-4 prose max-w-none">

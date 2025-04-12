@@ -1,8 +1,9 @@
 'use client';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext'; // Assuming useAuth provides user/session info
-import { use } from 'react';
+import { ProgramProvider, useProgramContext } from './ProgramContext'; // Import the provider
+import { use } from 'react'; // Import React.use
 import {
   LayoutDashboard,
   CalendarDays,
@@ -14,8 +15,35 @@ import {
   LogOut,
 } from 'lucide-react';
 
+// NavLink component with save confirmation
+const NavLink = ({ href, children, currentPath, programId }) => {
+  const router = useRouter();
+  const isActive = currentPath === href;
+
+  const handleClick = async (e) => {
+    // Only handle click if not already on this page
+    if (!isActive) {
+      e.preventDefault();
+
+      // Navigate to the new page - ProgramContext will
+      // handle the auto-save before navigation completes
+      router.push(href);
+    }
+  };
+
+  return (
+    <li className={`${isActive ? 'bordered' : ''}`}>
+      <a href={href} onClick={handleClick}>
+        {children}
+      </a>
+    </li>
+  );
+};
+
 export default function ProgramLayout({ children, params }) {
-  const { programId } = use(params);
+  // Correctly unwrap params using React.use()
+  const resolvedParams = use(params);
+  const { programId } = resolvedParams; // Access programId after resolving
   const pathname = usePathname();
   const { session } = useAuth(); // Get session state
 
@@ -53,12 +81,6 @@ export default function ProgramLayout({ children, params }) {
     { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   ];
 
-  const NavLink = ({ href, children }) => (
-    <li className={`${pathname === href ? 'bordered' : ''}`}>
-      <Link href={href}>{children}</Link>
-    </li>
-  );
-
   return (
     <div className="drawer lg:drawer-open">
       <input id="sidebar-drawer" type="checkbox" className="drawer-toggle" />
@@ -70,7 +92,9 @@ export default function ProgramLayout({ children, params }) {
         >
           <Menu />
         </label>
-        <div className="w-full p-4 pt-16 lg:pt-4">{children}</div>
+        <ProgramProvider programId={programId}>
+          <div className="w-full p-4 pt-16 lg:pt-4">{children}</div>
+        </ProgramProvider>
       </div>
       <div className="drawer-side">
         <label
@@ -82,7 +106,12 @@ export default function ProgramLayout({ children, params }) {
           {/* Sidebar content here */}
           <div className="mb-4 text-xl font-bold pl-4">Program Menu</div>
           {sidebarLinks.map((link) => (
-            <NavLink key={link.href} href={link.href}>
+            <NavLink
+              key={link.href}
+              href={link.href}
+              currentPath={pathname}
+              programId={programId}
+            >
               <link.icon className="h-5 w-5 mr-2" />
               {link.label}
             </NavLink>

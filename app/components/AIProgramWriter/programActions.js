@@ -215,7 +215,7 @@ export async function generateProgram({
                         title: workout.title,
                         body: workout.body || workout.description,
                         description: workout.body || workout.description,
-                        suggestedDate: workout.date || workout.suggestedDate,
+                        date: workout.date || workout.suggestedDate,
                       })
                     );
 
@@ -264,7 +264,7 @@ export async function generateProgram({
             title: workout.title,
             body: workout.body || workout.description,
             description: workout.body || workout.description,
-            suggestedDate: workout.date || workout.suggestedDate,
+            date: workout.date || workout.suggestedDate,
           }));
 
           setSuggestions(normalizedWorkouts);
@@ -386,13 +386,65 @@ export async function saveProgram({
   setIsLoading,
   showToastMessage,
   generatedDescription,
+  setSuggestions,
 }) {
   if (!programId) {
     showToastMessage(
       'Cannot save program without a program ID. Generate or load a program first.',
       'error'
     );
-    return;
+    return false;
+  }
+
+  // If entityId is missing, try to fetch it from the program
+  if (!programData.entityId) {
+    console.warn(
+      'Entity ID is missing, attempting to fetch from existing program'
+    );
+    try {
+      const { data: program, error } = await supabase
+        .from('programs')
+        .select('entity_id')
+        .eq('id', programId)
+        .single();
+
+      if (error) throw error;
+
+      if (program && program.entity_id) {
+        console.log('Retrieved entity_id from program:', program.entity_id);
+        programData.entityId = program.entity_id;
+      } else {
+        // Try to get any entity from the user
+        const { data: entities, error: entitiesError } = await supabase
+          .from('entities')
+          .select('id')
+          .limit(1);
+
+        if (entitiesError) throw entitiesError;
+
+        if (entities && entities.length > 0) {
+          console.log(
+            'Using first available entity as fallback:',
+            entities[0].id
+          );
+          programData.entityId = entities[0].id;
+        } else {
+          console.error('Entity ID is missing and could not be retrieved');
+          showToastMessage(
+            'Missing entity ID for this program. Please reload the page or contact support.',
+            'error'
+          );
+          return false;
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching entity_id:', error);
+      showToastMessage(
+        'Error retrieving entity ID. Please reload the page or contact support.',
+        'error'
+      );
+      return false;
+    }
   }
 
   setIsLoading(true);
@@ -469,7 +521,9 @@ export async function saveProgram({
           body: workout.body || workout.description,
           description: workout.body || workout.description,
           tags: workout.tags || [],
-          suggestedDate: workout.suggestedDate,
+          // Store both formats for maximum compatibility
+          date: workout.date || workout.suggestedDate || null,
+          suggestedDate: workout.suggestedDate || workout.date || null,
         })),
       })
       .eq('id', programId)
@@ -488,7 +542,7 @@ export async function saveProgram({
         body: workout.body || workout.description,
         tags: {
           ...(workout.tags || {}),
-          suggestedDate: workout.suggestedDate || null,
+          scheduled_date: workout.date || workout.suggestedDate || null,
         },
         created_at: workout.created_at || new Date().toISOString(),
         updated_at: new Date().toISOString(),
@@ -729,10 +783,6 @@ export async function handleAutoAssignDates({
           body: workout.body || workout.description,
           tags: {
             ...(workout.tags || {}),
-            type: workout.type || 'generated',
-            focus: workout.focus || '',
-            generated: true,
-            ai_generated: true,
             scheduled_date: scheduledDate,
           },
           is_reference: false,
@@ -753,7 +803,7 @@ export async function handleAutoAssignDates({
       const schedulesToCreate = newWorkouts.map((workout) => ({
         program_id: programId,
         workout_id: workout.id,
-        scheduled_date: workout.tags.scheduled_date,
+        date: workout.tags.scheduled_date,
       }));
 
       if (schedulesToCreate.length > 0) {
@@ -772,11 +822,10 @@ export async function handleAutoAssignDates({
                 ...w,
                 id: newWorkouts[idx].id,
                 savedWorkoutId: newWorkouts[idx].id,
-                suggestedDate: newWorkouts[idx].tags.scheduled_date,
+                date: newWorkouts[idx].tags.scheduled_date,
                 tags: {
                   ...(w.tags || {}),
                   scheduled_date: newWorkouts[idx].tags.scheduled_date,
-                  suggestedDate: newWorkouts[idx].tags.scheduled_date,
                 },
               }
             : w
@@ -825,7 +874,6 @@ export async function handleDatePickerSave({
         .update({
           tags: {
             ...(selectedWorkoutForDate.tags || {}),
-            suggestedDate: selectedDate,
             scheduled_date: selectedDate,
           },
         })
@@ -842,10 +890,9 @@ export async function handleDatePickerSave({
           w.id === workoutId || w.savedWorkoutId === workoutId
             ? {
                 ...w,
-                suggestedDate: selectedDate,
+                date: selectedDate,
                 tags: {
                   ...(w.tags || {}),
-                  suggestedDate: selectedDate,
                   scheduled_date: selectedDate,
                 },
               }
@@ -863,7 +910,6 @@ export async function handleDatePickerSave({
             selectedWorkoutForDate.body || selectedWorkoutForDate.description,
           tags: {
             ...(selectedWorkoutForDate.tags || {}),
-            suggestedDate: selectedDate,
             scheduled_date: selectedDate,
           },
           is_reference: false,
@@ -882,10 +928,9 @@ export async function handleDatePickerSave({
                 ...w,
                 id: newWorkout.id,
                 savedWorkoutId: newWorkout.id,
-                suggestedDate: selectedDate,
+                date: selectedDate,
                 tags: {
                   ...(w.tags || {}),
-                  suggestedDate: selectedDate,
                   scheduled_date: selectedDate,
                 },
               }
@@ -913,7 +958,7 @@ export async function handleDatePickerSave({
       const { error: updateScheduleError } = await supabase
         .from('workout_schedule')
         .update({
-          scheduled_date: selectedDate,
+          date: selectedDate,
         })
         .eq('id', existingSchedule.id);
 
@@ -925,7 +970,7 @@ export async function handleDatePickerSave({
         .insert({
           program_id: programId,
           workout_id: newWorkoutId,
-          scheduled_date: selectedDate,
+          date: selectedDate,
         });
 
       if (scheduleError) throw scheduleError;

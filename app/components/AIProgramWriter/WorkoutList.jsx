@@ -98,20 +98,13 @@ export default function WorkoutList({
                       `Week ${weekGroup.week}, Day ${index + 1}`}
                   </h4>
                   <div className="flex gap-2 items-center">
-                    <button
-                      className="badge badge-neutral text-white cursor-pointer"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onDatePick(workout);
-                      }}
-                      title="Adjust date"
-                    >
-                      {workout.tags?.suggestedDate
-                        ? formatDate(workout.tags.suggestedDate)
-                        : workout.suggestedDate
-                        ? formatDate(workout.suggestedDate)
-                        : 'Not scheduled'}
-                    </button>
+                    <div className="text-sm">
+                      {workout.tags?.date
+                        ? formatDate(workout.tags.date)
+                        : workout.date
+                        ? formatDate(workout.date)
+                        : 'No date assigned'}
+                    </div>
                     {workout.id && (
                       <>
                         <button

@@ -19,7 +19,7 @@ export const handleDatePickerOpen = (
   defaultDate
 ) => {
   setSelectedWorkoutForDate(workout);
-  setSelectedDate(workout.suggestedDate || defaultDate);
+  setSelectedDate(workout.date || defaultDate);
   setIsDatePickerModalOpen(true);
 };
 

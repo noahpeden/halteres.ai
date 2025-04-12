@@ -6,21 +6,25 @@ import { processWorkoutDescription } from './utils';
 
 // Process workout for display
 export const processWorkoutForDisplay = (workout) => {
-  // Determine the suggested date from various possible sources
-  const suggestedDate =
+  if (!workout) return null;
+
+  // Handle various date formats and sources
+  const dateValue =
+    workout.date ||
+    workout.suggestedDate ||
     workout.tags?.scheduled_date ||
+    workout.tags?.date ||
     workout.tags?.suggestedDate ||
-    workout.scheduled_date;
+    null;
 
   return {
     ...workout,
-    savedWorkoutId: workout.id,
-    title: workout.title,
-    body: workout.body || workout.description,
-    description: workout.body || workout.description,
-    tags: workout.tags || {},
-    suggestedDate: suggestedDate,
-    workoutDetails: workout.tags?.workoutDetails,
+    id: workout.id || null, // Ensure ID exists or null
+    title: workout.title || '',
+    description: workout.body || workout.description || '',
+    date: dateValue,
+    // Keep suggestedDate for backward compatibility
+    suggestedDate: dateValue,
   };
 };
 
