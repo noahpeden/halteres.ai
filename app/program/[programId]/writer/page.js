@@ -2,7 +2,7 @@
 import { useState, useEffect, use } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
-import AIProgramWriter from '@/components/AIProgramWriter/AIProgramWriter';
+import AIProgramWriter from '@/components/AIProgramWriter';
 
 export default function ProgramWriterPage(props) {
   const params = use(props.params);

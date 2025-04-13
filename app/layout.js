@@ -3,7 +3,6 @@ import { Nunito_Sans, Poppins } from 'next/font/google';
 import { metadata } from './simple-metadata';
 import ClientProviders from './client-providers';
 import { Inter } from 'next/font/google';
-import { AuthProvider } from '@/contexts/AuthContext';
 
 export const nunitoSans = Nunito_Sans({
   weight: ['300', '400', '600', '700'],
@@ -37,9 +36,7 @@ export default function RootLayout({ children }) {
         <link rel="manifest" href="/site.webmanifest" />
       </head>
       <body>
-        <AuthProvider>
-          <ClientProviders>{children}</ClientProviders>
-        </AuthProvider>
+        <ClientProviders>{children}</ClientProviders>
       </body>
     </html>
   );
