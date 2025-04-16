@@ -1,4 +1,15 @@
-const goals = [
+// Type definition for common option structures
+interface Option {
+  value: string;
+  label: string;
+}
+
+// Type definition for equipment presets map
+interface EquipmentPresets {
+  [key: string]: number[];
+}
+
+export const goals: Option[] = [
   { value: 'strength', label: 'Strength' },
   { value: 'endurance', label: 'Endurance' },
   { value: 'hypertrophy', label: 'Hypertrophy' },
@@ -7,14 +18,14 @@ const goals = [
   { value: 'conditioning', label: 'Conditioning' },
 ];
 
-const difficulties = [
+export const difficulties: Option[] = [
   { value: 'beginner', label: 'Beginner' },
   { value: 'intermediate', label: 'Intermediate' },
   { value: 'advanced', label: 'Advanced' },
   { value: 'elite', label: 'Elite' },
 ];
 
-const focusAreas = [
+export const focusAreas: Option[] = [
   { value: 'upper_body', label: 'Upper Body' },
   { value: 'lower_body', label: 'Lower Body' },
   { value: 'full_body', label: 'Full Body' },
@@ -23,7 +34,7 @@ const focusAreas = [
   { value: 'anterior_chain', label: 'Anterior Chain' },
 ];
 
-const workoutFormats = [
+export const workoutFormats: Option[] = [
   { value: 'standard', label: 'Standard Format' },
   { value: 'emom', label: 'EMOM' },
   { value: 'amrap', label: 'AMRAP' },
@@ -32,7 +43,7 @@ const workoutFormats = [
   { value: 'circuit', label: 'Circuit Training' },
 ];
 
-const programTypes = [
+export const programTypes: Option[] = [
   { value: 'linear', label: 'Linear Progression' },
   { value: 'undulating', label: 'Undulating Periodization' },
   { value: 'block', label: 'Block Periodization' },
@@ -40,7 +51,7 @@ const programTypes = [
   { value: 'concurrent', label: 'Concurrent Training' },
 ];
 
-const gymTypes = [
+export const gymTypes: Option[] = [
   { value: 'Crossfit Box', label: 'Crossfit Box' },
   { value: 'Commercial Gym', label: 'Commercial Gym' },
   { value: 'Home Gym', label: 'Home Gym' },
@@ -54,10 +65,12 @@ const gymTypes = [
   { value: 'Hotel Gym', label: 'Hotel Gym' },
   { value: 'Apartment Gym', label: 'Apartment Gym' },
   { value: 'Boxing/MMA Gym', label: 'Boxing/MMA Gym' },
+  // Consider adding an 'Other' option explicitly if used
+  // { value: 'Other', label: 'Other' },
 ];
 
 // Equipment presets based on gym type
-const gymEquipmentPresets = {
+export const gymEquipmentPresets: EquipmentPresets = {
   'Crossfit Box': [
     1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 14, 15, 16, 17, 18, 19, 20, 22, 23, 26,
     46,
@@ -74,15 +87,5 @@ const gymEquipmentPresets = {
   'Hotel Gym': [5, 16, 27, 39, 44, 45, 47],
   'Apartment Gym': [5, 16, 27, 44, 45],
   'Boxing/MMA Gym': [5, 6, 7, 16, 17, 18, 22, 27, 35],
-  Other: [],
-};
-
-export {
-  goals,
-  difficulties,
-  focusAreas,
-  workoutFormats,
-  programTypes,
-  gymTypes,
-  gymEquipmentPresets,
-};
+  Other: [], // Explicitly include 'Other' if it's a possible key
+}; 

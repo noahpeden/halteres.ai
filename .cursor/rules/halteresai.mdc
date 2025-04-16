@@ -6,5 +6,5 @@ alwaysApply: true
 
 # Your rule content
 
-- Do not create debug routes, sql queries, or buttons unless I tell you too explicitly. 
+- Do not create debug routes, sql queries, or buttons unless I tell you to explicitly. 
 - Do not create new migrations unless I tell you as I can usually just run sql migrations in the Supabase gui.
