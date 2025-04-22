@@ -13,7 +13,6 @@ import {
   handleDatePickerSave as datePickerSave,
   deleteWorkout as deleteWorkoutAction,
   editWorkout as editWorkoutAction,
-  createProgramRecord,
 } from './programActions';
 
 import {
@@ -21,9 +20,7 @@ import {
   updateFormDataFromProgram,
   handleFormChange,
   handleEquipmentChange,
-  handleWorkoutFormatChange,
   handleDayOfWeekChange,
-  updateDaysOfWeekFromDaysPerWeek,
   initializeEquipment,
 } from './formHandlers';
 import { calculateEndDate } from './dateHandlers';
@@ -112,16 +109,14 @@ export default function AIProgramWriter({
     daysOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
     programType: 'linear',
     gymType: 'Crossfit Box',
-    startDate: (() => {
-      const tomorrow = new Date();
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      return tomorrow.toISOString().split('T')[0];
-    })(),
+    startDate: '',
     endDate: '',
     sessionDetails: {},
     programOverview: {},
     gymDetails: {},
     periodization: {},
+    trainingMethodology: '',
+    customWorkoutSections: [],
   });
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
@@ -151,6 +146,29 @@ export default function AIProgramWriter({
     message: '',
     confirmText: '',
   });
+  const [hasCustomWorkoutFormat, setHasCustomWorkoutFormat] = useState(false);
+  const [customSectionName, setCustomSectionName] = useState('');
+  const [customSectionDuration, setCustomSectionDuration] = useState('');
+  const [customSectionDescription, setCustomSectionDescription] = useState('');
+
+  const handleProgramTypeChange = (e) => {
+    setFormData((prev) => ({
+      ...prev,
+      programType: e.target.value,
+    }));
+  };
+
+  useEffect(() => {
+    // Set initial start date only on the client
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const initialStartDate = tomorrow.toISOString().split('T')[0];
+    setFormData((prev) => ({
+      ...prev,
+      // Only set if startDate hasn't been set yet (e.g., by fetched data)
+      startDate: prev.startDate || initialStartDate,
+    }));
+  }, []); // Empty dependency array ensures this runs only once on mount
 
   useEffect(() => {
     setProgramId(initialProgramId);
@@ -302,6 +320,35 @@ export default function AIProgramWriter({
     if (success) {
       handleCloseEditModal();
     }
+  };
+
+  const addCustomSection = () => {
+    if (customSectionName.trim() === '') {
+      showToastMessage('Section name is required', 'error');
+      return;
+    }
+    const newSection = {
+      name: customSectionName,
+      duration: customSectionDuration,
+      description: customSectionDescription,
+      order: formData.customWorkoutSections.length + 1,
+    };
+    setFormData((prev) => ({
+      ...prev,
+      customWorkoutSections: [...prev.customWorkoutSections, newSection],
+    }));
+    setCustomSectionName('');
+    setCustomSectionDuration('');
+    setCustomSectionDescription('');
+  };
+
+  const removeCustomSection = (index) => {
+    setFormData((prev) => ({
+      ...prev,
+      customWorkoutSections: prev.customWorkoutSections.filter(
+        (_, i) => i !== index
+      ),
+    }));
   };
 
   useEffect(() => {
@@ -687,8 +734,11 @@ export default function AIProgramWriter({
     }
   };
 
-  const handleWorkoutFormatChangeWrapper = (e) => {
-    handleWorkoutFormatChange(e, setFormData);
+  const handleWorkoutFormatChange = (selectedFormats) => {
+    setFormData((prev) => ({
+      ...prev,
+      workoutFormats: selectedFormats,
+    }));
   };
 
   const handleDayOfWeekChangeWrapper = (day) => {
@@ -701,27 +751,24 @@ export default function AIProgramWriter({
       return;
     }
 
-    if (parseInt(formData.daysPerWeek) !== formData.daysOfWeek.length) {
+    if (
+      formData.daysOfWeek.length > 0 &&
+      parseInt(formData.daysPerWeek) !== formData.daysOfWeek.length
+    ) {
       setFormData((prev) => ({
         ...prev,
         daysPerWeek: prev.daysOfWeek.length.toString(),
       }));
+    } else if (
+      formData.daysOfWeek.length === 0 &&
+      formData.daysPerWeek !== '0'
+    ) {
+      setFormData((prev) => ({
+        ...prev,
+        daysPerWeek: '0',
+      }));
     }
   }, [formData.daysOfWeek.length, formData.daysPerWeek]);
-
-  useEffect(() => {
-    if (parseInt(formData.daysPerWeek) === formData.daysOfWeek.length) {
-      return;
-    }
-
-    isAutoUpdating.current = true;
-
-    updateDaysOfWeekFromDaysPerWeek(
-      formData.daysPerWeek,
-      formData.daysOfWeek,
-      setFormData
-    );
-  }, [formData.daysPerWeek, formData.daysOfWeek]);
 
   useEffect(() => {
     const endDate = calculateEndDate(
@@ -816,7 +863,7 @@ export default function AIProgramWriter({
         <ProgramForm
           formData={formData}
           handleChange={handleChange}
-          handleWorkoutFormatChange={handleWorkoutFormatChangeWrapper}
+          handleWorkoutFormatChange={handleWorkoutFormatChange}
           handleDayOfWeekChange={handleDayOfWeekChangeWrapper}
           isLoading={isLoading}
           programId={programId}
@@ -833,6 +880,20 @@ export default function AIProgramWriter({
               isVisible={showEquipment}
               onToggleVisibility={() => setShowEquipment(!showEquipment)}
             />
+          }
+          hasCustomWorkoutFormat={hasCustomWorkoutFormat}
+          setHasCustomWorkoutFormat={setHasCustomWorkoutFormat}
+          customSectionName={customSectionName}
+          setCustomSectionName={setCustomSectionName}
+          customSectionDuration={customSectionDuration}
+          setCustomSectionDuration={setCustomSectionDuration}
+          customSectionDescription={customSectionDescription}
+          setCustomSectionDescription={setCustomSectionDescription}
+          addCustomSection={addCustomSection}
+          removeCustomSection={removeCustomSection}
+          handleProgramTypeChange={handleProgramTypeChange}
+          handleNumberInputChange={(e, min, max) =>
+            handleNumberInputChange(e, setFormData, min, max)
           }
         />
       </div>

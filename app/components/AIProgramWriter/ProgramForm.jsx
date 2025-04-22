@@ -1,12 +1,7 @@
 'use client';
-import {
-  goals,
-  difficulties,
-  focusAreas,
-  workoutFormats,
-  programTypes,
-  gymTypes,
-} from '../utils';
+import { difficulties, gymTypes } from '../utils';
+import ProgramTypeSelector from '@/components/selectors/ProgramTypeSelector';
+import WorkoutFormatSelector from '@/components/selectors/WorkoutFormatSelector';
 
 export default function ProgramForm({
   formData,
@@ -18,8 +13,17 @@ export default function ProgramForm({
   generationStage,
   loadingDuration,
   equipmentSelector,
-  programId,
   suggestions,
+  hasCustomWorkoutFormat,
+  setHasCustomWorkoutFormat,
+  customSectionName,
+  setCustomSectionName,
+  customSectionDuration,
+  setCustomSectionDuration,
+  customSectionDescription,
+  setCustomSectionDescription,
+  addCustomSection,
+  removeCustomSection,
 }) {
   const LoadingButton = () => (
     <>
@@ -39,41 +43,20 @@ export default function ProgramForm({
   return (
     <div className="md:col-span-3 space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Name */}
-        <div>
-          <label className="form-control w-full">
-            <div className="label">
-              <span className="label-text">Program Name</span>
-            </div>
-            <input
-              type="text"
-              name="name"
-              className="input input-bordered w-full"
-              value={formData.name}
-              onChange={handleChange}
-              placeholder="Enter program name"
-            />
-          </label>
-        </div>
-
-        {/* Goal */}
+        {/* Training Goal */}
         <div>
           <label className="form-control w-full">
             <div className="label">
               <span className="label-text">Training Goal</span>
             </div>
-            <select
+            <input
+              type="text"
               name="goal"
-              className="select select-bordered w-full"
+              className="input input-bordered w-full"
               value={formData.goal}
               onChange={handleChange}
-            >
-              {goals.map((goal) => (
-                <option key={goal.value} value={goal.value}>
-                  {goal.label}
-                </option>
-              ))}
-            </select>
+              placeholder="e.g., Strength, Muscle Gain, Conditioning"
+            />
           </label>
         </div>
 
@@ -102,64 +85,51 @@ export default function ProgramForm({
         <div>
           <label className="form-control w-full">
             <div className="label">
-              <span className="label-text">Focus Area</span>
+              <span className="label-text">Focus Area (optional)</span>
             </div>
-            <select
+            <input
+              type="text"
               name="focusArea"
-              className="select select-bordered w-full"
+              className="input input-bordered w-full"
               value={formData.focusArea}
               onChange={handleChange}
-            >
-              <option value="">Select Focus Area</option>
-              {focusAreas.map((area) => (
-                <option key={area.value} value={area.value}>
-                  {area.label}
-                </option>
-              ))}
-            </select>
+              placeholder="e.g., Upper Body, Core, Endurance"
+            />
           </label>
         </div>
 
-        {/* Program Type */}
+        {/* Training Methodology */}
         <div>
           <label className="form-control w-full">
             <div className="label">
-              <span className="label-text">Program Type</span>
+              <span className="label-text">Training Methodology</span>
             </div>
-            <select
-              name="programType"
-              className="select select-bordered w-full"
-              value={formData.programType}
-              onChange={handleChange}
-            >
-              {programTypes.map((type) => (
-                <option key={type.value} value={type.value}>
-                  {type.label}
-                </option>
-              ))}
-            </select>
+            <ProgramTypeSelector
+              selectedType={formData.trainingMethodology}
+              onChange={(typeId) =>
+                handleChange({
+                  target: { name: 'trainingMethodology', value: typeId },
+                })
+              }
+            />
           </label>
         </div>
 
-        {/* Number of Weeks */}
+        {/* Program Duration (Weeks) */}
         <div>
           <label className="form-control w-full">
             <div className="label">
-              <span className="label-text">Number of Weeks</span>
+              <span className="label-text">Weeks</span>
             </div>
-            <select
+            <input
+              type="number"
               name="numberOfWeeks"
-              className="select select-bordered w-full"
+              className="input input-bordered w-full"
+              min="1"
+              max="52"
               value={formData.numberOfWeeks}
               onChange={handleChange}
-            >
-              <option value="1">1 Week</option>
-              <option value="2">2 Weeks</option>
-              <option value="3">3 Weeks</option>
-              <option value="4">4 Weeks</option>
-              <option value="5">5 Weeks</option>
-              <option value="6">6 Weeks</option>
-            </select>
+            />
           </label>
         </div>
 
@@ -168,7 +138,7 @@ export default function ProgramForm({
           <div className="label">
             <span className="label-text">Days of Week</span>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             {[
               'Sunday',
               'Monday',
@@ -215,6 +185,18 @@ export default function ProgramForm({
             </select>
           </label>
         </div>
+        {/* Workout Formats */}
+        <div>
+          <label className="form-control w-full">
+            <div className="label">
+              <span className="label-text">Workout Formats</span>
+            </div>
+            <WorkoutFormatSelector
+              selectedFormats={formData.workoutFormats}
+              onChange={handleWorkoutFormatChange}
+            />
+          </label>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -254,27 +236,6 @@ export default function ProgramForm({
               disabled
             />
           </label>
-        </div>
-
-        {/* Workout Formats */}
-        <div>
-          <div className="label">
-            <span className="label-text">Workout Format Preferences</span>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-            {workoutFormats.map((format) => (
-              <label key={format.value} className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  className="checkbox checkbox-sm"
-                  value={format.value}
-                  checked={formData.workoutFormats.includes(format.value)}
-                  onChange={handleWorkoutFormatChange}
-                />
-                <span>{format.label}</span>
-              </label>
-            ))}
-          </div>
         </div>
 
         {/* Description */}
@@ -320,6 +281,132 @@ export default function ProgramForm({
             'Generate Program'
           )}
         </button>
+      </div>
+
+      {/* Advanced Options Accordion using DaisyUI Collapse */}
+      <div className="collapse collapse-arrow border border-base-300 bg-base-100 rounded-box mt-6">
+        <input type="checkbox" className="peer" />
+        <div className="collapse-title text-lg font-medium peer-checked:bg-base-200 peer-checked:text-base-content">
+          Advanced Options
+        </div>
+        <div className="collapse-content peer-checked:bg-base-200 peer-checked:text-base-content">
+          <div className="space-y-4 pt-2">
+            {/* Personalization */}
+            <div className="flex flex-col gap-2">
+              <label className="label">
+                <span className="label-text">Personalization (optional)</span>
+              </label>
+              <textarea
+                name="personalization"
+                className="textarea textarea-bordered h-24"
+                value={formData.personalization}
+                onChange={handleChange}
+                placeholder="e.g., Specific exercise preferences, training style, or movement priorities"
+              />
+            </div>
+
+            {/* Custom Workout Sections */}
+            <div className="flex flex-col gap-2 mt-4">
+              <div className="flex justify-between items-center">
+                <label className="label">
+                  <span className="label-text">Custom Workout Sections</span>
+                </label>
+                <button
+                  type="button"
+                  className="btn btn-outline btn-sm"
+                  onClick={() =>
+                    setHasCustomWorkoutFormat(!hasCustomWorkoutFormat)
+                  }
+                >
+                  {hasCustomWorkoutFormat ? 'Hide' : 'Add Custom Format'}
+                </button>
+              </div>
+
+              {hasCustomWorkoutFormat && (
+                <div className="space-y-4 border border-base-300 p-4 rounded-md mt-2 bg-base-200">
+                  <div className="text-sm text-base-content/70 mb-2">
+                    Define custom sections for your workout format
+                  </div>
+
+                  <div className="flex flex-col gap-2">
+                    <input
+                      type="text"
+                      className="input input-bordered w-full"
+                      placeholder="Section Name (e.g., Skill Work)"
+                      value={customSectionName}
+                      onChange={(e) => setCustomSectionName(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-2">
+                    <input
+                      type="text"
+                      className="input input-bordered w-full"
+                      placeholder="Duration (e.g., 15 min, optional)"
+                      value={customSectionDuration}
+                      onChange={(e) => setCustomSectionDuration(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-2">
+                    <textarea
+                      className="textarea textarea-bordered h-20 w-full"
+                      placeholder="Description (e.g., Focus on technique development, optional)"
+                      value={customSectionDescription}
+                      onChange={(e) =>
+                        setCustomSectionDescription(e.target.value)
+                      }
+                    />
+                  </div>
+
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-sm"
+                    onClick={addCustomSection}
+                  >
+                    Add Section
+                  </button>
+
+                  {formData.customWorkoutSections.length > 0 && (
+                    <div className="mt-4">
+                      <h4 className="text-sm font-medium mb-2">
+                        Custom Sections:
+                      </h4>
+                      <div className="space-y-2">
+                        {formData.customWorkoutSections.map(
+                          (section, index) => (
+                            <div
+                              key={index}
+                              className="flex items-center justify-between bg-base-100 p-2 rounded-md shadow-sm"
+                            >
+                              <div>
+                                <span className="font-medium">
+                                  {section.name}
+                                </span>
+                                {section.duration && (
+                                  <span className="ml-2 text-sm text-base-content/70">
+                                    ({section.duration})
+                                  </span>
+                                )}
+                              </div>
+                              <button
+                                type="button"
+                                className="btn btn-ghost btn-sm"
+                                onClick={() => removeCustomSection(index)}
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          )
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

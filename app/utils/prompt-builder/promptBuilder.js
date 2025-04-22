@@ -1,23 +1,29 @@
 // app/utils/prompt-builder/promptBuilder.js
 /**
  * Prompt Builder Utility
- * Selects and assembles the correct prompt template based on gym type and context.
- * Easily extensible for new gym types.
+ * Selects and assembles the correct prompt template based on training methodology and context.
+ * Easily extensible for new training styles.
  */
 
 // Import prompt templates from separate files
 import { crossfitPrompt } from './prompts/crossfit.js';
-import { globoGymPrompt } from './prompts/globo-gym.js';
-import { homeGymPrompt } from './prompts/home-gym.js';
-import { genericPrompt } from './prompts/generic.js';
+import { commercialGymPrompt } from './prompts/commercial-gym.js';
+import { minimalEquipmentPrompt } from './prompts/minimal-equipment.js';
+import { balancedFitnessPrompt } from './prompts/balanced-fitness.js';
+import { bodybuildingGymPrompt } from './prompts/bodybuilding.js/index.js';
+import { powerliftingPrompt } from './prompts/powerlifting.js';
+import { functionalFitnessPrompt } from './prompts/functional-fitness.js';
+import { hiitMetabolicPrompt } from './prompts/hiit-metabolic.js';
+import { calisthenicsPrompt } from './prompts/calisthenics.js';
+import { sportSpecificPrompt } from './prompts/sport-specific.js';
 
 /**
- * Returns the appropriate prompt template for the given gym type and context.
+ * Returns the appropriate prompt template for the given training methodology and context.
  * @param {Object} context - The full context for prompt generation (user input, program params, etc.)
- * @param {string} gymType - The gym type (e.g., 'Crossfit Box', 'Globo Gym', 'Home Gym')
+ * @param {string} trainingType - The training methodology (e.g., 'CrossFit', 'Bodybuilding', 'Powerlifting')
  * @returns {string} The assembled prompt string
  */
-export default function promptBuilder(context, gymType) {
+export default function promptBuilder(context, trainingType) {
   // Add contextual data processing for client metrics and reference workouts if not already provided
   const enhancedContext = {
     ...context,
@@ -33,21 +39,53 @@ export default function promptBuilder(context, gymType) {
       context.hasInjuryHistory ||
       (context.clientMetricsData?.injury_history &&
         isNotEmptyInjuryHistory(context.clientMetricsData.injury_history)),
+    // Process custom workout format if provided
+    customWorkoutFormat: formatCustomWorkoutFormat(
+      context.workoutFormats || context.workout_format
+    ),
   };
 
-  switch ((gymType || '').toLowerCase()) {
-    case 'crossfit box':
+  // Handle both new training methodology types and legacy gym types for backward compatibility
+  switch ((trainingType || '').toLowerCase()) {
+    // Training methodology-based templates
     case 'crossfit':
+    case 'crossfit box':
       return crossfitPrompt(enhancedContext);
-    case 'globo gym':
-      return globoGymPrompt(enhancedContext);
-    case 'home gym':
-      return homeGymPrompt(enhancedContext);
+    case 'bodybuilding':
+    case 'bodybuilding gym':
+      return bodybuildingGymPrompt(enhancedContext);
+    case 'powerlifting':
+      return powerliftingPrompt(enhancedContext);
+    case 'functional fitness':
+      return functionalFitnessPrompt(enhancedContext);
+    case 'hiit':
+    case 'metabolic':
+    case 'hiit/metabolic':
+      return hiitMetabolicPrompt(enhancedContext);
+    case 'calisthenics':
+    case 'bodyweight':
+      return calisthenicsPrompt(enhancedContext);
+    case 'sport specific':
+    case 'sport-specific':
+    case 'athletic':
+      return sportSpecificPrompt(enhancedContext);
+    case 'commercial gym':
+    case 'general strength':
+    case 'globo gym': // Legacy support
+      return commercialGymPrompt(enhancedContext);
+    case 'minimal equipment':
+    case 'home gym': // Legacy support
+      return minimalEquipmentPrompt(enhancedContext);
+    case 'balanced fitness':
+    case 'general fitness':
     default:
-      console.warn(
-        `[promptBuilder] Unknown gym type: '${gymType}', using generic prompt.`
-      );
-      return genericPrompt(enhancedContext);
+      // If no specific type or unknown type, use balanced fitness as default
+      if (trainingType && trainingType.toLowerCase() !== 'balanced fitness') {
+        console.warn(
+          `[promptBuilder] Unknown training type: '${trainingType}', using balanced fitness prompt.`
+        );
+      }
+      return balancedFitnessPrompt(enhancedContext);
   }
 }
 
@@ -131,6 +169,66 @@ ${workout.body}
   .join('\n')}
 
 Draw inspiration from these reference workouts when designing this program. Use similar structures, movement patterns, and approaches where appropriate.`;
+}
+
+/**
+ * Formats custom workout format specifications
+ * @param {Array|Object} workoutFormats - Workout format specifications from the user
+ * @returns {Object|null} Processed custom workout format or null if not provided
+ */
+function formatCustomWorkoutFormat(workoutFormats) {
+  if (
+    !workoutFormats ||
+    (Array.isArray(workoutFormats) && workoutFormats.length === 0) ||
+    (typeof workoutFormats === 'object' &&
+      Object.keys(workoutFormats).length === 0)
+  ) {
+    return null;
+  }
+
+  // If it's just a string array of format names
+  if (Array.isArray(workoutFormats) && typeof workoutFormats[0] === 'string') {
+    return {
+      isCustomFormat: false,
+      formatNames: workoutFormats,
+    };
+  }
+
+  // If it's a structured custom format specification
+  if (Array.isArray(workoutFormats) && typeof workoutFormats[0] === 'object') {
+    return {
+      isCustomFormat: true,
+      sections: workoutFormats
+        .map((section) => ({
+          name: section.name || 'Section',
+          duration: section.duration || '',
+          description: section.description || '',
+          order: section.order || 0,
+        }))
+        .sort((a, b) => a.order - b.order),
+    };
+  }
+
+  // If it's a single object representing a custom format
+  if (typeof workoutFormats === 'object' && !Array.isArray(workoutFormats)) {
+    if (workoutFormats.sections && Array.isArray(workoutFormats.sections)) {
+      return {
+        isCustomFormat: true,
+        formatName: workoutFormats.formatName || 'Custom Format',
+        sections: workoutFormats.sections
+          .map((section) => ({
+            name: section.name || 'Section',
+            duration: section.duration || '',
+            description: section.description || '',
+            order: section.order || 0,
+          }))
+          .sort((a, b) => a.order - b.order),
+      };
+    }
+  }
+
+  // If we can't determine the format, return the original
+  return workoutFormats;
 }
 
 /**

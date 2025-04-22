@@ -1,5 +1,5 @@
 /**
- * Crossfit-style prompt template
+ * CrossFit prompt template with custom format support
  * @param {Object} context - The full context for prompt generation
  * @returns {string} The assembled prompt string
  */
@@ -20,6 +20,7 @@ export function crossfitPrompt(context) {
     clientMetrics = '',
     referenceWorkouts = '',
     suggestedDates = [],
+    customWorkoutFormat = { enabled: false, sections: [] },
   } = context;
 
   // Get more specific parameters
@@ -51,6 +52,25 @@ export function crossfitPrompt(context) {
   const includeScaling = ['Beginner', 'Intermediate'].includes(difficulty);
   const hasInjuryHistory = context.hasInjuryHistory || false;
 
+  // Process custom workout format if enabled
+  const hasCustomFormat =
+    customWorkoutFormat?.enabled &&
+    Array.isArray(customWorkoutFormat.sections) &&
+    customWorkoutFormat.sections.length > 0;
+
+  // Format custom sections for the prompt if enabled
+  const customFormatSection = hasCustomFormat
+    ? `
+Custom Workout Format:
+The user has specified a custom workout format with the following sections:
+${customWorkoutFormat.sections
+  .map((section) => `- ${section.name}: ${section.duration} minutes`)
+  .join('\n')}
+
+IMPORTANT: Please structure your workout to precisely follow this format with these section names and approximate durations.
+`
+    : '';
+
   // Date information for workout scheduling
   const dateInfo =
     suggestedDates.length > 0
@@ -64,8 +84,8 @@ export function crossfitPrompt(context) {
           .join('\\n')
       : '';
 
-  // Build the Crossfit-specific prompt
-  return `Generate a ${numberOfWeeks}-week Crossfit training program with the following parameters:
+  // Build the CrossFit-specific prompt
+  return `Generate a ${numberOfWeeks}-week CrossFit training program with the following parameters:
 
 ${
   description
@@ -93,6 +113,7 @@ ${
 ${personalization ? `Personalization: ${personalization}` : ''}
 ${clientMetrics || ''}
 ${referenceWorkouts || ''}
+${customFormatSection}
 
 For the program description, include:
 1. A concise overview of the program's goals and intended adaptations
@@ -132,7 +153,17 @@ Your response MUST be in this exact JSON format:
 
 For each workout's "body" field, use this structure:
 \`\`\`
-## Stimulus and Strategy
+${
+  hasCustomFormat
+    ? customWorkoutFormat.sections
+        .map(
+          (section) =>
+            `## ${
+              section.name
+            }\n[Detailed ${section.name.toLowerCase()} with specific movements, durations, and instructions]`
+        )
+        .join('\n\n')
+    : `## Stimulus and Strategy
 [Detailed explanation of workout stimulus and strategy approach]
 - Explain the intended stimulus for both strength and conditioning portions
 - Provide pacing guidance for each section
@@ -184,7 +215,8 @@ ${
 [3-5 specific technical cues for key movements]
 - Technical cues for the most complex movements
 - Form tips to maximize efficiency and safety
-- Common errors to avoid
+- Common errors to avoid`
+}
 \`\`\`
 
 The "workouts" array should contain exactly ${totalWorkouts} workouts, organized in a progressive sequence.

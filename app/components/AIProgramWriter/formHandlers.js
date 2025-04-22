@@ -158,11 +158,15 @@ export function updateFormDataFromProgram(program, formData) {
   return updatedData;
 }
 
-// Handle form change
+// Handle standard form input change
 export const handleFormChange = (e, setFormData) => {
-  const { name, value } = e.target;
+  const { name, value, type, checked } = e.target; // Add type and checked
 
-  if (
+  // Handle Checkbox (might be needed for advanced options later)
+  if (type === 'checkbox') {
+    setFormData((prev) => ({ ...prev, [name]: checked }));
+  } else if (
+    // Handle JSON fields (if any)
     [
       'sessionDetails',
       'programOverview',
@@ -177,8 +181,35 @@ export const handleFormChange = (e, setFormData) => {
       console.error(`Invalid JSON in ${name}`, error);
     }
   } else {
+    // Handle standard inputs/selects
     setFormData((prev) => ({ ...prev, [name]: value }));
   }
+};
+
+// Handle specific select change where value needs parsing or special handling
+// Example: number inputs disguised as text or needing bounds checks
+export const handleNumberInputChange = (e, setFormData, min, max) => {
+  const { name, value } = e.target;
+  const parsedValue = parseInt(value, 10);
+  if (
+    !isNaN(parsedValue) &&
+    parsedValue >= min &&
+    (max === undefined || parsedValue <= max)
+  ) {
+    setFormData((prev) => ({ ...prev, [name]: parsedValue.toString() })); // Store as string if form expects strings
+  } else if (value === '') {
+    // Allow clearing the input
+    setFormData((prev) => ({ ...prev, [name]: '' }));
+  }
+  // Optionally handle invalid input (e.g., show error, reset to prev value)
+};
+
+// Handle change for ProgramTypeSelector (passes the selected type ID directly)
+export const handleProgramTypeChange = (typeId, setFormData) => {
+  setFormData((prev) => ({
+    ...prev,
+    trainingMethodology: typeId,
+  }));
 };
 
 // Handle equipment selection
@@ -241,7 +272,8 @@ export const handleEquipmentChange = (e, formData, setFormData) => {
   return null;
 };
 
-// Handle workout format selection
+// Handle workout format selection (Original version expecting event - REMOVE)
+/*
 export const handleWorkoutFormatChange = (e, setFormData) => {
   const value = e.target.value;
   const isChecked = e.target.checked;
@@ -261,6 +293,15 @@ export const handleWorkoutFormatChange = (e, setFormData) => {
       };
     }
   });
+};
+*/
+
+// Handle change for WorkoutFormatSelector (passes the full array)
+export const handleWorkoutFormatChange = (newFormats, setFormData) => {
+  setFormData((prev) => ({
+    ...prev,
+    workoutFormats: newFormats,
+  }));
 };
 
 // Handler for day of week selection
@@ -329,15 +370,27 @@ export const updateDaysOfWeekFromDaysPerWeek = (
   }
 };
 
-// Initialize the equipment based on gym type
+// Initialize equipment based on gym type if equipment list is empty
 export const initializeEquipment = (formData, setFormData) => {
-  const defaultGymType = formData.gymType || 'Crossfit Box';
-  const defaultEquipment = gymEquipmentPresets[defaultGymType] || [];
+  if (formData.equipment.length === 0 && formData.gymType) {
+    const preset = gymEquipmentPresets[formData.gymType] || [];
+    if (preset.length > 0) {
+      const equipmentNames = preset
+        .map((id) => {
+          const equipment = equipmentList.find((item) => item.value === id);
+          return equipment ? equipment.label : null;
+        })
+        .filter(Boolean);
 
-  if (defaultEquipment.length > 0 && formData.equipment.length === 0) {
-    setFormData((prev) => ({
-      ...prev,
-      equipment: defaultEquipment,
-    }));
+      setFormData((prev) => ({
+        ...prev,
+        equipment: preset,
+        gymDetails: {
+          ...prev.gymDetails,
+          gym_type: formData.gymType,
+          equipment: equipmentNames,
+        },
+      }));
+    }
   }
 };

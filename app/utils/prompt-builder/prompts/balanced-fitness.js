@@ -1,12 +1,12 @@
 /**
- * Globo Gym-style prompt template
+ * Balanced Fitness prompt template for general well-rounded fitness
  * @param {Object} context - The full context for prompt generation
  * @returns {string} The assembled prompt string
  */
-export function globoGymPrompt(context) {
+export function balancedFitnessPrompt(context) {
   // Extract all relevant parameters with fallbacks
   const {
-    goal = 'General fitness',
+    goal = 'Well-rounded fitness and health',
     difficulty = 'Intermediate',
     focus_area = '',
     description = '',
@@ -64,8 +64,8 @@ export function globoGymPrompt(context) {
           .join('\\n')
       : '';
 
-  // Build the Globo Gym-specific prompt
-  return `Generate a ${numberOfWeeks}-week commercial gym training program with the following parameters:
+  // Build the balanced fitness prompt
+  return `Generate a ${numberOfWeeks}-week balanced fitness training program with the following parameters:
 
 ${
   description
@@ -83,7 +83,7 @@ ${focus_area ? `Focus Area: ${focus_area}` : ''}
 ${
   equipment.length > 0
     ? `Available Equipment: ${equipment.join(', ')}`
-    : 'Available Equipment: Full commercial gym with machines, free weights, cardio equipment, and standard accessories'
+    : 'Available Equipment: Standard gym equipment including weights, machines, and cardio equipment'
 }
 ${
   workoutFormats.length > 0
@@ -96,17 +96,20 @@ ${referenceWorkouts || ''}
 
 For the program description, include:
 1. A concise overview of the program's goals and intended adaptations
-2. The periodization approach used and why it's appropriate for a commercial gym setting
-3. Expected outcomes from following the program
-4. Recommendations for nutrition, recovery, and supplementary training
+2. The balanced approach to developing strength, endurance, mobility and overall fitness
+3. Expected health and fitness improvements from following the program
+4. Recommendations for nutrition, recovery, and lifestyle habits
 
-Commercial Gym-Specific Requirements:
-- Include traditional bodybuilding-style training with appropriate isolation and compound movements
-- Incorporate machine work, free weights, and cable exercises
-- Design muscle group splits that optimize recovery (push/pull, upper/lower, body part splits)
-- Emphasize progressive overload with specific rep schemes and percentage-based loading
-- Include targeted hypertrophy, strength, and/or endurance protocols based on the goal
-- Incorporate appropriate rest periods and superset structures
+Balanced Fitness-Specific Requirements:
+- Design a well-balanced training program addressing all fitness components
+- Include appropriate mix of strength, cardiovascular conditioning, and mobility work
+- Focus on fundamental movement patterns and exercise variety
+- Balance intensity and volume for sustainable long-term progress
+- Include progressive overload while maintaining exercise technique
+- Ensure proper warm-up and cool-down protocols
+- Include specific coaching cues for technical movements
+- Structure workouts to promote general health, function, and well-being
+- Incorporate exercises that develop balanced muscular development
 
 The program should follow logical progression based on the selected program type (${programType}).
 Ensure proper periodization, recovery, and exercise variation throughout the program.
@@ -115,14 +118,14 @@ IMPORTANT: The workouts must be scheduled on specific dates according to the use
 
 Your response MUST be in this exact JSON format:
 {
-  "title": "Gym Training Program for ${goal}",
-  "description": "A comprehensive ${numberOfWeeks}-week ${difficulty} commercial gym program focused on ${
-    focus_area || goal
+  "title": "Balanced Fitness Program for ${goal}",
+  "description": "A comprehensive ${numberOfWeeks}-week ${difficulty} balanced fitness program focused on ${
+    focus_area || 'overall health and functional fitness'
   } that includes detailed weekly progression, nutrition guidance, and recovery recommendations",
-  "overview": "A detailed explanation of the program methodology, periodization approach, expected outcomes, and supplementary recommendations",
+  "overview": "A detailed explanation of the program methodology, balanced fitness approach, expected outcomes, and lifestyle recommendations",
   "workouts": [
     {
-      "title": "Week X, Day Y: [Muscle Groups] and [Training Focus]",
+      "title": "Week X, Day Y: [Focus Area] and [Training Focus]",
       "body": "Detailed workout description including all required sections",
       "date": "YYYY-MM-DD"
     },
@@ -132,20 +135,20 @@ Your response MUST be in this exact JSON format:
 
 For each workout's "body" field, use this structure:
 \`\`\`
-## Stimulus and Strategy
-[Detailed explanation of workout stimulus and strategy approach]
-- Explain the intended stimulus for each movement and muscle group
-- Provide pacing guidance and rest periods
-- Explain how to approach the workout (e.g., "Focus on mind-muscle connection for the isolation movements")
+## Workout Focus
+[Brief explanation of this session's purpose in the overall program]
+- Explain the specific fitness components being targeted
+- Provide guidance on effort levels and intensity
+- Explain how this workout fits into the overall program
 
 ${
   includeScaling
     ? `## Scaling Options
 ### Intermediate Option
-[Detailed intermediate scaling with specific weights and modifications]
+[Detailed intermediate scaling with specific modifications]
 
 ### Beginner Option
-[Detailed beginner scaling with specific weights and modifications]
+[Detailed beginner scaling with simplified variations]
 ${
   hasInjuryHistory
     ? `
@@ -159,25 +162,35 @@ ${
 ## Warm-up
 [Detailed warm-up protocol with specific movements, sets, reps]
 - Include duration, reps, and brief explanations
-- Focus on movement preparation and activation for target muscle groups
+- Focus on movement preparation and joint mobilization
+- Specific activation for target movement patterns
 
-## Strength Work
-[Complete strength workout with movements, sets, reps, specific weights]
-- Clear exercise format (Sets x Reps)
-- Specific movements, sets, reps, and rest periods
-- Exact weights or percentage-based loading
-- Tempo prescriptions where appropriate (e.g., "3-1-2-0 tempo")
+## Strength Component
+[Primary strength exercises with specific sets, reps, weights]
+- Clear exercise format with exact sets and reps
+- Specific movements with detailed execution instructions
+- Appropriate loading parameters and rest periods
+- Focus on fundamental movement patterns
 
-## Conditioning/Accessory Work
-[Accessory exercises or conditioning work]
-- Clear exercise format
-- Specific movements, sets, reps, and rest periods
-- Target muscle groups and intended stimulus
+## Conditioning Component
+[Cardiovascular or metabolic conditioning work]
+- Clear format specification (intervals, steady-state, etc.)
+- Specific movements, durations, and intensities
+- Target heart rate zones or perceived exertion levels
+- Appropriate work-to-rest ratios when applicable
+
+## Mobility/Flexibility Work
+[Targeted mobility and flexibility exercises]
+- Specific stretches or mobility drills
+- Duration for each movement
+- Target areas based on individual needs
+- Integration with overall program goals
 
 ## Cool-down
 [Detailed cool-down protocol]
 - Include specific movements and durations
-- Focus on recovery and mobility work
+- Focus on recovery and relaxation
+- Brief flexibility work for primary muscle groups
 
 ## Coaching Cues
 [3-5 specific technical cues for key movements]
@@ -186,7 +199,7 @@ ${
 - Common errors to avoid
 \`\`\`
 
-The "workouts" array should contain exactly ${totalWorkouts} workouts, organized in a progressive sequence.
+The "workouts" array should contain exactly ${totalWorkouts} workouts, organized in a progressive sequence with balanced attention to all fitness components.
 
 ${
   dateInfo

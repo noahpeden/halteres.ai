@@ -36,7 +36,7 @@ export default function RootLayout({ children }) {
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <link rel="manifest" href="/site.webmanifest" />
       </head>
-      <body>
+      <body suppressHydrationWarning={true}>
         <AuthProvider>
           <ClientProviders>{children}</ClientProviders>
         </AuthProvider>

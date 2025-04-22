@@ -1,12 +1,12 @@
 /**
- * Home Gym-style prompt template
+ * Minimal Equipment training prompt template
  * @param {Object} context - The full context for prompt generation
  * @returns {string} The assembled prompt string
  */
-export function homeGymPrompt(context) {
+export function minimalEquipmentPrompt(context) {
   // Extract all relevant parameters with fallbacks
   const {
-    goal = 'General fitness',
+    goal = 'General fitness with minimal equipment',
     difficulty = 'Intermediate',
     focus_area = '',
     description = '',
@@ -64,8 +64,8 @@ export function homeGymPrompt(context) {
           .join('\\n')
       : '';
 
-  // Build the Home Gym-specific prompt
-  return `Generate a ${numberOfWeeks}-week home gym training program with the following parameters:
+  // Build the Minimal Equipment-specific prompt
+  return `Generate a ${numberOfWeeks}-week minimal equipment training program with the following parameters:
 
 ${
   description
@@ -96,17 +96,19 @@ ${referenceWorkouts || ''}
 
 For the program description, include:
 1. A concise overview of the program's goals and intended adaptations
-2. The periodization approach used and why it's appropriate for a home gym setting
+2. The periodization approach used and why it's effective with minimal equipment
 3. Expected outcomes from following the program
 4. Recommendations for nutrition, recovery, and supplementary training
 
-Home Gym-Specific Requirements:
-- Design workouts that require minimal equipment and space
+Minimal Equipment-Specific Requirements:
+- Design workouts that maximize results with limited equipment options
 - Emphasize bodyweight exercises, resistance bands, and dumbbell/kettlebell work
-- Include creative variations using household items when appropriate
+- Include creative variations and exercise progressions that don't require equipment changes
 - Focus on time-efficient workouts that can be done in limited space
 - Incorporate circuits, supersets, and time-based challenges to maximize intensity
 - Provide exercise substitutions based on available equipment
+- Use creative loading techniques like tempo manipulation, unilateral work, and mechanical disadvantage
+- Include both strength and conditioning work in balanced proportions
 
 The program should follow logical progression based on the selected program type (${programType}).
 Ensure proper periodization, recovery, and exercise variation throughout the program.
@@ -115,11 +117,11 @@ IMPORTANT: The workouts must be scheduled on specific dates according to the use
 
 Your response MUST be in this exact JSON format:
 {
-  "title": "Home Workout Program for ${goal}",
-  "description": "A comprehensive ${numberOfWeeks}-week ${difficulty} home-based program focused on ${
+  "title": "Minimal Equipment Training Program for ${goal}",
+  "description": "A comprehensive ${numberOfWeeks}-week ${difficulty} program focused on ${
     focus_area || goal
-  } that includes detailed weekly progression, nutrition guidance, and recovery recommendations",
-  "overview": "A detailed explanation of the program methodology, periodization approach, expected outcomes, and supplementary recommendations",
+  } using limited equipment that includes detailed weekly progression, nutrition guidance, and recovery recommendations",
+  "overview": "A detailed explanation of the program methodology, equipment maximization techniques, expected outcomes, and supplementary recommendations",
   "workouts": [
     {
       "title": "Week X, Day Y: [Focus Area] and [Training Focus]",
@@ -132,11 +134,11 @@ Your response MUST be in this exact JSON format:
 
 For each workout's "body" field, use this structure:
 \`\`\`
-## Stimulus and Strategy
-[Detailed explanation of workout stimulus and strategy approach]
+## Workout Focus
+[Brief explanation of this session's purpose and approach]
 - Explain the intended stimulus for the workout
 - Provide pacing guidance and work/rest periods
-- Explain how to approach the workout
+- Explain how to approach the workout with limited equipment
 
 ${
   includeScaling
@@ -145,7 +147,7 @@ ${
 [Detailed intermediate scaling with specific modifications]
 
 ### Beginner Option
-[Detailed beginner scaling with specific modifications]
+[Detailed beginner scaling with simplified variations]
 ${
   hasInjuryHistory
     ? `
@@ -160,23 +162,27 @@ ${
 [Detailed warm-up protocol with specific movements, sets, reps]
 - Include duration, reps, and brief explanations
 - Focus on movement preparation and activation
+- Use minimal or no equipment
 
 ## Main Workout
-[Complete workout with movements, sets, reps, specific weights]
+[Complete workout with movements, sets, reps, loading parameters]
 - Clear exercise format (circuits, supersets, straight sets)
 - Specific movements, sets, reps, and rest periods
 - Specific weights/resistance levels or bodyweight progressions
 - Equipment needed for each exercise
+- Creative intensity techniques that don't require equipment changes
 
 ## Finisher (Optional)
 [Short, high-intensity finisher]
 - Time-based or rep-based challenge
 - Simple movements that can be performed when fatigued
+- Minimal equipment requirements
 
 ## Cool-down
 [Detailed cool-down protocol]
 - Include specific movements and durations
 - Focus on recovery and mobility work
+- No equipment needed
 
 ## Coaching Cues
 [3-5 specific technical cues for key movements]

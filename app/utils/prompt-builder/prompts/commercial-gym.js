@@ -1,9 +1,9 @@
 /**
- * Generic fallback prompt template
+ * General Gym Training prompt template
  * @param {Object} context - The full context for prompt generation
  * @returns {string} The assembled prompt string
  */
-export function genericPrompt(context) {
+export function generalGymPrompt(context) {
   // Extract all relevant parameters with fallbacks
   const {
     goal = 'General fitness',
@@ -64,8 +64,8 @@ export function genericPrompt(context) {
           .join('\\n')
       : '';
 
-  // Build the generic prompt that works for any gym type
-  return `Generate a ${numberOfWeeks}-week training program with the following parameters:
+  // Build the General Gym Training prompt
+  return `Generate a ${numberOfWeeks}-week general gym training program with the following parameters:
 
 ${
   description
@@ -83,7 +83,7 @@ ${focus_area ? `Focus Area: ${focus_area}` : ''}
 ${
   equipment.length > 0
     ? `Available Equipment: ${equipment.join(', ')}`
-    : 'Available Equipment: Basic fitness equipment'
+    : 'Available Equipment: Assumes access to standard free weights, machines, and cardio equipment unless otherwise specified.'
 }
 ${
   workoutFormats.length > 0
@@ -96,17 +96,17 @@ ${referenceWorkouts || ''}
 
 For the program description, include:
 1. A concise overview of the program's goals and intended adaptations
-2. The periodization approach used and why it's appropriate
+2. The periodization approach used and why it's appropriate for a general gym setting
 3. Expected outcomes from following the program
 4. Recommendations for nutrition, recovery, and supplementary training
 
-Program Requirements:
-- Design a well-balanced training program with appropriate progression
-- Include a mix of strength, conditioning, and mobility work
-- Focus on compound functional movements
-- Ensure proper warm-up and cool-down protocols
-- Include specific coaching cues for technical movements
-- Balance intensity and recovery throughout the program
+General Gym Training Requirements:
+- Include traditional training styles with appropriate isolation and compound movements
+- Incorporate machine work, free weights, and cable exercises as appropriate for the goal
+- Design muscle group splits or full-body routines that optimize recovery (e.g., push/pull, upper/lower, body part splits)
+- Emphasize progressive overload with specific rep schemes, RPE/RIR targets, or percentage-based loading
+- Include targeted hypertrophy, strength, and/or endurance protocols based on the specified goal
+- Incorporate appropriate rest periods and techniques like supersets if relevant
 
 The program should follow logical progression based on the selected program type (${programType}).
 Ensure proper periodization, recovery, and exercise variation throughout the program.
@@ -115,14 +115,14 @@ IMPORTANT: The workouts must be scheduled on specific dates according to the use
 
 Your response MUST be in this exact JSON format:
 {
-  "title": "Training Program for ${goal}",
-  "description": "A comprehensive ${numberOfWeeks}-week ${difficulty} program focused on ${
+  "title": "General Training Program for ${goal}",
+  "description": "A comprehensive ${numberOfWeeks}-week ${difficulty} training program focused on ${
     focus_area || goal
-  } that includes detailed weekly progression, nutrition guidance, and recovery recommendations",
-  "overview": "A detailed explanation of the program methodology, periodization approach, expected outcomes, and supplementary recommendations",
+  } utilizing standard gym equipment, including detailed weekly progression, nutrition guidance, and recovery recommendations",
+  "overview": "A detailed explanation of the program methodology, periodization approach, expected outcomes, and supplementary recommendations based on general fitness principles",
   "workouts": [
     {
-      "title": "Week X, Day Y: [Focus Area] and [Training Focus]",
+      "title": "Week X, Day Y: [Muscle Groups] and [Training Focus]",
       "body": "Detailed workout description including all required sections",
       "date": "YYYY-MM-DD"
     },
@@ -134,18 +134,18 @@ For each workout's "body" field, use this structure:
 \`\`\`
 ## Stimulus and Strategy
 [Detailed explanation of workout stimulus and strategy approach]
-- Explain the intended stimulus for the workout
-- Provide pacing guidance and work/rest periods
-- Explain how to approach the workout
+- Explain the intended stimulus for each movement and muscle group
+- Provide pacing guidance and rest periods
+- Explain how to approach the workout (e.g., "Focus on mind-muscle connection for the isolation movements")
 
 ${
   includeScaling
     ? `## Scaling Options
 ### Intermediate Option
-[Detailed intermediate scaling with specific modifications]
+[Detailed intermediate scaling with specific weights and modifications]
 
 ### Beginner Option
-[Detailed beginner scaling with specific modifications]
+[Detailed beginner scaling with specific weights and modifications]
 ${
   hasInjuryHistory
     ? `
@@ -159,21 +159,20 @@ ${
 ## Warm-up
 [Detailed warm-up protocol with specific movements, sets, reps]
 - Include duration, reps, and brief explanations
-- Focus on movement preparation and activation
+- Focus on movement preparation and activation for target muscle groups
 
 ## Strength Work
 [Complete strength workout with movements, sets, reps, specific weights]
-- Clear exercise format (Sets x Reps, EMOM, etc.)
+- Clear exercise format (Sets x Reps)
 - Specific movements, sets, reps, and rest periods
-- Exact weights for RX and scaling options
-- Loading percentages when appropriate (e.g., "75% of 1RM")
+- Exact weights or percentage-based loading
+- Tempo prescriptions where appropriate (e.g., "3-1-2-0 tempo")
 
-## Conditioning Work
-[Complete conditioning workout with movements, sets, reps]
-- Clear exercise format (AMRAP, For Time, etc.)
+## Conditioning/Accessory Work
+[Accessory exercises or conditioning work]
+- Clear exercise format
 - Specific movements, sets, reps, and rest periods
-- Exact weights for RX and scaling options
-- Target time domains or goal times when applicable
+- Target muscle groups and intended stimulus
 
 ## Cool-down
 [Detailed cool-down protocol]
