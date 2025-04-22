@@ -94,8 +94,10 @@ ${
     : ''
 }
 ${personalization ? `Personalization: ${personalization}` : ''}
-${clientMetrics || ''}
-${referenceWorkouts || ''}
+${context.formattedReferenceInput}
+${context.formattedRagMatchedWorkouts}
+${context.clientMetrics ? `\n${context.clientMetrics}` : ''}
+${context.referenceWorkouts ? `\n${context.referenceWorkouts}` : ''}
 
 For the program description, include:
 1. A comprehensive overview focusing on sport-specific athletic development for ${targetSport}

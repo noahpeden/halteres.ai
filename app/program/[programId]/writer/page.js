@@ -40,13 +40,13 @@ export default function ProgramWriterPage() {
   const handleSaveName = async () => {
     if (!editedName.trim()) return;
     try {
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('programs')
         .update({ name: editedName })
-        .eq('id', programId)
-        .single();
+        .eq('id', programId);
+
       if (error) throw error;
-      setProgram((prev) => ({ ...prev, name: data.name }));
+      setProgram((prev) => ({ ...prev, name: editedName }));
       setIsEditingName(false);
     } catch (error) {
       console.error('Error saving program name:', error);

@@ -40,7 +40,7 @@ export default function AIWorkoutSuggestions({ programId, onSelectWorkout }) {
     async function fetchReferenceWorkouts() {
       try {
         const { data, error } = await supabase
-          .from('external_workouts')
+          .from('external_workouts_new')
           .select('id, title, body, tags') // Remove workout_type if it doesn't exist
           .limit(10);
 
@@ -232,7 +232,7 @@ export default function AIWorkoutSuggestions({ programId, onSelectWorkout }) {
     setIsLoading(true);
     try {
       let query = supabase
-        .from('external_workouts')
+        .from('external_workouts_new')
         .select('id, title, body, tags, difficulty');
 
       // Add text search with proper formatting

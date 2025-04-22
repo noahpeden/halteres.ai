@@ -43,7 +43,7 @@ export async function POST(req) {
 
         // Create a workout in external_workouts first (for RAG purposes)
         const { data: externalWorkout, error: externalError } = await supabase
-          .from('external_workouts')
+          .from('external_workouts_new')
           .insert({
             title: workoutTitle,
             body: `Auto-generated ${workoutType} workout for ${workoutDate.toLocaleDateString()}`,

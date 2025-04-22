@@ -49,6 +49,11 @@ export function updateFormDataFromProgram(program, formData) {
     updatedData.focusArea = program.focus_area;
   }
 
+  // Update training methodology if available
+  if (program.training_methodology) {
+    updatedData.trainingMethodology = program.training_methodology;
+  }
+
   // Update program type if available
   if (program.program_type) {
     updatedData.programType = program.program_type;

@@ -7,10 +7,10 @@
 
 // Import prompt templates from separate files
 import { crossfitPrompt } from './prompts/crossfit.js';
-import { commercialGymPrompt } from './prompts/commercial-gym.js';
+import { generalGymPrompt } from './prompts/commercial-gym.js';
 import { minimalEquipmentPrompt } from './prompts/minimal-equipment.js';
 import { balancedFitnessPrompt } from './prompts/balanced-fitness.js';
-import { bodybuildingGymPrompt } from './prompts/bodybuilding.js/index.js';
+import { bodybuildingPrompt } from './prompts/bodybuilding.js';
 import { powerliftingPrompt } from './prompts/powerlifting.js';
 import { functionalFitnessPrompt } from './prompts/functional-fitness.js';
 import { hiitMetabolicPrompt } from './prompts/hiit-metabolic.js';
@@ -34,6 +34,14 @@ export default function promptBuilder(context, trainingType) {
     referenceWorkouts:
       context.referenceWorkouts ||
       formatReferenceWorkouts(context.referenceWorkoutsData),
+    // Add formatted reference input if provided by the user
+    formattedReferenceInput: context.referenceInput
+      ? formatReferenceInput(context.referenceInput)
+      : '',
+    // Add formatted RAG matched workouts if available
+    formattedRagMatchedWorkouts: context.ragMatchedWorkouts
+      ? formatRagMatchedWorkouts(context.ragMatchedWorkouts)
+      : '',
     // Set hasInjuryHistory flag if it exists in client metrics
     hasInjuryHistory:
       context.hasInjuryHistory ||
@@ -53,7 +61,7 @@ export default function promptBuilder(context, trainingType) {
       return crossfitPrompt(enhancedContext);
     case 'bodybuilding':
     case 'bodybuilding gym':
-      return bodybuildingGymPrompt(enhancedContext);
+      return bodybuildingPrompt(enhancedContext);
     case 'powerlifting':
       return powerliftingPrompt(enhancedContext);
     case 'functional fitness':
@@ -72,7 +80,7 @@ export default function promptBuilder(context, trainingType) {
     case 'commercial gym':
     case 'general strength':
     case 'globo gym': // Legacy support
-      return commercialGymPrompt(enhancedContext);
+      return generalGymPrompt(enhancedContext);
     case 'minimal equipment':
     case 'home gym': // Legacy support
       return minimalEquipmentPrompt(enhancedContext);
@@ -229,6 +237,54 @@ function formatCustomWorkoutFormat(workoutFormats) {
 
   // If we can't determine the format, return the original
   return workoutFormats;
+}
+
+/**
+ * Formats user-provided reference workout/program input
+ * @param {string} referenceInput - The raw text input from the user
+ * @returns {string} Formatted string for the prompt or empty string if no input
+ */
+function formatReferenceInput(referenceInput) {
+  if (
+    !referenceInput ||
+    typeof referenceInput !== 'string' ||
+    referenceInput.trim() === ''
+  ) {
+    return '';
+  }
+
+  return `
+User-Provided Reference Material:
+---
+${referenceInput.trim()}
+---
+IMPORTANT: Consider the structure, style, and content of the above user-provided reference material when generating the program. Treat it as a key example of what the user is looking for, alongside their main description/goal.`;
+}
+
+/**
+ * Formats RAG-matched workouts data into a string format for the prompt
+ * @param {Array} ragMatchedWorkouts - RAG-matched workouts data
+ * @returns {string} Formatted string or empty string if no data
+ */
+function formatRagMatchedWorkouts(ragMatchedWorkouts) {
+  if (
+    !ragMatchedWorkouts ||
+    !Array.isArray(ragMatchedWorkouts) ||
+    ragMatchedWorkouts.length === 0
+  ) {
+    return '';
+  }
+
+  return `
+Database-Matched Workouts (Based on Reference Input):
+${ragMatchedWorkouts
+  .map(
+    (workout, index) =>
+      `Matched Workout ${index + 1}: ${workout.title}\n${workout.body}\n---`
+  )
+  .join('\n')}
+
+Consider these workouts found in our database that closely match the user's provided reference material. They may offer further examples of structure, exercises, or style.`;
 }
 
 /**

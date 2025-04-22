@@ -20,6 +20,9 @@ export function calisthenicsPrompt(context) {
     clientMetrics = '',
     referenceWorkouts = '',
     suggestedDates = [],
+    additionalNotes = '',
+    formattedReferenceInput = '',
+    formattedRagMatchedWorkouts = '',
   } = context;
 
   // Get more specific parameters
@@ -91,6 +94,8 @@ ${
     : ''
 }
 ${personalization ? `Personalization: ${personalization}` : ''}
+${formattedReferenceInput}
+${formattedRagMatchedWorkouts}
 ${clientMetrics || ''}
 ${referenceWorkouts || ''}
 

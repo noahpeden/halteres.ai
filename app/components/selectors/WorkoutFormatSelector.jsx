@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { CheckSquare, Square, ChevronDown } from 'lucide-react';
+import { CheckSquare, Square } from 'lucide-react';
 
 // Common workout formats with descriptions
 const workoutFormats = [
@@ -103,8 +103,6 @@ export default function WorkoutFormatSelector({
   selectedFormats = [],
   onChange,
 }) {
-  const [isOpen, setIsOpen] = useState(false);
-
   const handleFormatChange = (formatId) => {
     const isSelected = selectedFormats.includes(formatId);
     let newFormats;
@@ -130,52 +128,35 @@ export default function WorkoutFormatSelector({
       : 'Select Workout Formats';
 
   return (
-    <div className="dropdown w-full">
-      <button
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className="btn btn-outline w-full justify-between"
-        aria-expanded={isOpen}
-      >
-        <span>{selectedText}</span>
-        <ChevronDown
-          className={`h-4 w-4 transition-transform duration-200 ${
-            isOpen ? 'rotate-180' : ''
-          }`}
-        />
-      </button>
-      {isOpen && (
-        <ul
-          tabIndex={0}
-          className="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-full max-h-60 overflow-y-auto mt-1"
-        >
+    <div className="collapse collapse-arrow border border-base-300 bg-base-100 rounded-box w-full">
+      <input type="checkbox" className="peer" />
+      <div className="collapse-title text-sm font-medium flex items-center">
+        {selectedText}
+      </div>
+      <div className="collapse-content max-h-60 overflow-y-auto">
+        <ul className="menu p-0 grid grid-cols-2 gap-2">
           {workoutFormats.map((format) => (
-            <li key={format.id}>
-              <button
-                type="button"
-                onClick={() => handleFormatChange(format.id)}
-                className={`flex items-center justify-between w-full p-2 rounded ${
-                  selectedFormats.includes(format.id)
-                    ? 'bg-primary text-primary-content'
-                    : 'hover:bg-base-200'
-                }`}
+            <li key={format.id} className="py-1">
+              <label
+                htmlFor={`format-${format.id}`}
+                className="label cursor-pointer justify-start gap-3 hover:bg-base-200 rounded p-2"
               >
-                <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id={`format-${format.id}`}
+                  className="checkbox checkbox-primary"
+                  checked={selectedFormats.includes(format.id)}
+                  onChange={() => handleFormatChange(format.id)}
+                />
+                <span className="label-text flex items-center gap-2">
                   <span>{format.icon}</span>
                   <span>{format.name}</span>
-                </div>
-                <CheckSquare
-                  className={`h-4 w-4 ${
-                    selectedFormats.includes(format.id)
-                      ? 'opacity-100'
-                      : 'opacity-0'
-                  }`}
-                />
-              </button>
+                </span>
+              </label>
             </li>
           ))}
         </ul>
-      )}
+      </div>
     </div>
   );
 }

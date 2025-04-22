@@ -36,6 +36,7 @@ export async function POST(request) {
     const additionalNotes = requestData.description || '';
     const personalization = requestData.personalization || '';
     const workoutFormats = requestData.workout_format || [];
+    const referenceInput = requestData.referenceInput || '';
 
     // Critical parameters - ensure they have fallback values
     const numberOfWeeks = parseInt(
@@ -96,6 +97,7 @@ export async function POST(request) {
           trainingType,
           startDate,
           totalWorkouts,
+          referenceInput,
         },
         supabase,
         openai
@@ -254,6 +256,7 @@ export async function POST(request) {
       selectedDayNames,
       totalWorkouts,
       suggestedDates,
+      referenceInput,
       // Format dates for prompt
       formattedDates: suggestedDates
         .map(
@@ -270,6 +273,63 @@ export async function POST(request) {
         )
         .join('\n'),
     };
+
+    // --- RAG Step ---
+    let ragMatchedWorkouts = [];
+    if (referenceInput && referenceInput.trim() !== '') {
+      try {
+        logWithTimestamp('Starting RAG step for referenceInput');
+        // 1. Generate embedding for referenceInput
+        const embeddingResponse = await openai.embeddings.create({
+          model: 'text-embedding-3-small',
+          input: referenceInput,
+        });
+        const queryEmbedding = embeddingResponse.data[0].embedding;
+        logWithTimestamp('Generated embedding for referenceInput');
+
+        // 2. Call Supabase RPC to find matching workouts
+        const { data: matchedData, error: rpcError } = await supabase.rpc(
+          'match_workouts_embedding',
+          {
+            query_embedding: queryEmbedding,
+            match_threshold: 0.5, // Adjust threshold as needed
+            match_count: 5, // Limit matches
+          }
+        );
+
+        if (rpcError) {
+          logWithTimestamp('Error calling match_workouts_embedding RPC', {
+            error: rpcError,
+          });
+          // Don't fail the request, just log and proceed without RAG results
+          showToastMessage(
+            'Warning: Could not find similar workouts based on reference.',
+            'warning'
+          );
+        } else if (matchedData && matchedData.length > 0) {
+          ragMatchedWorkouts = matchedData.map((w) => ({
+            title: w.title,
+            body: w.body,
+          })); // Adapt structure if needed
+          logWithTimestamp(
+            `Found ${ragMatchedWorkouts.length} RAG-matched workouts`
+          );
+          promptContext.ragMatchedWorkouts = ragMatchedWorkouts; // Add to context
+        } else {
+          logWithTimestamp(
+            'No RAG-matched workouts found for the given threshold.'
+          );
+        }
+      } catch (ragError) {
+        logWithTimestamp('Error during RAG step', { error: ragError.message });
+        // Log error but continue without RAG results
+        showToastMessage(
+          'Warning: Error processing reference workout for matching.',
+          'warning'
+        );
+      }
+    }
+    // --- End RAG Step ---
 
     // Use promptBuilder to create the prompt
     const prompt = promptBuilder(promptContext, trainingType);
@@ -450,6 +510,7 @@ async function generateLargeProgram(requestData, params, supabase, openai) {
     trainingType,
     startDate,
     totalWorkouts,
+    referenceInput,
   } = params;
 
   logWithTimestamp('Starting large program generation', { totalWorkouts });
@@ -526,6 +587,7 @@ async function generateLargeProgram(requestData, params, supabase, openai) {
       workoutFormats,
       trainingType,
       selectedDaysOfWeek,
+      referenceInput,
     }
   );
 
@@ -546,7 +608,8 @@ async function generateLargeProgram(requestData, params, supabase, openai) {
       daysPerWeek,
       programType,
       commonPromptElements,
-      trainingType
+      trainingType,
+      referenceInput
     );
 
     const overviewResponse = await openai.chat.completions.create({
@@ -599,7 +662,8 @@ async function generateLargeProgram(requestData, params, supabase, openai) {
       programType,
       trainingType,
       allWorkouts,
-      openai
+      openai,
+      referenceInput
     );
 
     weekGenerationPromises.push(weekPromise);
@@ -711,7 +775,8 @@ function createOverviewPrompt(
   daysPerWeek,
   programType,
   commonPromptElements,
-  trainingType
+  trainingType,
+  referenceInput
 ) {
   const promptContext = {
     goal: commonPromptElements.goal,
@@ -727,6 +792,7 @@ function createOverviewPrompt(
     referenceWorkoutsData: commonPromptElements.referenceWorkoutsData,
     programType,
     selectedDayNames: commonPromptElements.selectedDayNames,
+    referenceInput,
     overviewOnly: true, // Flag to indicate we only want overview information
   };
 
@@ -743,7 +809,8 @@ async function generateWeek(
   programType,
   trainingType,
   existingWorkouts,
-  openai
+  openai,
+  referenceInput
 ) {
   const startWorkoutIndex = (weekNumber - 1) * daysPerWeek;
   const endWorkoutIndex = Math.min(
@@ -770,6 +837,7 @@ async function generateWeek(
     daysPerWeek,
     previousWorkouts: existingWorkouts,
     suggestedDates: chunkDates,
+    referenceInput,
     isWeekSpecific: true, // Flag to indicate we're generating a specific week
     // Format dates for prompt
     formattedDates: chunkDates
@@ -922,6 +990,7 @@ async function preparePromptElements(programId, supabase, params) {
     workoutFormats,
     trainingType,
     selectedDaysOfWeek,
+    referenceInput,
   } = params;
 
   // Get the day names from the day numbers for the prompt
@@ -1013,6 +1082,61 @@ async function preparePromptElements(programId, supabase, params) {
     }
   }
 
+  // --- RAG Step ---
+  let ragMatchedWorkouts = [];
+  if (referenceInput && referenceInput.trim() !== '') {
+    try {
+      logWithTimestamp(
+        'Starting RAG step for referenceInput (preparePromptElements)'
+      );
+      // 1. Generate embedding
+      const embeddingResponse = await openai.embeddings.create({
+        model: 'text-embedding-3-small',
+        input: referenceInput,
+      });
+      const queryEmbedding = embeddingResponse.data[0].embedding;
+      logWithTimestamp(
+        'Generated embedding for referenceInput (preparePromptElements)'
+      );
+
+      // 2. Call Supabase RPC
+      const { data: matchedData, error: rpcError } = await supabase.rpc(
+        'match_workouts_embedding',
+        {
+          query_embedding: queryEmbedding,
+          match_threshold: 0.5, // Adjust threshold as needed
+          match_count: 5, // Limit matches
+        }
+      );
+
+      if (rpcError) {
+        logWithTimestamp(
+          'Error calling match_workouts_embedding RPC (preparePromptElements)',
+          { error: rpcError }
+        );
+        // Log and continue
+      } else if (matchedData && matchedData.length > 0) {
+        ragMatchedWorkouts = matchedData.map((w) => ({
+          title: w.title,
+          body: w.body,
+        })); // Adapt structure if needed
+        logWithTimestamp(
+          `Found ${ragMatchedWorkouts.length} RAG-matched workouts (preparePromptElements)`
+        );
+      } else {
+        logWithTimestamp(
+          'No RAG-matched workouts found (preparePromptElements).'
+        );
+      }
+    } catch (ragError) {
+      logWithTimestamp('Error during RAG step (preparePromptElements)', {
+        error: ragError.message,
+      });
+      // Log error but continue
+    }
+  }
+  // --- End RAG Step ---
+
   // System prompt
   const systemPrompt =
     "You are an expert strength and conditioning coach who specializes in creating effective, periodized training programs. Create professional, functional fitness-style workouts with precise stimulus explanations, detailed scaling options, and specific coaching cues. Each workout should include clear RX weights, proper warm-up and cool-down protocols, and actionable strategy recommendations. Follow sound exercise science principles with appropriate progression, variation, and specificity. VERY IMPORTANT: Always prioritize the client's specific requirements from their description field above all other considerations - these are their must-have elements and should be incorporated throughout the program. Provide responses EXACTLY in the JSON format specified in the prompt.";
@@ -1030,5 +1154,7 @@ async function preparePromptElements(programId, supabase, params) {
     referenceWorkoutsData,
     selectedDayNames,
     trainingType,
+    referenceInput,
+    ragMatchedWorkouts,
   };
 }

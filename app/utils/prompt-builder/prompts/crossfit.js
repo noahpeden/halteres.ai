@@ -111,8 +111,10 @@ ${
     : ''
 }
 ${personalization ? `Personalization: ${personalization}` : ''}
-${clientMetrics || ''}
-${referenceWorkouts || ''}
+${context.formattedReferenceInput}
+${context.formattedRagMatchedWorkouts}
+${context.clientMetrics ? `\n${context.clientMetrics}` : ''}
+${context.referenceWorkouts ? `\n${context.referenceWorkouts}` : ''}
 ${customFormatSection}
 
 For the program description, include:

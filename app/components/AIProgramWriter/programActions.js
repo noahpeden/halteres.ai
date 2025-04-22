@@ -459,6 +459,7 @@ export async function saveProgram({
         goal: programData.goal,
         difficulty: programData.difficulty,
         focus_area: programData.focusArea,
+        training_methodology: programData.trainingMethodology,
         workout_format: programData.workoutFormats,
         duration_weeks: parseInt(programData.numberOfWeeks, 10),
         entity_id: programData.entityId,
@@ -591,6 +592,7 @@ export async function autoSaveProgramDetails({
         goal: formData.goal,
         difficulty: formData.difficulty,
         focus_area: formData.focusArea,
+        training_methodology: formData.trainingMethodology,
         workout_format: formData.workoutFormats,
         duration_weeks: parseInt(formData.numberOfWeeks, 10),
         entity_id: formData.entityId,
@@ -644,6 +646,7 @@ export async function createProgramRecord({
       // For JSONB fields, provide empty objects or default structures
       goal: formData.goal || 'strength',
       difficulty: formData.difficulty || 'intermediate',
+      training_methodology: formData.trainingMethodology || '',
       duration_weeks: parseInt(formData.numberOfWeeks, 10) || 4,
       gym_details: {},
       periodization: {},

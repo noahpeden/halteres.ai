@@ -116,6 +116,7 @@ export default function AIProgramWriter({
     gymDetails: {},
     periodization: {},
     trainingMethodology: '',
+    referenceInput: '',
     customWorkoutSections: [],
   });
   const [showToast, setShowToast] = useState(false);
@@ -355,7 +356,7 @@ export default function AIProgramWriter({
     async function fetchReferenceWorkouts() {
       try {
         const { data, error } = await supabase
-          .from('external_workouts')
+          .from('external_workouts_new')
           .select('id, title, body, tags')
           .limit(10);
 
