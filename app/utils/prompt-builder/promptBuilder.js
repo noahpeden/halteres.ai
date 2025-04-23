@@ -84,10 +84,8 @@ export default function promptBuilder(context, trainingType) {
       return sportSpecificPrompt(enhancedContext);
     case 'commercial gym':
     case 'general strength':
-    case 'globo gym': // Legacy support
       return generalGymPrompt(enhancedContext);
     case 'minimal equipment':
-    case 'home gym': // Legacy support
       return minimalEquipmentPrompt(enhancedContext);
     case 'balanced fitness':
     case 'general fitness':

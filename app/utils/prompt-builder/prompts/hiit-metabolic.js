@@ -36,6 +36,12 @@ export function hiitMetabolicPrompt(context) {
   const workoutFormats = workout_format || [];
   const selectedDaysOfWeek = calendar_data?.days_of_week || [];
 
+  // Format workout formats for clarity in the prompt
+  const formattedWorkoutFormats =
+    workoutFormats.length > 0
+      ? workoutFormats.join(', ')
+      : 'HIIT Formats (AMRAP, EMOM, Tabata, Intervals)';
+
   // Get day names for better readability
   const dayNames = [
     'Sunday',
@@ -86,12 +92,12 @@ ${focus_area ? `Focus Area: ${focus_area}` : ''}
 ${
   equipment.length > 0
     ? `Available Equipment: ${equipment.join(', ')}`
-    : 'Available Equipment: Kettlebells, dumbbells, medicine balls, battle ropes, rower, assault bike, treadmill, and bodyweight capabilities'
+    : 'Available Equipment: Minimal equipment usually required (bodyweight, jump rope, light weights, timer). Can adapt based on user spec.'
 }
 ${
   workoutFormats.length > 0
-    ? `Workout Formats to Include: ${workoutFormats.join(', ')}`
-    : ''
+    ? `Workout Formats to Include: ${formattedWorkoutFormats}\\nIMPORTANT: The generated workouts MUST primarily use the specified Workout Formats. Do NOT include formats outside this list unless essential for the primary Goal or Description. Prioritize these requested formats.`
+    : 'Workout Formats to Include: HIIT Formats (AMRAP, EMOM, Tabata, Intervals)'
 }
 ${personalization ? `Personalization: ${personalization}` : ''}
 ${formattedReferenceInput}
@@ -100,14 +106,14 @@ ${clientMetrics || ''}
 ${referenceWorkouts || ''}
 
 For the program description, include:
-1. A comprehensive overview focusing on metabolic conditioning, energy system development, and fat loss
-2. The scientific principles behind the interval training approach and energy system training
-3. Expected cardiovascular, body composition, and performance adaptations
-4. Recommendations for nutrition, recovery, and supplementary work to maximize metabolic benefits
+1. A concise overview of the program's goals (improved conditioning, fat loss) and intended adaptations derived primarily from the user's Goal and Description inputs.
+2. The periodization approach used (if any) and why it's effective for HIIT.
+3. Expected outcomes (increased VO2 max, metabolic rate) based *only* on the generated workouts.
+4. Recommendations for nutrition, recovery (emphasizing rest), and hydration.
 
-HIIT/Metabolic-Specific Requirements:
-- Design workouts with strategic work-to-rest ratios based on intensity and energy system targets
-- Include a variety of interval structures (Tabata, EMOM, AMRAP, circuits, ladders, pyramids)
+HIIT/Metabolic-Specific Requirements (Apply *unless* conflicting with user's Description, Goal, or requested Workout Formats):
+- Focus on high-intensity intervals followed by short rest periods
+- Utilize various HIIT protocols (Tabata, AMRAP, EMOM, fixed intervals)
 - Incorporate multiple energy system training methods (ATP-CP, glycolytic, oxidative)
 - Balance high-intensity days with active recovery protocols
 - Utilize full-body, compound movements for maximum metabolic effect
@@ -121,17 +127,16 @@ Ensure proper intensity management, metabolic development, and sufficient recove
 
 IMPORTANT: The workouts must be scheduled on specific dates according to the user's selected training days. DO NOT create workouts on days other than the ones specified.
 
+IMPORTANT: The program MUST strictly adhere to the requested ${numberOfWeeks} weeks duration. Generate exactly ${totalWorkouts} workouts for this duration.
+
 Your response MUST be in this exact JSON format:
 {
-  "title": "HIIT & Metabolic Conditioning Program for ${goal}",
-  "description": "A comprehensive ${numberOfWeeks}-week ${difficulty} high-intensity interval training program focused on ${
-    focus_area ||
-    'metabolic conditioning, cardiovascular development, and fat loss'
-  } with scientifically-designed work-to-rest ratios and energy system development",
-  "overview": "A detailed explanation of the interval training methodology, energy system development, expected physiological adaptations, and nutritional strategies to support metabolic conditioning",
+  "title": "HIIT/Metabolic Conditioning Program for ${goal}",
+  "description": "Generate a description accurately reflecting the program's ACTUAL content, duration (${numberOfWeeks} weeks), difficulty (${difficulty}), workout formats used (${formattedWorkoutFormats}), and the primary goal/focus derived from user input. Do NOT use a generic template description.",
+  "overview": "Generate a detailed explanation of the program methodology (focused on HIIT principles), periodization approach (if any), expected outcomes, and supplementary recommendations based SOLELY on the generated workouts and user inputs. Do NOT use generic explanations unless they directly apply.",
   "workouts": [
     {
-      "title": "Week X, Day Y: [Energy System Focus] - [Interval Structure]",
+      "title": "Week X, Day Y: [HIIT Protocol] and [Focus]",
       "body": "Detailed workout description including all required sections",
       "date": "YYYY-MM-DD"
     },
@@ -201,14 +206,13 @@ ${
 - Brief flexibility work for primary muscle groups
 
 ## Coaching Cues
-[3-5 specific technical and pacing cues]
-- Movement quality reminders for fatigue conditions
-- Pacing strategies for interval work
-- Breathing techniques during high-intensity efforts
-- Form priorities when approaching fatigue
+[3-5 specific technical cues for key movements]
+- Cues for maintaining intensity and proper form during fatigue
+- Pacing strategies for different interval types
+- Common errors to avoid
 \`\`\`
 
-The "workouts" array should contain exactly ${totalWorkouts} workouts, organized in a progressive sequence with strategic intensity distribution and recovery days.
+IMPORTANT: The "workouts" array MUST contain exactly ${totalWorkouts} workouts, organized in a progressive sequence over ${numberOfWeeks} weeks, following HIIT principles.
 
 ${
   dateInfo

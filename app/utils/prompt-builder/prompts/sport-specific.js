@@ -33,7 +33,12 @@ export function sportSpecificPrompt(context) {
   const totalWorkouts = numberOfWeeks * daysPerWeek;
   const workoutFormats = workout_format || [];
   const selectedDaysOfWeek = calendar_data?.days_of_week || [];
-  const targetSport = sport || 'general athletics'; // Default to general athletics if no sport specified
+
+  // Format workout formats for clarity in the prompt
+  const formattedWorkoutFormats =
+    workoutFormats.length > 0
+      ? workoutFormats.join(', ')
+      : 'Sport-Specific Mix (Strength, Power, Speed, Agility, Endurance)';
 
   // Get day names for better readability
   const dayNames = [
@@ -67,7 +72,9 @@ export function sportSpecificPrompt(context) {
       : '';
 
   // Build the Sport-Specific prompt
-  return `Generate a ${numberOfWeeks}-week sport-specific training program for ${targetSport} with the following parameters:
+  return `Generate a ${numberOfWeeks}-week sport-specific training program for ${
+    sport || 'general athletics'
+  } with the following parameters:
 
 ${
   description
@@ -76,7 +83,7 @@ Please prioritize these specific requirements above all else in program design.
 
 `
     : ''
-}Target Sport: ${targetSport}
+}Target Sport: ${sport || 'general athletics'}
 Goal: ${goal}
 Difficulty: ${difficulty}
 Days Per Week: ${daysPerWeek} days
@@ -86,31 +93,43 @@ ${focus_area ? `Focus Area: ${focus_area}` : ''}
 ${
   equipment.length > 0
     ? `Available Equipment: ${equipment.join(', ')}`
-    : 'Available Equipment: Standard gym equipment including weights, cardio machines, plyometric tools, agility ladders, medicine balls, and resistance bands'
+    : "Available Equipment: Tailored to the sport\\'s requirements (e.g., track, field, court, weight room access)"
 }
+
+IMPORTANT: The program MUST strictly adhere to the requested ${numberOfWeeks} weeks duration. Generate exactly ${totalWorkouts} workouts for this duration.
+
 ${
   workoutFormats.length > 0
-    ? `Workout Formats to Include: ${workoutFormats.join(', ')}`
-    : ''
+    ? `Workout Formats to Include: ${formattedWorkoutFormats}
+IMPORTANT: The generated workouts MUST primarily use the specified Workout Formats. Do NOT include formats outside this list unless essential for the primary Goal or Description. Prioritize these requested formats.`
+    : 'Workout Formats to Include: Sport-Specific Mix (Strength, Power, Speed, Agility, Endurance)'
 }
 ${personalization ? `Personalization: ${personalization}` : ''}
 ${context.formattedReferenceInput}
 ${context.formattedRagMatchedWorkouts}
-${context.clientMetrics ? `\n${context.clientMetrics}` : ''}
-${context.referenceWorkouts ? `\n${context.referenceWorkouts}` : ''}
+${clientMetrics || ''}
+${referenceWorkouts || ''}
 
 For the program description, include:
-1. A comprehensive overview focusing on sport-specific athletic development for ${targetSport}
-2. The periodization approach with specific phases targeting different athletic qualities
-3. Expected performance improvements in sport-relevant capacities
-4. Recommendations for nutrition, recovery, and injury prevention specific to the sport
+1. A concise overview of the program's goals (enhancing athletic performance for [Sport]) and intended adaptations derived primarily from the user's Goal and Description inputs.
+2. The periodization approach used (e.g., off-season, pre-season, in-season) and why it's effective for the sport.
+3. Expected outcomes (improved sport-specific metrics) based *only* on the generated workouts.
+4. Recommendations for nutrition, recovery, and sport-specific skill work.
+
+Sport-Specific Requirements (Apply *unless* conflicting with user's Description, Goal, or requested Workout Formats):
+- Focus on improving athletic qualities relevant to the specified sport (e.g., ${
+    sport || 'general athleticism'
+  })
+- Utilize training methods that transfer directly to on-field/court performance
 
 Sport-Specific Training Requirements:
-- Design a program that targets the primary physical demands and movement patterns of ${targetSport}
+- Design a program that targets the primary physical demands and movement patterns of ${
+    sport || 'general athletics'
+  }
 - Include appropriate balance of strength, power, speed, agility, and conditioning work
 - Structure training to develop sport-specific energy systems based on game/competition demands
 - Incorporate sport-specific movement patterns and technical skill transfer exercises
-- Address common injury prevention needs for ${targetSport}
+- Address common injury prevention needs for ${sport || 'general athletics'}
 - Include appropriate power development and rate of force production work
 - Balance general athletic development with sport-specific skill transfer
 - Implement appropriate in-season, off-season, or pre-season training focus based on timing
@@ -123,14 +142,14 @@ IMPORTANT: The workouts must be scheduled on specific dates according to the use
 
 Your response MUST be in this exact JSON format:
 {
-  "title": "${targetSport} Performance Program for ${goal}",
-  "description": "A comprehensive ${numberOfWeeks}-week ${difficulty} sport-specific program focused on ${
-    focus_area || 'athletic performance for ' + targetSport
-  } with periodized training phases and sport-specific skill transfer",
-  "overview": "A detailed explanation of the training methodology, sport-specific performance factors, expected athletic improvements, and competition preparation strategies",
+  "title": "${sport || 'Sport'}-Specific Training Program for ${goal}",
+  "description": "Generate a description accurately reflecting the program's ACTUAL content, duration (${numberOfWeeks} weeks), difficulty (${difficulty}), target sport (${
+    sport || 'general athleticism'
+  }), workout formats used (${formattedWorkoutFormats}), and the primary goal/focus derived from user input. Do NOT use a generic template description.",
+  "overview": "Generate a detailed explanation of the program methodology (focused on sport-specific transfer), periodization approach (if any), expected outcomes, and supplementary recommendations based SOLELY on the generated workouts and user inputs. Do NOT use generic explanations unless they directly apply.",
   "workouts": [
     {
-      "title": "Week X, Day Y: [Training Focus] - [Athletic Quality]",
+      "title": "Week X, Day Y: [Training Quality Focus] and [Workout Theme]",
       "body": "Detailed workout description including all required sections",
       "date": "YYYY-MM-DD"
     },
@@ -209,13 +228,12 @@ ${
 
 ## Coaching Cues
 [3-5 specific technical cues for key movements]
-- Performance-focused technical points
-- Sport-specific movement quality emphasis
-- Transfer cues connecting gym work to sport performance
-- Common errors to avoid for maximum performance and safety
+- Technical cues focused on athletic movement and power production
+- Form tips for injury prevention during dynamic activities
+- Common errors to avoid in sport-specific drills
 \`\`\`
 
-The "workouts" array should contain exactly ${totalWorkouts} workouts, organized in a progressive sequence with attention to all sport-specific athletic qualities and appropriate periodization.
+IMPORTANT: The "workouts" array MUST contain exactly ${totalWorkouts} workouts, organized in a progressive sequence over ${numberOfWeeks} weeks, following sport-specific training principles.
 
 ${
   dateInfo

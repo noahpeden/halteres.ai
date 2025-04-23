@@ -36,6 +36,12 @@ export function calisthenicsPrompt(context) {
   const workoutFormats = workout_format || [];
   const selectedDaysOfWeek = calendar_data?.days_of_week || [];
 
+  // Format workout formats for clarity in the prompt
+  const formattedWorkoutFormats =
+    workoutFormats.length > 0
+      ? workoutFormats.join(', ')
+      : 'Calisthenics Focus (Skills, Strength, Endurance)';
+
   // Get day names for better readability
   const dayNames = [
     'Sunday',
@@ -86,12 +92,12 @@ ${focus_area ? `Focus Area: ${focus_area}` : ''}
 ${
   equipment.length > 0
     ? `Available Equipment: ${equipment.join(', ')}`
-    : 'Available Equipment: Pull-up bar, parallel bars/dip station, rings, resistance bands, and minimal additional equipment'
+    : 'Available Equipment: Primarily bodyweight. May include pull-up bars, dip stations, rings, resistance bands based on context.'
 }
 ${
   workoutFormats.length > 0
-    ? `Workout Formats to Include: ${workoutFormats.join(', ')}`
-    : ''
+    ? `Workout Formats to Include: ${formattedWorkoutFormats}\\nIMPORTANT: The generated workouts MUST primarily use the specified Workout Formats. Do NOT include formats outside this list unless essential for the primary Goal or Description. Prioritize these requested formats.`
+    : 'Workout Formats to Include: Calisthenics Focus (Skills, Strength, Endurance)'
 }
 ${personalization ? `Personalization: ${personalization}` : ''}
 ${formattedReferenceInput}
@@ -100,12 +106,14 @@ ${clientMetrics || ''}
 ${referenceWorkouts || ''}
 
 For the program description, include:
-1. A comprehensive overview focusing on bodyweight strength development and movement skill acquisition
-2. The progressive approach to calisthenics training with proper movement progressions
-3. Expected strength, body control, and skill developments from following the program
-4. Recommendations for nutrition, mobility work, and recovery to support calisthenics training
+1. A concise overview of the program's goals (bodyweight mastery, skill acquisition) and intended adaptations derived primarily from the user's Goal and Description inputs.
+2. The periodization approach used (if any) and why it's effective for calisthenics progression.
+3. Expected outcomes (improved relative strength, new skills) based *only* on the generated workouts.
+4. Recommendations for nutrition, recovery, and skill practice.
 
-Calisthenics-Specific Requirements:
+Calisthenics-Specific Requirements (Apply *unless* conflicting with user's Description, Goal, or requested Workout Formats):
+- Focus on developing bodyweight strength, control, and skill acquisition
+- Utilize progressive calisthenics exercises (e.g., push-up variations, pull-up variations, squat variations)
 - Design workouts around core calisthenics movement patterns (push, pull, legs, core)
 - Include proper progression steps for advanced bodyweight skills (handstands, levers, muscle-ups, etc.)
 - Structure training to develop strength, hypertrophy, and skill components
@@ -121,16 +129,16 @@ Ensure proper skill development, structural balance, and appropriate progression
 
 IMPORTANT: The workouts must be scheduled on specific dates according to the user's selected training days. DO NOT create workouts on days other than the ones specified.
 
+IMPORTANT: The program MUST strictly adhere to the requested ${numberOfWeeks} weeks duration. Generate exactly ${totalWorkouts} workouts for this duration.
+
 Your response MUST be in this exact JSON format:
 {
   "title": "Calisthenics Program for ${goal}",
-  "description": "A comprehensive ${numberOfWeeks}-week ${difficulty} bodyweight training program focused on ${
-    focus_area || 'progressive calisthenics strength and skill development'
-  } with detailed movement progressions and skill acquisition",
-  "overview": "A detailed explanation of the calisthenics methodology, movement progression approach, expected strength/skill outcomes, and supplementary recommendations",
+  "description": "Generate a description accurately reflecting the program's ACTUAL content, duration (${numberOfWeeks} weeks), difficulty (${difficulty}), workout formats used (${formattedWorkoutFormats}), and the primary goal/focus derived from user input. Do NOT use a generic template description.",
+  "overview": "Generate a detailed explanation of the program methodology (focused on calisthenics principles), periodization approach (if any), expected outcomes, and supplementary recommendations based SOLELY on the generated workouts and user inputs. Do NOT use generic explanations unless they directly apply.",
   "workouts": [
     {
-      "title": "Week X, Day Y: [Movement Pattern Focus] - [Skill Emphasis]",
+      "title": "Week X, Day Y: [Skill/Strength Focus] and [Workout Type]",
       "body": "Detailed workout description including all required sections",
       "date": "YYYY-MM-DD"
     },
@@ -207,13 +215,12 @@ ${
 
 ## Coaching Cues
 [3-5 specific technical cues for key movements]
-- Body position cues for optimal leverage
-- Common form errors to avoid
-- Breathing patterns for maximal tension
-- Progression milestones to watch for
+- Technical cues for body positioning and tension
+- Form tips for maximizing muscle engagement and safety
+- Common errors to avoid in bodyweight exercises
 \`\`\`
 
-The "workouts" array should contain exactly ${totalWorkouts} workouts, organized in a progressive sequence with appropriate attention to all movement patterns and skill development.
+IMPORTANT: The "workouts" array MUST contain exactly ${totalWorkouts} workouts, organized in a progressive sequence over ${numberOfWeeks} weeks, following calisthenics principles.
 
 ${
   dateInfo

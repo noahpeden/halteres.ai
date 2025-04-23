@@ -18,7 +18,7 @@ export default function Dashboard() {
   const [entityName, setEntityName] = useState('');
   const [entityType, setEntityType] = useState('CLIENT'); // Default to CLIENT
   const [programName, setProgramName] = useState('');
-  const [programDuration, setProgramDuration] = useState(4); // Default 4 weeks
+  const [programDuration, setProgramDuration] = useState(1); // Default 1 week
   const [startDate, setStartDate] = useState(
     new Date().toISOString().split('T')[0]
   ); // Default to today

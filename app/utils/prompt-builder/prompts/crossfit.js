@@ -12,20 +12,16 @@ export function crossfitPrompt(context) {
     description = '',
     personalization = '',
     workout_format = [],
-    duration_weeks = 4,
-    days_per_week = 3,
     periodization = {},
     calendar_data = {},
     gym_details = {},
-    clientMetrics = '',
-    referenceWorkouts = '',
     suggestedDates = [],
     customWorkoutFormat = { enabled: false, sections: [] },
   } = context;
 
   // Get more specific parameters
-  const numberOfWeeks = parseInt(duration_weeks || context.numberOfWeeks || 4);
-  const daysPerWeek = parseInt(days_per_week || context.daysPerWeek || 3);
+  const numberOfWeeks = context.numberOfWeeks;
+  const daysPerWeek = context.daysPerWeek;
   const programType =
     periodization?.program_type || context.programType || 'linear';
   const equipment = gym_details?.equipment || context.equipment || [];
@@ -33,6 +29,12 @@ export function crossfitPrompt(context) {
   const totalWorkouts = numberOfWeeks * daysPerWeek;
   const workoutFormats = workout_format || [];
   const selectedDaysOfWeek = calendar_data?.days_of_week || [];
+
+  // Format workout formats for clarity in the prompt
+  const formattedWorkoutFormats =
+    workoutFormats.length > 0
+      ? workoutFormats.join(', ')
+      : 'Standard CrossFit Mix (Metcon, Strength, Skill)';
 
   // Get day names for better readability
   const dayNames = [
@@ -81,16 +83,16 @@ IMPORTANT: Please structure your workout to precisely follow this format with th
                 Math.floor(index / daysPerWeek) + 1
               }, Day ${(index % daysPerWeek) + 1})`
           )
-          .join('\\n')
+          .join('\n')
       : '';
 
   // Build the CrossFit-specific prompt
-  return `Generate a ${numberOfWeeks}-week CrossFit training program with the following parameters:
+  return `Generate a CrossFit training program for ${goal} based *strictly* on the following parameters. DO NOT deviate from the specified duration or workout formats.
 
 ${
   description
-    ? `IMPORTANT REQUIREMENTS FROM THE CLIENT: ${description}
-Please prioritize these specific requirements above all else in program design.
+    ? `CRITICAL REQUIREMENTS FROM THE CLIENT: ${description}
+These requirements MUST be the primary driver of the program design, overriding any conflicting general template instructions below.
 
 `
     : ''
@@ -105,11 +107,11 @@ ${
     ? `Available Equipment: ${equipment.join(', ')}`
     : 'Available Equipment: Barbells, kettlebells, dumbbells, racks, boxes, pull-up bars, rings, rowers, assault bikes, and typical CrossFit gear'
 }
-${
-  workoutFormats.length > 0
-    ? `Workout Formats to Include: ${workoutFormats.join(', ')}`
-    : ''
-}
+
+IMPORTANT DURATION: The program MUST be exactly ${numberOfWeeks} week(s) long. Generate exactly ${totalWorkouts} workouts total.
+
+REQUIRED WORKOUT FORMATS: The generated workouts MUST exclusively use the following specified formats: [${formattedWorkoutFormats}]. Do NOT include any other formats (like pure strength days, skill-only days, etc.) unless explicitly listed here or required by the CRITICAL REQUIREMENTS section above. Prioritize these formats strictly.
+
 ${personalization ? `Personalization: ${personalization}` : ''}
 ${context.formattedReferenceInput}
 ${context.formattedRagMatchedWorkouts}
@@ -118,34 +120,32 @@ ${context.referenceWorkouts ? `\n${context.referenceWorkouts}` : ''}
 ${customFormatSection}
 
 For the program description, include:
-1. A concise overview of the program's goals and intended adaptations
-2. The periodization approach used and why it's appropriate for CrossFit
-3. Expected outcomes from following the program
-4. Recommendations for nutrition, recovery, and supplementary training
+1. A concise overview reflecting the CRITICAL REQUIREMENTS, Goal, ACTUAL duration (${numberOfWeeks} weeks), and ACTUAL formats used (${formattedWorkoutFormats}).
+2. The periodization approach used (if any) and why it's appropriate for the client requirements.
+3. Expected outcomes based *only* on the generated workouts and client requirements.
+4. Recommendations for nutrition, recovery, etc. if relevant.
 
-CrossFit-Specific Requirements:
-- Include a mix of gymnastics, weightlifting, and metabolic conditioning 
-- Follow CrossFit methodology with varied functional movements executed at high intensity
-- Include benchmark WODs and Hero WODs where appropriate
-- Incorporate Olympic lifting progressions and skill development
-- Include both time-domain and task-domain workouts
-- Vary modalities (monostructural, gymnastics, weightlifting) and time domains
+General CrossFit Guidelines (Apply *only if* they DO NOT CONFLICT with CRITICAL REQUIREMENTS or REQUIRED WORKOUT FORMATS):
+- Use varied functional movements executed at appropriate intensity
+- Ensure variety in modalities IF it fits within the REQUIRED WORKOUT FORMATS
 
-The program should follow logical progression based on the selected program type (${programType}).
-Ensure proper periodization, recovery, and exercise variation throughout the program.
+The program MUST follow logical progression based on the selected program type (${programType}) AND the client's requirements.
+Ensure proper periodization, recovery, and exercise variation *within the constraints provided*.
 
 IMPORTANT: The workouts must be scheduled on specific dates according to the user's selected training days. DO NOT create workouts on days other than the ones specified.
 
 Your response MUST be in this exact JSON format:
 {
   "title": "CrossFit Training Program for ${goal}",
-  "description": "A comprehensive ${numberOfWeeks}-week ${difficulty} CrossFit program focused on ${
-    focus_area || goal
-  } that includes detailed weekly progression, nutrition guidance, and recovery recommendations",
-  "overview": "A detailed explanation of the program methodology, periodization approach, expected outcomes, and supplementary recommendations",
+  "description": "Generate a description ACCURATELY reflecting the program's ACTUAL content: CRITICAL REQUIREMENTS (${
+    description || 'None provided'
+  }), duration (${numberOfWeeks} weeks), difficulty (${difficulty}), and the specific workout formats used (${formattedWorkoutFormats}). Do NOT use a generic template description or mention formats not used.",
+  "overview": "Generate a detailed explanation of the program methodology, periodization approach (if any), expected outcomes, and supplementary recommendations based SOLELY on the generated workouts, CRITICAL REQUIREMENTS, and other user inputs. Do NOT use generic CrossFit explanations unless they directly apply to the constraints.",
   "workouts": [
     {
-      "title": "Week X, Day Y: [Focus Area] and [Creative CrossFit-Style Title]",
+      "title": "Week X, Day Y: [${formattedWorkoutFormats
+        .split(',')[0]
+        .trim()}] - [Creative Title]",
       "body": "Detailed workout description including all required sections",
       "date": "YYYY-MM-DD"
     },
@@ -221,7 +221,7 @@ ${
 }
 \`\`\`
 
-The "workouts" array should contain exactly ${totalWorkouts} workouts, organized in a progressive sequence.
+The "workouts" array MUST contain exactly ${totalWorkouts} workouts, covering exactly ${numberOfWeeks} week(s).
 
 ${
   dateInfo

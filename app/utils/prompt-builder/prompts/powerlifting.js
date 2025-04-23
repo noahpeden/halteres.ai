@@ -37,6 +37,12 @@ export function powerliftingPrompt(context) {
   const workoutFormats = workout_format || [];
   const selectedDaysOfWeek = calendar_data?.days_of_week || [];
 
+  // Format workout formats for clarity in the prompt
+  const formattedWorkoutFormats =
+    workoutFormats.length > 0
+      ? workoutFormats.join(', ')
+      : 'Standard Powerlifting Structure (Main Lifts, Accessories)';
+
   // Get day names for better readability
   const dayNames = [
     'Sunday',
@@ -87,12 +93,12 @@ ${focus_area ? `Focus Area: ${focus_area}` : ''}
 ${
   equipment.length > 0
     ? `Available Equipment: ${equipment.join(', ')}`
-    : 'Available Equipment: Power rack, barbell, plates, bench, safety equipment, and standard strength training accessories'
+    : 'Available Equipment: Power racks, barbells, plates, benches, dumbbells. Optional: bands, chains.'
 }
 ${
   workoutFormats.length > 0
-    ? `Workout Formats to Include: ${workoutFormats.join(', ')}`
-    : ''
+    ? `Workout Formats to Include: ${formattedWorkoutFormats}\\nIMPORTANT: The generated workouts MUST primarily use the specified Workout Formats. Do NOT include formats outside this list unless essential for the primary Goal or Description. Prioritize these requested formats.`
+    : 'Workout Formats to Include: Standard Powerlifting Structure (Main Lifts, Accessories)'
 }
 ${personalization ? `Personalization: ${personalization}` : ''}
 ${formattedReferenceInput}
@@ -103,13 +109,14 @@ ${referenceWorkouts || ''}
 ${formattedPeriodizationGuidelines}
 
 For the program description, include:
-1. A detailed overview focusing on strength development for the main powerlifts
-2. The periodization approach with specific intensity and volume prescriptions
-3. Expected strength gains and performance adaptations
-4. Technical development milestones for the program
-5. Recommendations for nutrition, recovery, and injury prevention specific to strength athletes
+1. A concise overview of the program's goals (strength in Squat, Bench, Deadlift) and intended adaptations derived primarily from the user's Goal and Description inputs.
+2. The periodization approach used (e.g., linear, block, DUP) and why it's effective for powerlifting.
+3. Expected outcomes (increased 1RMs) based *only* on the generated workouts.
+4. Recommendations for nutrition, recovery, and meet preparation if applicable.
 
-Powerlifting-Specific Requirements:
+Powerlifting-Specific Requirements (Apply *unless* conflicting with user's Description, Goal, or requested Workout Formats):
+- Focus on increasing strength in the squat, bench press, and deadlift
+- Utilize powerlifting training principles (specificity, overload, fatigue management)
 - Design a program focused on developing strength in the squat, bench press, deadlift and related variations
 - Structure training with appropriate frequency for each main lift (typically 2-3x per week per lift)
 - Include detailed percentage-based loading OR RPE (Rate of Perceived Exertion) prescriptions
@@ -124,16 +131,16 @@ Ensure proper load management, specific adaptation phases, and strategic deloads
 
 IMPORTANT: The workouts must be scheduled on specific dates according to the user's selected training days. DO NOT create workouts on days other than the ones specified.
 
+IMPORTANT: The program MUST strictly adhere to the requested ${numberOfWeeks} weeks duration. Generate exactly ${totalWorkouts} workouts for this duration.
+
 Your response MUST be in this exact JSON format:
 {
   "title": "Powerlifting Program for ${goal}",
-  "description": "A comprehensive ${numberOfWeeks}-week ${difficulty} powerlifting program focused on ${
-    focus_area || 'strength development in the squat, bench press, and deadlift'
-  } with detailed progression, technique development, and recovery strategies",
-  "overview": "A detailed explanation of the programming methodology, periodization approach, expected strength outcomes, and supplementary recommendations for powerlifting performance",
+  "description": "Generate a description accurately reflecting the program's ACTUAL content, duration (${numberOfWeeks} weeks), difficulty (${difficulty}), workout formats used (${formattedWorkoutFormats}), and the primary goal/focus derived from user input (likely SBD strength). Do NOT use a generic template description.",
+  "overview": "Generate a detailed explanation of the program methodology (focused on powerlifting strength), periodization approach (if any), expected outcomes, and supplementary recommendations based SOLELY on the generated workouts and user inputs. Do NOT use generic explanations unless they directly apply.",
   "workouts": [
     {
-      "title": "Week X, Day Y: [Main Lift Focus] - [Periodization Phase]",
+      "title": "Week X, Day Y: [Main Lift Focus] and [Accessory Focus]",
       "body": "Detailed workout description including all required sections",
       "date": "YYYY-MM-DD"
     },
@@ -211,9 +218,15 @@ ${
 - Precise form cues for safe and efficient movement
 - Common technical errors to avoid
 - Specific setup instructions for optimal leverage
+
+## Coaching Cues
+[3-5 specific technical cues for key movements]
+- Technical cues for the main lifts (squat, bench, deadlift)
+- Form tips for efficiency and injury prevention
+- Common errors to avoid
 \`\`\`
 
-The "workouts" array should contain exactly ${totalWorkouts} workouts, organized in a progressive sequence with appropriate distribution of squat, bench press, and deadlift training.
+IMPORTANT: The "workouts" array MUST contain exactly ${totalWorkouts} workouts, organized in a progressive sequence over ${numberOfWeeks} weeks, following powerlifting principles.
 
 ${
   dateInfo

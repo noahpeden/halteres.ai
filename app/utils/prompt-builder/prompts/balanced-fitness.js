@@ -6,35 +6,46 @@
 export function balancedFitnessPrompt(context) {
   // Extract all relevant parameters with fallbacks
   const {
-    goal = 'Well-rounded fitness and health',
+    goal = 'Overall health and fitness',
     difficulty = 'Intermediate',
     focus_area = '',
     description = '',
     personalization = '',
     workout_format = [],
-    duration_weeks = 4,
-    days_per_week = 3,
+    duration_weeks,
+    days_per_week,
     periodization = {},
     calendar_data = {},
     gym_details = {},
     clientMetrics = '',
     referenceWorkouts = '',
     suggestedDates = [],
-    additionalNotes = '',
-    formattedReferenceInput = '',
-    formattedRagMatchedWorkouts = '',
+    customWorkoutFormat = { enabled: false, sections: [] },
+    formattedPeriodizationGuidelines = '',
   } = context;
 
   // Get more specific parameters
-  const numberOfWeeks = parseInt(duration_weeks || context.numberOfWeeks || 4);
-  const daysPerWeek = parseInt(days_per_week || context.daysPerWeek || 3);
+  const numberOfWeeks = context.numberOfWeeks;
+  const daysPerWeek = context.daysPerWeek;
   const programType =
     periodization?.program_type || context.programType || 'linear';
-  const equipment = gym_details?.equipment || context.equipment || [];
+  const equipment = gym_details?.equipment ||
+    context.equipment || [
+      'Bodyweight',
+      'Dumbbells',
+      'Resistance Bands',
+      'Cardio Machine (optional)',
+    ];
   const startDate = calendar_data?.start_date || context.startDate || '';
   const totalWorkouts = numberOfWeeks * daysPerWeek;
   const workoutFormats = workout_format || [];
   const selectedDaysOfWeek = calendar_data?.days_of_week || [];
+
+  // Format workout formats for clarity in the prompt
+  const formattedWorkoutFormats =
+    workoutFormats.length > 0
+      ? workoutFormats.join(', ')
+      : 'Balanced Mix (Strength, Cardio, Mobility)';
 
   // Get day names for better readability
   const dayNames = [
@@ -64,7 +75,7 @@ export function balancedFitnessPrompt(context) {
                 Math.floor(index / daysPerWeek) + 1
               }, Day ${(index % daysPerWeek) + 1})`
           )
-          .join('\\n')
+          .join('\n')
       : '';
 
   // Build the balanced fitness prompt
@@ -86,51 +97,61 @@ ${focus_area ? `Focus Area: ${focus_area}` : ''}
 ${
   equipment.length > 0
     ? `Available Equipment: ${equipment.join(', ')}`
-    : 'Available Equipment: Standard gym equipment including weights, machines, and cardio equipment'
+    : 'Available Equipment: Bodyweight, dumbbells, resistance bands. Cardio machines optional.'
 }
+
+IMPORTANT DURATION: The program MUST be exactly ${numberOfWeeks} week(s) long. Generate exactly ${totalWorkouts} workouts total.
+
+REQUIRED WORKOUT FORMATS: The generated workouts MUST exclusively use the following specified formats: [${formattedWorkoutFormats}]. If no formats are specified, create a balanced mix of strength training (using available equipment), cardiovascular exercise, and mobility/flexibility work. Prioritize exercises possible with *only* the listed equipment.
+
+${personalization ? `Personalization: ${personalization}` : ''}
+${context.formattedReferenceInput}
+${context.formattedRagMatchedWorkouts}
+${context.clientMetrics ? `\n${context.clientMetrics}` : ''}
+${context.referenceWorkouts ? `\n${context.referenceWorkouts}` : ''}
 ${
-  workoutFormats.length > 0
-    ? `Workout Formats to Include: ${workoutFormats.join(', ')}`
+  customWorkoutFormat
+    ? `\n${
+        customWorkoutFormat.enabled
+          ? 'Custom Workout Format: ' + customWorkoutFormat.sections.join(', ')
+          : ''
+      }`
     : ''
 }
-${personalization ? `Personalization: ${personalization}` : ''}
-${formattedReferenceInput}
-${formattedRagMatchedWorkouts}
-${clientMetrics || ''}
-${referenceWorkouts || ''}
+${formattedPeriodizationGuidelines}
 
 For the program description, include:
-1. A concise overview of the program's goals and intended adaptations
-2. The balanced approach to developing strength, endurance, mobility and overall fitness
-3. Expected health and fitness improvements from following the program
-4. Recommendations for nutrition, recovery, and lifestyle habits
+1. A concise overview reflecting the CRITICAL REQUIREMENTS, Goal (balanced fitness), ACTUAL duration (${numberOfWeeks} weeks), and the structure incorporating strength, cardio, and mobility using available equipment and formats (${
+    formattedWorkoutFormats || 'Balanced Mix'
+  }).
+2. The periodization approach used (${programType}) and how it promotes well-rounded fitness development.
+3. Expected outcomes in terms of improved strength, cardiovascular health, flexibility, and overall well-being, based *only* on the generated workouts and client requirements.
+4. Recommendations for maintaining balance, listening to the body, and adjusting intensity.
 
-Balanced Fitness-Specific Requirements:
-- Design a well-balanced training program addressing all fitness components
-- Include appropriate mix of strength, cardiovascular conditioning, and mobility work
-- Focus on fundamental movement patterns and exercise variety
-- Balance intensity and volume for sustainable long-term progress
-- Include progressive overload while maintaining exercise technique
-- Ensure proper warm-up and cool-down protocols
-- Include specific coaching cues for technical movements
-- Structure workouts to promote general health, function, and well-being
-- Incorporate exercises that develop balanced muscular development
+General Balanced Fitness Guidelines (Apply *only if* they DO NOT CONFLICT with CRITICAL REQUIREMENTS or REQUIRED WORKOUT FORMATS):
+- Integrate strength training sessions (2-3 times per week) using compound and isolation exercises with available equipment.
+- Include dedicated cardiovascular exercise sessions (2-3 times per week) like running, cycling, swimming, or using cardio machines.
+- Incorporate flexibility and mobility work (stretching, yoga, dynamic warm-ups) regularly.
+- Structure workouts to avoid overtraining specific muscle groups or energy systems.
+- Encourage mindful movement and proper form.
 
-The program should follow logical progression based on the selected program type (${programType}).
-Ensure proper periodization, recovery, and exercise variation throughout the program.
+The program MUST follow logical progression based on the selected program type (${programType}) AND the client's requirements.
+Ensure proper periodization, recovery, and exercise variation *within the constraints provided*, promoting overall balance.
 
 IMPORTANT: The workouts must be scheduled on specific dates according to the user's selected training days. DO NOT create workouts on days other than the ones specified.
 
 Your response MUST be in this exact JSON format:
 {
   "title": "Balanced Fitness Program for ${goal}",
-  "description": "A comprehensive ${numberOfWeeks}-week ${difficulty} balanced fitness program focused on ${
-    focus_area || 'overall health and functional fitness'
-  } that includes detailed weekly progression, nutrition guidance, and recovery recommendations",
-  "overview": "A detailed explanation of the program methodology, balanced fitness approach, expected outcomes, and lifestyle recommendations",
+  "description": "Generate a description ACCURATELY reflecting the program's ACTUAL content: CRITICAL REQUIREMENTS (${
+    description || 'None provided'
+  }), duration (${numberOfWeeks} weeks), difficulty (${difficulty}), and the specific balanced structure (strength/cardio/mobility) using available equipment and formats (${
+    formattedWorkoutFormats || 'Balanced Mix'
+  }). Do NOT use a generic template description or mention components/equipment not used.",
+  "overview": "Generate a detailed explanation of the program methodology, periodization approach (${programType}) for balanced fitness, rationale for exercise selection, expected holistic health outcomes, and supplementary recommendations based SOLELY on the generated workouts, CRITICAL REQUIREMENTS, and other user inputs. Do NOT use generic explanations unless they directly apply to the constraints.",
   "workouts": [
     {
-      "title": "Week X, Day Y: [Focus Area] and [Training Focus]",
+      "title": "Week X, Day Y: [Focus - e.g., Strength/Cardio] and [Creative Title]",
       "body": "Detailed workout description including all required sections",
       "date": "YYYY-MM-DD"
     },
@@ -204,7 +225,7 @@ ${
 - Common errors to avoid
 \`\`\`
 
-The "workouts" array should contain exactly ${totalWorkouts} workouts, organized in a progressive sequence with balanced attention to all fitness components.
+The "workouts" array MUST contain exactly ${totalWorkouts} workouts, covering exactly ${numberOfWeeks} week(s).
 
 ${
   dateInfo

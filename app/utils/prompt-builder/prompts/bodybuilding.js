@@ -36,6 +36,12 @@ export function bodybuildingPrompt(context) {
   const workoutFormats = workout_format || [];
   const selectedDaysOfWeek = calendar_data?.days_of_week || [];
 
+  // Format workout formats for clarity in the prompt
+  const formattedWorkoutFormats =
+    workoutFormats.length > 0
+      ? workoutFormats.join(', ')
+      : 'Standard Bodybuilding Splits (Push/Pull/Legs, Body Part)';
+
   // Get day names for better readability
   const dayNames = [
     'Sunday',
@@ -86,12 +92,12 @@ ${focus_area ? `Focus Area: ${focus_area}` : ''}
 ${
   equipment.length > 0
     ? `Available Equipment: ${equipment.join(', ')}`
-    : 'Available Equipment: Assumes access to standard free weights and machines unless otherwise specified.'
+    : 'Available Equipment: Standard bodybuilding gym equipment (free weights, machines, cables)'
 }
 ${
   workoutFormats.length > 0
-    ? `Workout Formats to Include: ${workoutFormats.join(', ')}`
-    : ''
+    ? `Workout Formats to Include: ${formattedWorkoutFormats}\\nIMPORTANT: The generated workouts MUST primarily use the specified Workout Formats. Do NOT include formats outside this list unless essential for the primary Goal or Description. Prioritize these requested formats.`
+    : 'Workout Formats to Include: Standard Bodybuilding Splits (Push/Pull/Legs, Body Part)'
 }
 ${personalization ? `Personalization: ${personalization}` : ''}
 ${formattedReferenceInput}
@@ -100,12 +106,14 @@ ${clientMetrics || ''}
 ${referenceWorkouts || ''}
 
 For the program description, include:
-1. A detailed overview focusing on hypertrophy goals and muscle development
-2. The periodization approach with specific volume, intensity, and frequency recommendations
-3. Expected muscle growth and physiological adaptations
-4. Detailed nutrition recommendations including protein intake, caloric surplus/deficit, meal timing, and supplement suggestions
+1. A concise overview of the program's goals (muscle hypertrophy) and intended adaptations derived primarily from the user's Goal and Description inputs.
+2. The periodization approach used and why it's effective for bodybuilding.
+3. Expected outcomes (muscle growth, aesthetics) based *only* on the generated workouts.
+4. Recommendations for nutrition (macros, timing), recovery, and supplementation.
 
-Bodybuilding-Specific Requirements:
+Bodybuilding-Specific Requirements (Apply *unless* conflicting with user's Description, Goal, or requested Workout Formats):
+- Focus on maximizing muscle hypertrophy
+- Utilize bodybuilding training principles (volume, intensity, time under tension)
 - Design a body part split (e.g., chest/triceps, back/biceps, legs, shoulders/arms, rest) or PPL split optimized for maximum hypertrophy
 - Include primary compound movements followed by targeted isolation exercises for complete muscle development
 - Incorporate advanced techniques like drop sets, supersets, rest-pause, and time under tension principles
@@ -120,16 +128,16 @@ Ensure proper volume management, recovery protocols, and exercise variation to p
 
 IMPORTANT: The workouts must be scheduled on specific dates according to the user's selected training days. DO NOT create workouts on days other than the ones specified.
 
+IMPORTANT: The program MUST strictly adhere to the requested ${numberOfWeeks} weeks duration. Generate exactly ${totalWorkouts} workouts for this duration.
+
 Your response MUST be in this exact JSON format:
 {
-  "title": "Bodybuilding Hypertrophy Program for ${goal}",
-  "description": "A comprehensive ${numberOfWeeks}-week ${difficulty} bodybuilding program focused on ${
-    focus_area || 'total body hypertrophy'
-  } with detailed weekly progression, nutrition guidance, and recovery recommendations based on bodybuilding principles",
-  "overview": "A detailed explanation of the bodybuilding training methodology, muscle-building principles, periodization approach, expected hypertrophy outcomes, and supplementary recommendations",
+  "title": "Bodybuilding Program for ${goal}",
+  "description": "Generate a description accurately reflecting the program's ACTUAL content, duration (${numberOfWeeks} weeks), difficulty (${difficulty}), workout formats used (${formattedWorkoutFormats}), and the primary goal/focus derived from user input (likely hypertrophy). Do NOT use a generic template description.",
+  "overview": "Generate a detailed explanation of the program methodology (focused on hypertrophy), periodization approach (if any), expected outcomes, and supplementary recommendations based SOLELY on the generated workouts and user inputs. Do NOT use generic explanations unless they directly apply.",
   "workouts": [
     {
-      "title": "Week X, Day Y: [Muscle Groups]",
+      "title": "Week X, Day Y: [Muscle Group Split] and [Training Focus]",
       "body": "Detailed workout description including all required sections",
       "date": "YYYY-MM-DD"
     },
@@ -196,12 +204,12 @@ ${
 
 ## Coaching Cues
 [3-5 specific technical cues for key movements]
-- Form and execution details for maximum muscle activation
-- Mind-muscle connection tips for targeted stimulation
-- Common errors to avoid for safety and effectiveness
+- Technical cues for the most complex movements
+- Form tips to maximize efficiency and safety
+- Common errors to avoid
 \`\`\`
 
-The "workouts" array should contain exactly ${totalWorkouts} workouts, organized in a progressive sequence with appropriate muscle group targeting.
+IMPORTANT: The "workouts" array MUST contain exactly ${totalWorkouts} workouts, organized in a progressive sequence over ${numberOfWeeks} weeks, following bodybuilding principles.
 
 ${
   dateInfo

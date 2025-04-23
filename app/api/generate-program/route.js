@@ -33,7 +33,7 @@ export async function POST(request) {
     const goal = requestData.goal || 'General fitness';
     const difficulty = requestData.difficulty || 'Intermediate';
     const focusArea = requestData.focus_area || '';
-    const additionalNotes = requestData.description || '';
+    const description = requestData.description || '';
     const personalization = requestData.personalization || '';
     const workoutFormats = requestData.workout_format || [];
     const referenceInput = requestData.referenceInput || '';
@@ -87,7 +87,7 @@ export async function POST(request) {
           goal,
           difficulty,
           focusArea,
-          additionalNotes,
+          description,
           personalization,
           workoutFormats,
           numberOfWeeks,
@@ -239,41 +239,6 @@ export async function POST(request) {
       .map((dayNum) => dayNames[dayNum])
       .join(', ');
 
-    // Build context object for promptBuilder
-    const promptContext = {
-      goal,
-      difficulty,
-      daysPerWeek,
-      numberOfWeeks,
-      focusArea,
-      additionalNotes,
-      personalization,
-      equipment,
-      workoutFormats,
-      clientMetricsData,
-      referenceWorkoutsData,
-      programType,
-      selectedDayNames,
-      totalWorkouts,
-      suggestedDates,
-      referenceInput,
-      // Format dates for prompt
-      formattedDates: suggestedDates
-        .map(
-          (date, index) =>
-            'Workout ' +
-            (index + 1) +
-            ': ' +
-            date +
-            ' (Week ' +
-            (Math.floor(index / parseInt(daysPerWeek)) + 1) +
-            ', Day ' +
-            ((index % parseInt(daysPerWeek)) + 1) +
-            ')'
-        )
-        .join('\n'),
-    };
-
     // --- RAG Step ---
     let ragMatchedWorkouts = [];
     if (referenceInput && referenceInput.trim() !== '') {
@@ -314,7 +279,6 @@ export async function POST(request) {
           logWithTimestamp(
             `Found ${ragMatchedWorkouts.length} RAG-matched workouts`
           );
-          promptContext.ragMatchedWorkouts = ragMatchedWorkouts; // Add to context
         } else {
           logWithTimestamp(
             'No RAG-matched workouts found for the given threshold.'
@@ -330,6 +294,41 @@ export async function POST(request) {
       }
     }
     // --- End RAG Step ---
+
+    // Build context object for promptBuilder
+    const promptContext = {
+      goal,
+      difficulty,
+      daysPerWeek,
+      numberOfWeeks,
+      focusArea,
+      description,
+      personalization,
+      equipment,
+      workoutFormats,
+      clientMetricsData,
+      referenceWorkoutsData,
+      programType,
+      selectedDayNames,
+      totalWorkouts,
+      suggestedDates,
+      referenceInput,
+      ragMatchedWorkouts,
+      formattedDates: suggestedDates
+        .map(
+          (date, index) =>
+            'Workout ' +
+            (index + 1) +
+            ': ' +
+            date +
+            ' (Week ' +
+            (Math.floor(index / parseInt(daysPerWeek)) + 1) +
+            ', Day ' +
+            ((index % parseInt(daysPerWeek)) + 1) +
+            ')'
+        )
+        .join('\n'),
+    };
 
     // Use promptBuilder to create the prompt
     const prompt = promptBuilder(promptContext, trainingType);
@@ -500,7 +499,7 @@ async function generateLargeProgram(requestData, params, supabase, openai) {
     goal,
     difficulty,
     focusArea,
-    additionalNotes,
+    description,
     personalization,
     workoutFormats,
     numberOfWeeks,
@@ -581,7 +580,7 @@ async function generateLargeProgram(requestData, params, supabase, openai) {
       goal,
       difficulty,
       focusArea,
-      additionalNotes,
+      description,
       personalization,
       equipment,
       workoutFormats,
@@ -784,7 +783,7 @@ function createOverviewPrompt(
     daysPerWeek,
     numberOfWeeks,
     focusArea: commonPromptElements.focusArea,
-    additionalNotes: commonPromptElements.additionalNotes,
+    description: commonPromptElements.description,
     personalization: commonPromptElements.personalization,
     equipment: commonPromptElements.equipment,
     workoutFormats: commonPromptElements.workoutFormats,
@@ -984,7 +983,7 @@ async function preparePromptElements(programId, supabase, params) {
     goal,
     difficulty,
     focusArea,
-    additionalNotes,
+    description,
     personalization,
     equipment,
     workoutFormats,
@@ -1146,7 +1145,7 @@ async function preparePromptElements(programId, supabase, params) {
     goal,
     difficulty,
     focusArea,
-    additionalNotes,
+    description,
     personalization,
     equipment,
     workoutFormats,

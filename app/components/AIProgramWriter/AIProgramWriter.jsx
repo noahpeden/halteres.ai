@@ -141,6 +141,7 @@ export default function AIProgramWriter({ onSelectWorkout }) {
   }, [dispatch, suggestions]);
 
   const handleConfirmGenerate = useCallback(async () => {
+    console.log(JSON.stringify(formData, null, 2));
     dispatch({ type: 'CLOSE_CONFIRMATION_MODAL' });
     if (!programId) {
       showToastMessage(
