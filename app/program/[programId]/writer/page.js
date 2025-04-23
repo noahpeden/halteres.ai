@@ -16,28 +16,62 @@ export default function ProgramWriterPage() {
   const [programDescription, setProgramDescription] = useState(
     'Generate workouts for your program'
   );
-
+  const [clientName, setClientName] = useState('');
+  const [clientType, setClientType] = useState('');
   useEffect(() => {
     async function fetchProgramHeader() {
       if (!programId) return;
       try {
-        const { data, error } = await supabase
+        // 1. Fetch program details including entity_id
+        const { data: programData, error: programError } = await supabase
           .from('programs')
-          .select('name, description')
+          .select('name, description, entity_id') // Select entity_id instead of clients(name)
           .eq('id', programId)
           .single();
 
-        if (error && error.code !== 'PGRST116') throw error;
+        if (programError && programError.code !== 'PGRST116')
+          throw programError;
 
-        if (data) {
-          setProgramName(data.name || 'AI Program Writer');
-          setEditedName(data.name || '');
+        if (programData) {
+          // Set program details first
+          setProgramName(programData.name || 'AI Program Writer');
+          setEditedName(programData.name || '');
           setProgramDescription(
-            data.description || 'Generate workouts for your program'
+            programData.description || 'Generate workouts for your program'
           );
+
+          // 2. If entity_id exists, fetch entity name
+          if (programData.entity_id) {
+            const { data: entityData, error: entityError } = await supabase
+              .from('entities')
+              .select('name, type')
+              .eq('id', programData.entity_id)
+              .single();
+
+            if (entityError && entityError.code !== 'PGRST116') {
+              console.error('Error fetching entity name:', entityError);
+              setClientName('Error fetching client name');
+            } else if (entityData) {
+              setClientName(entityData.name || 'Unnamed Client/Class');
+              setClientType(entityData.type || 'Client/Class');
+            } else {
+              setClientName('Client/Class not found'); // Entity record exists but name is null/empty or record missing
+            }
+          } else {
+            setClientName('Client/Class not assigned'); // No entity_id linked to the program
+          }
+        } else {
+          // Handle case where program itself is not found
+          setProgramName('Program Not Found');
+          setProgramDescription('');
+          setClientName('');
         }
       } catch (error) {
         console.error('Error fetching program header:', error);
+        // Set default error states
+        setProgramName('Error Loading Program');
+        setProgramDescription('');
+        setClientName('Error Loading Client');
       }
     }
 
@@ -103,12 +137,21 @@ export default function ProgramWriterPage() {
               </button>
             </div>
           ) : (
-            <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold text-primary">{programName}</h1>
-              <Edit2
-                className="h-5 w-5 cursor-pointer text-primary"
-                onClick={() => setIsEditingName(true)}
-              />
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-2">
+                <h1 className="text-2xl font-bold text-primary">
+                  {programName}
+                </h1>
+                <Edit2
+                  className="h-5 w-5 cursor-pointer text-primary"
+                  onClick={() => setIsEditingName(true)}
+                />
+              </div>
+              {clientName && (
+                <p className="text-xl text-gray-500">
+                  {clientName} ({clientType})
+                </p>
+              )}
             </div>
           )}
           <p className="text-practical-gray">{programDescription}</p>

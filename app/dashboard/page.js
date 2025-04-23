@@ -33,6 +33,7 @@ export default function Dashboard() {
   });
   const [selectedProgramId, setSelectedProgramId] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [filterEntityId, setFilterEntityId] = useState('all'); // State for entity filter
 
   // Check if auth is ready
   useEffect(() => {
@@ -344,6 +345,12 @@ export default function Dashboard() {
     }
   }
 
+  // Filter programs based on selected entity
+  const filteredPrograms = programs.filter(
+    (program) =>
+      filterEntityId === 'all' || program.entity_id === filterEntityId
+  );
+
   if (isLoading) {
     return (
       <div className="container mx-auto p-4 flex justify-center items-center min-h-[60vh]">
@@ -407,7 +414,39 @@ export default function Dashboard() {
       {programs.length > 0 ? (
         <div className="mb-8">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold">Your Programs</h2>
+            <div className="flex justify-start items-center gap-4 w-full">
+              <h2 className="text-xl font-semibold">Your Programs</h2>
+              <div className="flex items-center gap-4">
+                {/* Entity Filter Dropdown */}
+                <div className="form-control">
+                  <select
+                    className="select select-bordered select-sm"
+                    value={filterEntityId}
+                    onChange={(e) => setFilterEntityId(e.target.value)}
+                  >
+                    <option value="all">All Programs</option>
+                    <optgroup label="Clients">
+                      {entities
+                        .filter((entity) => entity.type === 'CLIENT')
+                        .map((entity) => (
+                          <option key={entity.id} value={entity.id}>
+                            {entity.name}
+                          </option>
+                        ))}
+                    </optgroup>
+                    <optgroup label="Classes">
+                      {entities
+                        .filter((entity) => entity.type === 'CLASS')
+                        .map((entity) => (
+                          <option key={entity.id} value={entity.id}>
+                            {entity.name}
+                          </option>
+                        ))}
+                    </optgroup>
+                  </select>
+                </div>
+              </div>
+            </div>
             <label
               htmlFor="entity-selection-modal"
               className="btn btn-primary text-white"
@@ -417,41 +456,53 @@ export default function Dashboard() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-            {programs.map((program) => (
-              <div
-                key={program.id}
-                className="card bg-white shadow-md hover:shadow-lg transition-shadow"
-              >
-                <div className="card-body">
-                  <h3 className="card-title">{program.name}</h3>
-                  <p className="text-gray-600 text-sm">
-                    Created: {new Date(program.created_at).toLocaleDateString()}
-                  </p>
-                  <p className="mt-2">
-                    {program.description || 'No description available'}
-                  </p>
-                  <div className="card-actions justify-end mt-4">
-                    <Link
-                      href={`/program/${program.id}/writer`}
-                      className="btn btn-primary btn-sm"
-                    >
-                      Open
-                    </Link>
-                    <button
-                      onClick={() => {
-                        setSelectedProgramId(program.id);
-                        document.getElementById(
-                          'delete-program-modal'
-                        ).checked = true;
-                      }}
-                      className="btn btn-error btn-sm btn-outline"
-                    >
-                      Delete
-                    </button>
+            {filteredPrograms.map((program) => {
+              // Find the entity name for the card
+              const entity = entities.find((e) => e.id === program.entity_id);
+              const entityDisplayName = entity
+                ? `${entity.name} (${entity.type})`
+                : 'Unknown Client/Class';
+
+              return (
+                <div
+                  key={program.id}
+                  className="card bg-white shadow-md hover:shadow-lg transition-shadow"
+                >
+                  <div className="card-body">
+                    <h3 className="card-title">{program.name}</h3>
+                    <p className="text-sm text-gray-500 mt-1 mb-2">
+                      For: {entityDisplayName}
+                    </p>
+                    <p className="text-gray-600 text-sm">
+                      Created:{' '}
+                      {new Date(program.created_at).toLocaleDateString()}
+                    </p>
+                    <p className="mt-2 text-sm">
+                      {program.description || 'No description available'}
+                    </p>
+                    <div className="card-actions justify-end mt-4">
+                      <Link
+                        href={`/program/${program.id}/writer`}
+                        className="btn btn-primary btn-sm"
+                      >
+                        Open
+                      </Link>
+                      <button
+                        onClick={() => {
+                          setSelectedProgramId(program.id);
+                          document.getElementById(
+                            'delete-program-modal'
+                          ).checked = true;
+                        }}
+                        className="btn btn-error btn-sm btn-outline"
+                      >
+                        Delete
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       ) : (
@@ -476,39 +527,6 @@ export default function Dashboard() {
 
       {/* Friends & Family Feedback Section */}
       <div className="bg-white p-6 rounded-lg shadow mb-8">
-        <h2 className="text-xl font-semibold mb-2">
-          Friends & Family Release Feedback
-        </h2>
-
-        <div className="mb-6">
-          <h3 className="font-medium mb-2">Watch our introduction video:</h3>
-          <div
-            className="rounded-lg"
-            style={{
-              position: 'relative',
-              paddingBottom: '56.25%',
-              height: 0,
-              overflow: 'hidden',
-            }}
-          >
-            {' '}
-            <iframe
-              src="https://www.loom.com/embed/01378252e9da4a789b31a35afd848b6f?sid=ace0ecdc-e214-4dd2-a083-6eed26a5a2ef"
-              webkitAllowFullScreen
-              mozAllowFullScreen
-              allowFullScreen
-              className="rounded-lg"
-              style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                width: '100%',
-                height: '100%',
-              }}
-            ></iframe>
-          </div>
-        </div>
-
         <div className="flex flex-col md:flex-row justify-between items-center">
           <div>
             <p className="text-gray-600 mb-4">
@@ -526,12 +544,13 @@ export default function Dashboard() {
           </div>
           <div className="mt-4 md:mt-0 bg-blue-50 p-4 rounded-lg">
             <h3 className="font-medium mb-2">Questions or issues?</h3>
-            <p className="text-sm">Contact our co-founder Ben:</p>
+            <p className="text-sm">Contact us!</p>
             <p className="text-sm">
               <span className="font-medium">Phone:</span> (314) 827-4744
             </p>
             <p className="text-sm">
-              <span className="font-medium">Email:</span> ben@halteres.ai
+              <span className="font-medium">Email:</span> ben@halteres.ai or
+              noah@halteres.ai
             </p>
           </div>
         </div>
