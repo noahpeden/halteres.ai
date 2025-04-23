@@ -78,7 +78,7 @@ export default function ProgramLayout({ children, params }) {
           aria-label="close sidebar"
           className="drawer-overlay"
         ></label>
-        <ul className="menu p-4 w-80 min-h-full bg-base-100 text-base-content relative">
+        <ul className="menu p-4 w-50 min-h-full bg-base-100 text-base-content relative">
           {/* Sidebar content here */}
           <div className="mb-4 text-xl font-bold pl-4">Program Menu</div>
           {sidebarLinks.map((link) => (

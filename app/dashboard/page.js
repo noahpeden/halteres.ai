@@ -287,7 +287,7 @@ export default function Dashboard() {
         setDaysOfWeek([1, 3, 5]);
         setSelectedEntityId('');
         // Navigate to the program
-        router.push(`/program/${result?.data[0].id}/calendar`);
+        router.push(`/program/${result?.data[0].id}/writer`);
       } else {
         throw new Error(result.error);
       }
