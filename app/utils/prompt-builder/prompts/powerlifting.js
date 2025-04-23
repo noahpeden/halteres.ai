@@ -23,6 +23,7 @@ export function powerliftingPrompt(context) {
     additionalNotes = '',
     formattedReferenceInput = '',
     formattedRagMatchedWorkouts = '',
+    formattedPeriodizationGuidelines = '',
   } = context;
 
   // Get more specific parameters
@@ -99,6 +100,8 @@ ${formattedRagMatchedWorkouts}
 ${clientMetrics || ''}
 ${referenceWorkouts || ''}
 
+${formattedPeriodizationGuidelines}
+
 For the program description, include:
 1. A detailed overview focusing on strength development for the main powerlifts
 2. The periodization approach with specific intensity and volume prescriptions
@@ -116,7 +119,7 @@ Powerlifting-Specific Requirements:
 - Balance volume, intensity, and frequency for maximum strength development
 - Incorporate appropriate recovery protocols to manage fatigue
 
-The program should follow logical strength progression based on the selected program type (${programType}).
+IMPORTANT: Each workout MUST explicitly state which phase/cycle/block it belongs to according to the periodization model (${programType}).
 Ensure proper load management, specific adaptation phases, and strategic deloads to prevent overtraining.
 
 IMPORTANT: The workouts must be scheduled on specific dates according to the user's selected training days. DO NOT create workouts on days other than the ones specified.
@@ -130,7 +133,7 @@ Your response MUST be in this exact JSON format:
   "overview": "A detailed explanation of the programming methodology, periodization approach, expected strength outcomes, and supplementary recommendations for powerlifting performance",
   "workouts": [
     {
-      "title": "Week X, Day Y: [Main Lift Focus]",
+      "title": "Week X, Day Y: [Main Lift Focus] - [Periodization Phase]",
       "body": "Detailed workout description including all required sections",
       "date": "YYYY-MM-DD"
     },
@@ -145,6 +148,11 @@ For each workout's "body" field, use this structure:
 - Explain the training goal for this specific session
 - Detail how this workout fits into the weekly and overall program structure
 - Note any specific technical elements to focus on
+
+## Periodization Context
+- Clearly state which phase/cycle/block this workout belongs to
+- Explain how this session contributes to the overall periodization strategy
+- Specify the intensity and volume parameters for this phase
 
 ${
   includeScaling

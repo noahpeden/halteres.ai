@@ -1,14 +1,16 @@
 'use client';
+import { useCallback } from 'react';
 import { difficulties, gymTypes } from '../utils';
 import ProgramEssentials from './ProgramEssentials';
 import ProgramScheduling from './ProgramScheduling';
 import ProgramDetails from './ProgramDetails';
 import CustomWorkoutFormat from './CustomWorkoutFormat';
 import LoadingButton from './LoadingButton';
+import { handleFormChange as handleFormChangeUtil } from './formHandlers';
 
-export default function ProgramForm({
+const ProgramForm = ({
   formData,
-  handleChange,
+  dispatch,
   handleWorkoutFormatChange,
   handleDayOfWeekChange,
   isLoading,
@@ -27,7 +29,20 @@ export default function ProgramForm({
   setCustomSectionDescription,
   addCustomSection,
   removeCustomSection,
-}) {
+  handleProgramTypeChange,
+}) => {
+  const handleChange = useCallback(
+    (e) => {
+      const { name, value, type, checked } = e.target;
+      const updateValue = type === 'checkbox' ? checked : value;
+      dispatch({
+        type: 'SET_FIELD_VALUE',
+        payload: { field: name, value: updateValue },
+      });
+    },
+    [dispatch]
+  );
+
   return (
     <div className="md:col-span-3 space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -42,6 +57,7 @@ export default function ProgramForm({
       <ProgramDetails
         formData={formData}
         handleChange={handleChange}
+        handleProgramTypeChange={handleProgramTypeChange}
         handleWorkoutFormatChange={handleWorkoutFormatChange}
         equipmentSelector={equipmentSelector}
       />
@@ -64,11 +80,9 @@ export default function ProgramForm({
         <div className="space-y-4"></div>
       </div>
 
-      <div className="space-y-4 pt-2"></div>
-
       <div className="flex justify-between items-center mt-6">
         <button
-          className={`btn btn-primary text-white w-full py-3 text-lg${
+          className={`btn btn-primary text-white w-full flex items-center justify-center text-lg ${
             isLoading ? ' btn-disabled' : ''
           }`}
           onClick={generateProgram}
@@ -88,4 +102,6 @@ export default function ProgramForm({
       </div>
     </div>
   );
-}
+};
+
+export default ProgramForm;

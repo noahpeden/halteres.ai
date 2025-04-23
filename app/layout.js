@@ -1,9 +1,9 @@
 import './globals.css';
 import { Nunito_Sans, Poppins } from 'next/font/google';
 import { metadata } from './simple-metadata';
-import ClientProviders from './client-providers';
 import { Inter } from 'next/font/google';
 import { AuthProvider } from '@/contexts/AuthContext';
+import Navbar from './components/Navbar';
 
 export const nunitoSans = Nunito_Sans({
   weight: ['300', '400', '600', '700'],
@@ -38,7 +38,8 @@ export default function RootLayout({ children }) {
       </head>
       <body suppressHydrationWarning={true}>
         <AuthProvider>
-          <ClientProviders>{children}</ClientProviders>
+          <Navbar />
+          {children}
         </AuthProvider>
       </body>
     </html>

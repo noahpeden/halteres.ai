@@ -16,6 +16,7 @@ import { functionalFitnessPrompt } from './prompts/functional-fitness.js';
 import { hiitMetabolicPrompt } from './prompts/hiit-metabolic.js';
 import { calisthenicsPrompt } from './prompts/calisthenics.js';
 import { sportSpecificPrompt } from './prompts/sport-specific.js';
+import { formatPeriodizationGuidelines } from './periodizationUtils.js';
 
 /**
  * Returns the appropriate prompt template for the given training methodology and context.
@@ -50,6 +51,10 @@ export default function promptBuilder(context, trainingType) {
     // Process custom workout format if provided
     customWorkoutFormat: formatCustomWorkoutFormat(
       context.workoutFormats || context.workout_format
+    ),
+    // Add formatted periodization guidelines based on program type
+    formattedPeriodizationGuidelines: formatPeriodizationSection(
+      context.programType || context.periodization?.program_type || 'linear'
     ),
   };
 
@@ -95,6 +100,27 @@ export default function promptBuilder(context, trainingType) {
       }
       return balancedFitnessPrompt(enhancedContext);
   }
+}
+
+/**
+ * Creates a prominent, detailed section about periodization for prompts
+ * @param {string} programType - The periodization type
+ * @returns {string} Formatted string about periodization to include in prompts
+ */
+export function formatPeriodizationSection(programType) {
+  if (!programType || programType === '') {
+    return '';
+  }
+
+  // Generate the periodization guidelines as a formatted string
+  const periodizationGuidelines = formatPeriodizationGuidelines(programType);
+
+  return `
+PERIODIZATION: ${programType.toUpperCase()}
+${periodizationGuidelines}
+
+IMPORTANT PERIODIZATION REQUIREMENT: The periodization model above MUST be strictly followed throughout the entire program. Each workout must explicitly state which phase/cycle/day it belongs to in the periodization structure.
+`;
 }
 
 /**

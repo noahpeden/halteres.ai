@@ -1,5 +1,5 @@
 'use client';
-import { difficulties, gymTypes } from '../utils';
+import { difficulties, gymTypes, focusAreas } from '../utils';
 import WorkoutFormatSelector from '@/components/selectors/WorkoutFormatSelector';
 
 export default function ProgramDetails({
@@ -34,7 +34,8 @@ export default function ProgramDetails({
             </select>
             <div className="label">
               <span className="label-text-alt text-accent">
-                Select the type of facility you train at
+                Use the equipment selector below to further customize the gym
+                equipment available
               </span>
             </div>
           </label>
@@ -70,17 +71,20 @@ export default function ProgramDetails({
         {/* Focus Area */}
         <div>
           <label className="form-control w-full">
-            <span className="label-text font-medium">
-              Focus Area (optional)
-            </span>
-            <input
-              type="text"
+            <span className="label-text font-medium">Focus Area</span>
+            <select
               name="focusArea"
-              className="input input-bordered w-full"
+              className="select select-bordered w-full"
               value={formData.focusArea}
               onChange={handleChange}
-              placeholder="e.g., Upper Body, Core, Endurance"
-            />
+            >
+              <option value="">Select a focus area</option>
+              {focusAreas.map((area) => (
+                <option key={area.value} value={area.value}>
+                  {area.label}
+                </option>
+              ))}
+            </select>
           </label>
         </div>
 
@@ -98,7 +102,7 @@ export default function ProgramDetails({
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Personalization */}
-        <div className="flex flex-col gap-2">
+        {/* <div className="flex flex-col gap-2">
           <label className="label">
             <span className="label-text font-medium">
               Personalization (optional)
@@ -111,10 +115,10 @@ export default function ProgramDetails({
             onChange={handleChange}
             placeholder="e.g., Specific exercise preferences, training style, or movement priorities"
           />
-        </div>
+        </div> */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Training Goal */}
-          <div>
+          {/* <div>
             <label className="form-control w-full">
               <div className="label">
                 <span className="label-text">Training Goal</span>
@@ -128,7 +132,7 @@ export default function ProgramDetails({
                 placeholder="e.g., Strength, Muscle Gain, Conditioning"
               />
             </label>
-          </div>
+          </div> */}
         </div>
       </div>
     </section>

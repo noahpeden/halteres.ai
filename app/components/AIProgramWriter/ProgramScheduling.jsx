@@ -8,6 +8,11 @@ export default function ProgramScheduling({
   return (
     <section className="bg-base-100 p-5 rounded-lg border border-base-300 shadow-sm h-full flex flex-col">
       <h2 className="text-xl font-semibold mb-4 text-primary">Scheduling</h2>
+      <span className="text-sm text-gray-500 mb-4">
+        Choose the length of your program and the days of the week you'll have
+        sessions on. We use this to determine the number of workouts in the
+        program.
+      </span>
 
       {/* Days of Week Selector */}
       <div className="mb-4">
