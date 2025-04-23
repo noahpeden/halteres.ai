@@ -3,7 +3,8 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter, useParams } from 'next/navigation';
 import AIProgramWriter from '@/components/AIProgramWriter/AIProgramWriter';
-import { Edit2, Check, X } from 'lucide-react';
+import ClientMetricsTab from '@/components/ClientMetricsTab';
+import { Edit2, Check, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { ProgramWriterProvider } from '@/contexts/ProgramWriterContext';
 
 export default function ProgramWriterPage() {
@@ -18,6 +19,15 @@ export default function ProgramWriterPage() {
   );
   const [clientName, setClientName] = useState('');
   const [clientType, setClientType] = useState('');
+
+  // State for sidebar collapse
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+
+  // Handler to toggle sidebar collapse
+  const toggleSidebarCollapse = () => {
+    setIsSidebarCollapsed(!isSidebarCollapsed);
+  };
+
   useEffect(() => {
     async function fetchProgramHeader() {
       if (!programId) return;
@@ -113,7 +123,7 @@ export default function ProgramWriterPage() {
 
   return (
     <ProgramWriterProvider initialProgramId={programId}>
-      <div>
+      <div className="container mx-auto p-4 relative">
         <div className="mb-6">
           {isEditingName ? (
             <div className="flex items-center gap-2">
@@ -157,11 +167,46 @@ export default function ProgramWriterPage() {
           <p className="text-practical-gray">{programDescription}</p>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-4">
-          <AIProgramWriter
-            programId={programId}
-            onSelectWorkout={handleSelectWorkout}
-          />
+        {/* Open Sidebar Button - Visible only when collapsed */}
+        {isSidebarCollapsed && (
+          <button
+            onClick={toggleSidebarCollapse}
+            className="fixed top-1/2 right-0 transform -translate-y-1/2 z-20 btn btn-primary btn-circle shadow-lg lg:flex hidden"
+            aria-label="Expand Sidebar"
+          >
+            <ChevronLeft size={20} />
+          </button>
+        )}
+
+        {/* Main Content Area with Sidebar Layout */}
+        <div className="flex flex-col lg:flex-row gap-6">
+          {/* AI Program Writer (Main Content) - Dynamically sized */}
+          <div
+            className={`flex-grow ${
+              isSidebarCollapsed ? 'lg:w-full' : 'lg:w-2/3'
+            } transition-all duration-300 ease-in-out`}
+          >
+            <div className="bg-white rounded-lg shadow p-4 h-full">
+              <AIProgramWriter onSelectWorkout={handleSelectWorkout} />
+            </div>
+          </div>
+
+          {/* Client Metrics Sidebar - Dynamically sized/hidden */}
+          <div
+            className={`flex-shrink-0 transition-all duration-300 ease-in-out 
+                        ${
+                          isSidebarCollapsed
+                            ? 'lg:w-0 opacity-0 pointer-events-none'
+                            : 'lg:w-1/3 opacity-100 pointer-events-auto'
+                        }`}
+          >
+            <ClientMetricsTab
+              programId={programId}
+              viewMode="sidebar"
+              isCollapsed={isSidebarCollapsed}
+              onToggleCollapse={toggleSidebarCollapse} // Pass the handler down
+            />
+          </div>
         </div>
       </div>
     </ProgramWriterProvider>
