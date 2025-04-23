@@ -40,6 +40,42 @@ export default function ClientMetricsTab({
     setIsMounted(true);
   }, []);
 
+  // Helper function to initialize edited data with correct unit conversion
+  const initializeEditedData = (data, convertToImperial = useImperial) => {
+    if (!data) return {};
+
+    const metrics = data.metrics || {};
+
+    return {
+      name: data.program?.name || '',
+      description: data.program?.description || '',
+      metrics: {
+        bench_1rm:
+          convertToImperial && metrics.bench_1rm
+            ? kgToLbs(metrics.bench_1rm)
+            : metrics.bench_1rm || 0,
+        deadlift_1rm:
+          convertToImperial && metrics.deadlift_1rm
+            ? kgToLbs(metrics.deadlift_1rm)
+            : metrics.deadlift_1rm || 0,
+        squat_1rm:
+          convertToImperial && metrics.squat_1rm
+            ? kgToLbs(metrics.squat_1rm)
+            : metrics.squat_1rm || 0,
+        mile_time: metrics.mile_time || '',
+        gender: metrics.gender || '',
+        height_cm: metrics.height_cm || 0,
+        weight_kg:
+          convertToImperial && metrics.weight_kg
+            ? kgToLbs(metrics.weight_kg)
+            : metrics.weight_kg || 0,
+        recovery_score: metrics.recovery_score || 0,
+        preferred_training_days: metrics.preferred_training_days || [],
+        injury_history: metrics.injury_history || '',
+      },
+    };
+  };
+
   useEffect(() => {
     async function fetchClientData() {
       setIsLoading(true);
@@ -87,23 +123,8 @@ export default function ClientMetricsTab({
 
         setClientData(initialData);
 
-        // Initialize edited data with the fetched data
-        setEditedData({
-          name: programData.name || '',
-          description: programData.description || '',
-          metrics: initialData.metrics || {
-            bench_1rm: 0,
-            deadlift_1rm: 0,
-            squat_1rm: 0,
-            mile_time: '',
-            gender: '',
-            height_cm: 0,
-            weight_kg: 0,
-            recovery_score: 0,
-            preferred_training_days: [],
-            injury_history: '',
-          },
-        });
+        // Initialize edited data with the fetched data and apply unit conversion
+        setEditedData(initializeEditedData(initialData));
       } catch (error) {
         console.error('Error fetching client data:', error);
         // Initialize with empty data in case of error
@@ -138,7 +159,11 @@ export default function ClientMetricsTab({
 
   const handleEdit = () => {
     setIsEditing(true);
-    if (clientData.metrics.height_cm) {
+
+    // Reinitialize the edited data with proper unit conversion
+    setEditedData(initializeEditedData(clientData));
+
+    if (clientData?.metrics?.height_cm) {
       const { feet, inches } = cmToFeet(clientData.metrics.height_cm);
       setHeightFeet(feet);
       setHeightInches(inches);
@@ -236,24 +261,10 @@ export default function ClientMetricsTab({
   };
 
   const handleCancel = () => {
-    // Reset edited data to current client data
+    // Reset edited data to current client data with proper unit conversion
     if (clientData) {
-      setEditedData({
-        name: clientData.program.name || '',
-        description: clientData.program.description || '',
-        metrics: clientData.metrics || {
-          bench_1rm: 0,
-          deadlift_1rm: 0,
-          squat_1rm: 0,
-          mile_time: '',
-          gender: '',
-          height_cm: 0,
-          weight_kg: 0,
-          recovery_score: 0,
-          preferred_training_days: [],
-          injury_history: '',
-        },
-      });
+      setEditedData(initializeEditedData(clientData));
+
       if (clientData.metrics.height_cm) {
         const { feet, inches } = cmToFeet(clientData.metrics.height_cm);
         setHeightFeet(feet);
@@ -281,7 +292,8 @@ export default function ClientMetricsTab({
   };
 
   const toggleUnitSystem = () => {
-    setUseImperial(!useImperial);
+    const newImperialValue = !useImperial;
+    setUseImperial(newImperialValue);
 
     if (isEditing) {
       // Convert the edited data when toggling
@@ -289,23 +301,23 @@ export default function ClientMetricsTab({
         ...prev,
         metrics: {
           ...prev.metrics,
-          bench_1rm: useImperial
-            ? lbsToKg(prev.metrics.bench_1rm)
-            : kgToLbs(prev.metrics.bench_1rm),
-          deadlift_1rm: useImperial
-            ? lbsToKg(prev.metrics.deadlift_1rm)
-            : kgToLbs(prev.metrics.deadlift_1rm),
-          squat_1rm: useImperial
-            ? lbsToKg(prev.metrics.squat_1rm)
-            : kgToLbs(prev.metrics.squat_1rm),
-          weight_kg: useImperial
-            ? lbsToKg(prev.metrics.weight_kg)
-            : kgToLbs(prev.metrics.weight_kg),
+          bench_1rm: newImperialValue
+            ? kgToLbs(prev.metrics.bench_1rm) // Converting from kg to lbs
+            : lbsToKg(prev.metrics.bench_1rm), // Converting from lbs to kg
+          deadlift_1rm: newImperialValue
+            ? kgToLbs(prev.metrics.deadlift_1rm)
+            : lbsToKg(prev.metrics.deadlift_1rm),
+          squat_1rm: newImperialValue
+            ? kgToLbs(prev.metrics.squat_1rm)
+            : lbsToKg(prev.metrics.squat_1rm),
+          weight_kg: newImperialValue
+            ? kgToLbs(prev.metrics.weight_kg)
+            : lbsToKg(prev.metrics.weight_kg),
         },
       }));
 
       // Handle the height conversion separately for the feet/inches fields
-      if (useImperial) {
+      if (!newImperialValue) {
         // Going from imperial to metric
         const newCm = feetInchesToCm(heightFeet, heightInches);
         handleMetricsChange('height_cm', newCm);
