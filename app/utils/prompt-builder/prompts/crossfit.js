@@ -127,6 +127,12 @@ For the program description, include:
 
 General CrossFit Guidelines (Apply *only if* they DO NOT CONFLICT with CRITICAL REQUIREMENTS or REQUIRED WORKOUT FORMATS):
 - Use varied functional movements executed at appropriate intensity
+- Include a mix of gymnastics, weightlifting, and metabolic conditioning 
+- Follow CrossFit methodology with varied functional movements executed at high intensity
+- Include benchmark WODs and Hero WODs where appropriate
+- Incorporate Olympic lifting progressions and skill development
+- Include both time-domain and task-domain workouts
+- Vary modalities (monostructural, gymnastics, weightlifting) and time domains
 - Ensure variety in modalities IF it fits within the REQUIRED WORKOUT FORMATS
 
 The program MUST follow logical progression based on the selected program type (${programType}) AND the client's requirements.
