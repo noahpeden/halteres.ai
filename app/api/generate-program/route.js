@@ -1,6 +1,7 @@
 import { createClient } from '@/utils/supabase/server';
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
+import promptBuilder from '@/utils/prompt-builder/promptBuilder';
 
 export const maxDuration = 300;
 export const dynamic = 'force-dynamic';
@@ -32,9 +33,10 @@ export async function POST(request) {
     const goal = requestData.goal || 'General fitness';
     const difficulty = requestData.difficulty || 'Intermediate';
     const focusArea = requestData.focus_area || '';
-    const additionalNotes = requestData.description || '';
+    const description = requestData.description || '';
     const personalization = requestData.personalization || '';
     const workoutFormats = requestData.workout_format || [];
+    const referenceInput = requestData.referenceInput || '';
 
     // Critical parameters - ensure they have fallback values
     const numberOfWeeks = parseInt(
@@ -53,6 +55,7 @@ export async function POST(request) {
       requestData.gym_details?.equipment || requestData.equipment || [];
     const gymType =
       requestData.gym_details?.gym_type || requestData.gymType || '';
+    const trainingType = gymType; // Use gymType as trainingType for now
     const startDate =
       requestData.calendar_data?.start_date || requestData.startDate || '';
 
@@ -62,6 +65,7 @@ export async function POST(request) {
       programType,
       goal,
       difficulty,
+      trainingType,
     });
 
     // Calculate total number of workouts
@@ -83,16 +87,17 @@ export async function POST(request) {
           goal,
           difficulty,
           focusArea,
-          additionalNotes,
+          description,
           personalization,
           workoutFormats,
           numberOfWeeks,
           daysPerWeek,
           programType,
           equipment,
-          gymType,
+          trainingType,
           startDate,
           totalWorkouts,
+          referenceInput,
         },
         supabase,
         openai
@@ -147,7 +152,7 @@ export async function POST(request) {
     logWithTimestamp('Authentication successful', { userId: session.user.id });
 
     // Fetch client metrics if program ID exists
-    let clientMetricsContent = '';
+    let clientMetricsData = null;
     if (programId) {
       try {
         logWithTimestamp('Fetching client metrics', { programId });
@@ -177,35 +182,7 @@ export async function POST(request) {
             });
           } else if (entityData) {
             logWithTimestamp('Found client metrics', { entityData });
-
-            // Format client metrics for the prompt
-            clientMetricsContent = `
-Client Metrics:
-${entityData.gender ? `Gender: ${entityData.gender}` : ''}
-${entityData.height_cm ? `Height: ${entityData.height_cm} cm` : ''}
-${entityData.weight_kg ? `Weight: ${entityData.weight_kg} kg` : ''}
-${entityData.bench_1rm ? `Bench Press 1RM: ${entityData.bench_1rm} kg` : ''}
-${entityData.squat_1rm ? `Squat 1RM: ${entityData.squat_1rm} kg` : ''}
-${entityData.deadlift_1rm ? `Deadlift 1RM: ${entityData.deadlift_1rm} kg` : ''}
-${entityData.mile_time ? `Mile Time: ${entityData.mile_time}` : ''}
-${
-  entityData.recovery_score
-    ? `Recovery Score: ${entityData.recovery_score}/10`
-    : ''
-}
-${
-  entityData.injury_history
-    ? `Injury History: ${
-        typeof entityData.injury_history === 'object'
-          ? JSON.stringify(entityData.injury_history)
-          : entityData.injury_history
-      }`
-    : ''
-}
-
-When calculating RX weights, scale them appropriately based on the client's strength metrics (bench, squat, deadlift) if available.
-For other movements, estimate appropriate weights based on the client's metrics, gender, and strength levels.
-If client metrics indicate specific limitations, provide appropriate scaling options.`;
+            clientMetricsData = entityData;
           }
         }
       } catch (err) {
@@ -215,32 +192,8 @@ If client metrics indicate specific limitations, provide appropriate scaling opt
       }
     }
 
-    // Check if injury history exists and is meaningful
-    let hasInjuryHistory = false;
-    if (
-      programId &&
-      typeof entityData !== 'undefined' &&
-      entityData &&
-      entityData.injury_history
-    ) {
-      if (
-        typeof entityData.injury_history === 'string' &&
-        entityData.injury_history.trim() !== ''
-      ) {
-        hasInjuryHistory = true;
-      } else if (
-        typeof entityData.injury_history === 'object' &&
-        Object.keys(entityData.injury_history).length > 0 &&
-        JSON.stringify(entityData.injury_history) !== '{}'
-      ) {
-        // Added check for empty object string representation
-        hasInjuryHistory = true;
-      }
-    }
-    logWithTimestamp('Injury history check', { hasInjuryHistory });
-
     // Fetch reference workouts if program ID exists
-    let referenceWorkoutsContent = '';
+    let referenceWorkoutsData = [];
     if (programId) {
       try {
         logWithTimestamp('Fetching reference workouts', { programId });
@@ -261,20 +214,7 @@ If client metrics indicate specific limitations, provide appropriate scaling opt
           logWithTimestamp('Found reference workouts', {
             count: referenceWorkouts.length,
           });
-
-          // Format reference workouts for the prompt
-          referenceWorkoutsContent = `
-Reference Workouts for Inspiration:
-${referenceWorkouts
-  .map(
-    (workout, index) =>
-      `Reference ${index + 1}: ${workout.title}
-${workout.body}
----`
-  )
-  .join('\n')}
-
-Draw inspiration from these reference workouts when designing this program. Use similar structures, movement patterns, and approaches where appropriate.`;
+          referenceWorkoutsData = referenceWorkouts;
         } else {
           logWithTimestamp('No reference workouts found');
         }
@@ -299,167 +239,106 @@ Draw inspiration from these reference workouts when designing this program. Use 
       .map((dayNum) => dayNames[dayNum])
       .join(', ');
 
-    // Conditionally build scaling options sections
-    const includeScaling = ['Beginner', 'Intermediate'].includes(difficulty);
-    let scalingInstructions = '';
-    let scalingBodyStructure = '';
-    let coachingCueNumber = 7; // Default if scaling is included
-    let cooldownNumber = 8; // Default if scaling is included
+    // --- RAG Step ---
+    let ragMatchedWorkouts = [];
+    if (referenceInput && referenceInput.trim() !== '') {
+      try {
+        logWithTimestamp('Starting RAG step for referenceInput');
+        // 1. Generate embedding for referenceInput
+        const embeddingResponse = await openai.embeddings.create({
+          model: 'text-embedding-3-small',
+          input: referenceInput,
+        });
+        const queryEmbedding = embeddingResponse.data[0].embedding;
+        logWithTimestamp('Generated embedding for referenceInput');
 
-    if (includeScaling) {
-      scalingInstructions = `
-6. Scaling Options:
-   - Intermediate level scaling with specific weights and movement modifications
-   - Beginner level scaling with specific weights and movement modifications
-   ${
-     hasInjuryHistory
-       ? '- Injury considerations with alternative movements'
-       : ''
-   }`;
+        // 2. Call Supabase RPC to find matching workouts
+        const { data: matchedData, error: rpcError } = await supabase.rpc(
+          'match_workouts_embedding',
+          {
+            query_embedding: queryEmbedding,
+            match_threshold: 0.5, // Adjust threshold as needed
+            match_count: 5, // Limit matches
+          }
+        );
 
-      scalingBodyStructure = `
-## Scaling Options
-### Intermediate Option
-[Detailed intermediate scaling with specific weights and modifications]
-
-### Beginner Option
-[Detailed beginner scaling with specific weights and modifications]
-${
-  hasInjuryHistory
-    ? `
-### Injury Considerations
-[Modifications for common limitations]`
-    : ''
-}`;
-    } else {
-      // Adjust numbering if scaling is omitted
-      coachingCueNumber = 6;
-      cooldownNumber = 7;
+        if (rpcError) {
+          logWithTimestamp('Error calling match_workouts_embedding RPC', {
+            error: rpcError,
+          });
+          // Don't fail the request, just log and proceed without RAG results
+          showToastMessage(
+            'Warning: Could not find similar workouts based on reference.',
+            'warning'
+          );
+        } else if (matchedData && matchedData.length > 0) {
+          ragMatchedWorkouts = matchedData.map((w) => ({
+            title: w.title,
+            body: w.body,
+          })); // Adapt structure if needed
+          logWithTimestamp(
+            `Found ${ragMatchedWorkouts.length} RAG-matched workouts`
+          );
+        } else {
+          logWithTimestamp(
+            'No RAG-matched workouts found for the given threshold.'
+          );
+        }
+      } catch (ragError) {
+        logWithTimestamp('Error during RAG step', { error: ragError.message });
+        // Log error but continue without RAG results
+        showToastMessage(
+          'Warning: Error processing reference workout for matching.',
+          'warning'
+        );
+      }
     }
+    // --- End RAG Step ---
 
-    // Build the prompt with reference workouts and client metrics included
-    const prompt = `Generate a ${numberOfWeeks}-week training program with the following parameters:
+    // Build context object for promptBuilder
+    const promptContext = {
+      goal,
+      difficulty,
+      daysPerWeek,
+      numberOfWeeks,
+      focusArea,
+      description,
+      personalization,
+      equipment,
+      workoutFormats,
+      clientMetricsData,
+      referenceWorkoutsData,
+      programType,
+      selectedDayNames,
+      totalWorkouts,
+      suggestedDates,
+      referenceInput,
+      ragMatchedWorkouts,
+      formattedDates: suggestedDates
+        .map(
+          (date, index) =>
+            'Workout ' +
+            (index + 1) +
+            ': ' +
+            date +
+            ' (Week ' +
+            (Math.floor(index / parseInt(daysPerWeek)) + 1) +
+            ', Day ' +
+            ((index % parseInt(daysPerWeek)) + 1) +
+            ')'
+        )
+        .join('\n'),
+    };
 
-${
-  additionalNotes
-    ? `IMPORTANT REQUIREMENTS FROM THE CLIENT: ${additionalNotes}
-Please prioritize these specific requirements above all else in program design.
-
-`
-    : ''
-}Goal: ${goal}
-Difficulty: ${difficulty}
-Days Per Week: ${daysPerWeek} days
-Selected Training Days: ${selectedDayNames}
-Total Length: ${numberOfWeeks} weeks
-${focusArea ? `Focus Area: ${focusArea}` : ''}
-${
-  equipment && equipment.length > 0
-    ? `Available Equipment: ${equipment.join(', ')}`
-    : ''
-}
-${
-  workoutFormats && workoutFormats.length > 0
-    ? `Workout Formats to Include: ${workoutFormats.join(', ')}`
-    : ''
-}
-${gymType ? `Gym Type: ${gymType}` : ''}
-${personalization ? `Personalization: ${personalization}` : ''}
-${clientMetricsContent ? `${clientMetricsContent}` : ''}
-${referenceWorkoutsContent ? `${referenceWorkoutsContent}` : ''}
-
-For the program description, include:
-1. A concise overview of the program's goals and intended adaptations
-2. The periodization approach used and why it's appropriate
-3. Expected outcomes from following the program
-4. Recommendations for nutrition, recovery, and supplementary training
-
-The program should follow logical progression based on the selected program type (${programType}).
-Ensure proper periodization, recovery, and exercise variation throughout the program.
-
-IMPORTANT: The workouts must be scheduled on specific dates according to the user's selected training days. DO NOT create workouts on days other than the ones specified.
-
-Your response MUST be in this exact JSON format:
-{
-  "title": "Training Program for ${goal}",
-  "description": "A comprehensive ${numberOfWeeks}-week ${difficulty} training program focused on ${
-      focusArea || goal
-    } that includes detailed weekly progression, nutrition guidance, and recovery recommendations",
-  "overview": "A detailed explanation of the program methodology, periodization approach, expected outcomes, and supplementary recommendations",
-  "workouts": [
-    {
-      "title": "Week X, Day Y: [Focus Area] and [Creative Title]",
-      "body": "Detailed workout description including all required sections",
-      "date": "YYYY-MM-DD"
-    },
-    ...more workouts
-  ]
-}
-
-For each workout's "body" field, use this structure:
-\`\`\`
-## Stimulus and Strategy
-[Detailed explanation of workout stimulus and strategy approach]
-- Explain the intended stimulus for both strength and conditioning portions
-- Provide pacing guidance for each section
-- Explain how to approach the workout (e.g., "Break the handstand push-ups into sets of 3 early")${scalingBodyStructure}
-
-## Warm-up
-[Detailed warm-up protocol with specific movements, sets, reps]
-- Include duration, reps, and brief explanations
-- Focus on movement preparation and activation
-
-## Strength Work
-[Complete strength workout with movements, sets, reps, specific weights]
-- Clear exercise format (Sets x Reps, EMOM, etc.)
-- Specific movements, sets, reps, and rest periods
-- Exact weights for RX (men and women) and scaling options
-- Loading percentages when appropriate (e.g., "75% of 1RM")
-
-## Conditioning Work
-[Complete conditioning workout with movements, sets, reps, specific weights]
-- Clear exercise format (AMRAP, For Time, etc.)
-- Specific movements, sets, reps, and rest periods
-- Exact weights for RX (men and women) and scaling options
-- Target time domains or goal times when applicable
-
-## Cool-down
-[Detailed cool-down protocol]
-- Include specific movements and durations
-- Focus on recovery and mobility work
-
-## Coaching Cues
-[3-5 specific technical cues for key movements]
-- Technical cues for the most complex movements
-- Form tips to maximize efficiency and safety
-- Common errors to avoid
-\`\`\`
-
-The "workouts" array should contain exactly ${totalWorkouts} workouts, organized in a progressive sequence.
-
-Use the following dates for each workout:
-${suggestedDates
-  .map(
-    (date, index) =>
-      'Workout ' +
-      (index + 1) +
-      ': ' +
-      date +
-      ' (Week ' +
-      (Math.floor(index / parseInt(daysPerWeek)) + 1) +
-      ', Day ' +
-      ((index % parseInt(daysPerWeek)) + 1) +
-      ')'
-  )
-  .join('\\n')}\
-
-IMPORTANT: Each workout MUST be assigned to one of the above dates. These dates strictly follow the user's selected training days of the week.`;
-
-    logWithTimestamp('Prompt prepared', { promptLength: prompt.length });
+    // Use promptBuilder to create the prompt
+    const prompt = promptBuilder(promptContext, trainingType);
+    logWithTimestamp('Prompt prepared using promptBuilder', {
+      promptLength: prompt.length,
+    });
 
     // Updated system prompt
     const systemPrompt =
-      "You are an expert strength and conditioning coach who specializes in creating effective, periodized training programs. Create professional, functional fitness-style workouts with precise stimulus explanations, detailed scaling options, and specific coaching cues. Each workout should include clear RX weights, proper warm-up and cool-down protocols, and actionable strategy recommendations. Follow sound exercise science principles with appropriate progression, variation, and specificity. VERY IMPORTANT: Always prioritize the client's specific requirements from their description field above all other considerations - these are their must-have elements and should be incorporated throughout the program. Provide responses EXACTLY in the JSON format specified in the prompt.";
+      "You are an expert strength and conditioning coach who specializes in creating effective, periodized training programs. Create professional, functional fitness-style workouts with precise stimulus explanations, detailed scaling options, and specific coaching cues. Each workout should include clear RX weights, proper warm-up and cool-down protocols, and actionable strategy recommendations. Follow sound exercise science principles with appropriate progression, variation, and specificity. VERY IMPORTANT: Always prioritize the client's specific requirements from their description field above all other considerations - these are their must-have elements and should be incorporated throughout the program. CRITICAL: When a periodization model (linear, undulating, block, conjugate, etc.) is specified, you MUST strictly follow that model's principles throughout the entire program, clearly labeling each workout with its specific phase/block/day type according to the model. Each workout should explicitly state which phase/cycle/block it belongs to in the periodization structure. Provide responses EXACTLY in the JSON format specified in the prompt.";
 
     // Call OpenAI with required response format
     try {
@@ -620,16 +499,17 @@ async function generateLargeProgram(requestData, params, supabase, openai) {
     goal,
     difficulty,
     focusArea,
-    additionalNotes,
+    description,
     personalization,
     workoutFormats,
     numberOfWeeks,
     daysPerWeek,
     programType,
     equipment,
-    gymType,
+    trainingType,
     startDate,
     totalWorkouts,
+    referenceInput,
   } = params;
 
   logWithTimestamp('Starting large program generation', { totalWorkouts });
@@ -700,12 +580,13 @@ async function generateLargeProgram(requestData, params, supabase, openai) {
       goal,
       difficulty,
       focusArea,
-      additionalNotes,
+      description,
       personalization,
       equipment,
       workoutFormats,
-      gymType,
+      trainingType,
       selectedDaysOfWeek,
+      referenceInput,
     }
   );
 
@@ -725,7 +606,9 @@ async function generateLargeProgram(requestData, params, supabase, openai) {
       numberOfWeeks,
       daysPerWeek,
       programType,
-      commonPromptElements
+      commonPromptElements,
+      trainingType,
+      referenceInput
     );
 
     const overviewResponse = await openai.chat.completions.create({
@@ -776,8 +659,10 @@ async function generateLargeProgram(requestData, params, supabase, openai) {
       suggestedDates,
       commonPromptElements,
       programType,
+      trainingType,
       allWorkouts,
-      openai
+      openai,
+      referenceInput
     );
 
     weekGenerationPromises.push(weekPromise);
@@ -888,31 +773,29 @@ function createOverviewPrompt(
   numberOfWeeks,
   daysPerWeek,
   programType,
-  commonPromptElements
+  commonPromptElements,
+  trainingType,
+  referenceInput
 ) {
-  return `Generate ONLY the overview information for a ${numberOfWeeks}-week training program with ${daysPerWeek} workouts per week.
+  const promptContext = {
+    goal: commonPromptElements.goal,
+    difficulty: commonPromptElements.difficulty,
+    daysPerWeek,
+    numberOfWeeks,
+    focusArea: commonPromptElements.focusArea,
+    description: commonPromptElements.description,
+    personalization: commonPromptElements.personalization,
+    equipment: commonPromptElements.equipment,
+    workoutFormats: commonPromptElements.workoutFormats,
+    clientMetricsData: commonPromptElements.clientMetricsData,
+    referenceWorkoutsData: commonPromptElements.referenceWorkoutsData,
+    programType,
+    selectedDayNames: commonPromptElements.selectedDayNames,
+    referenceInput,
+    overviewOnly: true, // Flag to indicate we only want overview information
+  };
 
-${
-  commonPromptElements.clientMetricsContent
-    ? `${commonPromptElements.clientMetricsContent}`
-    : ''
-}
-${
-  commonPromptElements.referenceWorkoutsContent
-    ? `${commonPromptElements.referenceWorkoutsContent}`
-    : ''
-}
-
-The program should follow a ${programType} periodization approach.
-
-Your response MUST be in this exact JSON format:
-{
-  "title": "Training Program Title",
-  "description": "A brief one-sentence description of the program",
-  "overview": "A detailed explanation of the program methodology, periodization approach, expected outcomes, and supplementary recommendations"
-}
-
-Include NO workout details, only the program overview information.`;
+  return promptBuilder(promptContext, trainingType);
 }
 
 // Helper function to generate a single week (returns a promise)
@@ -923,8 +806,10 @@ async function generateWeek(
   allSuggestedDates,
   commonPromptElements,
   programType,
+  trainingType,
   existingWorkouts,
-  openai
+  openai,
+  referenceInput
 ) {
   const startWorkoutIndex = (weekNumber - 1) * daysPerWeek;
   const endWorkoutIndex = Math.min(
@@ -942,17 +827,38 @@ async function generateWeek(
     datesCount: chunkDates.length,
   });
 
-  // Create a week-specific prompt
-  const chunkPrompt = createWeekSpecificPrompt(
+  // Create week-specific context for promptBuilder
+  const weekPromptContext = {
+    ...commonPromptElements,
+    programType,
     weekNumber,
     totalWeeks,
     daysPerWeek,
-    chunkDates,
-    commonPromptElements,
-    programType,
-    existingWorkouts,
-    false // We're handling overview separately now
-  );
+    previousWorkouts: existingWorkouts,
+    suggestedDates: chunkDates,
+    referenceInput,
+    isWeekSpecific: true, // Flag to indicate we're generating a specific week
+    // Format dates for prompt
+    formattedDates: chunkDates
+      .map((date, index) => {
+        const actualIndex = startWorkoutIndex + index;
+        return (
+          'Workout ' +
+          (actualIndex + 1) +
+          ': ' +
+          date +
+          ' (Week ' +
+          weekNumber +
+          ', Day ' +
+          (index + 1) +
+          ')'
+        );
+      })
+      .join('\n'),
+  };
+
+  // Create a week-specific prompt
+  const chunkPrompt = promptBuilder(weekPromptContext, trainingType);
 
   try {
     // Call OpenAI for this chunk with a reduced timeout
@@ -1077,12 +983,13 @@ async function preparePromptElements(programId, supabase, params) {
     goal,
     difficulty,
     focusArea,
-    additionalNotes,
+    description,
     personalization,
     equipment,
     workoutFormats,
-    gymType,
+    trainingType,
     selectedDaysOfWeek,
+    referenceInput,
   } = params;
 
   // Get the day names from the day numbers for the prompt
@@ -1100,8 +1007,7 @@ async function preparePromptElements(programId, supabase, params) {
     .join(', ');
 
   // Fetch client metrics if program ID exists
-  let clientMetricsContent = '';
-  let entityData = null;
+  let clientMetricsData = null;
   if (programId) {
     try {
       logWithTimestamp('Fetching client metrics', { programId });
@@ -1130,37 +1036,10 @@ async function preparePromptElements(programId, supabase, params) {
             error: entityError,
           });
         } else if (entityDataResult) {
-          entityData = entityDataResult;
-          logWithTimestamp('Found client metrics', { entityData });
-
-          // Format client metrics for the prompt
-          clientMetricsContent = `
-Client Metrics:
-${entityData.gender ? `Gender: ${entityData.gender}` : ''}
-${entityData.height_cm ? `Height: ${entityData.height_cm} cm` : ''}
-${entityData.weight_kg ? `Weight: ${entityData.weight_kg} kg` : ''}
-${entityData.bench_1rm ? `Bench Press 1RM: ${entityData.bench_1rm} kg` : ''}
-${entityData.squat_1rm ? `Squat 1RM: ${entityData.squat_1rm} kg` : ''}
-${entityData.deadlift_1rm ? `Deadlift 1RM: ${entityData.deadlift_1rm} kg` : ''}
-${entityData.mile_time ? `Mile Time: ${entityData.mile_time}` : ''}
-${
-  entityData.recovery_score
-    ? `Recovery Score: ${entityData.recovery_score}/10`
-    : ''
-}
-${
-  entityData.injury_history
-    ? `Injury History: ${
-        typeof entityData.injury_history === 'object'
-          ? JSON.stringify(entityData.injury_history)
-          : entityData.injury_history
-      }`
-    : ''
-}
-
-When calculating RX weights, scale them appropriately based on the client's strength metrics (bench, squat, deadlift) if available.
-For other movements, estimate appropriate weights based on the client's metrics, gender, and strength levels.
-If client metrics indicate specific limitations, provide appropriate scaling options.`;
+          clientMetricsData = entityDataResult;
+          logWithTimestamp('Found client metrics', {
+            entityData: clientMetricsData,
+          });
         }
       }
     } catch (err) {
@@ -1170,26 +1049,8 @@ If client metrics indicate specific limitations, provide appropriate scaling opt
     }
   }
 
-  // Check if injury history exists and is meaningful
-  let hasInjuryHistory = false;
-  if (programId && entityData && entityData.injury_history) {
-    if (
-      typeof entityData.injury_history === 'string' &&
-      entityData.injury_history.trim() !== ''
-    ) {
-      hasInjuryHistory = true;
-    } else if (
-      typeof entityData.injury_history === 'object' &&
-      Object.keys(entityData.injury_history).length > 0 &&
-      JSON.stringify(entityData.injury_history) !== '{}'
-    ) {
-      hasInjuryHistory = true;
-    }
-  }
-  logWithTimestamp('Injury history check', { hasInjuryHistory });
-
   // Fetch reference workouts if program ID exists
-  let referenceWorkoutsContent = '';
+  let referenceWorkoutsData = [];
   if (programId) {
     try {
       logWithTimestamp('Fetching reference workouts', { programId });
@@ -1209,20 +1070,7 @@ If client metrics indicate specific limitations, provide appropriate scaling opt
         logWithTimestamp('Found reference workouts', {
           count: referenceWorkouts.length,
         });
-
-        // Format reference workouts for the prompt
-        referenceWorkoutsContent = `
-Reference Workouts for Inspiration:
-${referenceWorkouts
-  .map(
-    (workout, index) =>
-      `Reference ${index + 1}: ${workout.title}
-${workout.body}
----`
-  )
-  .join('\n')}
-
-Draw inspiration from these reference workouts when designing this program. Use similar structures, movement patterns, and approaches where appropriate.`;
+        referenceWorkoutsData = referenceWorkouts;
       } else {
         logWithTimestamp('No reference workouts found');
       }
@@ -1233,187 +1081,79 @@ Draw inspiration from these reference workouts when designing this program. Use 
     }
   }
 
-  // Conditionally build scaling options sections
-  const includeScaling = ['Beginner', 'Intermediate'].includes(difficulty);
-  let scalingInstructions = '';
-  let scalingBodyStructure = '';
+  // --- RAG Step ---
+  let ragMatchedWorkouts = [];
+  if (referenceInput && referenceInput.trim() !== '') {
+    try {
+      logWithTimestamp(
+        'Starting RAG step for referenceInput (preparePromptElements)'
+      );
+      // 1. Generate embedding
+      const embeddingResponse = await openai.embeddings.create({
+        model: 'text-embedding-3-small',
+        input: referenceInput,
+      });
+      const queryEmbedding = embeddingResponse.data[0].embedding;
+      logWithTimestamp(
+        'Generated embedding for referenceInput (preparePromptElements)'
+      );
 
-  if (includeScaling) {
-    scalingInstructions = `
-6. Scaling Options:
-   - Intermediate level scaling with specific weights and movement modifications
-   - Beginner level scaling with specific weights and movement modifications
-   ${
-     hasInjuryHistory
-       ? '- Injury considerations with alternative movements'
-       : ''
-   }`;
+      // 2. Call Supabase RPC
+      const { data: matchedData, error: rpcError } = await supabase.rpc(
+        'match_workouts_embedding',
+        {
+          query_embedding: queryEmbedding,
+          match_threshold: 0.5, // Adjust threshold as needed
+          match_count: 5, // Limit matches
+        }
+      );
 
-    scalingBodyStructure = `
-## Scaling Options
-### Intermediate Option
-[Detailed intermediate scaling with specific weights and modifications]
-
-### Beginner Option
-[Detailed beginner scaling with specific weights and modifications]
-${
-  hasInjuryHistory
-    ? `
-### Injury Considerations
-[Modifications for common limitations]`
-    : ''
-}`;
+      if (rpcError) {
+        logWithTimestamp(
+          'Error calling match_workouts_embedding RPC (preparePromptElements)',
+          { error: rpcError }
+        );
+        // Log and continue
+      } else if (matchedData && matchedData.length > 0) {
+        ragMatchedWorkouts = matchedData.map((w) => ({
+          title: w.title,
+          body: w.body,
+        })); // Adapt structure if needed
+        logWithTimestamp(
+          `Found ${ragMatchedWorkouts.length} RAG-matched workouts (preparePromptElements)`
+        );
+      } else {
+        logWithTimestamp(
+          'No RAG-matched workouts found (preparePromptElements).'
+        );
+      }
+    } catch (ragError) {
+      logWithTimestamp('Error during RAG step (preparePromptElements)', {
+        error: ragError.message,
+      });
+      // Log error but continue
+    }
   }
+  // --- End RAG Step ---
 
   // System prompt
   const systemPrompt =
-    "You are an expert strength and conditioning coach who specializes in creating effective, periodized training programs. Create professional, functional fitness-style workouts with precise stimulus explanations, detailed scaling options, and specific coaching cues. Each workout should include clear RX weights, proper warm-up and cool-down protocols, and actionable strategy recommendations. Follow sound exercise science principles with appropriate progression, variation, and specificity. VERY IMPORTANT: Always prioritize the client's specific requirements from their description field above all other considerations - these are their must-have elements and should be incorporated throughout the program. Provide responses EXACTLY in the JSON format specified in the prompt.";
+    "You are an expert strength and conditioning coach who specializes in creating effective, periodized training programs. Create professional, functional fitness-style workouts with precise stimulus explanations, detailed scaling options, and specific coaching cues. Each workout should include clear RX weights, proper warm-up and cool-down protocols, and actionable strategy recommendations. Follow sound exercise science principles with appropriate progression, variation, and specificity. VERY IMPORTANT: Always prioritize the client's specific requirements from their description field above all other considerations - these are their must-have elements and should be incorporated throughout the program. CRITICAL: When a periodization model (linear, undulating, block, conjugate, etc.) is specified, you MUST strictly follow that model's principles throughout the entire program, clearly labeling each workout with its specific phase/block/day type according to the model. Each workout should explicitly state which phase/cycle/block it belongs to in the periodization structure. Provide responses EXACTLY in the JSON format specified in the prompt.";
 
   return {
     systemPrompt,
-    clientMetricsContent,
-    referenceWorkoutsContent,
+    goal,
+    difficulty,
+    focusArea,
+    description,
+    personalization,
+    equipment,
+    workoutFormats,
+    clientMetricsData,
+    referenceWorkoutsData,
     selectedDayNames,
-    hasInjuryHistory,
-    scalingInstructions,
-    scalingBodyStructure,
-    includeScaling,
+    trainingType,
+    referenceInput,
+    ragMatchedWorkouts,
   };
-}
-
-// Helper function to create a week-specific prompt
-function createWeekSpecificPrompt(
-  weekNumber,
-  totalWeeks,
-  daysPerWeek,
-  chunkDates,
-  commonPromptElements,
-  programType,
-  previousWorkouts,
-  includeOverview
-) {
-  const {
-    clientMetricsContent,
-    referenceWorkoutsContent,
-    selectedDayNames,
-    scalingBodyStructure,
-    includeScaling,
-  } = commonPromptElements;
-
-  let coachingCueNumber = includeScaling ? 7 : 6;
-  let cooldownNumber = includeScaling ? 8 : 7;
-
-  let workoutDateInfo = chunkDates
-    .map(
-      (date, index) =>
-        'Workout ' +
-        ((weekNumber - 1) * daysPerWeek + index + 1) +
-        ': ' +
-        date +
-        ' (Week ' +
-        weekNumber +
-        ', Day ' +
-        (index + 1) +
-        ')'
-    )
-    .join('\n');
-
-  // Different prompt for first week vs subsequent weeks
-  let promptContent;
-
-  if (includeOverview) {
-    // First week gets the full program overview
-    promptContent = `Generate Week ${weekNumber} of a ${totalWeeks}-week training program. This is the FIRST week of the program, so please also include the overall program description and overview.
-
-${clientMetricsContent ? `${clientMetricsContent}` : ''}
-${referenceWorkoutsContent ? `${referenceWorkoutsContent}` : ''}
-
-The program should follow a ${programType} periodization approach, with proper progression, recovery, and exercise variation throughout.
-
-Your response MUST be in this exact JSON format:
-{
-  "title": "Training Program for [Goal]",
-  "description": "A comprehensive ${totalWeeks}-week program focused on [Focus Area]",
-  "overview": "A detailed explanation of the program methodology, periodization approach, expected outcomes, and supplementary recommendations",
-  "workouts": [
-    {
-      "title": "Week ${weekNumber}, Day Y: [Focus Area] and [Creative Title]",
-      "body": "Detailed workout description including all required sections",
-      "date": "YYYY-MM-DD"
-    },
-    ...more workouts for Week ${weekNumber}
-  ]
-}`;
-  } else {
-    // Subsequent weeks get a more focused prompt with reference to previous workouts
-    promptContent = `Generate Week ${weekNumber} of a ${totalWeeks}-week training program. This is week ${weekNumber} of ${totalWeeks}, so ensure appropriate progression from previous weeks.
-
-${clientMetricsContent ? `${clientMetricsContent}` : ''}
-
-This program follows a ${programType} periodization approach. For context, here are the titles of previous workouts:
-${previousWorkouts.map((w) => w.title).join('\n')}
-
-Your response MUST be in this exact JSON format:
-{
-  "workouts": [
-    {
-      "title": "Week ${weekNumber}, Day Y: [Focus Area] and [Creative Title]",
-      "body": "Detailed workout description including all required sections",
-      "date": "YYYY-MM-DD"
-    },
-    ...more workouts for Week ${weekNumber}
-  ]
-}`;
-  }
-
-  // Add common workout structure instructions
-  promptContent += `
-
-For each workout's "body" field, use this structure:
-\`\`\`
-## Stimulus and Strategy
-[Detailed explanation of workout stimulus and strategy approach]
-- Explain the intended stimulus for both strength and conditioning portions
-- Provide pacing guidance for each section
-- Explain how to approach the workout (e.g., "Break the handstand push-ups into sets of 3 early")${scalingBodyStructure}
-
-## Warm-up
-[Detailed warm-up protocol with specific movements, sets, reps]
-- Include duration, reps, and brief explanations
-- Focus on movement preparation and activation
-
-## Strength Work
-[Complete strength workout with movements, sets, reps, specific weights]
-- Clear exercise format (Sets x Reps, EMOM, etc.)
-- Specific movements, sets, reps, and rest periods
-- Exact weights for RX (men and women) and scaling options
-- Loading percentages when appropriate (e.g., "75% of 1RM")
-
-## Conditioning Work
-[Complete conditioning workout with movements, sets, reps, specific weights]
-- Clear exercise format (AMRAP, For Time, etc.)
-- Specific movements, sets, reps, and rest periods
-- Exact weights for RX (men and women) and scaling options
-- Target time domains or goal times when applicable
-
-## Cool-down
-[Detailed cool-down protocol]
-- Include specific movements and durations
-- Focus on recovery and mobility work
-
-## Coaching Cues
-[3-5 specific technical cues for key movements]
-- Technical cues for the most complex movements
-- Form tips to maximize efficiency and safety
-- Common errors to avoid
-\`\`\`
-
-The "workouts" array should contain exactly ${chunkDates.length} workouts for Week ${weekNumber}.
-
-Use the following dates for each workout in Week ${weekNumber}:
-${workoutDateInfo}
-
-IMPORTANT: Each workout MUST be assigned to one of the above dates.`;
-
-  return promptContent;
 }

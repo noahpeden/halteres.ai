@@ -14,7 +14,7 @@ export default function WorkoutSelection({ programId, onSelectWorkout }) {
   const searchWorkouts = async () => {
     setIsLoading(true);
     try {
-      let query = supabase.from('external_workouts').select('*');
+      let query = supabase.from('external_workouts_new').select('*');
 
       if (searchQuery) {
         query = query.textSearch('body', searchQuery);
