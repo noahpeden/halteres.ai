@@ -39,7 +39,7 @@ export default function RootLayout({ children }) {
       <body suppressHydrationWarning={true}>
         <AuthProvider>
           <Navbar />
-          {children}
+          <main className="pt-24">{children}</main>
         </AuthProvider>
       </body>
     </html>
