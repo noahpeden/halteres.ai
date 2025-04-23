@@ -19,18 +19,10 @@ import {
 import {
   processWorkoutForDisplay,
   updateFormDataFromProgram,
-  handleFormChange as handleFormChangeUtil,
   handleEquipmentChange as handleEquipmentChangeUtil,
-  handleDayOfWeekChange as handleDayOfWeekChangeUtil,
-  initializeEquipment as initializeEquipmentUtil,
+  handleDayOfWeekChangeUtil,
 } from './formHandlers';
 import { calculateEndDate } from './dateHandlers';
-import {
-  handleViewWorkoutDetails,
-  handleDatePickerOpen,
-  handleCloseWorkoutModal,
-  handleCloseDatePickerModal,
-} from './modalHandlers';
 
 // Import child components normally
 import ProgramFormComponent from './ProgramForm';
@@ -629,7 +621,7 @@ export default function AIProgramWriter({ onSelectWorkout }) {
               payload: AUTO_SAVE_STATES.IDLE,
             });
           }
-        }, 1500);
+        }, 2500);
       } else {
         dispatch({
           type: 'SET_AUTO_SAVE_STATE',
@@ -742,35 +734,38 @@ export default function AIProgramWriter({ onSelectWorkout }) {
           type: 'SET_FIELD_VALUE',
           payload: { field: 'equipment', value: newEquipment },
         });
+        const allSelected =
+          equipmentList.length > 0 &&
+          newEquipment.length === equipmentList.length;
+        dispatch({ type: 'SET_ALL_EQUIPMENT_SELECTED', payload: allSelected });
       }
     }
-  }, [formData.gymType, dispatch, formData.equipment]);
+  }, [formData.gymType, dispatch]);
 
   useEffect(() => {
-    if (formData.equipment.length > 0) {
-      const equipmentNames = formData.equipment
-        .map((id) => {
-          const equipment = equipmentList.find((item) => item.value === id);
-          return equipment ? equipment.label : null;
-        })
-        .filter(Boolean);
+    const equipmentNames = formData.equipment
+      .map((id) => {
+        const equipment = equipmentList.find((item) => item.value === id);
+        return equipment ? equipment.label : null;
+      })
+      .filter(Boolean);
 
-      const currentGymDetailsEquipment = state.formData.gymDetails?.equipment;
-      if (
-        JSON.stringify(equipmentNames) !==
-        JSON.stringify(currentGymDetailsEquipment)
-      ) {
-        dispatch({
-          type: 'UPDATE_FORM_DATA',
-          payload: {
-            gymDetails: {
-              ...state.formData.gymDetails,
-              gym_type: formData.gymType,
-              equipment: equipmentNames,
-            },
+    const currentGymDetailsEquipment = state.formData.gymDetails?.equipment;
+    if (
+      JSON.stringify(equipmentNames) !==
+      JSON.stringify(currentGymDetailsEquipment)
+    ) {
+      dispatch({
+        type: 'SET_FIELD_VALUE',
+        payload: {
+          field: 'gymDetails',
+          value: {
+            ...state.formData.gymDetails,
+            gym_type: formData.gymType,
+            equipment: equipmentNames,
           },
-        });
-      }
+        },
+      });
     }
   }, [
     formData.equipment,
@@ -779,37 +774,22 @@ export default function AIProgramWriter({ onSelectWorkout }) {
     state.formData.gymDetails,
   ]);
 
-  useEffect(() => {
-    const newAllSelected =
-      equipmentList.length > 0 &&
-      formData.equipment.length === equipmentList.length;
-    if (newAllSelected !== allEquipmentSelected) {
-      dispatch({ type: 'SET_ALL_EQUIPMENT_SELECTED', payload: newAllSelected });
-    }
-  }, [formData.equipment, dispatch, allEquipmentSelected]);
-
   const handleEquipmentChangeWrapper = useCallback(
     (e) => {
-      handleEquipmentChangeUtil(
-        e,
-        formData,
-        (update) => {
-          if (update.equipment !== undefined) {
-            dispatch({
-              type: 'SET_FIELD_VALUE',
-              payload: { field: 'equipment', value: update.equipment },
-            });
-          }
-          if (update.gymDetails !== undefined) {
-            dispatch({
-              type: 'SET_FIELD_VALUE',
-              payload: { field: 'gymDetails', value: update.gymDetails },
-            });
-          }
-        },
-        (value) =>
-          dispatch({ type: 'SET_ALL_EQUIPMENT_SELECTED', payload: value })
-      );
+      const result = handleEquipmentChangeUtil(e, formData);
+
+      if (result) {
+        const { equipment, gymDetails, allSelected } = result;
+        dispatch({
+          type: 'SET_FIELD_VALUE',
+          payload: { field: 'equipment', value: equipment },
+        });
+        dispatch({
+          type: 'SET_FIELD_VALUE',
+          payload: { field: 'gymDetails', value: gymDetails },
+        });
+        dispatch({ type: 'SET_ALL_EQUIPMENT_SELECTED', payload: allSelected });
+      }
     },
     [dispatch, formData]
   );
@@ -826,20 +806,13 @@ export default function AIProgramWriter({ onSelectWorkout }) {
 
   const handleDayOfWeekChangeWrapper = useCallback(
     (day) => {
-      handleDayOfWeekChangeUtil(
-        day,
-        (update) => {
-          if (update.daysOfWeek !== undefined) {
-            dispatch({
-              type: 'SET_FIELD_VALUE',
-              payload: { field: 'daysOfWeek', value: update.daysOfWeek },
-            });
-          }
-        },
-        isAutoUpdating
-      );
+      const newDaysOfWeek = handleDayOfWeekChangeUtil(day, formData.daysOfWeek);
+      dispatch({
+        type: 'SET_FIELD_VALUE',
+        payload: { field: 'daysOfWeek', value: newDaysOfWeek },
+      });
     },
-    [dispatch]
+    [dispatch, formData.daysOfWeek]
   );
 
   useEffect(() => {
@@ -848,7 +821,8 @@ export default function AIProgramWriter({ onSelectWorkout }) {
       return;
     }
     const numDaysSelected = formData.daysOfWeek.length;
-    if (parseInt(formData.daysPerWeek) !== numDaysSelected) {
+    const currentDaysPerWeek = parseInt(formData.daysPerWeek) || 0;
+    if (currentDaysPerWeek !== numDaysSelected) {
       dispatch({
         type: 'SET_FIELD_VALUE',
         payload: { field: 'daysPerWeek', value: numDaysSelected.toString() },

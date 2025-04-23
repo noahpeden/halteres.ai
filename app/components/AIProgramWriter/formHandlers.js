@@ -54,6 +54,11 @@ export function updateFormDataFromProgram(program, formData) {
     updatedData.trainingMethodology = program.training_methodology;
   }
 
+  // Update reference input if available
+  if (program.reference_input) {
+    updatedData.referenceInput = program.reference_input;
+  }
+
   // Update program type if available
   if (program.program_type) {
     updatedData.programType = program.program_type;
@@ -218,63 +223,50 @@ export const handleProgramTypeChange = (typeId, setFormData) => {
 };
 
 // Handle equipment selection
-export const handleEquipmentChange = (e, formData, setFormData) => {
+export const handleEquipmentChange = (e, currentFormData) => {
   const value = e.target.value === '-1' ? -1 : parseInt(e.target.value);
   const isChecked = e.target.checked;
+  const allEquipmentIds = equipmentList.map((item) => item.value);
+  const allEquipmentNames = equipmentList.map((item) => item.label);
+  let newEquipment = [...currentFormData.equipment];
+  let newEquipmentNames = [...(currentFormData.gymDetails?.equipment || [])];
+  let allSelected = false;
 
   // Handle "Select All"
   if (value === -1) {
     if (isChecked) {
-      const allEquipmentIds = equipmentList.map((item) => item.value);
-      const allEquipmentNames = equipmentList.map((item) => item.label);
-
-      setFormData((prev) => ({
-        ...prev,
-        equipment: allEquipmentIds,
-        gymDetails: {
-          ...prev.gymDetails,
-          equipment: allEquipmentNames,
-        },
-      }));
-      return true; // Return true to indicate all equipment is selected
+      newEquipment = allEquipmentIds;
+      newEquipmentNames = allEquipmentNames;
+      allSelected = true;
     } else {
-      setFormData((prev) => ({
-        ...prev,
-        equipment: [],
-        gymDetails: {
-          ...prev.gymDetails,
-          equipment: [],
-        },
-      }));
-      return false; // Return false to indicate no equipment is selected
+      newEquipment = [];
+      newEquipmentNames = [];
+      allSelected = false;
     }
+  } else {
+    // Handle individual equipment selection
+    const equipmentItem = equipmentList.find((item) => item.value === value);
+    if (!equipmentItem) return null; // Should not happen
+
+    if (isChecked) {
+      newEquipment = [...newEquipment, value];
+      newEquipmentNames = [...newEquipmentNames, equipmentItem.label];
+    } else {
+      newEquipment = newEquipment.filter((item) => item !== value);
+      newEquipmentNames = newEquipmentNames.filter(
+        (name) => name !== equipmentItem.label
+      );
+    }
+    // Check if all are selected after individual change
+    allSelected = newEquipment.length === allEquipmentIds.length;
   }
 
-  // Handle individual equipment selection
-  setFormData((prev) => {
-    let newEquipment = isChecked
-      ? [...prev.equipment, value]
-      : prev.equipment.filter((item) => item !== value);
+  const newGymDetails = {
+    ...currentFormData.gymDetails,
+    equipment: newEquipmentNames,
+  };
 
-    const newEquipmentNames = newEquipment
-      .map((id) => {
-        const equipment = equipmentList.find((item) => item.value === id);
-        return equipment ? equipment.label : null;
-      })
-      .filter(Boolean);
-
-    return {
-      ...prev,
-      equipment: newEquipment,
-      gymDetails: {
-        ...prev.gymDetails,
-        equipment: newEquipmentNames,
-      },
-    };
-  });
-
-  // Return null to indicate partial selection (not used in this implementation)
-  return null;
+  return { equipment: newEquipment, gymDetails: newGymDetails, allSelected };
 };
 
 // Handle workout format selection (Original version expecting event - REMOVE)
@@ -310,24 +302,17 @@ export const handleWorkoutFormatChange = (newFormats, setFormData) => {
 };
 
 // Handler for day of week selection
-export const handleDayOfWeekChange = (day, setFormData) => {
-  setFormData((prev) => {
-    if (prev.daysOfWeek.includes(day)) {
-      // Only allow removing if there will still be at least one day selected
-      if (prev.daysOfWeek.length > 1) {
-        return {
-          ...prev,
-          daysOfWeek: prev.daysOfWeek.filter((d) => d !== day),
-        };
-      }
-      return prev; // Don't remove the last day
-    } else {
-      return {
-        ...prev,
-        daysOfWeek: [...prev.daysOfWeek, day],
-      };
+export const handleDayOfWeekChangeUtil = (day, currentDaysOfWeek) => {
+  if (currentDaysOfWeek.includes(day)) {
+    // Only allow removing if there will still be at least one day selected
+    if (currentDaysOfWeek.length > 1) {
+      return currentDaysOfWeek.filter((d) => d !== day);
     }
-  });
+    return currentDaysOfWeek; // Don't remove the last day
+  } else {
+    // Add the day
+    return [...currentDaysOfWeek, day];
+  }
 };
 
 // Update days of week based on days per week changes

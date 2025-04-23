@@ -17,7 +17,7 @@ export default function ProgramScheduling({
       {/* Days of Week Selector */}
       <div className="mb-4">
         <span className="label-text font-medium">Days of Week</span>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-2">
+        <div className="flex flex-wrap gap-x-4 gap-y-2 mt-2">
           {[
             'Sunday',
             'Monday',
