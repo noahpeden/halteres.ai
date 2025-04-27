@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
-import { stripe } from '@/app/utils/stripe'; // Assuming @ alias works, adjust if needed
+import { stripe } from '@/utils/stripe';
 
 export async function POST(req) {
   const cookieStore = cookies();

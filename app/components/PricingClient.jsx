@@ -4,27 +4,26 @@ import React, { useState, useEffect } from 'react';
 import { useStripeContext } from '../contexts/StripeContext'; // Adjust path if needed
 import { useRouter } from 'next/navigation'; // Use App Router's router
 
-// Helper to calculate remaining trial days
 function calculateRemainingTrialDays(trialEndDateStr) {
   if (!trialEndDateStr) return 0;
   const endDate = new Date(trialEndDateStr);
   const now = new Date();
   const diffTime = endDate.getTime() - now.getTime();
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  return Math.max(0, diffDays); // Ensure non-negative
+  return Math.max(0, diffDays);
 }
 
 export default function PricingClient({ user, profile, plans }) {
-  const stripePromise = useStripeContext(); // Gets the promise from the context
+  console.log('PricingClient', user, profile, plans);
+  const stripePromise = useStripeContext();
   const router = useRouter();
   const [loadingPriceId, setLoadingPriceId] = useState(null);
   const [error, setError] = useState(null);
 
   const handleSubscribe = async (priceId) => {
-    setError(null); // Clear previous errors
+    setError(null);
 
     if (!user) {
-      // If user is not logged in, redirect to login page
       router.push('/login?redirectedFrom=/pricing');
       return;
     }
@@ -32,7 +31,6 @@ export default function PricingClient({ user, profile, plans }) {
     setLoadingPriceId(priceId);
 
     try {
-      // 1. Call your backend to create the checkout session
       const res = await fetch('/api/checkout-sessions', {
         method: 'POST',
         headers: {
@@ -51,20 +49,16 @@ export default function PricingClient({ user, profile, plans }) {
         throw new Error('Missing session ID from server.');
       }
 
-      // 2. Wait for Stripe.js to load (if it hasn't already)
       const stripe = await stripePromise;
       if (!stripe) {
         throw new Error('Stripe.js has not loaded yet.');
       }
 
-      // 3. Redirect to Stripe Checkout
       const { error: stripeError } = await stripe.redirectToCheckout({
         sessionId,
       });
 
       if (stripeError) {
-        // If `redirectToCheckout` fails due to a browser or network
-        // error, display the localized error message to your customer.
         console.error('Stripe redirectToCheckout error:', stripeError);
         setError(stripeError.message);
       }
@@ -76,7 +70,6 @@ export default function PricingClient({ user, profile, plans }) {
     }
   };
 
-  // Determine current status for display
   const isTrialing = profile?.subscription_status === 'trialing';
   const isActive = profile?.subscription_status === 'active';
   const currentPlanLookupKey = isActive
