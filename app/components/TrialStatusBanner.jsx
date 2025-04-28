@@ -18,17 +18,23 @@ export default function TrialStatusBanner() {
 
       setIsLoading(true);
       try {
-        const { data: subscription, error } = await supabase
-          .from('subscriptions')
-          .select('status, trial_end')
-          .eq('user_id', user.id)
-          .in('status', ['trialing', 'active'])
+        const { data: profileData, error } = await supabase
+          .from('profiles')
+          .select('subscription_status, trial_end_date')
+          .eq('id', user.id)
+          .in('subscription_status', ['trialing', 'active'])
           .single();
 
         if (error && error.code !== 'PGRST116') {
-          console.error('Error fetching subscription status:', error);
+          console.error('Error fetching profile/subscription status:', error);
+          setTrialStatus(null);
+        } else if (profileData) {
+          setTrialStatus({
+            status: profileData.subscription_status,
+            trial_end: profileData.trial_end_date,
+          });
         } else {
-          setTrialStatus(subscription);
+          setTrialStatus(null);
         }
       } catch (err) {
         console.error('Unexpected error fetching subscription:', err);
