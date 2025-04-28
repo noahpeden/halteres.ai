@@ -18,11 +18,13 @@ export default function CompanyPage() {
     <div className="min-h-screen bg-base-100">
       <main>
         {/* Hero section */}
-        <div className="hero min-h-[60vh] bg-primary text-primary-content">
+        <div className="hero min-h-[30vh] bg-primary text-primary-content">
           <div className="hero-content text-center">
             <div className="max-w-md">
-              <h1 className="text-5xl font-bold">About HalteresAI</h1>
-              <p className="py-6">
+              <h1 className="text-5xl font-bold text-white">
+                About HalteresAI
+              </h1>
+              <p className="py-6 text-white">
                 We're on a mission to revolutionize fitness programming by
                 combining real-world coaching experience with cutting-edge AI
                 technology.
@@ -265,20 +267,23 @@ export default function CompanyPage() {
         {/* CTA section */}
         <div className="bg-primary text-primary-content py-16">
           <div className="container mx-auto px-4 text-center">
-            <h2 className="text-3xl font-bold mb-4">
+            <h2 className="text-3xl font-bold mb-4 text-white">
               Ready to transform your fitness programming?
             </h2>
-            <p className="max-w-xl mx-auto mb-8 text-lg opacity-80">
+            <p className="max-w-xl mx-auto mb-8 text-lg opacity-80 text-white">
               Join coaches who are saving time and delivering better results
               with HalteresAI.
             </p>
             <div className="flex flex-wrap justify-center gap-4">
-              <Link href="/login" className="btn btn-lg btn-accent">
+              <Link
+                href="/login"
+                className="btn btn-lg btn-secondary text-white"
+              >
                 Get started
               </Link>
               <Link
                 href="/contact"
-                className="btn btn-lg btn-outline btn-accent"
+                className="btn btn-lg btn-outline btn-secondary bg-white hover:text-white"
               >
                 Contact us
               </Link>
