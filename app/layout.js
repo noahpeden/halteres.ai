@@ -5,6 +5,7 @@ import { Inter } from 'next/font/google';
 import { AuthProvider } from '@/contexts/AuthContext';
 import Navbar from './components/Navbar';
 import { StripeProvider } from './contexts/StripeContext';
+import { createClient } from '@/utils/supabase/server';
 
 export const nunitoSans = Nunito_Sans({
   weight: ['300', '400', '600', '700'],
@@ -25,7 +26,13 @@ const inter = Inter({ subsets: ['latin'] });
 // Export the static metadata
 export { metadata };
 
-export default function RootLayout({ children }) {
+export default async function RootLayout({ children }) {
+  const supabase = createClient();
+
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
   return (
     <html
       className={`${nunitoSans.variable} ${poppins.variable} ${inter.className}`}
@@ -39,7 +46,7 @@ export default function RootLayout({ children }) {
       </head>
       <body suppressHydrationWarning={true}>
         <StripeProvider>
-          <AuthProvider>
+          <AuthProvider initialSession={session}>
             <Navbar />
             <main className="pt-24">{children}</main>
           </AuthProvider>

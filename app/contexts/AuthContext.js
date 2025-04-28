@@ -5,39 +5,21 @@ import { createClient } from '@/utils/supabase/client';
 const AuthContext = createContext();
 const supabase = createClient();
 
-export function AuthProvider({ children }) {
-  const [session, setSession] = useState(null);
-  const [user, setUser] = useState(null);
+export function AuthProvider({ children, initialSession }) {
+  const [session, setSession] = useState(initialSession || null);
+  const [user, setUser] = useState(initialSession?.user || null);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-    });
-
-    supabase.auth.getUser().then((userData) => {
-      if (userData && userData.data && userData.data.user) {
-        setUser(userData.data.user);
-      }
-    });
-
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-
-      // Also update user when auth state changes
-      if (session) {
-        supabase.auth.getUser().then((userData) => {
-          if (userData && userData.data && userData.data.user) {
-            setUser(userData.data.user);
-          }
-        });
-      } else {
-        setUser(null);
-      }
+    } = supabase.auth.onAuthStateChange((_event, currentSession) => {
+      setSession(currentSession);
+      setUser(currentSession?.user || null);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription?.unsubscribe();
+    };
   }, []);
 
   return (
