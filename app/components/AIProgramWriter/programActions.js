@@ -23,6 +23,7 @@ export async function generateProgram({
   setLoadingTimer,
   setFormData,
   setGeneratedDescription,
+  refetchProfile,
 }) {
   setIsLoading(true);
   setSuggestions([]);
@@ -238,9 +239,12 @@ export async function generateProgram({
                         : 'Program generated successfully!'
                     );
 
-                    // Refresh the trial banner after generation
-                    if (typeof window.refreshTrialBanner === 'function') {
-                      window.refreshTrialBanner();
+                    // Refresh the auth context profile after generation completes
+                    if (refetchProfile) {
+                      console.log(
+                        '[generateProgram SSE] Calling refetchProfile...'
+                      );
+                      refetchProfile();
                     }
                   }
                   break;
@@ -256,6 +260,10 @@ export async function generateProgram({
             }
           }
         }
+        // After SSE loop finishes (implicitly successful if no error thrown)
+        clearTimeout(timeoutId);
+        lastError = null; // Ensure no error is carried forward if stream completes
+        break; // Break outer retry loop
       } else {
         // Process normal JSON response
         const data = await response.json();
@@ -292,20 +300,22 @@ export async function generateProgram({
               : 'Program generated successfully!'
           );
 
-          // Refresh the trial banner after generation
-          if (typeof window.refreshTrialBanner === 'function') {
-            window.refreshTrialBanner();
+          // Refresh the auth context profile after generation completes
+          if (refetchProfile) {
+            console.log('[generateProgram JSON] Calling refetchProfile...');
+            refetchProfile();
           }
         } else {
           showToastMessage(
             'No program workouts were generated. Please try again.'
           );
         }
-      }
 
-      // If we get here, the request was successful
-      clearTimeout(timeoutId);
-      break; // Exit the retry loop on success
+        // If we get here, the request was successful
+        clearTimeout(timeoutId);
+        lastError = null; // Ensure no error is carried forward
+        break; // Exit the retry loop on success
+      }
     } catch (error) {
       console.error('Error:', error);
 

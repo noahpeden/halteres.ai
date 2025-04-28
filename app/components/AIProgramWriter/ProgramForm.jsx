@@ -11,8 +11,20 @@ import { handleFormChange as handleFormChangeUtil } from './formHandlers';
 // Helper function (can be moved to utils)
 function isNewDay(lastGenerationDateStr) {
   if (!lastGenerationDateStr) return true;
-  const today = new Date();
   const lastDate = new Date(lastGenerationDateStr);
+
+  // Check if lastDate is a valid date object
+  if (!(lastDate instanceof Date) || isNaN(lastDate.getTime())) {
+    console.warn(
+      'Invalid lastGenerationDateStr received:',
+      lastGenerationDateStr
+    );
+    // Treat invalid date as needing a reset for safety, effectively a 'new day'
+    return true;
+  }
+
+  const today = new Date();
+  // Compare year, month, and day only
   return (
     today.getFullYear() !== lastDate.getFullYear() ||
     today.getMonth() !== lastDate.getMonth() ||
@@ -31,16 +43,6 @@ const ProgramForm = ({
   loadingDuration,
   equipmentSelector,
   suggestions,
-  hasCustomWorkoutFormat,
-  setHasCustomWorkoutFormat,
-  customSectionName,
-  setCustomSectionName,
-  customSectionDuration,
-  setCustomSectionDuration,
-  customSectionDescription,
-  setCustomSectionDescription,
-  addCustomSection,
-  removeCustomSection,
   handleProgramTypeChange,
   subscriptionStatus,
   trialEndDate,
@@ -60,43 +62,75 @@ const ProgramForm = ({
     [dispatch]
   );
 
+  // Log the received subscriptionStatus prop
+  console.log(
+    'ProgramForm received subscriptionStatus:',
+    subscriptionStatus,
+    typeof subscriptionStatus
+  );
+
   // --- Eligibility Logic ---
   const { isEligibleToGenerate, disabledReason } = useMemo(() => {
     const isActive = subscriptionStatus === 'active';
     const isTrialing = subscriptionStatus === 'trialing';
-    const isTrialValid = trialEndDate
-      ? new Date(trialEndDate) >= new Date()
-      : false;
-    const hasGenerationsLeft = generationsRemaining > 0;
-    const dailyLimit = 5; // Assuming a daily limit for trial users
-    const isDifferentDay = isNewDay(lastGenerationDate);
-    const dailyGenerationsUsed = isDifferentDay ? 0 : generationsToday;
-    const underDailyLimit = dailyGenerationsUsed < dailyLimit;
+    const now = new Date(); // Use a single consistent 'now' timestamp
 
+    // Active subscribers can always generate
     if (isActive) {
-      return { isEligibleToGenerate: true, disabledReason: null }; // Paid users always eligible
+      return { isEligibleToGenerate: true, disabledReason: null };
     }
 
-    if (isTrialing && isTrialValid) {
+    // Trial user checks
+    if (isTrialing) {
+      // Check 1: Trial Validity
+      const trialEnd = trialEndDate ? new Date(trialEndDate) : null;
+      // Ensure trialEnd is a valid date and it's not in the past (compare dates only)
+      const isTrialValid =
+        trialEnd instanceof Date &&
+        !isNaN(trialEnd.getTime()) &&
+        new Date(trialEnd.toDateString()) >= new Date(now.toDateString()); // Compare date parts only
+
+      if (!isTrialValid) {
+        return {
+          isEligibleToGenerate: false,
+          disabledReason:
+            'Your trial period has expired or is invalid. Please upgrade to continue generating programs.',
+        };
+      }
+
+      // Check 2: Trial Generations Remaining (handle null/undefined)
+      const remaining = generationsRemaining ?? 0;
+      const hasGenerationsLeft = remaining > 0;
       if (!hasGenerationsLeft) {
         return {
           isEligibleToGenerate: false,
-          disabledReason: 'Trial generation limit reached.',
+          disabledReason:
+            'You have used all your trial generations. Please upgrade to continue generating programs.',
         };
       }
+
+      // Check 3: Daily Generation Limit (handle null/undefined)
+      const dailyLimit = 5;
+      const isDifferentDay = isNewDay(lastGenerationDate);
+      const todayCount = generationsToday ?? 0; // Default to 0 if null/undefined
+      const dailyGenerationsUsed = isDifferentDay ? 0 : todayCount;
+      const underDailyLimit = dailyGenerationsUsed < dailyLimit;
+
       if (!underDailyLimit) {
         return {
           isEligibleToGenerate: false,
-          disabledReason: 'Daily trial generation limit reached.',
+          disabledReason: `You've reached your daily limit of ${dailyLimit} generations. Try again tomorrow or upgrade for unlimited access.`,
         };
       }
-      return { isEligibleToGenerate: true, disabledReason: null }; // Valid trial, within limits
+
+      // If all trial checks pass
+      return { isEligibleToGenerate: true, disabledReason: null };
     }
 
-    // Default: Not active, not on valid trial, or trial expired
+    // Default case: Not active and not on trial (or invalid status)
     return {
       isEligibleToGenerate: false,
-      disabledReason: 'Subscription required or trial expired.',
+      disabledReason: 'Please start a trial or subscribe to generate programs.',
     };
   }, [
     subscriptionStatus,
@@ -105,6 +139,7 @@ const ProgramForm = ({
     generationsToday,
     lastGenerationDate,
   ]);
+  console.log(isEligibleToGenerate);
 
   const isButtonDisabled = isLoading || !isEligibleToGenerate;
   const buttonText = () => {

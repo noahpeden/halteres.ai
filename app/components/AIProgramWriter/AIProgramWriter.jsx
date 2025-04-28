@@ -59,7 +59,16 @@ const AUTO_SAVE_STATES = {
 };
 
 export default function AIProgramWriter({ onSelectWorkout }) {
-  const { supabase } = useAuth();
+  const {
+    supabase,
+    user,
+    subscriptionStatus,
+    trialEndDate,
+    generationsRemaining,
+    generationsToday,
+    lastGenerationDate,
+    refetchProfile,
+  } = useAuth();
   const { state, dispatch } = useProgramWriterContext();
   const {
     programId,
@@ -163,8 +172,9 @@ export default function AIProgramWriter({ onSelectWorkout }) {
         dispatch({ type: 'SET_SERVER_STATUS', payload: status }),
       setLoadingDuration: (duration) =>
         dispatch({ type: 'SET_LOADING_DURATION', payload: duration }),
+      refetchProfile,
     });
-  }, [programId, formData, dispatch, showToastMessage]);
+  }, [programId, formData, dispatch, showToastMessage, refetchProfile]);
 
   const handleSaveProgram = useCallback(() => {
     saveProgram({
@@ -1003,6 +1013,11 @@ export default function AIProgramWriter({ onSelectWorkout }) {
               onToggleVisibility={handleToggleEquipment}
             />
           }
+          subscriptionStatus={subscriptionStatus}
+          trialEndDate={trialEndDate}
+          generationsRemaining={generationsRemaining}
+          generationsToday={generationsToday}
+          lastGenerationDate={lastGenerationDate}
         />
       </div>
 
