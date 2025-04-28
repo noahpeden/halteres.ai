@@ -105,37 +105,6 @@ export default function PricingClient({ user, profile, plans }) {
         </div>
       )}
 
-      {/* Display Trial Information Banner */}
-      {isTrialing && remainingDays > 0 && (
-        <div className="col-span-full card bg-primary text-primary-content shadow-xl mb-6">
-          <div className="card-body">
-            <h2 className="card-title">You are on a free trial!</h2>
-            <p>
-              You have{' '}
-              <strong>
-                {remainingDays} day{remainingDays !== 1 ? 's' : ''}
-              </strong>{' '}
-              left.
-            </p>
-            <p>
-              Generations remaining in trial: <strong>{generationsLeft}</strong>{' '}
-              (Max 5 per day).
-            </p>
-            {/* <p>You can generate up to <strong>{profile.generations_today >= 5 ? 0 : 5 - profile.generations_today}</strong> more programs today.</p> */}
-          </div>
-        </div>
-      )}
-      {isTrialing && remainingDays <= 0 && (
-        <div className="col-span-full alert alert-warning shadow-lg mb-6">
-          <div>
-            <span>
-              Your trial has ended. Please subscribe to continue generating
-              programs.
-            </span>
-          </div>
-        </div>
-      )}
-
       {plans.map((plan) => {
         const isCurrentPlan =
           isActive && currentPlanLookupKey === plan.lookupKey;

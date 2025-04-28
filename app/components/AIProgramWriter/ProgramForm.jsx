@@ -62,13 +62,6 @@ const ProgramForm = ({
     [dispatch]
   );
 
-  // Log the received subscriptionStatus prop
-  console.log(
-    'ProgramForm received subscriptionStatus:',
-    subscriptionStatus,
-    typeof subscriptionStatus
-  );
-
   // --- Eligibility Logic ---
   const { isEligibleToGenerate, disabledReason } = useMemo(() => {
     const isActive = subscriptionStatus === 'active';
@@ -139,7 +132,6 @@ const ProgramForm = ({
     generationsToday,
     lastGenerationDate,
   ]);
-  console.log(isEligibleToGenerate);
 
   const isButtonDisabled = isLoading || !isEligibleToGenerate;
   const buttonText = () => {
