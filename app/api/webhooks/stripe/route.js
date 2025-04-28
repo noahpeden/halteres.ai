@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { headers } from 'next/headers';
-import Stripe from 'stripe';
-import { stripe } from '@/app/utils/stripe';
+import { stripe } from '@/utils/stripe';
 import { createClient } from '@supabase/supabase-js';
 
 const relevantEvents = new Set([
