@@ -58,14 +58,14 @@ export default function TrialStatusBanner() {
   );
 
   return (
-    <div className="bg-gradient-to-r from-primary to-secondary text-white p-3 text-center text-sm fixed top-0 left-0 right-0 z-50 shadow-md flex items-center justify-center space-x-2">
+    <div className="bg-gradient-to-r from-primary to-secondary text-white p-3 text-center text-sm shadow-md flex items-center justify-center space-x-2">
       <Info size={16} className="flex-shrink-0" />
       <span>
         You have <strong>{daysLeft}</strong> day{daysLeft !== 1 ? 's' : ''} left
         in your free trial.
       </span>
       <Link
-        href="/billing"
+        href="/pricing"
         className="ml-2 inline-flex items-center justify-center px-3 py-1 border border-transparent text-xs font-medium rounded-md shadow-sm text-primary bg-white hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
       >
         <Zap size={14} className="mr-1" /> Upgrade Now
