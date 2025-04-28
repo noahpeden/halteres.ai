@@ -4,6 +4,9 @@ import PricingClient from '../components/PricingClient'; // Adjust path if neede
 import Link from 'next/link';
 import { metadata as baseMetadata } from '../metadata'; // Import base metadata
 
+// Force dynamic rendering for this page
+export const dynamic = 'force-dynamic';
+
 // Generate Metadata (using function from old page.js)
 export const generateMetadata = () => {
   return {

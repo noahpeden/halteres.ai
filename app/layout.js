@@ -5,7 +5,8 @@ import { Inter } from 'next/font/google';
 import { AuthProvider } from '@/contexts/AuthContext';
 import Navbar from './components/Navbar';
 import { StripeProvider } from './contexts/StripeContext';
-import { createClient } from '@/utils/supabase/server';
+// No longer need createClient imported directly here if called inside
+// import { createClient } from '@/utils/supabase/server'; // <-- Remove or comment out if unused at module scope
 
 export const nunitoSans = Nunito_Sans({
   weight: ['300', '400', '600', '700'],
@@ -27,8 +28,12 @@ const inter = Inter({ subsets: ['latin'] });
 export { metadata };
 
 export default async function RootLayout({ children }) {
-  const supabase = createClient();
+  // Import createClient inside the function if not imported at module scope
+  // This ensures it uses the correct context when called.
+  const { createClient } = await import('@/utils/supabase/server');
+  const supabase = await createClient(); // Await if createClient is async
 
+  // Fetch session data inside the component
   const {
     data: { session },
   } = await supabase.auth.getSession();
@@ -46,6 +51,7 @@ export default async function RootLayout({ children }) {
       </head>
       <body suppressHydrationWarning={true}>
         <StripeProvider>
+          {/* Pass the fetched session to AuthProvider */}
           <AuthProvider initialSession={session}>
             <Navbar />
             <main className="pt-24">{children}</main>

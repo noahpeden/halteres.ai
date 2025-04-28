@@ -1,5 +1,4 @@
 import { metadata } from '../metadata';
-import Image from 'next/image';
 import Link from 'next/link';
 import {
   Sparkles,
@@ -9,8 +8,9 @@ import {
   MessageSquare,
   Repeat,
   CloudUpload,
-  CheckCheck,
 } from 'lucide-react';
+
+export const dynamic = 'force-dynamic';
 
 export const generateMetadata = () => {
   return {
