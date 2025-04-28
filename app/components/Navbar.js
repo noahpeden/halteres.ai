@@ -6,18 +6,13 @@ import { useAuth } from '../contexts/AuthContext';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { useState, useEffect } from 'react';
 import {
-  LogOut,
   Menu,
-  X,
   Settings,
   HelpCircle,
   Phone,
   Info,
   Clock,
   Newspaper,
-  Crown,
-  User,
-  LayoutDashboard,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 export default function Navbar() {
@@ -77,8 +72,6 @@ export default function Navbar() {
     { label: 'Help', href: '/help', icon: HelpCircle },
     { label: 'Contact', href: '/contact', icon: Phone },
   ];
-
-  const aboutItems = [{ label: 'Company', href: '/company', icon: Info }];
 
   return (
     <div className="fixed top-0 z-50 w-full bg-base-100 shadow-sm border-b border-gray-200">
@@ -151,23 +144,7 @@ export default function Navbar() {
                 </li>
 
                 <li>
-                  <details>
-                    <summary>About</summary>
-                    <ul className="p-2 bg-base-100 w-48 z-50">
-                      {aboutItems.map((item, index) => (
-                        <li key={index}>
-                          <NavLink href={item.href}>
-                            <div className="flex items-center">
-                              {item.icon && (
-                                <item.icon className="mr-2 h-4 w-4" />
-                              )}
-                              {item.label}
-                            </div>
-                          </NavLink>
-                        </li>
-                      ))}
-                    </ul>
-                  </details>
+                  <NavLink href="/company">About</NavLink>
                 </li>
               </>
             )}
@@ -231,23 +208,7 @@ export default function Navbar() {
                   </li>
 
                   <li>
-                    <details>
-                      <summary>About</summary>
-                      <ul>
-                        {aboutItems.map((item, index) => (
-                          <li key={index}>
-                            <NavLink href={item.href}>
-                              <div className="flex items-center">
-                                {item.icon && (
-                                  <item.icon className="mr-2 h-4 w-4" />
-                                )}
-                                {item.label}
-                              </div>
-                            </NavLink>
-                          </li>
-                        ))}
-                      </ul>
-                    </details>
+                    <NavLink href="/company">Company</NavLink>
                   </li>
                   <div className="divider"></div>
 
