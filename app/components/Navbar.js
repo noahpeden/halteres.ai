@@ -17,13 +17,13 @@ import {
   Newspaper,
   Crown,
 } from 'lucide-react';
-
+import { useRouter } from 'next/navigation';
 export default function Navbar() {
   const { session, user } = useAuth();
   const supabase = createClientComponentClient();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userProfile, setUserProfile] = useState(null);
-
+  const router = useRouter();
   useEffect(() => {
     // Fetch user profile when user is available
     const fetchUserProfile = async () => {
@@ -55,8 +55,8 @@ export default function Navbar() {
     userProfile?.subscription_plan !== null;
 
   const handleLogout = async () => {
+    router.push('/');
     await supabase.auth.signOut();
-    window.location.href = '/login';
   };
 
   const NavLink = ({ href, children, className = '' }) => (
