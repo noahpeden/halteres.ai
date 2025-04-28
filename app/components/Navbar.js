@@ -4,7 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useAuth } from '../contexts/AuthContext';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   LogOut,
   Menu,
@@ -15,12 +15,44 @@ import {
   Info,
   Clock,
   Newspaper,
+  Crown,
 } from 'lucide-react';
 
 export default function Navbar() {
-  const { session } = useAuth();
+  const { session, user } = useAuth();
   const supabase = createClientComponentClient();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [userProfile, setUserProfile] = useState(null);
+
+  useEffect(() => {
+    // Fetch user profile when user is available
+    const fetchUserProfile = async () => {
+      if (!user) return;
+
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('subscription_status, subscription_plan')
+          .eq('id', user.id)
+          .single();
+
+        if (error) {
+          console.error('Error fetching user profile:', error);
+          return;
+        }
+
+        setUserProfile(data);
+      } catch (err) {
+        console.error('Failed to fetch user profile:', err);
+      }
+    };
+
+    fetchUserProfile();
+  }, [user, supabase]);
+
+  const isPremiumUser =
+    userProfile?.subscription_status === 'active' &&
+    userProfile?.subscription_plan !== null;
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -145,13 +177,21 @@ export default function Navbar() {
 
         <div className="navbar-end">
           {session ? (
-            <button
-              onClick={handleLogout}
-              className="btn btn-error btn-sm text-white"
-            >
-              <LogOut className="h-4 w-4 mr-2" />
-              Log out
-            </button>
+            <div className="flex items-center gap-2">
+              {isPremiumUser && (
+                <div className="badge badge-primary gap-1">
+                  <Crown className="h-3.5 w-3.5" />
+                  <span>Premium</span>
+                </div>
+              )}
+              <button
+                onClick={handleLogout}
+                className="btn btn-error btn-sm text-white"
+              >
+                <LogOut className="h-4 w-4 mr-2" />
+                Log out
+              </button>
+            </div>
           ) : (
             <Link href="/login">
               <button className="btn btn-primary btn-sm">
@@ -249,12 +289,24 @@ export default function Navbar() {
               )}
 
               {session && (
-                <li>
-                  <button onClick={handleLogout} className="text-error">
-                    <LogOut className="mr-2 h-4 w-4" />
-                    Log out
-                  </button>
-                </li>
+                <>
+                  {isPremiumUser && (
+                    <li>
+                      <div className="flex items-center">
+                        <Crown className="mr-2 h-4 w-4 text-primary" />
+                        <span className="text-primary font-medium">
+                          Premium
+                        </span>
+                      </div>
+                    </li>
+                  )}
+                  <li>
+                    <button onClick={handleLogout} className="text-error">
+                      <LogOut className="mr-2 h-4 w-4" />
+                      Log out
+                    </button>
+                  </li>
+                </>
               )}
             </ul>
           </div>

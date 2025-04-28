@@ -13,6 +13,108 @@ function logWithTimestamp(message, data = null) {
   if (data) console.log(JSON.stringify(data, null, 2));
 }
 
+// Helper function to update user profile after generation
+async function updateProfileAfterGeneration(
+  supabase,
+  userId,
+  isPaidSubscriber
+) {
+  logWithTimestamp('[UpdateProfile] Starting update', {
+    userId,
+    isPaidSubscriber,
+  });
+  try {
+    // Get current date in ISO format
+    const currentDate = new Date().toISOString();
+
+    // Prepare base update data
+    const updateData = {
+      last_generation_date: currentDate,
+      // We no longer use supabase.sql here for generations_today
+      // It will be handled below if needed or fetched first.
+    };
+
+    // Fetch current profile values first
+    logWithTimestamp('[UpdateProfile] Fetching current profile values...', {
+      userId,
+    });
+    const { data: currentProfile, error: fetchError } = await supabase
+      .from('profiles')
+      .select('generations_today, generations_remaining, free_generations_used')
+      .eq('id', userId)
+      .single();
+
+    if (fetchError) {
+      logWithTimestamp('[UpdateProfile] Error fetching current profile', {
+        error: fetchError,
+        userId,
+      });
+      return false; // Cannot proceed without current values
+    }
+
+    logWithTimestamp('[UpdateProfile] Fetched current profile', {
+      currentProfile,
+    });
+
+    // Always increment generations_today
+    updateData.generations_today = (currentProfile.generations_today || 0) + 1;
+
+    // Only update free generation counters for non-paid subscribers
+    if (!isPaidSubscriber) {
+      logWithTimestamp(
+        '[UpdateProfile] User is NOT paid, calculating decrement/increment.'
+      );
+      // Calculate new values based on fetched data
+      const currentRemaining = currentProfile.generations_remaining ?? 0;
+      const currentUsed = currentProfile.free_generations_used ?? 0;
+      updateData.generations_remaining = Math.max(0, currentRemaining - 1); // Prevent going below 0
+      updateData.free_generations_used = currentUsed + 1;
+    } else {
+      logWithTimestamp(
+        '[UpdateProfile] User IS paid, skipping decrement/increment.'
+      );
+      // Optionally set them explicitly to current values if needed, though not strictly necessary
+      // updateData.generations_remaining = currentProfile.generations_remaining;
+      // updateData.free_generations_used = currentProfile.free_generations_used;
+    }
+
+    logWithTimestamp('[UpdateProfile] Prepared updateData', { updateData });
+
+    // Update the profile
+    logWithTimestamp('[UpdateProfile] Executing Supabase update...');
+    const { error: updateError } = await supabase
+      .from('profiles')
+      .update(updateData)
+      .eq('id', userId);
+
+    if (updateError) {
+      logWithTimestamp('[UpdateProfile] Error during Supabase update', {
+        error: updateError, // Use the specific update error
+        userId,
+      });
+      return false;
+    } else {
+      logWithTimestamp(
+        '[UpdateProfile] Successfully updated profile in Supabase',
+        {
+          userId,
+          isPaidSubscriber,
+          decrementedCounter: !isPaidSubscriber,
+          updatedValues: updateData, // Log what was actually sent
+        }
+      );
+      return true;
+    }
+  } catch (error) {
+    // Catch any other unexpected errors in the process
+    logWithTimestamp('[UpdateProfile] Exception during update process', {
+      error: error.message,
+      userId,
+    });
+    return false;
+  }
+}
+
 export async function POST(request) {
   logWithTimestamp('API route started');
 
@@ -27,6 +129,60 @@ export async function POST(request) {
 
     const requestData = await request.json();
     logWithTimestamp('Request data received', requestData);
+
+    // Authentication check - must be before anything else
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (!session) {
+      logWithTimestamp('Authentication failed');
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+    const userId = session.user.id;
+    logWithTimestamp('Authentication successful', { userId });
+
+    // Check subscription status and generation counts
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('subscription_status, generations_remaining, subscription_plan')
+      .eq('id', userId)
+      .single();
+
+    if (profileError) {
+      logWithTimestamp('Error fetching user profile', { error: profileError });
+      return NextResponse.json(
+        {
+          error: 'Failed to fetch user profile',
+          details: profileError.message,
+        },
+        { status: 500 }
+      );
+    }
+
+    // Skip generation limit check for paid subscribers
+    const isPaidSubscriber =
+      profile.subscription_status === 'active' &&
+      profile.subscription_plan !== null;
+
+    // If user is not a paid subscriber and has no generations left, block the request
+    if (!isPaidSubscriber && profile.generations_remaining <= 0) {
+      logWithTimestamp('Generation limit reached', {
+        userId,
+        generationsRemaining: profile.generations_remaining,
+      });
+
+      return NextResponse.json(
+        {
+          error: 'Generation limit reached',
+          details:
+            'You have used all your available generations. Please upgrade to a paid plan to continue.',
+        },
+        { status: 403 }
+      );
+    }
 
     // Extract parameters with defaults
     const programId = requestData.programId;
@@ -138,18 +294,38 @@ export async function POST(request) {
       }
     }
 
-    // Verify user access to the program
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    if (!session) {
-      logWithTimestamp('Authentication failed');
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      );
+    // Fetch reference workouts if program ID exists
+    let referenceWorkoutsData = [];
+    if (programId) {
+      try {
+        logWithTimestamp('Fetching reference workouts', { programId });
+
+        const { data: referenceWorkouts, error: referenceError } =
+          await supabase
+            .from('program_workouts')
+            .select('title, body, tags')
+            .eq('program_id', programId)
+            .eq('is_reference', true)
+            .order('created_at', { ascending: false });
+
+        if (referenceError) {
+          logWithTimestamp('Error fetching reference workouts', {
+            error: referenceError,
+          });
+        } else if (referenceWorkouts && referenceWorkouts.length > 0) {
+          logWithTimestamp('Found reference workouts', {
+            count: referenceWorkouts.length,
+          });
+          referenceWorkoutsData = referenceWorkouts;
+        } else {
+          logWithTimestamp('No reference workouts found');
+        }
+      } catch (err) {
+        logWithTimestamp('Error processing reference workouts', {
+          error: err.message,
+        });
+      }
     }
-    logWithTimestamp('Authentication successful', { userId: session.user.id });
 
     // Fetch client metrics if program ID exists
     let clientMetricsData = null;
@@ -187,39 +363,6 @@ export async function POST(request) {
         }
       } catch (err) {
         logWithTimestamp('Error processing client metrics', {
-          error: err.message,
-        });
-      }
-    }
-
-    // Fetch reference workouts if program ID exists
-    let referenceWorkoutsData = [];
-    if (programId) {
-      try {
-        logWithTimestamp('Fetching reference workouts', { programId });
-
-        const { data: referenceWorkouts, error: referenceError } =
-          await supabase
-            .from('program_workouts')
-            .select('title, body, tags')
-            .eq('program_id', programId)
-            .eq('is_reference', true)
-            .order('created_at', { ascending: false });
-
-        if (referenceError) {
-          logWithTimestamp('Error fetching reference workouts', {
-            error: referenceError,
-          });
-        } else if (referenceWorkouts && referenceWorkouts.length > 0) {
-          logWithTimestamp('Found reference workouts', {
-            count: referenceWorkouts.length,
-          });
-          referenceWorkoutsData = referenceWorkouts;
-        } else {
-          logWithTimestamp('No reference workouts found');
-        }
-      } catch (err) {
-        logWithTimestamp('Error processing reference workouts', {
           error: err.message,
         });
       }
@@ -458,6 +601,9 @@ export async function POST(request) {
             new Date().toISOString().split('T')[0],
         };
       });
+
+      // Update the user's profile after successful generation
+      await updateProfileAfterGeneration(supabase, userId, isPaidSubscriber);
 
       // Return the generated program data with consistent format
       return NextResponse.json(
@@ -751,6 +897,15 @@ async function generateLargeProgram(requestData, params, supabase, openai) {
   // Sort workouts by date to ensure correct order
   allWorkouts.sort((a, b) => new Date(a.date) - new Date(b.date));
 
+  // Update the user's profile after successful generation
+  await updateProfileAfterGeneration(
+    supabase,
+    session.user.id,
+    // We need to check if user is paid subscriber here too
+    // since we don't have access to the isPaidSubscriber variable from main function
+    await isPaidSubscriberCheck(supabase, session.user.id)
+  );
+
   // Return the complete program
   logWithTimestamp('Large program generation complete', {
     totalWorkoutsGenerated: allWorkouts.length,
@@ -1025,7 +1180,7 @@ async function preparePromptElements(programId, supabase, params) {
         });
       } else if (programData && programData.entity_id) {
         // Fetch metrics from entities table
-        const { data: entityDataResult, error: entityError } = await supabase
+        const { data: entityData, error: entityError } = await supabase
           .from('entities')
           .select('*')
           .eq('id', programData.entity_id)
@@ -1035,11 +1190,9 @@ async function preparePromptElements(programId, supabase, params) {
           logWithTimestamp('Error fetching client metrics', {
             error: entityError,
           });
-        } else if (entityDataResult) {
-          clientMetricsData = entityDataResult;
-          logWithTimestamp('Found client metrics', {
-            entityData: clientMetricsData,
-          });
+        } else if (entityData) {
+          logWithTimestamp('Found client metrics', { entityData });
+          clientMetricsData = entityData;
         }
       }
     } catch (err) {
@@ -1156,4 +1309,31 @@ async function preparePromptElements(programId, supabase, params) {
     referenceInput,
     ragMatchedWorkouts,
   };
+}
+
+// Helper function to check if user is a paid subscriber
+async function isPaidSubscriberCheck(supabase, userId) {
+  try {
+    const { data: profile, error } = await supabase
+      .from('profiles')
+      .select('subscription_status, subscription_plan')
+      .eq('id', userId)
+      .single();
+
+    if (error) {
+      logWithTimestamp('Error checking subscription status', { error, userId });
+      return false;
+    }
+
+    return (
+      profile.subscription_status === 'active' &&
+      profile.subscription_plan !== null
+    );
+  } catch (error) {
+    logWithTimestamp('Exception checking subscription status', {
+      error: error.message,
+      userId,
+    });
+    return false;
+  }
 }

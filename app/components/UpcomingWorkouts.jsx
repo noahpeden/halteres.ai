@@ -109,24 +109,14 @@ export default function UpcomingWorkouts() {
           return;
         }
 
-        console.log('All fetched workouts:', allWorkouts?.length);
-
-        // Filter workouts to only show those in the next week
-        // First check if we have any workouts to debug
         if (allWorkouts && allWorkouts.length > 0) {
-          // Log a sample workout to see the structure
-          console.log('Sample workout structure:', allWorkouts[0]);
-
-          // Look for date in each workout (either in scheduled_date or tags.scheduled_date)
           const upcomingWorkouts = allWorkouts.filter((workout) => {
-            // Try to get date from various places
             const scheduledDate = workout.scheduled_date;
             const tagDate =
               workout.tags?.scheduled_date ||
               workout.tags?.suggestedDate ||
               workout.tags?.date;
 
-            // Convert to Date objects if possible
             let dateFromScheduled = null;
             let dateFromTags = null;
 
@@ -149,18 +139,14 @@ export default function UpcomingWorkouts() {
               }
             }
 
-            // Use the first valid date we find
             const workoutDate = dateFromScheduled || dateFromTags;
 
             if (!workoutDate) {
-              // No valid date found, skip this workout
               return false;
             }
 
-            // Format the workout date to YYYY-MM-DD for comparison
             const workoutDateStr = workoutDate.toISOString().split('T')[0];
 
-            // Check if this workout is in the next week
             return workoutDateStr >= todayStr && workoutDateStr < nextWeekStr;
           });
 
@@ -178,28 +164,16 @@ export default function UpcomingWorkouts() {
       }
     }
 
-    // Helper function to process fetched workouts
     function processWorkouts(workoutsData) {
-      // Format the workouts for display
       const formattedWorkouts = workoutsData
-        .filter((workout) => workout.title) // Filter out any invalid entries
+        .filter((workout) => workout.title)
         .map((workout) => {
-          // Log the raw workout object, focusing on the entities part
-          console.log(
-            'Processing workout:',
-            workout.id,
-            'Entities:',
-            workout.entities
-          );
-
-          // Get the date from either scheduled_date or tags
           const scheduledDate = workout.scheduled_date;
           const tagDate =
             workout.tags?.scheduled_date ||
             workout.tags?.suggestedDate ||
             workout.tags?.date;
 
-          // Use the first valid date we find
           let workoutDate = null;
           if (scheduledDate) {
             try {
@@ -219,7 +193,6 @@ export default function UpcomingWorkouts() {
             }
           }
 
-          // Format date as ISO string if available
           const formattedDate = workoutDate ? workoutDate.toISOString() : null;
 
           return {
@@ -239,7 +212,7 @@ export default function UpcomingWorkouts() {
             completed: workout.completed || false,
           };
         })
-        .filter((workout) => workout.scheduled_date); // Only include workouts with valid dates
+        .filter((workout) => workout.scheduled_date);
 
       setWorkouts(formattedWorkouts);
 

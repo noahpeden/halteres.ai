@@ -4,6 +4,7 @@ import { metadata } from './simple-metadata';
 import { Inter } from 'next/font/google';
 import { AuthProvider } from '@/contexts/AuthContext';
 import Navbar from './components/Navbar';
+import { StripeProvider } from './contexts/StripeContext';
 
 export const nunitoSans = Nunito_Sans({
   weight: ['300', '400', '600', '700'],
@@ -37,10 +38,12 @@ export default function RootLayout({ children }) {
         <link rel="manifest" href="/site.webmanifest" />
       </head>
       <body suppressHydrationWarning={true}>
-        <AuthProvider>
-          <Navbar />
-          <main className="pt-24">{children}</main>
-        </AuthProvider>
+        <StripeProvider>
+          <AuthProvider>
+            <Navbar />
+            <main className="pt-24">{children}</main>
+          </AuthProvider>
+        </StripeProvider>
       </body>
     </html>
   );
