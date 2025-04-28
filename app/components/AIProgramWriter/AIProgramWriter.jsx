@@ -968,7 +968,7 @@ export default function AIProgramWriter({ onSelectWorkout }) {
         isDirty={isDirty}
       />
       {programId && (
-        <div className="flex justify-end items-center mt-6">
+        <div className="flex justify-end items-center mt-6 mb-6">
           <div
             className="tooltip tooltip-top tooltip-info mr-2"
             data-tip="Your changes are automatically saved, but you can use this to manually save."
@@ -986,7 +986,7 @@ export default function AIProgramWriter({ onSelectWorkout }) {
                 Saving...
               </>
             ) : (
-              'Save Program Details'
+              'Save'
             )}
           </button>
         </div>

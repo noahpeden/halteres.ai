@@ -237,6 +237,11 @@ export async function generateProgram({
                         ? 'Program generated and saved successfully! You can now add workouts to your calendar.'
                         : 'Program generated successfully!'
                     );
+
+                    // Refresh the trial banner after generation
+                    if (typeof window.refreshTrialBanner === 'function') {
+                      window.refreshTrialBanner();
+                    }
                   }
                   break;
                 } else if (data.status === 'error') {
@@ -286,6 +291,11 @@ export async function generateProgram({
               ? 'Program generated and saved successfully! You can now add workouts to your calendar.'
               : 'Program generated successfully!'
           );
+
+          // Refresh the trial banner after generation
+          if (typeof window.refreshTrialBanner === 'function') {
+            window.refreshTrialBanner();
+          }
         } else {
           showToastMessage(
             'No program workouts were generated. Please try again.'

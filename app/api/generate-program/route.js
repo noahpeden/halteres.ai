@@ -19,43 +19,95 @@ async function updateProfileAfterGeneration(
   userId,
   isPaidSubscriber
 ) {
+  logWithTimestamp('[UpdateProfile] Starting update', {
+    userId,
+    isPaidSubscriber,
+  });
   try {
     // Get current date in ISO format
     const currentDate = new Date().toISOString();
 
-    // Prepare update data
+    // Prepare base update data
     const updateData = {
       last_generation_date: currentDate,
-      generations_today: supabase.sql`generations_today + 1`, // Increment generations_today counter
+      // We no longer use supabase.sql here for generations_today
+      // It will be handled below if needed or fetched first.
     };
 
-    // Only decrement generations_remaining for non-paid subscribers
-    if (!isPaidSubscriber) {
-      updateData.generations_remaining = supabase.sql`generations_remaining - 1`;
+    // Fetch current profile values first
+    logWithTimestamp('[UpdateProfile] Fetching current profile values...', {
+      userId,
+    });
+    const { data: currentProfile, error: fetchError } = await supabase
+      .from('profiles')
+      .select('generations_today, generations_remaining, free_generations_used')
+      .eq('id', userId)
+      .single();
+
+    if (fetchError) {
+      logWithTimestamp('[UpdateProfile] Error fetching current profile', {
+        error: fetchError,
+        userId,
+      });
+      return false; // Cannot proceed without current values
     }
 
+    logWithTimestamp('[UpdateProfile] Fetched current profile', {
+      currentProfile,
+    });
+
+    // Always increment generations_today
+    updateData.generations_today = (currentProfile.generations_today || 0) + 1;
+
+    // Only update free generation counters for non-paid subscribers
+    if (!isPaidSubscriber) {
+      logWithTimestamp(
+        '[UpdateProfile] User is NOT paid, calculating decrement/increment.'
+      );
+      // Calculate new values based on fetched data
+      const currentRemaining = currentProfile.generations_remaining ?? 0;
+      const currentUsed = currentProfile.free_generations_used ?? 0;
+      updateData.generations_remaining = Math.max(0, currentRemaining - 1); // Prevent going below 0
+      updateData.free_generations_used = currentUsed + 1;
+    } else {
+      logWithTimestamp(
+        '[UpdateProfile] User IS paid, skipping decrement/increment.'
+      );
+      // Optionally set them explicitly to current values if needed, though not strictly necessary
+      // updateData.generations_remaining = currentProfile.generations_remaining;
+      // updateData.free_generations_used = currentProfile.free_generations_used;
+    }
+
+    logWithTimestamp('[UpdateProfile] Prepared updateData', { updateData });
+
     // Update the profile
-    const { error } = await supabase
+    logWithTimestamp('[UpdateProfile] Executing Supabase update...');
+    const { error: updateError } = await supabase
       .from('profiles')
       .update(updateData)
       .eq('id', userId);
 
-    if (error) {
-      logWithTimestamp('Error updating profile after generation', {
-        error,
+    if (updateError) {
+      logWithTimestamp('[UpdateProfile] Error during Supabase update', {
+        error: updateError, // Use the specific update error
         userId,
       });
       return false;
+    } else {
+      logWithTimestamp(
+        '[UpdateProfile] Successfully updated profile in Supabase',
+        {
+          userId,
+          isPaidSubscriber,
+          decrementedCounter: !isPaidSubscriber,
+          updatedValues: updateData, // Log what was actually sent
+        }
+      );
+      return true;
     }
-
-    logWithTimestamp('Successfully updated profile after generation', {
-      userId,
-      isPaidSubscriber,
-      decrementedCounter: !isPaidSubscriber,
-    });
-    return true;
   } catch (error) {
-    logWithTimestamp('Exception updating profile after generation', {
+    // Catch any other unexpected errors in the process
+    logWithTimestamp('[UpdateProfile] Exception during update process', {
       error: error.message,
       userId,
     });
