@@ -17,6 +17,7 @@ import {
   Newspaper,
   Crown,
   User,
+  LayoutDashboard,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 export default function Navbar() {
@@ -84,7 +85,10 @@ export default function Navbar() {
       {/* Desktop navbar */}
       <div className="navbar max-w-7xl mx-auto px-4">
         <div className="navbar-start">
-          <Link href="/" className="flex-shrink-0 flex items-center">
+          <Link
+            href={session ? '/dashboard' : '/'}
+            className="flex-shrink-0 flex items-center"
+          >
             <Image
               src={img}
               alt="Halteres.ai Logo"
@@ -167,59 +171,18 @@ export default function Navbar() {
                 </li>
               </>
             )}
-
-            {session && (
-              <li>
-                <NavLink href="/dashboard">Dashboard</NavLink>
-              </li>
-            )}
           </ul>
         </div>
 
         <div className="navbar-end">
-          {session ? (
-            <div className="flex items-center gap-2">
-              {isPremiumUser && (
-                <div className="badge badge-primary gap-1">
-                  <Crown className="h-3.5 w-3.5" />
-                  <span>Premium</span>
-                </div>
-              )}
-              <Link href="/profile">
-                <button className="btn btn-ghost btn-sm">
-                  <User className="h-4 w-4 mr-2" />
-                  Profile
-                </button>
-              </Link>
-              <button
-                onClick={handleLogout}
-                className="btn btn-error btn-sm text-white"
-              >
-                <LogOut className="h-4 w-4 mr-2" />
-                Log out
-              </button>
-            </div>
-          ) : (
-            <Link href="/login">
-              <button className="btn btn-primary btn-sm">
-                Sign up or Log in
-              </button>
-            </Link>
-          )}
-
           {/* Mobile menu button */}
-          <div className="dropdown dropdown-end lg:hidden ml-2">
+          <div className="dropdown dropdown-end  ml-2">
             <label tabIndex={0} className="btn btn-ghost btn-circle">
-              {mobileMenuOpen ? (
-                <X className="h-5 w-5" />
-              ) : (
-                <Menu className="h-5 w-5" />
-              )}
+              <Menu className="h-5 w-5" />
             </label>
             <ul
               tabIndex={0}
-              className="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-52"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="menu menu-sm dropdown-content z-[1] p-2 shadow bg-base-100 rounded-box w-52"
             >
               {!session && (
                 <>
@@ -286,38 +249,37 @@ export default function Navbar() {
                       </ul>
                     </details>
                   </li>
-                </>
-              )}
+                  <div className="divider"></div>
 
-              {session && (
-                <li>
-                  <NavLink href="/dashboard">Dashboard</NavLink>
-                </li>
+                  <Link href="/login">
+                    <button className="btn btn-primary text-white btn-sm w-full">
+                      Login
+                    </button>
+                  </Link>
+                </>
               )}
 
               {session && (
                 <>
                   {isPremiumUser && (
                     <li>
-                      <div className="flex items-center">
-                        <Crown className="mr-2 h-4 w-4 text-primary" />
-                        <span className="text-primary font-medium">
-                          Premium
-                        </span>
+                      <div className="flex items-center justify-center px-4 py-2 font-semibold text-primary">
+                        Premium User
                       </div>
+                      <div className="divider my-0"></div>
                     </li>
                   )}
                   <li>
-                    <Link href="/profile">
-                      <button className="text-primary">
-                        <User className="mr-2 h-4 w-4" />
-                        Profile
-                      </button>
-                    </Link>
+                    <Link href="/dashboard">Dashboard</Link>
                   </li>
                   <li>
-                    <button onClick={handleLogout} className="text-error">
-                      <LogOut className="mr-2 h-4 w-4" />
+                    <Link href="/profile">Profile</Link>
+                  </li>
+                  <li>
+                    <button
+                      onClick={handleLogout}
+                      className="text-error w-full justify-start"
+                    >
                       Log out
                     </button>
                   </li>
