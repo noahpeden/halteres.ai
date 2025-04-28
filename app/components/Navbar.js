@@ -16,6 +16,7 @@ import {
   Clock,
   Newspaper,
   Crown,
+  User,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 export default function Navbar() {
@@ -184,6 +185,12 @@ export default function Navbar() {
                   <span>Premium</span>
                 </div>
               )}
+              <Link href="/profile">
+                <button className="btn btn-ghost btn-sm">
+                  <User className="h-4 w-4 mr-2" />
+                  Profile
+                </button>
+              </Link>
               <button
                 onClick={handleLogout}
                 className="btn btn-error btn-sm text-white"
@@ -300,6 +307,14 @@ export default function Navbar() {
                       </div>
                     </li>
                   )}
+                  <li>
+                    <Link href="/profile">
+                      <button className="text-primary">
+                        <User className="mr-2 h-4 w-4" />
+                        Profile
+                      </button>
+                    </Link>
+                  </li>
                   <li>
                     <button onClick={handleLogout} className="text-error">
                       <LogOut className="mr-2 h-4 w-4" />
