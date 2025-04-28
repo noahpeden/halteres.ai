@@ -4,6 +4,7 @@ import { metadata } from './simple-metadata';
 import { Inter } from 'next/font/google';
 import { AuthProvider } from '@/contexts/AuthContext';
 import Navbar from './components/Navbar';
+import TrialStatusBanner from './components/TrialStatusBanner';
 import { StripeProvider } from './contexts/StripeContext';
 // No longer need createClient imported directly here if called inside
 // import { createClient } from '@/utils/supabase/server'; // <-- Remove or comment out if unused at module scope
@@ -53,7 +54,10 @@ export default async function RootLayout({ children }) {
         <StripeProvider>
           {/* Pass the fetched session to AuthProvider */}
           <AuthProvider initialSession={session}>
-            <Navbar />
+            <div className="fixed top-0 left-0 right-0 z-50">
+              <Navbar />
+              <TrialStatusBanner />
+            </div>
             <main className="pt-24">{children}</main>
           </AuthProvider>
         </StripeProvider>

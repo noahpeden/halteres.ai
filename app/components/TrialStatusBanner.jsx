@@ -20,7 +20,7 @@ export default function TrialStatusBanner() {
       try {
         const { data: profileData, error } = await supabase
           .from('profiles')
-          .select('subscription_status, trial_end_date')
+          .select('subscription_status, trial_end_date, generations_remaining')
           .eq('id', user.id)
           .in('subscription_status', ['trialing', 'active'])
           .single();
@@ -32,6 +32,7 @@ export default function TrialStatusBanner() {
           setTrialStatus({
             status: profileData.subscription_status,
             trial_end: profileData.trial_end_date,
+            generations_remaining: profileData.generations_remaining,
           });
         } else {
           setTrialStatus(null);
@@ -58,11 +59,13 @@ export default function TrialStatusBanner() {
   );
 
   return (
-    <div className="bg-gradient-to-r from-primary to-secondary text-white p-3 text-center text-sm shadow-md flex items-center justify-center space-x-2">
+    <div className="mt-16 bg-gradient-to-r from-primary to-secondary text-white p-3 text-center text-sm shadow-md flex items-center justify-center space-x-2 w-full">
       <Info size={16} className="flex-shrink-0" />
       <span>
         You have <strong>{daysLeft}</strong> day{daysLeft !== 1 ? 's' : ''} left
-        in your free trial.
+        in your free trial with{' '}
+        <strong>{trialStatus.generations_remaining}</strong> generation
+        {trialStatus.generations_remaining !== 1 ? 's' : ''} remaining.
       </span>
       <Link
         href="/pricing"

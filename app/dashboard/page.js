@@ -7,7 +7,6 @@ import TodayWorkouts from '@/components/TodayWorkouts';
 import UpcomingWorkouts from '@/components/UpcomingWorkouts';
 import { Clock } from 'lucide-react';
 import { Calendar } from 'lucide-react';
-import TrialStatusBanner from '@/components/TrialStatusBanner';
 
 export default function Dashboard() {
   const router = useRouter();
@@ -362,7 +361,6 @@ export default function Dashboard() {
 
   return (
     <>
-      <TrialStatusBanner />
       <div className="container mx-auto px-4 pb-16 pt-8">
         <div className="mb-8">
           <h1 className="text-2xl font-bold mb-6">Coach Dashboard</h1>

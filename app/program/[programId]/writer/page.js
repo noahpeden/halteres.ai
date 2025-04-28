@@ -6,7 +6,6 @@ import AIProgramWriter from '@/components/AIProgramWriter/AIProgramWriter';
 import ClientMetricsTab from '@/components/ClientMetricsTab';
 import { Edit2, Check, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { ProgramWriterProvider } from '@/contexts/ProgramWriterContext';
-import TrialStatusBanner from '@/components/TrialStatusBanner';
 
 export default function ProgramWriterPage() {
   const { programId } = useParams();
@@ -124,7 +123,6 @@ export default function ProgramWriterPage() {
 
   return (
     <ProgramWriterProvider initialProgramId={programId}>
-      <TrialStatusBanner />
       <div className="container mx-auto p-4 relative">
         <div className="mb-6">
           {isEditingName ? (
