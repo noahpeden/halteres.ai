@@ -1,22 +1,19 @@
+import { format, parse } from 'date-fns';
+
 export const formatDate = (dateString) => {
   if (!dateString) return 'Not scheduled';
-
-  const options = {
-    weekday: 'long',
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  };
-
-  // Parse the date parts to avoid timezone issues
-  const [year, month, day] = dateString
-    .split('-')
-    .map((num) => parseInt(num, 10));
-
-  // Create a date object with the exact date (months are 0-indexed in JS Date)
-  const date = new Date(year, month - 1, day);
-
-  return date.toLocaleDateString(undefined, options);
+  try {
+    let date;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+      date = parse(dateString, 'yyyy-MM-dd', new Date());
+    } else {
+      date = new Date(dateString);
+    }
+    if (isNaN(date.getTime())) return 'Invalid date';
+    return format(date, 'EEE, MMM d'); // e.g., 'Mon, Jun 7'
+  } catch {
+    return 'Invalid date';
+  }
 };
 
 export const processWorkoutDescription = (description) => {

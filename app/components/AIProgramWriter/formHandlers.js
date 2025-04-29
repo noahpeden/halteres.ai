@@ -6,11 +6,15 @@ import { processWorkoutDescription } from './utils';
 
 // Process workout for display
 export const processWorkoutForDisplay = (workout) => {
-  // Determine the suggested date from various possible sources
+  // Normalize scheduled_date to YYYY-MM-DD if present
+  const scheduledDate = workout.scheduled_date
+    ? new Date(workout.scheduled_date).toISOString().split('T')[0]
+    : undefined;
+
   const suggestedDate =
+    scheduledDate ||
     workout.tags?.scheduled_date ||
-    workout.tags?.suggestedDate ||
-    workout.scheduled_date;
+    workout.tags?.suggestedDate;
 
   return {
     ...workout,

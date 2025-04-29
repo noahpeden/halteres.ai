@@ -1033,21 +1033,22 @@ export async function handleDatePickerSave({
     let newWorkoutId;
 
     if (workoutId) {
+      // Clean potential date fields from tags before update
+      const tagsWithoutDate = { ...(selectedWorkoutForDate.tags || {}) };
+      delete tagsWithoutDate.suggestedDate;
+      delete tagsWithoutDate.scheduled_date;
+
       // Update the existing workout
       const { data, error: updateError } = await supabase
         .from('program_workouts')
         .update({
-          // Update the top-level scheduled_date column
-          scheduled_date: selectedDate
-            ? new Date(selectedDate).toISOString()
-            : null,
-          // Clean the tags column by removing date fields
-          tags: supabase.sql`(tags - 'suggestedDate' - 'scheduled_date')`,
+          scheduled_date: selectedDate || null,
+          tags: tagsWithoutDate,
         })
         .eq('id', workoutId)
         .select()
         .single();
-
+      console.log('Update workout response:', data, updateError);
       if (updateError) throw updateError;
       newWorkoutId = workoutId;
 
@@ -1082,16 +1083,13 @@ export async function handleDatePickerSave({
           title: selectedWorkoutForDate.title,
           body:
             selectedWorkoutForDate.body || selectedWorkoutForDate.description,
-          tags: tagsWithoutDate, // Insert cleaned tags
-          // Insert into the top-level scheduled_date column
-          scheduled_date: selectedDate
-            ? new Date(selectedDate).toISOString()
-            : null,
+          tags: tagsWithoutDate,
+          scheduled_date: selectedDate || null,
           is_reference: false,
         })
         .select()
         .single();
-
+      console.log('Insert workout response:', newWorkout, workoutError);
       if (workoutError) throw workoutError;
       newWorkoutId = newWorkout.id;
 

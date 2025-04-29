@@ -110,7 +110,13 @@ function programWriterReducer(state, action) {
         },
       };
     case 'SET_SUGGESTIONS':
-      return { ...state, suggestions: action.payload };
+      return {
+        ...state,
+        suggestions:
+          typeof action.payload === 'function'
+            ? action.payload(state.suggestions)
+            : action.payload,
+      };
     case 'UPDATE_SUGGESTION': {
       // Used for updating date, id, etc. after save/assign
       const index = state.suggestions.findIndex(

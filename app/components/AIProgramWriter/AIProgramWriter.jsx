@@ -61,7 +61,6 @@ const AUTO_SAVE_STATES = {
 export default function AIProgramWriter({ onSelectWorkout }) {
   const {
     supabase,
-    user,
     subscriptionStatus,
     trialEndDate,
     generationsRemaining,
@@ -79,7 +78,6 @@ export default function AIProgramWriter({ onSelectWorkout }) {
     isLoading,
     generationStage,
     loadingDuration,
-    serverStatus,
     autoSaveState,
     isDirty,
     initialFormData,
@@ -253,8 +251,9 @@ export default function AIProgramWriter({ onSelectWorkout }) {
       selectedWorkoutForDate,
       selectedDate,
       supabase,
-      setSuggestions: (newSuggestions) =>
-        dispatch({ type: 'SET_SUGGESTIONS', payload: newSuggestions }),
+      setSuggestions: (updater) => {
+        dispatch({ type: 'SET_SUGGESTIONS', payload: updater });
+      },
       handleDatePickerClose: () => dispatch({ type: 'CLOSE_DATE_PICKER' }),
       showToastMessage,
     });

@@ -1,5 +1,5 @@
 'use client';
-import { Trash2, Pencil } from 'lucide-react';
+import { Trash2, Pencil, MoreVertical } from 'lucide-react';
 export default function WorkoutList({
   workouts,
   daysPerWeek,
@@ -106,59 +106,50 @@ export default function WorkoutList({
                       }}
                       title="Adjust date"
                     >
-                      {(() => {
-                        const dateValue =
-                          workout.tags?.suggestedDate || workout.suggestedDate;
-                        if (dateValue) {
-                          try {
-                            // Directly parse the dateValue - handles ISO strings correctly.
-                            const date = new Date(dateValue);
-                            if (isNaN(date.getTime())) {
-                              console.warn(
-                                'Invalid date encountered:',
-                                dateValue
-                              );
-                              return 'Invalid Date'; // Handle cases where parsing fails
-                            }
-                            return date.toLocaleDateString('en-US', {
-                              weekday: 'short',
-                              month: 'numeric',
-                              day: 'numeric',
-                              year: 'numeric',
-                            });
-                          } catch (e) {
-                            console.error(
-                              'Error formatting date:',
-                              dateValue,
-                              e
-                            );
-                            return 'Invalid Date';
-                          }
-                        } else {
-                          return 'Not scheduled';
-                        }
-                      })()}
+                      {workout.tags?.suggestedDate
+                        ? formatDate(workout.tags.suggestedDate)
+                        : workout.suggestedDate
+                        ? formatDate(workout.suggestedDate)
+                        : 'Not scheduled'}
                     </button>
                     {workout.id && (
-                      <>
+                      <div className="dropdown dropdown-end">
                         <button
-                          className="btn btn-sm btn-ghost btn-square text-accent"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onEditWorkout(workout);
-                          }}
-                          title="Edit workout"
+                          tabIndex={0}
+                          className="btn btn-sm btn-ghost btn-square"
+                          aria-label="More actions"
+                          title="More actions"
+                          onClick={(e) => e.stopPropagation()}
                         >
-                          <Pencil className="h-5 w-5" />
+                          <MoreVertical className="h-5 w-5" />
                         </button>
-                        <button
-                          className="btn btn-sm btn-ghost btn-square text-error"
-                          onClick={(e) => onDeleteWorkout(workout.id, e)}
-                          title="Delete workout"
+                        <ul
+                          tabIndex={0}
+                          className="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-32"
                         >
-                          <Trash2 className="h-5 w-5" />
-                        </button>
-                      </>
+                          <li>
+                            <button
+                              className="flex items-center gap-2 text-accent"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onEditWorkout(workout);
+                              }}
+                              title="Edit workout"
+                            >
+                              <Pencil className="h-4 w-4" /> Edit
+                            </button>
+                          </li>
+                          <li>
+                            <button
+                              className="flex items-center gap-2 text-error"
+                              onClick={(e) => onDeleteWorkout(workout.id, e)}
+                              title="Delete workout"
+                            >
+                              <Trash2 className="h-4 w-4" /> Delete
+                            </button>
+                          </li>
+                        </ul>
+                      </div>
                     )}
                   </div>
                 </div>
