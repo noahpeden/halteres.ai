@@ -3,6 +3,11 @@
  * @param {Object} context - The full context for prompt generation
  * @returns {string} The assembled prompt string
  */
+import {
+  formatEquipmentRestrictions,
+  formatSchedulingRequirements,
+} from '../promptBuilder.js';
+
 export function balancedFitnessPrompt(context) {
   // Extract all relevant parameters with fallbacks
   const {
@@ -94,11 +99,7 @@ Days Per Week: ${daysPerWeek} days
 Selected Training Days: ${selectedDayNames || 'All available days'}
 Total Length: ${numberOfWeeks} weeks
 ${focus_area ? `Focus Area: ${focus_area}` : ''}
-${
-  equipment.length > 0
-    ? `Available Equipment: ${equipment.join(', ')}`
-    : 'Available Equipment: Bodyweight, dumbbells, resistance bands. Cardio machines optional.'
-}
+${formatEquipmentRestrictions(equipment)}
 
 IMPORTANT DURATION: The program MUST be exactly ${numberOfWeeks} week(s) long. Generate exactly ${totalWorkouts} workouts total.
 
@@ -119,6 +120,7 @@ ${
     : ''
 }
 ${formattedPeriodizationGuidelines}
+${formatSchedulingRequirements(suggestedDates, daysPerWeek, selectedDayNames)}
 
 For the program description, include:
 1. A concise overview reflecting the CRITICAL REQUIREMENTS, Goal (balanced fitness), ACTUAL duration (${numberOfWeeks} weeks), and the structure incorporating strength, cardio, and mobility using available equipment and formats (${
@@ -226,13 +228,5 @@ ${
 \`\`\`
 
 The "workouts" array MUST contain exactly ${totalWorkouts} workouts, covering exactly ${numberOfWeeks} week(s).
-
-${
-  dateInfo
-    ? `Use the following dates for each workout:
-${dateInfo}
-
-IMPORTANT: Each workout MUST be assigned to one of the above dates. These dates strictly follow the user's selected training days of the week.`
-    : ''
-}`;
+`;
 }

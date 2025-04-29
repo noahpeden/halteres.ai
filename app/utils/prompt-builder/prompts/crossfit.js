@@ -3,6 +3,11 @@
  * @param {Object} context - The full context for prompt generation
  * @returns {string} The assembled prompt string
  */
+import {
+  formatEquipmentRestrictions,
+  formatSchedulingRequirements,
+} from '../promptBuilder.js';
+
 export function crossfitPrompt(context) {
   // Extract all relevant parameters with fallbacks
   const {
@@ -73,17 +78,16 @@ IMPORTANT: Please structure your workout to precisely follow this format with th
 `
     : '';
 
-  // Date information for workout scheduling
-  const dateInfo =
-    suggestedDates.length > 0
-      ? suggestedDates
-          .map(
-            (date, index) =>
-              `Workout ${index + 1}: ${date} (Week ${
-                Math.floor(index / daysPerWeek) + 1
-              }, Day ${(index % daysPerWeek) + 1})`
-          )
-          .join('\n')
+  // Format periodization guidelines
+  const formattedPeriodizationGuidelines =
+    periodization?.approach && periodization?.why_appropriate
+      ? `
+Periodization Guidelines:
+${periodization.approach}
+
+Why it's appropriate for the client requirements:
+${periodization.why_appropriate}
+`
       : '';
 
   // Build the CrossFit-specific prompt
@@ -102,10 +106,11 @@ Days Per Week: ${daysPerWeek} days
 Selected Training Days: ${selectedDayNames || 'All available days'}
 Total Length: ${numberOfWeeks} weeks
 ${focus_area ? `Focus Area: ${focus_area}` : ''}
+${formatEquipmentRestrictions(equipment)}
 ${
-  equipment.length > 0
-    ? `Available Equipment: ${equipment.join(', ')}`
-    : 'Available Equipment: Barbells, kettlebells, dumbbells, racks, boxes, pull-up bars, rings, rowers, assault bikes, and typical CrossFit gear'
+  workoutFormats.length > 0
+    ? `Workout Formats to Include: ${formattedWorkoutFormats}\\nIMPORTANT: The generated workouts MUST primarily use the specified Workout Formats. Do NOT include formats outside this list unless essential for the primary Goal or Description. Prioritize these requested formats.`
+    : 'Workout Formats to Include: AMRAP, EMOM, For Time, Chipper, Strength Complex, Intervals'
 }
 
 IMPORTANT DURATION: The program MUST be exactly ${numberOfWeeks} week(s) long. Generate exactly ${totalWorkouts} workouts total.
@@ -118,6 +123,8 @@ ${context.formattedRagMatchedWorkouts}
 ${context.clientMetrics ? `\n${context.clientMetrics}` : ''}
 ${context.referenceWorkouts ? `\n${context.referenceWorkouts}` : ''}
 ${customFormatSection}
+${formattedPeriodizationGuidelines}
+${formatSchedulingRequirements(suggestedDates, daysPerWeek, selectedDayNames)}
 
 For the program description, include:
 1. A concise overview reflecting the CRITICAL REQUIREMENTS, Goal, ACTUAL duration (${numberOfWeeks} weeks), and ACTUAL formats used (${formattedWorkoutFormats}).
@@ -228,13 +235,5 @@ ${
 \`\`\`
 
 The "workouts" array MUST contain exactly ${totalWorkouts} workouts, covering exactly ${numberOfWeeks} week(s).
-
-${
-  dateInfo
-    ? `Use the following dates for each workout:
-${dateInfo}
-
-IMPORTANT: Each workout MUST be assigned to one of the above dates. These dates strictly follow the user's selected training days of the week.`
-    : ''
-}`;
+`;
 }

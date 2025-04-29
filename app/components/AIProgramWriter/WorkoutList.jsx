@@ -99,18 +99,45 @@ export default function WorkoutList({
                   </h4>
                   <div className="flex gap-2 items-center">
                     <button
-                      className="badge badge-neutral text-white cursor-pointer"
+                      className="btn btn-xs btn-ghost text-primary cursor-pointer"
                       onClick={(e) => {
                         e.stopPropagation();
                         onDatePick(workout);
                       }}
                       title="Adjust date"
                     >
-                      {workout.tags?.suggestedDate
-                        ? formatDate(workout.tags.suggestedDate)
-                        : workout.suggestedDate
-                        ? formatDate(workout.suggestedDate)
-                        : 'Not scheduled'}
+                      {(() => {
+                        const dateValue =
+                          workout.tags?.suggestedDate || workout.suggestedDate;
+                        if (dateValue) {
+                          try {
+                            // Directly parse the dateValue - handles ISO strings correctly.
+                            const date = new Date(dateValue);
+                            if (isNaN(date.getTime())) {
+                              console.warn(
+                                'Invalid date encountered:',
+                                dateValue
+                              );
+                              return 'Invalid Date'; // Handle cases where parsing fails
+                            }
+                            return date.toLocaleDateString('en-US', {
+                              weekday: 'short',
+                              month: 'numeric',
+                              day: 'numeric',
+                              year: 'numeric',
+                            });
+                          } catch (e) {
+                            console.error(
+                              'Error formatting date:',
+                              dateValue,
+                              e
+                            );
+                            return 'Invalid Date';
+                          }
+                        } else {
+                          return 'Not scheduled';
+                        }
+                      })()}
                     </button>
                     {workout.id && (
                       <>

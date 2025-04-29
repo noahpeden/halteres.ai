@@ -19,6 +19,63 @@ import { sportSpecificPrompt } from './prompts/sport-specific.js';
 import { formatPeriodizationGuidelines } from './periodizationUtils.js';
 
 /**
+ * Creates a strongly worded equipment restriction notice
+ * @param {Array} equipment - The list of available equipment
+ * @returns {string} Formatted string with equipment restrictions
+ */
+export function formatEquipmentRestrictions(equipment) {
+  const equipmentList =
+    Array.isArray(equipment) && equipment.length > 0
+      ? equipment.join(', ')
+      : 'Bodyweight only';
+
+  return `
+AVAILABLE EQUIPMENT: ${equipmentList}
+
+⚠️ CRITICAL EQUIPMENT RESTRICTION ⚠️
+The program MUST STRICTLY ONLY use the equipment explicitly listed above. You MUST NOT include exercises that require equipment not listed in the available equipment, even in warm-ups, main workouts, cooldowns, or finishers. If a common exercise is not possible due to equipment limitations, substitute with an alternative that uses ONLY the available equipment.
+`;
+}
+
+/**
+ * Creates a strongly worded scheduling notice with dates to use
+ * @param {Array} suggestedDates - The list of dates for workouts
+ * @param {number} daysPerWeek - Number of workout days per week
+ * @param {string} selectedDayNames - Names of selected days of the week
+ * @returns {string} Formatted string with scheduling requirements
+ */
+export function formatSchedulingRequirements(
+  suggestedDates,
+  daysPerWeek,
+  selectedDayNames
+) {
+  if (!Array.isArray(suggestedDates) || suggestedDates.length === 0) {
+    return '';
+  }
+
+  const datesList = suggestedDates
+    .map(
+      (date, index) =>
+        `Workout ${index + 1}: ${date} (Week ${
+          Math.floor(index / daysPerWeek) + 1
+        }, Day ${(index % daysPerWeek) + 1})`
+    )
+    .join('\n');
+
+  return `
+WORKOUT SCHEDULING REQUIREMENTS:
+Selected Training Days: ${selectedDayNames || 'All available days'}
+
+⚠️ CRITICAL SCHEDULING REQUIREMENT ⚠️
+The workouts MUST be scheduled on the EXACT dates below. These dates follow the user's selected training days (${selectedDayNames}). DO NOT create workouts on any other dates.
+
+${datesList}
+
+IMPORTANT: Each workout you generate MUST be assigned to one of the above dates. The "date" field in each workout object MUST match one of these dates EXACTLY, and all dates must be used.
+`;
+}
+
+/**
  * Returns the appropriate prompt template for the given training methodology and context.
  * @param {Object} context - The full context for prompt generation (user input, program params, etc.)
  * @param {string} trainingType - The training methodology (e.g., 'CrossFit', 'Bodybuilding', 'Powerlifting')

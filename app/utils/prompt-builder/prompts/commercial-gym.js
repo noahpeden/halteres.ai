@@ -3,6 +3,11 @@
  * @param {Object} context - The full context for prompt generation
  * @returns {string} The assembled prompt string
  */
+import {
+  formatEquipmentRestrictions,
+  formatSchedulingRequirements,
+} from '../promptBuilder.js';
+
 export function generalGymPrompt(context) {
   // Extract all relevant parameters with fallbacks
   const {
@@ -59,19 +64,6 @@ export function generalGymPrompt(context) {
   const includeScaling = ['Beginner', 'Intermediate'].includes(difficulty);
   const hasInjuryHistory = context.hasInjuryHistory || false;
 
-  // Date information for workout scheduling
-  const dateInfo =
-    suggestedDates.length > 0
-      ? suggestedDates
-          .map(
-            (date, index) =>
-              `Workout ${index + 1}: ${date} (Week ${
-                Math.floor(index / daysPerWeek) + 1
-              }, Day ${(index % daysPerWeek) + 1})`
-          )
-          .join('\n')
-      : '';
-
   // Build the General Gym Training prompt
   return `Generate a ${numberOfWeeks}-week general gym training program with the following parameters:
 
@@ -88,64 +80,46 @@ Days Per Week: ${daysPerWeek} days
 Selected Training Days: ${selectedDayNames || 'All available days'}
 Total Length: ${numberOfWeeks} weeks
 ${focus_area ? `Focus Area: ${focus_area}` : ''}
-${
-  equipment.length > 0
-    ? `Available Equipment: ${equipment.join(', ')}`
-    : 'Available Equipment: Assumes access to standard free weights, machines, and cardio equipment unless otherwise specified.'
-}
+${formatEquipmentRestrictions(equipment)}
 
 IMPORTANT DURATION: The program MUST be exactly ${numberOfWeeks} week(s) long. Generate exactly ${totalWorkouts} workouts total.
 
-REQUIRED WORKOUT FORMATS: The generated workouts MUST utilize typical commercial gym equipment (machines, free weights, cardio) and follow the specified formats: [${formattedWorkoutFormats}]. If no formats are specified, create a standard general strength program (e.g., full body, upper/lower split). Prioritize effective use of common gym equipment.
+REQUIRED WORKOUT FORMATS: The generated workouts MUST utilize typical commercial gym equipment (machines, free weights, cardio) and follow the specified formats: [${formattedWorkoutFormats}]. If no formats are specified, create a standard general strength program (e.g., full body, upper/lower split). Prioritize effective use of common gym equipment, using ONLY the available equipment.
 
 ${personalization ? `Personalization: ${personalization}` : ''}
 ${context.formattedReferenceInput}
 ${context.formattedRagMatchedWorkouts}
 ${context.clientMetrics ? `\n${context.clientMetrics}` : ''}
 ${context.referenceWorkouts ? `\n${context.referenceWorkouts}` : ''}
-${
-  customWorkoutFormat
-    ? `\n${
-        customWorkoutFormat.enabled
-          ? 'Custom Workout Format: ' + customWorkoutFormat.sections.join(', ')
-          : ''
-      }`
-    : ''
-}
 ${formattedPeriodizationGuidelines}
+${formatSchedulingRequirements(suggestedDates, daysPerWeek, selectedDayNames)}
 
 For the program description, include:
-1. A concise overview reflecting the CRITICAL REQUIREMENTS, Goal (general strength/fitness), ACTUAL duration (${numberOfWeeks} weeks), and the structure utilizing commercial gym equipment and formats (${
-    formattedWorkoutFormats || 'General Strength Split'
-  }).
-2. The periodization approach used (${programType}) and how it promotes steady progress in a typical gym setting.
-3. Expected outcomes in terms of increased strength, improved body composition (if applicable), and overall fitness, based *only* on the generated workouts and client requirements.
-4. Recommendations for gym etiquette, proper machine use, and incorporating variety.
+1. A concise overview reflecting the CRITICAL REQUIREMENTS, Goal, ACTUAL duration (${numberOfWeeks} weeks), difficulty, and the general structure using standard gym equipment and formats (${formattedWorkoutFormats}).
+2. The periodization approach used (${programType}) and how it ensures consistent progress.
+3. Expected outcomes in terms of strength gains, fitness improvements, and potential body composition changes, based *only* on the generated workouts and client requirements.
+4. Recommendations for using gym equipment effectively, proper form, and basic nutrition/recovery.
 
-General Commercial Gym Guidelines (Apply *only if* they DO NOT CONFLICT with CRITICAL REQUIREMENTS or REQUIRED WORKOUT FORMATS):
-- Include a mix of machine exercises and free weight exercises (barbells, dumbbells).
-- Incorporate compound lifts along with isolation movements.
-- Utilize cardio equipment for warm-ups, cool-downs, or dedicated cardio sessions.
-- Structure workouts logically, often following a split routine (full body, upper/lower, push/pull/legs).
-- Provide clear instructions for sets, reps, rest periods, and potentially RPE or weight suggestions.
+General Gym Guidelines (Apply *only if* they DO NOT CONFLICT with CRITICAL REQUIREMENTS or REQUIRED WORKOUT FORMATS):
+- Utilize a mix of compound exercises (barbell/dumbbell presses, squats, rows) and isolation movements (machines, cables, dumbbells).
+- Include both free weights and machine exercises for variety and targeting specific muscles.
+- Incorporate cardiovascular exercise on cardio machines or through circuits.
+- Follow a structured split (e.g., upper/lower, push/pull/legs, full body) if not specified otherwise.
+- Progress by gradually increasing weight, reps, or sets over time.
 
-The program MUST follow logical progression based on the selected program type (${programType}) AND the client's requirements.
-Ensure proper periodization, recovery, and exercise variation *within the constraints provided*, making good use of standard gym equipment.
-
-IMPORTANT: The workouts must be scheduled on specific dates according to the user's selected training days. DO NOT create workouts on days other than the ones specified.
+The program MUST follow logical progression based on the selected program type (${programType}) AND the client's requirements, using standard gym equipment effectively.
+Ensure proper periodization, recovery, and exercise variation *within the constraints provided*.
 
 Your response MUST be in this exact JSON format:
 {
-  "title": "Commercial Gym Program for ${goal}",
+  "title": "General Gym Training Program for ${goal}",
   "description": "Generate a description ACCURATELY reflecting the program's ACTUAL content: CRITICAL REQUIREMENTS (${
     description || 'None provided'
-  }), duration (${numberOfWeeks} weeks), difficulty (${difficulty}), and the specific structure using commercial gym equipment and formats (${
-    formattedWorkoutFormats || 'General Strength Split'
-  }). Do NOT use a generic template description or mention formats/equipment not used.",
-  "overview": "Generate a detailed explanation of the program methodology, periodization approach (${programType}) suited for a commercial gym, rationale for exercise selection (machines vs. free weights), expected strength and fitness outcomes, and supplementary recommendations based SOLELY on the generated workouts, CRITICAL REQUIREMENTS, and other user inputs. Do NOT use generic explanations unless they directly apply to the constraints.",
+  }), duration (${numberOfWeeks} weeks), difficulty (${difficulty}), and the specific structure using available commercial gym equipment and formats (${formattedWorkoutFormats}). Do NOT use a generic template description.",
+  "overview": "Generate a detailed explanation of the program methodology, periodization approach (${programType}) for general fitness, rationale for exercise selection (mix of free weights/machines), expected fitness outcomes, and supplementary recommendations based SOLELY on the generated workouts, CRITICAL REQUIREMENTS, and other user inputs. Do NOT use generic explanations unless they directly apply to the constraints.",
   "workouts": [
     {
-      "title": "Week X, Day Y: [Muscle Groups/Focus] and [Creative Title]",
+      "title": "Week X, Day Y: [Training Focus - e.g., Upper Body Strength] Gym Session",
       "body": "Detailed workout description including all required sections",
       "date": "YYYY-MM-DD"
     },
@@ -155,68 +129,63 @@ Your response MUST be in this exact JSON format:
 
 For each workout's "body" field, use this structure:
 \`\`\`
-## Stimulus and Strategy
-[Detailed explanation of workout stimulus and strategy approach]
-- Explain the intended stimulus for each movement and muscle group
-- Provide pacing guidance and rest periods
-- Explain how to approach the workout (e.g., "Focus on mind-muscle connection for the isolation movements")
+## Workout Focus
+[Brief explanation of this session's purpose in the overall program]
+- Explain the target muscle groups or fitness components (e.g., Strength, Hypertrophy, Conditioning)
+- Provide guidance on intensity (RPE, weight selection)
+- Explain how this workout fits into the weekly structure
 
 ${
   includeScaling
     ? `## Scaling Options
 ### Intermediate Option
-[Detailed intermediate scaling with specific weights and modifications]
+[Detailed intermediate scaling with specific weight/rep adjustments]
 
 ### Beginner Option
-[Detailed beginner scaling with specific weights and modifications]
+[Detailed beginner scaling with lighter weights, machine alternatives, or reduced volume]`
+    : ''
+}
 ${
   hasInjuryHistory
     ? `
-### Injury Considerations
-[Modifications for common limitations]`
-    : ''
-}`
+## Injury Considerations
+[Alternative exercises or modifications for common limitations using gym equipment]`
     : ''
 }
 
 ## Warm-up
-[Detailed warm-up protocol with specific movements, sets, reps]
-- Include duration, reps, and brief explanations
-- Focus on movement preparation and activation for target muscle groups
+[Detailed warm-up protocol]
+- Include 5-10 minutes of light cardio (treadmill, bike, elliptical)
+- Dynamic stretching for relevant joints
+- Activation exercises for target muscles
+- Warm-up sets for the first main exercise
 
-## Strength Work
-[Complete strength workout with movements, sets, reps, specific weights]
-- Clear exercise format (Sets x Reps)
-- Specific movements, sets, reps, and rest periods
-- Exact weights or percentage-based loading
-- Tempo prescriptions where appropriate (e.g., "3-1-2-0 tempo")
+## Strength/Hypertrophy Work
+[Main resistance training exercises for the day]
+- List exercises in a logical order (e.g., compound then isolation)
+- Specify exact sets, reps (e.g., 3 sets of 8-12 reps), and rest periods
+- Provide clear instructions on weight selection (e.g., choose a weight you can lift for X reps with good form, RPE 7-8)
+- Include both free weight and machine exercises based on availability
 
-## Conditioning/Accessory Work
-[Accessory exercises or conditioning work]
-- Clear exercise format
-- Specific movements, sets, reps, and rest periods
-- Target muscle groups and intended stimulus
+## Conditioning (Optional)
+[Cardiovascular or metabolic conditioning component]
+- Specify type (e.g., steady-state cardio, interval training, circuit)
+- Provide duration, intensity (e.g., heart rate zone, RPE), and machine/mode used
+- Example: 20 minutes steady-state cardio on Treadmill at RPE 6
+- Example: 10 rounds of 30s work / 30s rest on Air Bike
 
 ## Cool-down
 [Detailed cool-down protocol]
-- Include specific movements and durations
-- Focus on recovery and mobility work
+- Include light cardio cool-down (5 minutes)
+- Static stretching for major muscle groups worked (hold each stretch 20-30 seconds)
 
 ## Coaching Cues
-[3-5 specific technical cues for key movements]
-- Technical cues for the most complex movements
-- Form tips to maximize efficiency and safety
-- Common errors to avoid
+[3-5 specific technical cues for key exercises]
+- Focus on proper form for common gym exercises (squats, presses, rows)
+- Tips for using machines safely and effectively
+- Breathing technique during lifts
 \`\`\`
 
 The "workouts" array MUST contain exactly ${totalWorkouts} workouts, covering exactly ${numberOfWeeks} week(s).
-
-${
-  dateInfo
-    ? `Use the following dates for each workout:
-${dateInfo}
-
-IMPORTANT: Each workout MUST be assigned to one of the above dates. These dates strictly follow the user's selected training days of the week.`
-    : ''
-}`;
+`;
 }

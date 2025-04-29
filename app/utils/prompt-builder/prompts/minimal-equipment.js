@@ -3,6 +3,11 @@
  * @param {Object} context - The full context for prompt generation
  * @returns {string} The assembled prompt string
  */
+import {
+  formatEquipmentRestrictions,
+  formatSchedulingRequirements,
+} from '../promptBuilder.js';
+
 export function minimalEquipmentPrompt(context) {
   // Extract all relevant parameters with fallbacks
   const {
@@ -93,11 +98,8 @@ Days Per Week: ${daysPerWeek} days
 Selected Training Days: ${selectedDayNames || 'All available days'}
 Total Length: ${numberOfWeeks} weeks
 ${focus_area ? `Focus Area: ${focus_area}` : ''}
-${
-  equipment.length > 0
-    ? `Available Equipment: ${equipment.join(', ')}`
-    : 'Available Equipment: Primarily bodyweight. Use resistance bands or jump rope if available.'
-}
+${formatEquipmentRestrictions(equipment)}
+
 ${
   workoutFormats.length > 0
     ? `Workout Formats to Include: ${formattedWorkoutFormats}\\nIMPORTANT: The generated workouts MUST primarily use the specified Workout Formats. Do NOT include formats outside this list unless essential for the primary Goal or Description. Prioritize these requested formats.`
@@ -107,6 +109,7 @@ ${personalization ? `Personalization: ${personalization}` : ''}
 ${formattedPeriodizationGuidelines}
 ${clientMetrics || ''}
 ${referenceWorkouts || ''}
+${formatSchedulingRequirements(suggestedDates, daysPerWeek, selectedDayNames)}
 
 For the program description, include:
 1. A concise overview reflecting the CRITICAL REQUIREMENTS, Goal, ACTUAL duration (${numberOfWeeks} weeks), and the structure utilizing ONLY the specified minimal equipment and formats (${
@@ -210,13 +213,5 @@ ${
 \`\`\`
 
 IMPORTANT: The "workouts" array MUST contain exactly ${totalWorkouts} workouts, organized in a progressive sequence over ${numberOfWeeks} weeks.
-
-${
-  dateInfo
-    ? `Use the following dates for each workout:
-${dateInfo}
-
-IMPORTANT: Each workout MUST be assigned to one of the above dates. These dates strictly follow the user's selected training days of the week.`
-    : ''
-}`;
+`;
 }

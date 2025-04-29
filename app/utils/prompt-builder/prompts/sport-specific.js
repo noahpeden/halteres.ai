@@ -3,6 +3,11 @@
  * @param {Object} context - The full context for prompt generation
  * @returns {string} The assembled prompt string
  */
+import {
+  formatEquipmentRestrictions,
+  formatSchedulingRequirements,
+} from '../promptBuilder.js';
+
 export function sportSpecificPrompt(context) {
   // Extract all relevant parameters with fallbacks
   const {
@@ -21,6 +26,7 @@ export function sportSpecificPrompt(context) {
     referenceWorkouts = '',
     suggestedDates = [],
     sport = '', // Sport-specific parameter
+    formattedPeriodizationGuidelines = '',
   } = context;
 
   // Get more specific parameters
@@ -58,19 +64,6 @@ export function sportSpecificPrompt(context) {
   const includeScaling = ['Beginner', 'Intermediate'].includes(difficulty);
   const hasInjuryHistory = context.hasInjuryHistory || false;
 
-  // Date information for workout scheduling
-  const dateInfo =
-    suggestedDates.length > 0
-      ? suggestedDates
-          .map(
-            (date, index) =>
-              `Workout ${index + 1}: ${date} (Week ${
-                Math.floor(index / daysPerWeek) + 1
-              }, Day ${(index % daysPerWeek) + 1})`
-          )
-          .join('\\n')
-      : '';
-
   // Build the Sport-Specific prompt
   return `Generate a ${numberOfWeeks}-week sport-specific training program for ${
     sport || 'general athletics'
@@ -90,13 +83,9 @@ Days Per Week: ${daysPerWeek} days
 Selected Training Days: ${selectedDayNames || 'All available days'}
 Total Length: ${numberOfWeeks} weeks
 ${focus_area ? `Focus Area: ${focus_area}` : ''}
-${
-  equipment.length > 0
-    ? `Available Equipment: ${equipment.join(', ')}`
-    : "Available Equipment: Tailored to the sport\\'s requirements (e.g., track, field, court, weight room access)"
-}
+${formatEquipmentRestrictions(equipment)}
 
-IMPORTANT: The program MUST strictly adhere to the requested ${numberOfWeeks} weeks duration. Generate exactly ${totalWorkouts} workouts for this duration.
+IMPORTANT DURATION: The program MUST strictly adhere to the requested ${numberOfWeeks} weeks duration. Generate exactly ${totalWorkouts} workouts for this duration.
 
 ${
   workoutFormats.length > 0
@@ -109,47 +98,35 @@ ${context.formattedReferenceInput}
 ${context.formattedRagMatchedWorkouts}
 ${clientMetrics || ''}
 ${referenceWorkouts || ''}
+${formattedPeriodizationGuidelines}
+${formatSchedulingRequirements(suggestedDates, daysPerWeek, selectedDayNames)}
 
 For the program description, include:
-1. A concise overview of the program's goals (enhancing athletic performance for [Sport]) and intended adaptations derived primarily from the user's Goal and Description inputs.
-2. The periodization approach used (e.g., off-season, pre-season, in-season) and why it's effective for the sport.
-3. Expected outcomes (improved sport-specific metrics) based *only* on the generated workouts.
-4. Recommendations for nutrition, recovery, and sport-specific skill work.
+1. A concise overview reflecting the CRITICAL REQUIREMENTS, Target Sport (${sport}), Goal (${goal}), ACTUAL duration (${numberOfWeeks} weeks), and the specific athletic qualities being developed (e.g., speed, power).
+2. The periodization approach used (${programType}) and how it aligns with the sport's demands and season (if applicable).
+3. Expected outcomes in terms of improved sport performance metrics, based *only* on the generated workouts and client requirements.
+4. Recommendations for integrating this training with sport-specific practice and recovery strategies.
 
-Sport-Specific Requirements (Apply *unless* conflicting with user's Description, Goal, or requested Workout Formats):
-- Focus on improving athletic qualities relevant to the specified sport (e.g., ${
-    sport || 'general athleticism'
-  })
-- Utilize training methods that transfer directly to on-field/court performance
+General Sport-Specific Guidelines (Apply *only if* they DO NOT CONFLICT with CRITICAL REQUIREMENTS or REQUIRED WORKOUT FORMATS):
+- Select exercises that directly transfer to the movements and demands of the target sport (${sport}).
+- Develop relevant physical qualities (strength, power, speed, agility, endurance, mobility) based on the sport's needs.
+- Incorporate plyometrics, change-of-direction drills, and speed training if applicable.
+- Address injury prevention through targeted strengthening and mobility work.
+- Periodize training appropriately considering the competitive season (off-season, pre-season, in-season).
 
-Sport-Specific Training Requirements:
-- Design a program that targets the primary physical demands and movement patterns of ${
-    sport || 'general athletics'
-  }
-- Include appropriate balance of strength, power, speed, agility, and conditioning work
-- Structure training to develop sport-specific energy systems based on game/competition demands
-- Incorporate sport-specific movement patterns and technical skill transfer exercises
-- Address common injury prevention needs for ${sport || 'general athletics'}
-- Include appropriate power development and rate of force production work
-- Balance general athletic development with sport-specific skill transfer
-- Implement appropriate in-season, off-season, or pre-season training focus based on timing
-- Consider appropriate deloading and peak timing for competitions if applicable
-
-The program should follow logical progression based on the selected program type (${programType}).
-Ensure proper athletic development with appropriate balance between different physical qualities.
-
-IMPORTANT: The workouts must be scheduled on specific dates according to the user's selected training days. DO NOT create workouts on days other than the ones specified.
+The program MUST follow logical progression based on the selected program type (${programType}) AND the client's requirements, tailored specifically to enhance performance in ${sport}.
+Ensure proper periodization, recovery, and exercise selection *within the constraints provided*.
 
 Your response MUST be in this exact JSON format:
 {
-  "title": "${sport || 'Sport'}-Specific Training Program for ${goal}",
-  "description": "Generate a description accurately reflecting the program's ACTUAL content, duration (${numberOfWeeks} weeks), difficulty (${difficulty}), target sport (${
-    sport || 'general athleticism'
-  }), workout formats used (${formattedWorkoutFormats}), and the primary goal/focus derived from user input. Do NOT use a generic template description.",
-  "overview": "Generate a detailed explanation of the program methodology (focused on sport-specific transfer), periodization approach (if any), expected outcomes, and supplementary recommendations based SOLELY on the generated workouts and user inputs. Do NOT use generic explanations unless they directly apply.",
+  "title": "${sport} Specific Training Program for ${goal}",
+  "description": "Generate a description ACCURATELY reflecting the program's ACTUAL content: CRITICAL REQUIREMENTS (${
+    description || 'None provided'
+  }), target sport (${sport}), duration (${numberOfWeeks} weeks), difficulty (${difficulty}), and the specific athletic qualities developed using only specified formats (${formattedWorkoutFormats}). Do NOT use a generic template description.",
+  "overview": "Generate a detailed explanation of the program methodology, periodization approach (${programType}) tailored for ${sport}, rationale for exercise selection (sport transfer), expected performance outcomes, and integration recommendations based SOLELY on the generated workouts, CRITICAL REQUIREMENTS, and other user inputs. Do NOT use generic explanations unless they directly apply to the constraints.",
   "workouts": [
     {
-      "title": "Week X, Day Y: [Training Quality Focus] and [Workout Theme]",
+      "title": "Week X, Day Y: [Athletic Quality Focus - e.g., Power/Speed] for ${sport}",
       "body": "Detailed workout description including all required sections",
       "date": "YYYY-MM-DD"
     },
@@ -160,87 +137,65 @@ Your response MUST be in this exact JSON format:
 For each workout's "body" field, use this structure:
 \`\`\`
 ## Workout Focus
-[Brief explanation of this session's purpose in the overall program]
-- Explain the athletic qualities being developed
-- Detail how this workout translates to sport performance
-- Note specific adaptation targets (e.g., phosphagen system, eccentric strength, etc.)
-- Specify where this falls in the training phase (e.g., general prep, specific prep, etc.)
+[Brief explanation of this session's purpose for ${sport} performance]
+- Explain the specific athletic quality being targeted (e.g., Lower Body Power, Acceleration)
+- Provide guidance on intent and effort levels for drills
+- Explain how this session contributes to overall athletic development for ${sport}
 
 ${
   includeScaling
     ? `## Scaling Options
 ### Intermediate Option
-[Detailed intermediate scaling with appropriate modifications]
+[Detailed intermediate scaling with specific modifications]
 
 ### Beginner Option
-[Detailed beginner scaling with simplified movement patterns and reduced intensity]
+[Detailed beginner scaling with simplified variations]`
+    : ''
+}
 ${
   hasInjuryHistory
     ? `
-### Injury Considerations
-[Modifications for common sport-specific injuries or limitations]`
-    : ''
-}`
+## Injury Considerations
+[Modifications considering sport-specific injury risks or existing limitations]`
     : ''
 }
 
 ## Warm-up
-[Sport-specific warm-up protocol]
-- General movement preparation (5-10 minutes)
-- Dynamic mobility targeting sport-specific joints and ranges
-- Movement skill preparation and activation
-- Sport-specific movement rehearsal at submaximal intensities
+[Detailed dynamic warm-up preparing for sport-specific movements]
+- Include movement prep, activation drills, and low-intensity plyometrics/speed drills
 
-## Speed/Power Development
-[High-velocity, explosive training]
-- Brief, maximal-intent exercises (sprints, jumps, throws, Olympic lifts)
-- Complete recovery between sets (work:rest ratio of 1:5-10)
-- Technical focus on rate of force development
-- Sport-specific movement patterns at high velocity
+## Skill/Speed/Agility Work
+[Drills focused on sport-specific skills, speed, or change of direction]
+- Specific drills with sets, reps, distances, and rest periods
+- Emphasis on technique and quality of movement
 
-## Strength Work
-[Primary resistance training]
-- Clear exercise format with exact sets, reps, and loading parameters
-- Sport-specific movement patterns and force production requirements
-- Rest periods designed for full recovery between primary sets
-- Exercise selection targeting sport-specific force vectors
+## Strength/Power Work
+[Primary strength or power exercises relevant to ${sport}]
+- Specific exercises (e.g., Hang Clean, Box Jumps, Heavy Squats)
+- Sets, reps, and load prescription (percentage, RPE, or velocity-based)
+- Focus on explosive execution where appropriate
 
-## Conditioning
-[Energy system development appropriate for the sport]
-- Work:rest ratios specific to the sport's demands
-- Movement patterns that mimic sport-specific work
-- Clear intensity guidelines (speed, heart rate, RPE)
-- Game/match simulation patterns when appropriate
+## Conditioning Work (Sport-Specific)
+[Conditioning that mimics the energy system demands of ${sport}]
+- Specific format (e.g., repeated sprints, interval training, game-simulation circuits)
+- Work-to-rest ratios relevant to the sport
+- Intensity targets (heart rate, RPE)
 
-## Technical/Skill Transfer
-[Sport-specific skill development]
-- Exercises connecting gym-based training to on-field/court performance
-- Technique focus points for maximum transfer
-- Specific drills targeting sport skill components
-- Integration of physical qualities with technical skills
+## Accessory/Prehab Work
+[Targeted exercises for muscle balance and injury prevention]
+- Exercises addressing common weak points or injury sites in ${sport}
+- Core stability and mobility work
 
-## Recovery/Regeneration
-[Active recovery strategies]
-- Sport-specific mobility for key movement patterns
-- Self-myofascial release for primary muscle groups
-- Specific recovery protocols for between training sessions
-- Monitoring guidelines for recovery status
+## Cool-down
+[Detailed cool-down protocol]
+- Static stretching or mobility focused on recovery for key muscle groups
 
 ## Coaching Cues
-[3-5 specific technical cues for key movements]
-- Technical cues focused on athletic movement and power production
-- Form tips for injury prevention during dynamic activities
-- Common errors to avoid in sport-specific drills
+[3-5 specific technical cues for key drills or lifts]
+- Focus on maximizing transfer to sport performance
+- Cues related to posture, force production, or movement efficiency
 \`\`\`
 
-IMPORTANT: The "workouts" array MUST contain exactly ${totalWorkouts} workouts, organized in a progressive sequence over ${numberOfWeeks} weeks, following sport-specific training principles.
-
-${
-  dateInfo
-    ? `Use the following dates for each workout:
-${dateInfo}
-
-IMPORTANT: Each workout MUST be assigned to one of the above dates. These dates strictly follow the user's selected training days of the week.`
-    : ''
-}`;
+The "workouts" array MUST contain exactly ${totalWorkouts} workouts, covering exactly ${numberOfWeeks} week(s).
+`;
 }

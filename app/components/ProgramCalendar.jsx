@@ -39,17 +39,18 @@ const mapWorkoutToEvent = (workout) => {
 
   let workoutDate;
   try {
-    // Attempt to parse as full ISO string first
+    // Attempt to parse as full ISO string first (preferable if available)
     let parsedDate = parseISO(workoutDateStr);
 
-    // If parseISO fails or produces an invalid date, AND it looks like 'YYYY-MM-DD',
-    // try parsing it explicitly as local time.
+    // If it failed or looks like a simple date string, parse explicitly as UTC
     if (!isValid(parsedDate) && /^\d{4}-\d{2}-\d{2}$/.test(workoutDateStr)) {
-      // Append T00:00:00 to treat it as local midnight
-      parsedDate = new Date(workoutDateStr + 'T00:00:00');
+      // Split the date string and create a Date object using UTC values
+      const [year, month, day] = workoutDateStr.split('-').map(Number);
+      // Note: JavaScript months are 0-indexed (0=Jan, 11=Dec)
+      parsedDate = new Date(Date.UTC(year, month - 1, day, 0, 0, 0));
     }
 
-    // Final check if we have a valid date
+    // Final check if we have a valid date after all attempts
     if (!isValid(parsedDate)) {
       throw new Error(`Invalid date string after attempts: ${workoutDateStr}`);
     }
@@ -65,8 +66,8 @@ const mapWorkoutToEvent = (workout) => {
   return {
     id: workout.id,
     title: workout.title || 'Untitled Workout',
-    start: workoutDate,
-    end: new Date(workoutDate.getTime() + 60 * 60 * 1000),
+    start: workoutDate, // Use the parsed date object
+    end: workoutDate, // For allDay events, start and end can be the same date object
     allDay: true,
     resource: workout,
   };

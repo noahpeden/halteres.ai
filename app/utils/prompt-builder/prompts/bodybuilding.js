@@ -1,19 +1,24 @@
 /**
- * Bodybuilding-style prompt template
+ * Bodybuilding prompt template
  * @param {Object} context - The full context for prompt generation
  * @returns {string} The assembled prompt string
  */
+import {
+  formatEquipmentRestrictions,
+  formatSchedulingRequirements,
+} from '../promptBuilder.js';
+
 export function bodybuildingPrompt(context) {
   // Extract all relevant parameters with fallbacks
   const {
-    goal = 'Muscle hypertrophy',
+    goal = 'Muscle hypertrophy and physique development',
     difficulty = 'Intermediate',
-    focus_area = '',
+    focus_area = '', // e.g., 'Chest and Back focus'
     description = '',
     personalization = '',
-    workout_format = [],
-    duration_weeks = 4,
-    days_per_week = 5, // Default to 5 days for bodybuilding
+    workout_format = [], // e.g., ['Push/Pull/Legs', 'Upper/Lower']
+    duration_weeks = 8,
+    days_per_week = 5, // Common bodybuilding split
     periodization = {},
     calendar_data = {},
     gym_details = {},
@@ -23,10 +28,11 @@ export function bodybuildingPrompt(context) {
     additionalNotes = '',
     formattedReferenceInput = '',
     formattedRagMatchedWorkouts = '',
+    formattedPeriodizationGuidelines = '',
   } = context;
 
   // Get more specific parameters
-  const numberOfWeeks = parseInt(duration_weeks || context.numberOfWeeks || 4);
+  const numberOfWeeks = parseInt(duration_weeks || context.numberOfWeeks || 8);
   const daysPerWeek = parseInt(days_per_week || context.daysPerWeek || 5);
   const programType =
     periodization?.program_type || context.programType || 'linear';
@@ -36,11 +42,11 @@ export function bodybuildingPrompt(context) {
   const workoutFormats = workout_format || [];
   const selectedDaysOfWeek = calendar_data?.days_of_week || [];
 
-  // Format workout formats for clarity in the prompt
+  // Format workout formats (training split) for clarity in the prompt
   const formattedWorkoutFormats =
     workoutFormats.length > 0
-      ? workoutFormats.join(', ')
-      : 'Standard Bodybuilding Splits (Push/Pull/Legs, Body Part)';
+      ? workoutFormats.join(' / ') // Display split, e.g., 'Push / Pull / Legs'
+      : 'Body Part Split'; // Default bodybuilding split
 
   // Get day names for better readability
   const dayNames = [
@@ -60,21 +66,8 @@ export function bodybuildingPrompt(context) {
   const includeScaling = ['Beginner', 'Intermediate'].includes(difficulty);
   const hasInjuryHistory = context.hasInjuryHistory || false;
 
-  // Date information for workout scheduling
-  const dateInfo =
-    suggestedDates.length > 0
-      ? suggestedDates
-          .map(
-            (date, index) =>
-              `Workout ${index + 1}: ${date} (Week ${
-                Math.floor(index / daysPerWeek) + 1
-              }, Day ${(index % daysPerWeek) + 1})`
-          )
-          .join('\\n')
-      : '';
-
-  // Build the Bodybuilding Gym-specific prompt
-  return `Generate a detailed ${numberOfWeeks}-week bodybuilding training program with the following parameters:
+  // Build the Bodybuilding prompt
+  return `Generate a ${numberOfWeeks}-week bodybuilding training program with the following parameters:
 
 ${
   description
@@ -86,58 +79,54 @@ Please prioritize these specific requirements above all else in program design.
 }Goal: ${goal}
 Difficulty: ${difficulty}
 Days Per Week: ${daysPerWeek} days
+Training Split: ${formattedWorkoutFormats}
 Selected Training Days: ${selectedDayNames || 'All available days'}
 Total Length: ${numberOfWeeks} weeks
-${focus_area ? `Focus Area: ${focus_area}` : ''}
-${
-  equipment.length > 0
-    ? `Available Equipment: ${equipment.join(', ')}`
-    : 'Available Equipment: Standard bodybuilding gym equipment (free weights, machines, cables)'
-}
-${
-  workoutFormats.length > 0
-    ? `Workout Formats to Include: ${formattedWorkoutFormats}\\nIMPORTANT: The generated workouts MUST primarily use the specified Workout Formats. Do NOT include formats outside this list unless essential for the primary Goal or Description. Prioritize these requested formats.`
-    : 'Workout Formats to Include: Standard Bodybuilding Splits (Push/Pull/Legs, Body Part)'
-}
+${focus_area ? `Focus Area/Weak Points: ${focus_area}` : ''}
+${formatEquipmentRestrictions(equipment)}
+
+IMPORTANT DURATION: The program MUST be exactly ${numberOfWeeks} week(s) long. Generate exactly ${totalWorkouts} workouts total.
+
+REQUIRED WORKOUT STRUCTURE: Follow the specified Training Split (${formattedWorkoutFormats}). Focus on exercises that promote muscle hypertrophy using proper form and targeting specific muscle groups each session. Utilize bodybuilding techniques like drop sets, supersets, tempo control where appropriate, using ONLY the available equipment.
+
 ${personalization ? `Personalization: ${personalization}` : ''}
 ${formattedReferenceInput}
 ${formattedRagMatchedWorkouts}
 ${clientMetrics || ''}
 ${referenceWorkouts || ''}
+${additionalNotes ? `\\nAdditional Notes: ${additionalNotes}` : ''}
+${formattedPeriodizationGuidelines}
+${formatSchedulingRequirements(suggestedDates, daysPerWeek, selectedDayNames)}
 
 For the program description, include:
-1. A concise overview of the program's goals (muscle hypertrophy) and intended adaptations derived primarily from the user's Goal and Description inputs.
-2. The periodization approach used and why it's effective for bodybuilding.
-3. Expected outcomes (muscle growth, aesthetics) based *only* on the generated workouts.
-4. Recommendations for nutrition (macros, timing), recovery, and supplementation.
+1. A concise overview reflecting the CRITICAL REQUIREMENTS, Goal (Bodybuilding/Hypertrophy), ACTUAL duration (${numberOfWeeks} weeks), the specific training split used (${formattedWorkoutFormats}), and any focus areas.
+2. The periodization approach used (${programType}) and how it maximizes muscle growth (e.g., volume accumulation, intensification phases).
+3. Expected outcomes in terms of muscle gain and physique changes, based *only* on the generated workouts and client requirements.
+4. Recommendations for nutrition (protein intake, calorie surplus/deficit based on goal), rest, and posing practice (if relevant).
 
-Bodybuilding-Specific Requirements (Apply *unless* conflicting with user's Description, Goal, or requested Workout Formats):
-- Focus on maximizing muscle hypertrophy
-- Utilize bodybuilding training principles (volume, intensity, time under tension)
-- Design a body part split (e.g., chest/triceps, back/biceps, legs, shoulders/arms, rest) or PPL split optimized for maximum hypertrophy
-- Include primary compound movements followed by targeted isolation exercises for complete muscle development
-- Incorporate advanced techniques like drop sets, supersets, rest-pause, and time under tension principles
-- Emphasize mind-muscle connection, proper form, and controlled eccentrics
-- Vary rep ranges within workouts (e.g., heavy compound 6-8 reps, isolation 10-15 reps, finishers 15-20 reps)
-- Detail specific tempo prescriptions for optimal hypertrophic stimulus (e.g., 3-0-1-0, 2-1-2-0)
-- Include both machine and free weight variations for complete muscular development
-- Incorporate strategic deload protocols to prevent overtraining
+General Bodybuilding Guidelines (Apply *only if* they DO NOT CONFLICT with CRITICAL REQUIREMENTS or REQUIRED WORKOUT STRUCTURE):
+- Structure the program around the specified training split (${formattedWorkoutFormats}).
+- Prioritize compound movements first, followed by isolation exercises for each muscle group.
+- Use moderate to high volume (sets x reps) within the hypertrophy rep range (typically 6-15 reps).
+- Control the tempo, especially the eccentric (lowering) phase, to maximize time under tension.
+- Incorporate intensity techniques like drop sets, supersets, rest-pause sets strategically.
+- Ensure sufficient recovery between sessions for the same muscle group.
 
-The program should follow logical bodybuilding progression based on the selected program type (${programType}).
-Ensure proper volume management, recovery protocols, and exercise variation to prevent plateaus and maximize growth.
-
-IMPORTANT: The workouts must be scheduled on specific dates according to the user's selected training days. DO NOT create workouts on days other than the ones specified.
-
-IMPORTANT: The program MUST strictly adhere to the requested ${numberOfWeeks} weeks duration. Generate exactly ${totalWorkouts} workouts for this duration.
+The program MUST follow logical progression based on the selected program type (${programType}) AND the client's requirements, tailored for maximal muscle hypertrophy.
+Ensure proper periodization, volume management, and exercise selection *within the constraints provided*.
 
 Your response MUST be in this exact JSON format:
 {
   "title": "Bodybuilding Program for ${goal}",
-  "description": "Generate a description accurately reflecting the program's ACTUAL content, duration (${numberOfWeeks} weeks), difficulty (${difficulty}), workout formats used (${formattedWorkoutFormats}), and the primary goal/focus derived from user input (likely hypertrophy). Do NOT use a generic template description.",
-  "overview": "Generate a detailed explanation of the program methodology (focused on hypertrophy), periodization approach (if any), expected outcomes, and supplementary recommendations based SOLELY on the generated workouts and user inputs. Do NOT use generic explanations unless they directly apply.",
+  "description": "Generate a description ACCURATELY reflecting the program's ACTUAL content: CRITICAL REQUIREMENTS (${
+    description || 'None provided'
+  }), duration (${numberOfWeeks} weeks), difficulty (${difficulty}), training split (${formattedWorkoutFormats}), focus area (${
+    focus_area || 'balanced'
+  }), and utilizing ONLY available equipment. Do NOT use a generic template description.",
+  "overview": "Generate a detailed explanation of the program methodology, periodization approach (${programType}) for hypertrophy, rationale for the training split and exercise selection, expected physique outcomes, and supplementary recommendations based SOLELY on the generated workouts, CRITICAL REQUIREMENTS, and other user inputs. Do NOT use generic explanations unless they directly apply to the constraints.",
   "workouts": [
     {
-      "title": "Week X, Day Y: [Muscle Group Split] and [Training Focus]",
+      "title": "Week X, Day Y: [Muscle Group Focus - e.g., Chest/Triceps] Bodybuilding",
       "body": "Detailed workout description including all required sections",
       "date": "YYYY-MM-DD"
     },
@@ -147,76 +136,54 @@ Your response MUST be in this exact JSON format:
 
 For each workout's "body" field, use this structure:
 \`\`\`
-## Stimulus and Strategy
-[Detailed explanation of workout stimulus and strategy approach]
-- Explain the intended muscle fiber recruitment and growth stimulus
-- Provide detailed rest periods between sets (e.g., 60-90 seconds for hypertrophy)
-- Explain how to approach the workout (e.g., "Focus on the stretch and contraction of each movement")
+## Workout Focus: [Target Muscle Group(s)]
+[Brief explanation of this session's purpose in the bodybuilding program]
+- Explain the specific muscle group(s) being targeted
+- Describe the intended stimulus (e.g., volume, intensity, pump)
+- Provide guidance on mind-muscle connection and form focus
 
 ${
   includeScaling
     ? `## Scaling Options
 ### Intermediate Option
-[Detailed intermediate scaling with specific weights and modifications]
+[Adjustments for intermediate lifters, potentially adding volume or intensity techniques]
 
 ### Beginner Option
-[Detailed beginner scaling with specific weights and modifications]
+[Simplified exercise choices or reduced volume for beginners]`
+    : ''
+}
 ${
   hasInjuryHistory
     ? `
-### Injury Considerations
-[Modifications for common limitations]`
-    : ''
-}`
+## Injury Considerations
+[Alternative exercises or modifications for common limitations]`
     : ''
 }
 
 ## Warm-up
-[Detailed warm-up protocol with specific movements, sets, reps]
-- Include duration, reps, and brief explanations
-- Focus on blood flow to target muscle groups (5-10 minutes)
-- Include light activation sets for primary muscle groups
+[Detailed warm-up specific to the target muscle group(s)]
+- Include light cardio, dynamic stretching, and activation exercises
+- Perform warm-up sets for the first compound movement
 
-## Primary Exercises
-[Main compound movements targeting the day's muscle groups]
-- Clear exercise format (Sets x Reps)
-- Specific movements, sets, reps, and rest periods
-- Exact weight recommendations or RPE/RIR guidance
-- Tempo prescriptions (e.g., "3-0-1-1 tempo")
+## Main Workout: [Muscle Group(s)]
+[Complete list of exercises for the target muscle group(s)]
+- List exercises in order (typically compound first, then isolation)
+- Specify exact sets, reps (e.g., 4 sets of 8-12 reps), and rest periods (e.g., 60-90 seconds)
+- Indicate load guidance (e.g., weight to reach failure within rep range, RPE 8-9)
+- Include tempo recommendations (e.g., 3-0-1-0)
+- Note any intensity techniques used (e.g., Superset with Exercise B, Drop set on last set)
 
-## Secondary Exercises
-[Isolation and accessory movements for complete development]
-- Clear exercise format with specific execution details
-- Focus on mind-muscle connection and proper form
-- Include specific angles and variations for complete development
-- Rest periods and intensity techniques (drop sets, supersets, etc.)
-
-## Finisher
-[High-rep, pump-focused exercises to complete the workout]
-- Burnout sets or high-rep protocols
-- Specific movements and execution details
-- Intended sensation ("pump", "burn", etc.)
-
-## Cool-down
+## Cool-down (Optional)
 [Brief cool-down protocol]
-- Include specific stretches for worked muscle groups
-- Relaxation and recovery strategies
+- Light stretching for the worked muscle groups
 
 ## Coaching Cues
-[3-5 specific technical cues for key movements]
-- Technical cues for the most complex movements
-- Form tips to maximize efficiency and safety
-- Common errors to avoid
+[3-5 specific technical cues for key exercises]
+- Focus on achieving proper form and maximizing muscle tension
+- Cues for mind-muscle connection
+- Tips for executing intensity techniques effectively
 \`\`\`
 
-IMPORTANT: The "workouts" array MUST contain exactly ${totalWorkouts} workouts, organized in a progressive sequence over ${numberOfWeeks} weeks, following bodybuilding principles.
-
-${
-  dateInfo
-    ? `Use the following dates for each workout:
-${dateInfo}
-
-IMPORTANT: Each workout MUST be assigned to one of the above dates. These dates strictly follow the user's selected training days of the week.`
-    : ''
-}`;
+The "workouts" array MUST contain exactly ${totalWorkouts} workouts, covering exactly ${numberOfWeeks} week(s).
+`;
 }

@@ -378,12 +378,6 @@ export default function AIProgramWriter({ onSelectWorkout }) {
         return;
       }
 
-      console.log('[AutoSave] Starting to save workouts', {
-        programId,
-        workoutsToSave: suggestions.filter((workout) => !workout.id).length,
-        totalWorkouts: suggestions.length,
-      });
-
       dispatch({
         type: 'SET_AUTO_SAVE_STATE',
         payload: AUTO_SAVE_STATES.SAVING,

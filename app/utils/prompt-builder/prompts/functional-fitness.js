@@ -3,6 +3,11 @@
  * @param {Object} context - The full context for prompt generation
  * @returns {string} The assembled prompt string
  */
+import {
+  formatEquipmentRestrictions,
+  formatSchedulingRequirements,
+} from '../promptBuilder.js';
+
 export function functionalFitnessPrompt(context) {
   // Extract all relevant parameters with fallbacks
   const {
@@ -23,6 +28,7 @@ export function functionalFitnessPrompt(context) {
     additionalNotes = '',
     formattedReferenceInput = '',
     formattedRagMatchedWorkouts = '',
+    formattedPeriodizationGuidelines = '',
   } = context;
 
   // Get more specific parameters
@@ -60,20 +66,7 @@ export function functionalFitnessPrompt(context) {
   const includeScaling = ['Beginner', 'Intermediate'].includes(difficulty);
   const hasInjuryHistory = context.hasInjuryHistory || false;
 
-  // Date information for workout scheduling
-  const dateInfo =
-    suggestedDates.length > 0
-      ? suggestedDates
-          .map(
-            (date, index) =>
-              `Workout ${index + 1}: ${date} (Week ${
-                Math.floor(index / daysPerWeek) + 1
-              }, Day ${(index % daysPerWeek) + 1})`
-          )
-          .join('\\n')
-      : '';
-
-  // Build the Functional Fitness-specific prompt
+  // Build the Functional Fitness prompt
   return `Generate a ${numberOfWeeks}-week functional fitness training program with the following parameters:
 
 ${
@@ -89,54 +82,47 @@ Days Per Week: ${daysPerWeek} days
 Selected Training Days: ${selectedDayNames || 'All available days'}
 Total Length: ${numberOfWeeks} weeks
 ${focus_area ? `Focus Area: ${focus_area}` : ''}
-${
-  equipment.length > 0
-    ? `Available Equipment: ${equipment.join(', ')}`
-    : 'Available Equipment: Barbells, dumbbells, kettlebells, resistance bands, boxes, pull-up bars, medicine balls, stability balls. Optional: sleds, ropes, sandbags.'
-}
-${
-  workoutFormats.length > 0
-    ? `Workout Formats to Include: ${formattedWorkoutFormats}\\nIMPORTANT: The generated workouts MUST primarily use the specified Workout Formats. Do NOT include formats outside this list unless essential for the primary Goal or Description. Prioritize these requested formats.`
-    : 'Workout Formats to Include: Functional Mix (Compound, Unilateral, Core, Conditioning)'
-}
+${formatEquipmentRestrictions(equipment)}
+
+IMPORTANT DURATION: The program MUST be exactly ${numberOfWeeks} week(s) long. Generate exactly ${totalWorkouts} workouts total.
+
+REQUIRED WORKOUT FORMATS: The generated workouts MUST exclusively use the following specified formats: [${formattedWorkoutFormats}]. If no formats are specified, create a mix of compound movements, unilateral work, core stability, and metabolic conditioning using ONLY the available equipment.
+
 ${personalization ? `Personalization: ${personalization}` : ''}
 ${formattedReferenceInput}
 ${formattedRagMatchedWorkouts}
 ${clientMetrics || ''}
 ${referenceWorkouts || ''}
+${additionalNotes ? `\\nAdditional Notes: ${additionalNotes}` : ''}
+${formattedPeriodizationGuidelines}
+${formatSchedulingRequirements(suggestedDates, daysPerWeek, selectedDayNames)}
 
 For the program description, include:
-1. A concise overview of the program's goals (improved movement, strength, conditioning) and intended adaptations derived primarily from the user's Goal and Description inputs.
-2. The periodization approach used and why it's effective for functional fitness.
-3. Expected outcomes (better movement patterns, increased functional capacity) based *only* on the generated workouts.
-4. Recommendations for nutrition, recovery, and mobility work.
+1. A concise overview reflecting the CRITICAL REQUIREMENTS, Goal (Functional Fitness), ACTUAL duration (${numberOfWeeks} weeks), and the emphasis on movement patterns relevant to daily life.
+2. The periodization approach used (${programType}) and how it develops well-rounded functional capacity.
+3. Expected outcomes in terms of improved movement quality, strength, and conditioning for everyday activities, based *only* on the generated workouts and client requirements.
+4. Recommendations for applying this fitness to daily tasks and maintaining functional health.
 
-Functional Fitness-Specific Requirements (Apply *unless* conflicting with user's Description, Goal, or requested Workout Formats):
-- Focus on improving movement quality, functional strength, and conditioning
-- Utilize compound movements, unilateral exercises, core stability, and multi-planar training
-- Incorporate a balanced mix of strength, conditioning, mobility, and stability work
-- Include appropriate training for all major movement planes (sagittal, frontal, transverse)
-- Emphasize quality of movement and proper mechanics over extreme intensity
-- Gradually build movement complexity and intensity throughout the program
-- Include unilateral exercises and asymmetrical loading for balanced development
-- Incorporate core stability and rotational movements frequently
-- Balance moderate-intensity steady-state work with appropriate high-intensity intervals
+General Functional Fitness Guidelines (Apply *only if* they DO NOT CONFLICT with CRITICAL REQUIREMENTS or REQUIRED WORKOUT FORMATS):
+- Emphasize fundamental human movement patterns (squat, hinge, push, pull, carry, rotation).
+- Incorporate multi-joint, compound exercises.
+- Include unilateral exercises (single-leg, single-arm) for balance and stability.
+- Develop core strength and stability through various exercises (anti-rotation, anti-extension, etc.).
+- Include conditioning work that improves work capacity.
 
-The program should follow logical progression based on the selected program type (${programType}).
-Ensure proper movement development, balanced adaptation, and appropriate recovery throughout the program.
-
-IMPORTANT: The workouts must be scheduled on specific dates according to the user's selected training days. DO NOT create workouts on days other than the ones specified.
-
-IMPORTANT: The program MUST strictly adhere to the requested ${numberOfWeeks} weeks duration. Generate exactly ${totalWorkouts} workouts for this duration.
+The program MUST follow logical progression based on the selected program type (${programType}) AND the client's requirements, improving overall functional movement and fitness.
+Ensure proper periodization, recovery, and exercise selection *within the constraints provided*.
 
 Your response MUST be in this exact JSON format:
 {
   "title": "Functional Fitness Program for ${goal}",
-  "description": "Generate a description accurately reflecting the program's ACTUAL content, duration (${numberOfWeeks} weeks), difficulty (${difficulty}), workout formats used (${formattedWorkoutFormats}), and the primary goal/focus derived from user input. Do NOT use a generic template description.",
-  "overview": "Generate a detailed explanation of the program methodology (focused on functional movement), periodization approach (if any), expected outcomes, and supplementary recommendations based SOLELY on the generated workouts and user inputs. Do NOT use generic explanations unless they directly apply.",
+  "description": "Generate a description ACCURATELY reflecting the program's ACTUAL content: CRITICAL REQUIREMENTS (${
+    description || 'None provided'
+  }), duration (${numberOfWeeks} weeks), difficulty (${difficulty}), and the specific focus on functional movement patterns using available equipment and formats (${formattedWorkoutFormats}). Do NOT use a generic template description.",
+  "overview": "Generate a detailed explanation of the program methodology, periodization approach (${programType}) for functional fitness, rationale for exercise selection (movement patterns), expected real-world fitness outcomes, and supplementary recommendations based SOLELY on the generated workouts, CRITICAL REQUIREMENTS, and other user inputs. Do NOT use generic explanations unless they directly apply to the constraints.",
   "workouts": [
     {
-      "title": "Week X, Day Y: [Movement Focus] and [Energy System Focus]",
+      "title": "Week X, Day Y: [Movement Pattern Focus - e.g., Hinge/Pull] Functional Session",
       "body": "Detailed workout description including all required sections",
       "date": "YYYY-MM-DD"
     },
@@ -147,10 +133,10 @@ Your response MUST be in this exact JSON format:
 For each workout's "body" field, use this structure:
 \`\`\`
 ## Workout Focus
-[Brief explanation of this session's purpose in the overall program]
-- Explain the functional movement patterns being trained
-- Detail how this workout develops real-world capacity
-- Describe the intended stimulus level (moderate, challenging, recovery, etc.)
+[Brief explanation of this session's purpose for functional fitness]
+- Explain the primary movement patterns being trained
+- Provide guidance on movement quality and control
+- Explain how this session improves overall functional capacity
 
 ${
   includeScaling
@@ -159,67 +145,48 @@ ${
 [Detailed intermediate scaling with specific modifications]
 
 ### Beginner Option
-[Detailed beginner scaling with simplified movement patterns and reduced load]
+[Detailed beginner scaling with simplified variations]`
+    : ''
+}
 ${
   hasInjuryHistory
     ? `
-### Injury Considerations
-[Modifications for common functional limitations]`
-    : ''
-}`
+## Injury Considerations
+[Modifications for common limitations, focusing on safe movement patterns]`
     : ''
 }
 
 ## Warm-up
-[Comprehensive warm-up protocol with specific movements, sets, reps]
-- Dynamic mobility for major joints (5-8 minutes)
-- Movement prep with pattern-specific activation
-- Progressive loading for primary movement patterns
-- Skill practice for complex movements
+[Detailed dynamic warm-up focusing on mobility and activation for functional patterns]
+- Include joint mobilization, dynamic stretches, and movement prep drills
 
-## Strength Focus
-[Key strength movements with detailed parameters]
-- Clear exercise format with exact sets and reps
-- Specific loading parameters (weight/resistance level)
-- Rest periods and movement quality cues
-- Focus on foundational movement patterns
+## Movement Pattern Work
+[Exercises targeting the day's primary functional movement patterns]
+- Examples: Squat variations, Deadlift/Hinge variations, Push-ups/Presses, Rows/Pulls
+- Clear sets, reps, and load guidance
+- Emphasis on controlled execution and full range of motion
 
-## Conditioning
-[Balanced cardiorespiratory training]
-- Format clearly specified (intervals, circuits, etc.)
-- Work:rest ratios for interval-based work
-- Specific movements with load/intensity parameters
-- Target heart rate zones or perceived exertion levels
+## Unilateral & Core Work
+[Exercises for single-limb strength/stability and core engagement]
+- Examples: Lunges, Step-ups, Single-Arm Rows/Presses, Pallof Press, Carries
+- Sets, reps, and load/resistance guidance
 
-## Movement Skill / Accessory Work
-[Targeted movement quality and accessory exercises]
-- Unilateral and stability-focused movements
-- Corrective exercises and movement refinement
-- Secondary movement patterns for balanced development
-- Core stability and rotational strength
+## Conditioning Finisher
+[Short metabolic conditioning piece using functional movements]
+- Examples: Kettlebell Swings, Burpees, Farmer's Carries, Sled Pushes (if equip avail)
+- Clear format (AMRAP, rounds for time, intervals)
+- Focus on maintaining good form under fatigue
 
 ## Cool-down
-[Comprehensive recovery protocol]
-- Specific mobility and flexibility work
-- Breathing and relaxation techniques
-- Self-myofascial release recommendations
-- Recovery strategies for between sessions
+[Detailed cool-down protocol]
+- Include static stretching or mobility work for key areas
 
 ## Coaching Cues
-[3-5 specific technical cues for key movements]
-- Technical cues for compound and functional movements
-- Form tips for stability and injury prevention
-- Common errors to avoid
+[3-5 specific technical cues for key functional movements]
+- Focus on proper mechanics, posture, and core engagement
+- Cues to improve movement efficiency and safety
 \`\`\`
 
-IMPORTANT: The "workouts" array MUST contain exactly ${totalWorkouts} workouts, organized in a progressive sequence over ${numberOfWeeks} weeks, following functional fitness principles.
-
-${
-  dateInfo
-    ? `Use the following dates for each workout:
-${dateInfo}
-
-IMPORTANT: Each workout MUST be assigned to one of the above dates. These dates strictly follow the user's selected training days of the week.`
-    : ''
-}`;
+The "workouts" array MUST contain exactly ${totalWorkouts} workouts, covering exactly ${numberOfWeeks} week(s).
+`;
 }
