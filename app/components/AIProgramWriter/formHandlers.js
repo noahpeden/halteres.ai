@@ -165,6 +165,15 @@ export function updateFormDataFromProgram(program, formData) {
     }
   }
 
+  // Update session details if available
+  if (program.session_details && typeof program.session_details === 'object') {
+    // Merge existing sessionDetails with fetched ones, giving priority to fetched data
+    updatedData.sessionDetails = {
+      ...updatedData.sessionDetails, // Keep existing values if any
+      ...program.session_details, // Overwrite with fetched values
+    };
+  }
+
   return updatedData;
 }
 

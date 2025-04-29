@@ -99,6 +99,38 @@ export default function ProgramDetails({
           </label>
         </div>
       </div>
+      {/* Workout Duration */}
+      <div className="mb-4">
+        <label className="form-control w-full">
+          <span className="label-text font-medium">
+            Workout Duration (minutes)
+          </span>
+          <input
+            type="number"
+            name="sessionDuration"
+            className="input input-bordered w-full"
+            placeholder="e.g., 60"
+            value={formData.sessionDetails?.duration_minutes || ''}
+            onChange={(e) => {
+              const value = e.target.value;
+              handleChange({
+                target: {
+                  name: 'sessionDetails',
+                  value: {
+                    ...formData.sessionDetails,
+                    duration_minutes: value ? parseInt(value, 10) : null,
+                  },
+                },
+              });
+            }}
+          />
+          <div className="label">
+            <span className="label-text-alt">
+              Approximate duration for each workout session.
+            </span>
+          </div>
+        </label>
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Personalization */}

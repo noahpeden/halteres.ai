@@ -13,6 +13,7 @@ import {
   Menu,
   LogOut,
 } from 'lucide-react';
+import { TableOfContents } from 'lucide-react';
 
 export default function ProgramLayout({ children, params }) {
   const { programId } = use(params);
@@ -66,9 +67,9 @@ export default function ProgramLayout({ children, params }) {
         {/* Page content here */}
         <label
           htmlFor="sidebar-drawer"
-          className="btn btn-ghost drawer-button lg:hidden absolute top-4 right-4 z-10"
+          className="btn btn-ghost drawer-button lg:hidden absolute top-4 left-4 "
         >
-          <Menu />
+          <TableOfContents />
         </label>
         <div className="w-full p-4 pt-16 lg:pt-4">{children}</div>
       </div>
@@ -80,7 +81,7 @@ export default function ProgramLayout({ children, params }) {
         ></label>
         <ul className="menu p-4 w-50 min-h-full bg-base-100 text-base-content relative">
           {/* Sidebar content here */}
-          <div className="mb-4 text-xl font-bold pl-4">Program Menu</div>
+          <div className=" mb-4 text-xl font-bold pl-4">Program Menu</div>
           {sidebarLinks.map((link) => (
             <NavLink key={link.href} href={link.href}>
               <link.icon className="h-5 w-5 mr-2" />
