@@ -228,6 +228,7 @@ export async function generateProgram({
                         body: workout.body || workout.description,
                         description: workout.body || workout.description,
                         suggestedDate: workout.date || workout.suggestedDate,
+                        date: workout.date || workout.suggestedDate,
                       })
                     );
 
@@ -289,6 +290,7 @@ export async function generateProgram({
             body: workout.body || workout.description,
             description: workout.body || workout.description,
             suggestedDate: workout.date || workout.suggestedDate,
+            date: workout.date || workout.suggestedDate,
           }));
 
           setSuggestions(normalizedWorkouts);

@@ -360,19 +360,29 @@ export default function AIProgramWriter({ onSelectWorkout }) {
 
   useEffect(() => {
     async function autoSaveGeneratedWorkouts() {
-      if (
-        !programId ||
-        autoSaveState !== AUTO_SAVE_STATES.IDLE ||
-        suggestions.length === 0 ||
-        isLoading
-      ) {
+      if (!programId || suggestions.length === 0 || isLoading) {
+        console.log('[AutoSave] Not saving, conditions not met:', {
+          hasProgramId: !!programId,
+          suggestionCount: suggestions.length,
+          isLoading,
+        });
         return;
       }
 
+      // Check if any workouts need to be saved (don't have IDs)
       const hasNewWorkouts = suggestions.some((workout) => !workout.id);
       if (!hasNewWorkouts) {
+        console.log(
+          '[AutoSave] All workouts already have IDs, nothing to save'
+        );
         return;
       }
+
+      console.log('[AutoSave] Starting to save workouts', {
+        programId,
+        workoutsToSave: suggestions.filter((workout) => !workout.id).length,
+        totalWorkouts: suggestions.length,
+      });
 
       dispatch({
         type: 'SET_AUTO_SAVE_STATE',
@@ -409,7 +419,13 @@ export default function AIProgramWriter({ onSelectWorkout }) {
             delete tagsWithoutDate.suggestedDate;
             delete tagsWithoutDate.scheduled_date;
 
-            const dateValue = workout.suggestedDate || null;
+            const dateValue = workout.suggestedDate || workout.date || null;
+            console.log('[AutoSave] Processing workout for insert:', {
+              title: workout.title,
+              dateValue,
+              hasDate: !!workout.date,
+              hasSuggestedDate: !!workout.suggestedDate,
+            });
 
             return {
               program_id: programId,
@@ -434,9 +450,11 @@ export default function AIProgramWriter({ onSelectWorkout }) {
               payload: AUTO_SAVE_STATES.DONE,
             });
           }
+          dispatch({ type: 'SET_LOADING', payload: false });
           return;
         }
 
+        console.log('[AutoSave] Inserting workouts:', workoutInserts.length);
         const { data: newWorkouts, error: insertError } = await supabase
           .from('program_workouts')
           .insert(workoutInserts)
@@ -445,6 +463,10 @@ export default function AIProgramWriter({ onSelectWorkout }) {
         if (insertError) throw insertError;
 
         if (newWorkouts && newWorkouts.length > 0) {
+          console.log(
+            '[AutoSave] Successfully inserted workouts:',
+            newWorkouts.length
+          );
           const updatedSuggestions = suggestions.map((suggestion) => {
             const saved = newWorkouts.find(
               (nw) => nw.title === suggestion.title && !suggestion.id
@@ -454,13 +476,11 @@ export default function AIProgramWriter({ onSelectWorkout }) {
               : suggestion;
           });
           dispatch({ type: 'SET_SUGGESTIONS', payload: updatedSuggestions });
-          if (autoSaveState !== AUTO_SAVE_STATES.ERROR) {
-            showToastMessage('Auto-saved workouts to your program');
-            dispatch({
-              type: 'SET_AUTO_SAVE_STATE',
-              payload: AUTO_SAVE_STATES.DONE,
-            });
-          }
+          showToastMessage('Auto-saved workouts to your program');
+          dispatch({
+            type: 'SET_AUTO_SAVE_STATE',
+            payload: AUTO_SAVE_STATES.DONE,
+          });
         }
       } catch (error) {
         console.error('[AutoSave] Error auto-saving workouts:', error);
@@ -490,12 +510,12 @@ export default function AIProgramWriter({ onSelectWorkout }) {
     programId,
     suggestions,
     supabase,
-    autoSaveState,
     isLoading,
     formData.entityId,
     dispatch,
     showToastMessage,
     state.autoSaveState,
+    autoSaveState,
   ]);
 
   useEffect(() => {
