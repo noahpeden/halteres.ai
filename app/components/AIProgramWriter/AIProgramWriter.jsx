@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useRef, useCallback, memo } from 'react';
+import { useEffect, useRef, useCallback, memo, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import equipmentList from '@/utils/equipmentList';
 import { gymEquipmentPresets } from '../utils';
@@ -35,6 +35,7 @@ import RescheduleModalComponent from './RescheduleModal';
 import EditWorkoutModalComponent from './EditWorkoutModal';
 import AutoSaveStatusIndicatorComponent from './AutoSaveStatusIndicator';
 import ConfirmationModalComponent from './ConfirmationModal'; // Assuming this exists now
+import ReferenceWorkoutSearchModal from './ReferenceWorkoutSearchModal';
 
 import { InfoIcon } from 'lucide-react';
 
@@ -106,6 +107,9 @@ export default function AIProgramWriter({ onSelectWorkout }) {
   const loadingTimer = useRef(null);
   const isAutoUpdating = useRef(false);
   const debounceTimerRef = useRef(null);
+  const [isReferenceWorkoutModalOpen, setReferenceWorkoutModalOpen] =
+    useState(false);
+  const [dbReferenceWorkouts, setDbReferenceWorkouts] = useState([]);
 
   // --- Utility Functions ---
 
@@ -553,8 +557,11 @@ export default function AIProgramWriter({ onSelectWorkout }) {
 
         const { data: savedWorkouts, error: workoutsError } = await supabase
           .from('program_workouts')
-          .select('id, title, body, tags, created_at, scheduled_date')
+          .select(
+            'id, title, body, tags, created_at, scheduled_date, is_reference'
+          )
           .eq('program_id', programId)
+          .eq('is_reference', false)
           .order('scheduled_date', { ascending: true, nullsFirst: true });
 
         if (workoutsError) throw workoutsError;
@@ -950,6 +957,63 @@ export default function AIProgramWriter({ onSelectWorkout }) {
     [dispatch]
   );
 
+  // --- Reference Workout Handlers ---
+
+  const handleOpenReferenceWorkoutModal = useCallback(
+    () => setReferenceWorkoutModalOpen(true),
+    []
+  );
+  const handleCloseReferenceWorkoutModal = useCallback(
+    () => setReferenceWorkoutModalOpen(false),
+    []
+  );
+
+  useEffect(() => {
+    if (!programId) return;
+    supabase
+      .from('program_workouts')
+      .select('*')
+      .eq('program_id', programId)
+      .eq('is_reference', true)
+      .then(({ data, error }) => {
+        if (!error) setDbReferenceWorkouts(data || []);
+      });
+  }, [programId, supabase]);
+
+  const handleReferenceWorkoutsSelected = useCallback(
+    async (workouts) => {
+      if (!programId) return;
+      for (const workout of workouts) {
+        // Check if already exists for this program
+        const { data: existing } = await supabase
+          .from('program_workouts')
+          .select('id')
+          .eq('program_id', programId)
+          .eq('is_reference', true)
+          .eq('title', workout.title)
+          .maybeSingle();
+        if (!existing) {
+          await supabase.from('program_workouts').insert({
+            program_id: programId,
+            title: workout.title,
+            body: workout.body,
+            tags: workout.tags,
+            is_reference: true,
+          });
+        }
+      }
+      // Refetch from DB
+      const { data: dbReferenceWorkouts, error } = await supabase
+        .from('program_workouts')
+        .select('*')
+        .eq('program_id', programId)
+        .eq('is_reference', true);
+      if (!error) setDbReferenceWorkouts(dbReferenceWorkouts || []);
+      setReferenceWorkoutModalOpen(false);
+    },
+    [programId, supabase]
+  );
+
   // --- Render ---
 
   return (
@@ -999,7 +1063,10 @@ export default function AIProgramWriter({ onSelectWorkout }) {
           addCustomSection={addCustomSection}
           removeCustomSection={removeCustomSection}
           handleProgramTypeChange={handleProgramTypeChange}
-          formData={formData}
+          formData={{
+            ...formData,
+            onOpenReferenceWorkoutModal: handleOpenReferenceWorkoutModal,
+          }}
           isLoading={isLoading}
           suggestions={suggestions}
           generationStage={generationStage}
@@ -1037,9 +1104,12 @@ export default function AIProgramWriter({ onSelectWorkout }) {
       </div>
 
       <ReferenceWorkouts
-        workouts={referenceWorkouts}
+        workouts={dbReferenceWorkouts}
         supabase={supabase}
-        onRemove={handleRemoveReferenceWorkout}
+        onRemove={async (id) => {
+          await supabase.from('program_workouts').delete().eq('id', id);
+          setDbReferenceWorkouts((prev) => prev.filter((w) => w.id !== id));
+        }}
         showToastMessage={showToastMessage}
       />
 
@@ -1052,7 +1122,7 @@ export default function AIProgramWriter({ onSelectWorkout }) {
 
       {suggestions.length > 0 && (
         <WorkoutList
-          workouts={suggestions}
+          workouts={suggestions.filter((w) => !w.is_reference)}
           daysPerWeek={formData.daysPerWeek}
           formatDate={formatDate}
           onViewDetails={handleViewWorkoutDetailsWrapper}
@@ -1120,6 +1190,14 @@ export default function AIProgramWriter({ onSelectWorkout }) {
           content={confirmationModalContent}
         />
       )}
+
+      <ReferenceWorkoutSearchModal
+        isOpen={isReferenceWorkoutModalOpen}
+        onClose={handleCloseReferenceWorkoutModal}
+        onSelect={handleReferenceWorkoutsSelected}
+        selectedWorkouts={dbReferenceWorkouts}
+        initialSearchText={formData.referenceInput || ''}
+      />
     </div>
   );
 }

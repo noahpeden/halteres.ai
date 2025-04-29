@@ -72,6 +72,15 @@ export default function ProgramEssentials({ formData, handleChange }) {
             rows="3"
           ></textarea>
         </label>
+        {/* Search Workouts Button */}
+        <button
+          type="button"
+          className="btn btn-outline btn-secondary w-full mt-2 hover:bg-secondary hover:!text-white"
+          disabled={formData.onOpenReferenceWorkoutModal === null}
+          onClick={formData.onOpenReferenceWorkoutModal}
+        >
+          Add Reference Workouts
+        </button>
       </div>
 
       {/* Program Type */}
