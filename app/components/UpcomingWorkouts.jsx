@@ -5,6 +5,44 @@ import Link from 'next/link';
 import EditWorkoutModal from '@/components/AIProgramWriter/EditWorkoutModal';
 import WorkoutModal from '@/components/AIProgramWriter/WorkoutModal';
 
+// Helper to format date as YYYY-MM-DD
+const formatDateKey = (date) => {
+  return date.toISOString().split('T')[0];
+};
+
+// Helper to get display format (e.g., "Mon, Jun 10")
+// Updated to accept Date object or parsable string
+const formatDisplayDate = (dateInput) => {
+  try {
+    const date = dateInput instanceof Date ? dateInput : new Date(dateInput);
+    if (isNaN(date.getTime())) {
+      // If parsing failed initially, try adding time for YYYY-MM-DD strings
+      const dateWithTime = new Date(dateInput + 'T00:00:00');
+      if (isNaN(dateWithTime.getTime())) {
+        console.error('Invalid date input for formatting:', dateInput);
+        return 'Invalid Date';
+      }
+      // Use the date parsed with time added
+      return new Intl.DateTimeFormat('en-US', {
+        weekday: 'short',
+        month: 'numeric',
+        day: 'numeric',
+        year: 'numeric',
+      }).format(dateWithTime);
+    }
+    // Use the directly parsed or passed date object
+    return new Intl.DateTimeFormat('en-US', {
+      weekday: 'short',
+      month: 'numeric',
+      day: 'numeric',
+      year: 'numeric',
+    }).format(date);
+  } catch (error) {
+    console.error('Error formatting display date:', error);
+    return 'Invalid Date';
+  }
+};
+
 export default function UpcomingWorkouts() {
   const { supabase, user } = useAuth();
   const [workouts, setWorkouts] = useState([]);
@@ -21,6 +59,36 @@ export default function UpcomingWorkouts() {
   // View Modal state
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [selectedWorkoutForView, setSelectedWorkoutForView] = useState(null);
+
+  // Date Filtering state
+  const [selectedDateFilter, setSelectedDateFilter] = useState('today'); // 'today', 'all', or 'YYYY-MM-DD'
+  const [dateOptions, setDateOptions] = useState([]);
+
+  // Generate date options for the next 7 days
+  useEffect(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const options = [
+      { key: 'all', display: 'All Week' },
+      { key: 'today', display: 'Today', dateKey: formatDateKey(today) },
+    ];
+    for (let i = 1; i < 7; i++) {
+      const nextDay = new Date(today);
+      nextDay.setDate(today.getDate() + i);
+      const dateKey = formatDateKey(nextDay);
+      options.push({
+        key: dateKey,
+        display: formatDisplayDate(nextDay), // Pass Date object directly
+        dateKey: dateKey,
+      });
+    }
+    setDateOptions(options);
+
+    // Set initial filter to today's key
+    setSelectedDateFilter(
+      options.find((opt) => opt.key === 'today')?.dateKey || 'all'
+    );
+  }, []);
 
   // Check if auth is ready
   useEffect(() => {
@@ -324,23 +392,9 @@ export default function UpcomingWorkouts() {
     setIsViewModalOpen(true);
   };
 
-  // Format the date to display
+  // Format the date to display as group header (re-uses helper)
   const formatDate = (dateString) => {
-    try {
-      const date = new Date(dateString);
-      if (isNaN(date.getTime())) {
-        console.error('Invalid date:', dateString);
-        return 'Invalid date';
-      }
-      return new Intl.DateTimeFormat('en-US', {
-        weekday: 'short',
-        month: 'short',
-        day: 'numeric',
-      }).format(date);
-    } catch (error) {
-      console.error('Error formatting date:', error);
-      return 'Invalid date';
-    }
+    return formatDisplayDate(dateString);
   };
 
   // Group workouts by date
@@ -385,6 +439,64 @@ export default function UpcomingWorkouts() {
       });
   };
 
+  // Filter workouts based on selected date filter
+  const filteredWorkouts = workouts
+    .filter((workout) => {
+      if (selectedDateFilter === 'all') {
+        return true; // Show all workouts if 'all' is selected
+      }
+      // Get the workout's date key
+      let workoutDateKey;
+      try {
+        const date = new Date(workout.scheduled_date);
+        if (!isNaN(date.getTime())) {
+          workoutDateKey = date.toISOString().split('T')[0];
+        } else {
+          return false; // Skip workouts with invalid dates
+        }
+      } catch (error) {
+        return false; // Skip workouts with date processing errors
+      }
+
+      return workoutDateKey === selectedDateFilter;
+    })
+    .sort((a, b) => new Date(a.scheduled_date) - new Date(b.scheduled_date)); // Ensure sorted order
+
+  // Group the *filtered* workouts by date for display
+  const groupFilteredWorkoutsByDate = () => {
+    const groups = {};
+    filteredWorkouts.forEach((workout) => {
+      let dateKey;
+      try {
+        const date = new Date(workout.scheduled_date);
+        if (!isNaN(date.getTime())) {
+          dateKey = date.toISOString().split('T')[0];
+        } else {
+          dateKey = 'unknown';
+        }
+      } catch (error) {
+        dateKey = 'unknown';
+      }
+
+      if (!groups[dateKey]) {
+        groups[dateKey] = [];
+      }
+      groups[dateKey].push(workout);
+    });
+
+    return Object.entries(groups)
+      .map(([date, workouts]) => ({
+        date,
+        formattedDate: date === 'unknown' ? 'Unknown Date' : formatDate(date),
+        workouts,
+      }))
+      .sort((a, b) => {
+        if (a.date === 'unknown') return 1;
+        if (b.date === 'unknown') return -1;
+        return a.date.localeCompare(b.date);
+      });
+  };
+
   // If auth is not ready yet, show a simple loading spinner
   if (!authReady) {
     return (
@@ -403,98 +515,171 @@ export default function UpcomingWorkouts() {
     );
   }
 
-  // Get all upcoming workouts directly, sorted by date
-  const upcomingSortedWorkouts = workouts
-    .slice() // Create a shallow copy to avoid mutating the original state
-    .sort((a, b) => new Date(a.scheduled_date) - new Date(b.scheduled_date));
+  // Get all upcoming workouts directly, sorted by date - Now handled by filteredWorkouts
+  // const upcomingSortedWorkouts = workouts
+  //   .slice() // Create a shallow copy to avoid mutating the original state
+  //   .sort((a, b) => new Date(a.scheduled_date) - new Date(b.scheduled_date));
 
-  if (upcomingSortedWorkouts.length === 0) {
+  if (filteredWorkouts.length === 0 && selectedDateFilter !== 'all') {
+    return (
+      <div>
+        {/* Date Filter Tabs */}
+        <div className="tabs tabs-bordered mb-4 overflow-x-auto">
+          {dateOptions.map((option) => (
+            <a
+              key={option.key}
+              className={`tab ${
+                selectedDateFilter === (option.dateKey || option.key)
+                  ? 'tab-active'
+                  : ''
+              }`}
+              onClick={() =>
+                setSelectedDateFilter(option.dateKey || option.key)
+              }
+            >
+              {option.display}
+            </a>
+          ))}
+        </div>
+        <div className="text-center py-8 bg-base-100 rounded-lg shadow">
+          <p className="text-gray-500">
+            No workouts scheduled for{' '}
+            {dateOptions.find(
+              (opt) => (opt.dateKey || opt.key) === selectedDateFilter
+            )?.display || 'this day'}
+            .
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (workouts.length === 0) {
+    // Check original workouts length for initial empty state
     return (
       <div className="text-center py-8 bg-base-100 rounded-lg shadow">
-        <p className="text-gray-500">
-          No upcoming workouts scheduled for this week.
-        </p>
+        <p className="text-gray-500">No workouts scheduled for this week.</p>
       </div>
     );
   }
 
   return (
     <div>
-      <div className="flex overflow-x-auto space-x-4 pb-4">
-        {upcomingSortedWorkouts.map((workout) => (
-          <div
-            key={workout.id}
-            className="card bg-white shadow min-w-[300px] flex-shrink-0"
+      {/* Date Filter Tabs */}
+      <div className="tabs tabs-bordered mb-4 overflow-x-auto">
+        {dateOptions.map((option) => (
+          <a
+            key={option.key}
+            className={`tab ${
+              selectedDateFilter === (option.dateKey || option.key)
+                ? 'tab-active'
+                : ''
+            }`}
+            onClick={() => setSelectedDateFilter(option.dateKey || option.key)}
           >
-            <div className="card-body p-4">
-              <div className="flex justify-between items-start mb-2">
-                <div>
-                  <p className="text-sm font-semibold text-gray-500">
-                    {formatDate(workout.scheduled_date)}
-                  </p>
-                  <h4 className="card-title text-base leading-tight">
-                    {workout.title}
-                  </h4>
-                  <p className="text-xs text-gray-500">
-                    {workout.entityName} ({workout.entityType})
-                  </p>
-                </div>
-                <div className="dropdown dropdown-end">
-                  <label tabIndex={0} className="btn btn-ghost btn-xs">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      className="inline-block w-4 h-4 stroke-current"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M5 12h.01M12 12h.01M19 12h.01M6 12a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z"
-                      ></path>
-                    </svg>
-                  </label>
-                  <ul
-                    tabIndex={0}
-                    className="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-32"
+            {option.display}
+          </a>
+        ))}
+      </div>
+
+      {/* Replace horizontal scroll with vertical list grouped by date */}
+      <div className="space-y-6">
+        {groupFilteredWorkoutsByDate().map(
+          ({ date, formattedDate, workouts: dateWorkouts }) => (
+            <div key={date}>
+              {/* Only show header if filtering by 'all' */}
+              {selectedDateFilter === 'all' && (
+                <h3 className="text-lg font-semibold mb-3 sticky top-0 bg-base-100/90 backdrop-blur py-2 z-10">
+                  {formattedDate}
+                </h3>
+              )}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {dateWorkouts.map((workout) => (
+                  <div
+                    key={workout.id}
+                    className="card bg-white shadow transition-shadow hover:shadow-md"
                   >
-                    <li>
-                      <a onClick={() => handleEditWorkout(workout)}>Edit</a>
-                    </li>
-                    {/* Add other actions like Delete if needed */}
-                  </ul>
-                </div>
-              </div>
+                    <div className="card-body p-4">
+                      <div className="flex justify-between items-start mb-2">
+                        <div>
+                          <h4 className="card-title text-base leading-tight">
+                            {workout.title}
+                          </h4>
+                          <p className="text-xs text-gray-500">
+                            {workout.entityName} ({workout.entityType})
+                          </p>
+                          <p className="text-xs text-gray-400 mt-1">
+                            Program: {workout.programName}
+                          </p>
+                        </div>
+                        <div className="dropdown dropdown-end">
+                          <label tabIndex={0} className="btn btn-ghost btn-xs">
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              className="inline-block w-4 h-4 stroke-current"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth="2"
+                                d="M5 12h.01M12 12h.01M19 12h.01M6 12a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z"
+                              ></path>
+                            </svg>
+                          </label>
+                          <ul
+                            tabIndex={0}
+                            className="dropdown-content z-[2] menu p-2 shadow bg-base-100 rounded-box w-32"
+                          >
+                            <li>
+                              <a onClick={() => handleEditWorkout(workout)}>
+                                Edit
+                              </a>
+                            </li>
+                            {/* Add other actions like Delete if needed */}
+                          </ul>
+                        </div>
+                      </div>
 
-              {/* Add more workout details if desired, e.g., workout.body */}
-              {/* <p className="text-xs mb-3 line-clamp-2">{workout.body}</p> */}
+                      {/* Optional: Add workout body preview if desired */}
+                      {/* <p className="text-xs mb-3 line-clamp-2">{workout.body}</p> */}
 
-              <div className="card-actions justify-between items-center">
-                <button
-                  onClick={() => handleViewWorkoutDetails(workout)}
-                  className="btn btn-primary btn-xs"
-                >
-                  View Details
-                </button>
-                <div className="form-control">
-                  <label className="label cursor-pointer p-0">
-                    <span className="label-text text-xs mr-2">Completed</span>
-                    <input
-                      type="checkbox"
-                      className={`checkbox checkbox-success checkbox-xs ${
-                        updatingWorkout === workout.id ? 'opacity-50' : ''
-                      }`}
-                      checked={completionStates[workout.id] || false}
-                      onChange={() => toggleWorkoutCompletion(workout.id)}
-                      disabled={updatingWorkout === workout.id}
-                    />
-                  </label>
-                </div>
+                      <div className="card-actions justify-between items-center mt-2">
+                        <button
+                          onClick={() => handleViewWorkoutDetails(workout)}
+                          className="btn btn-primary btn-xs"
+                        >
+                          View Details
+                        </button>
+                        <div className="form-control">
+                          <label className="label cursor-pointer p-0">
+                            <span className="label-text text-xs mr-2">
+                              Completed
+                            </span>
+                            <input
+                              type="checkbox"
+                              className={`checkbox checkbox-success checkbox-xs ${
+                                updatingWorkout === workout.id
+                                  ? 'opacity-50'
+                                  : ''
+                              }`}
+                              checked={completionStates[workout.id] || false}
+                              onChange={() =>
+                                toggleWorkoutCompletion(workout.id)
+                              }
+                              disabled={updatingWorkout === workout.id}
+                            />
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
-          </div>
-        ))}
+          )
+        )}
       </div>
 
       {/* Edit Workout Modal */}

@@ -100,11 +100,27 @@ export default function WorkoutModal({
         <div className="p-6">
           <div className="mb-4">
             <span className="badge badge-primary">
-              {workout.scheduled_date
-                ? formatDate(workout.scheduled_date)
-                : workout.suggestedDate
-                ? formatDate(workout.suggestedDate)
-                : 'Not scheduled'}
+              {(() => {
+                const dateValue =
+                  workout.scheduled_date || workout.suggestedDate;
+                if (dateValue) {
+                  try {
+                    const date = new Date(dateValue);
+                    if (!isNaN(date.getTime())) {
+                      // Ensure formatDate is called with a valid Date object or string it expects
+                      // Pass the validated Date object to the formatting function
+                      return formatDate(date);
+                    }
+                  } catch (e) {
+                    console.error(
+                      'Error parsing date in WorkoutModal:',
+                      dateValue,
+                      e
+                    );
+                  }
+                }
+                return 'Not scheduled';
+              })()}
             </span>
           </div>
 
