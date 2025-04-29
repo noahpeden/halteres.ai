@@ -363,8 +363,15 @@ export default function Dashboard() {
     <>
       <div className="container mx-auto px-4 pb-16 pt-8">
         <div className="mb-8">
-          <h1 className="text-2xl font-bold mb-6">Coach Dashboard</h1>
-
+          <div className="flex justify-between items-center mb-4">
+            <h1 className="text-2xl font-bold mb-6">Coach Dashboard</h1>
+            <label
+              htmlFor="entity-selection-modal"
+              className="btn btn-primary text-white"
+            >
+              Create New Program
+            </label>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
             <div className="stat bg-white shadow rounded-lg">
               <div className="stat-figure text-primary">
@@ -417,11 +424,16 @@ export default function Dashboard() {
         {programs.length > 0 ? (
           <div className="mb-8">
             <div className="flex justify-between items-center mb-4">
-              <div className="flex justify-start items-center gap-4 w-full">
+              <div className="flex justify-between items-center w-full">
                 <h2 className="text-xl font-semibold">Your Programs</h2>
                 <div className="flex items-center gap-4">
                   {/* Entity Filter Dropdown */}
                   <div className="form-control">
+                    <label className="label">
+                      <span className="label-text">
+                        Filter by Class or Client
+                      </span>
+                    </label>
                     <select
                       className="select select-bordered select-sm"
                       value={filterEntityId}
@@ -450,12 +462,6 @@ export default function Dashboard() {
                   </div>
                 </div>
               </div>
-              <label
-                htmlFor="entity-selection-modal"
-                className="btn btn-primary text-white"
-              >
-                Create New Program
-              </label>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
