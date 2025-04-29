@@ -750,20 +750,22 @@ export default function AIProgramWriter({ onSelectWorkout }) {
   // --- Form Field Handlers (Wrapped) ---
 
   useEffect(() => {
-    if (formData.gymType) {
+    // Only apply preset if equipment is empty (prevents overwriting custom selections)
+    if (
+      formData.gymType &&
+      (!formData.equipment || formData.equipment.length === 0)
+    ) {
       const newEquipment = gymEquipmentPresets[formData.gymType] || [];
-      if (JSON.stringify(newEquipment) !== JSON.stringify(formData.equipment)) {
-        dispatch({
-          type: 'SET_FIELD_VALUE',
-          payload: { field: 'equipment', value: newEquipment },
-        });
-        const allSelected =
-          equipmentList.length > 0 &&
-          newEquipment.length === equipmentList.length;
-        dispatch({ type: 'SET_ALL_EQUIPMENT_SELECTED', payload: allSelected });
-      }
+      dispatch({
+        type: 'SET_FIELD_VALUE',
+        payload: { field: 'equipment', value: newEquipment },
+      });
+      const allSelected =
+        equipmentList.length > 0 &&
+        newEquipment.length === equipmentList.length;
+      dispatch({ type: 'SET_ALL_EQUIPMENT_SELECTED', payload: allSelected });
     }
-  }, [formData.gymType, dispatch]);
+  }, [formData.gymType, formData.equipment, dispatch]);
 
   useEffect(() => {
     const equipmentNames = formData.equipment
