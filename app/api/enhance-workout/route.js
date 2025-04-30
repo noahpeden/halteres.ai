@@ -1,0 +1,92 @@
+import { NextResponse } from 'next/server';
+import OpenAI from 'openai';
+
+export async function POST(req) {
+  try {
+    const body = await req.json();
+    const {
+      workout, // { title, description, ... }
+      instructions, // string from user
+      methodology, // string
+      gymEquipment, // array or string
+      injuries, // array or string
+    } = body;
+
+    if (!workout || !instructions || !methodology || !gymEquipment) {
+      return NextResponse.json(
+        {
+          error:
+            'Missing required fields: workout, instructions, methodology, gymEquipment',
+        },
+        { status: 400 }
+      );
+    }
+
+    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+    // Compose the enhancement prompt
+    const systemPrompt = `
+You are an expert fitness coach who specializes in creating and enhancing effective, personalized workout programs. Always consider evidence-based training principles, safety, and client context.`;
+
+    const userPrompt = `
+Enhance the following workout according to these user instructions: "${instructions}".
+
+Context:
+- Training methodology: ${methodology}
+- Equipment available: ${
+      Array.isArray(gymEquipment) ? gymEquipment.join(', ') : gymEquipment
+    }
+- Client injuries or limitations: ${
+      injuries && injuries.length
+        ? Array.isArray(injuries)
+          ? injuries.join(', ')
+          : injuries
+        : 'None'
+    }
+
+Original Workout:
+Title: ${workout.title || ''}
+Description:
+${workout.description || ''}
+
+Requirements:
+- Make improvements or modifications as needed to address the user instructions, methodology, equipment, and injuries.
+- Ensure the workout is safe, effective, and practical for the given context.
+- If the user asks for a specific enhancement, prioritize that, but do not ignore safety or context.
+- If the workout is already optimal, make only minor improvements and explain them in the notes.
+- Return your response as a JSON object with the following fields:
+  - title: (string, required)
+  - description: (string, required, detailed workout plan)
+  - notes: (string, optional, explain any key changes or rationale)
+`;
+
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4.1',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt },
+      ],
+      temperature: 0.7,
+      response_format: { type: 'json_object' },
+      max_tokens: 1200,
+    });
+
+    let enhancedWorkout;
+    try {
+      enhancedWorkout = JSON.parse(response.choices[0].message.content);
+      if (!enhancedWorkout.title || !enhancedWorkout.description) {
+        throw new Error('Invalid workout format');
+      }
+    } catch (err) {
+      return NextResponse.json(
+        { error: 'Failed to parse enhanced workout from AI response.' },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({ enhancedWorkout }, { status: 200 });
+  } catch (error) {
+    console.error('Error enhancing workout:', error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}

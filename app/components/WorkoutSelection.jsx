@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 
-export default function WorkoutSelection({ programId, onSelectWorkout }) {
+export default function WorkoutSelection({ onSelectWorkout }) {
   const { supabase } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [workoutType, setWorkoutType] = useState('');

@@ -113,14 +113,6 @@ export default function ProgramWriterPage() {
     setIsEditingName(false);
   };
 
-  const handleSelectWorkout = (workout) => {
-    router.push(
-      `/program/${programId}/calendar?selectedWorkout=${encodeURIComponent(
-        JSON.stringify(workout)
-      )}`
-    );
-  };
-
   return (
     <ProgramWriterProvider initialProgramId={programId}>
       <div className="container mx-auto p-4 relative">
@@ -187,7 +179,7 @@ export default function ProgramWriterPage() {
             } transition-all duration-300 ease-in-out`}
           >
             <div className="bg-white rounded-lg shadow p-4 h-full">
-              <AIProgramWriter onSelectWorkout={handleSelectWorkout} />
+              <AIProgramWriter programId={programId} />
             </div>
           </div>
 

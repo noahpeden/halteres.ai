@@ -758,7 +758,7 @@ async function generateLargeProgram(requestData, params, supabase, openai) {
     );
 
     const overviewResponse = await openai.chat.completions.create({
-      model: 'gpt-4o',
+      model: 'gpt-4.1',
       messages: [
         {
           role: 'system',
@@ -1018,7 +1018,7 @@ async function generateWeek(
   try {
     // Call OpenAI for this chunk with a reduced timeout
     const response = await openai.chat.completions.create({
-      model: 'gpt-4o',
+      model: 'gpt-4.1',
       messages: [
         {
           role: 'system',

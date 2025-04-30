@@ -59,7 +59,7 @@ const AUTO_SAVE_STATES = {
   ERROR: 'error',
 };
 
-export default function AIProgramWriter({ onSelectWorkout }) {
+export default function AIProgramWriter({ programId }) {
   const {
     supabase,
     subscriptionStatus,
@@ -71,7 +71,6 @@ export default function AIProgramWriter({ onSelectWorkout }) {
   } = useAuth();
   const { state, dispatch } = useProgramWriterContext();
   const {
-    programId,
     formData,
     suggestions,
     referenceWorkouts,
@@ -1014,6 +1013,43 @@ export default function AIProgramWriter({ onSelectWorkout }) {
     [programId, supabase]
   );
 
+  // --- Enhanced Workout Save Handler ---
+  const handleSaveEnhancedWorkout = async (workout) => {
+    if (!workout.id) {
+      showToastMessage('Cannot update workout: missing id', 'error');
+      console.error('Cannot update workout: missing id', workout);
+      return false;
+    }
+    try {
+      const { error } = await supabase.from('program_workouts').upsert(
+        {
+          id: workout.id,
+          program_id: programId,
+          title: workout.title,
+          body: workout.body || workout.description,
+          scheduled_date:
+            workout.scheduled_date || workout.suggestedDate || null,
+        },
+        { onConflict: 'id' }
+      );
+      if (error) {
+        showToastMessage('Error saving enhanced workout', 'error');
+        console.error('Supabase upsert error:', error, workout);
+        return false;
+      }
+      showToastMessage('Workout updated!', 'success');
+      return true;
+    } catch (err) {
+      showToastMessage('Unexpected error saving workout', 'error');
+      console.error(
+        'Unexpected error in handleSaveEnhancedWorkout:',
+        err,
+        workout
+      );
+      return false;
+    }
+  };
+
   // --- Render ---
 
   return (
@@ -1127,7 +1163,7 @@ export default function AIProgramWriter({ onSelectWorkout }) {
           formatDate={formatDate}
           onViewDetails={handleViewWorkoutDetailsWrapper}
           onDatePick={handleDatePickerOpenWrapper}
-          onSelectWorkout={onSelectWorkout}
+          onSelectWorkout={handleSaveEnhancedWorkout}
           onDeleteWorkout={handleDeleteWorkout}
           onEditWorkout={handleEditWorkout}
           isLoading={isLoading}
@@ -1140,7 +1176,7 @@ export default function AIProgramWriter({ onSelectWorkout }) {
           isOpen={isWorkoutModalOpen}
           workout={selectedWorkout}
           onClose={handleCloseWorkoutModalWrapper}
-          onSelectWorkout={onSelectWorkout}
+          onSaveEnhancedWorkout={handleSaveEnhancedWorkout}
           formatDate={formatDate}
           onDeleteWorkout={handleDeleteWorkout}
           onEditWorkout={handleEditWorkout}
