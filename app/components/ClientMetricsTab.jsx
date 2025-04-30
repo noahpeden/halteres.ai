@@ -4,8 +4,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 // Conversion helpers
-const kgToLbs = (kg) => Math.round(kg * 2.20462);
-const lbsToKg = (lbs) => Math.round(lbs / 2.20462);
+const kgToLbs = (kg) => (kg ? kg * 2.20462 : 0);
+const lbsToKg = (lbs) => (lbs ? lbs / 2.20462 : 0);
 const cmToFeet = (cm) => {
   if (!cm || typeof cm === 'object') return { feet: 0, inches: 0 };
   const totalInches = cm / 2.54;
@@ -200,13 +200,15 @@ export default function ClientMetricsTab({
           : editedData.metrics.squat_1rm,
         mile_time: editedData.metrics.mile_time,
         gender: editedData.metrics.gender,
-        height_cm: useImperial
-          ? feetInchesToCm(heightFeet, heightInches)
-          : editedData.metrics.height_cm,
+        height_cm: Math.round(
+          useImperial
+            ? feetInchesToCm(heightFeet, heightInches)
+            : editedData.metrics.height_cm
+        ),
         weight_kg: useImperial
           ? lbsToKg(editedData.metrics.weight_kg)
           : editedData.metrics.weight_kg,
-        recovery_score: editedData.metrics.recovery_score,
+        recovery_score: Math.round(editedData.metrics.recovery_score),
         preferred_training_days: editedData.metrics.preferred_training_days,
         injury_history: editedData.metrics.injury_history,
       };
@@ -254,7 +256,17 @@ export default function ClientMetricsTab({
 
       setIsEditing(false);
     } catch (error) {
-      console.error('Error saving client data:', error);
+      // Improved error logging for Supabase errors
+      if (error && typeof error === 'object') {
+        console.error('Error saving client data:', {
+          message: error.message,
+          details: error.details,
+          code: error.code,
+          error,
+        });
+      } else {
+        console.error('Error saving client data:', error);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -345,9 +357,9 @@ export default function ClientMetricsTab({
   const formatWeight = (kg) => {
     if (!kg) return 'N/A';
     if (useImperial) {
-      return `${kgToLbs(kg)}lbs`;
+      return `${Math.round(kgToLbs(kg))}lbs`;
     }
-    return `${kg}kg`;
+    return `${Math.round(kg)}kg`;
   };
 
   const formatHeight = (cm) => {
