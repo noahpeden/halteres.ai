@@ -144,6 +144,23 @@ export async function POST(req) {
             subscription = await stripe.subscriptions.retrieve(
               checkoutSubscriptionId
             );
+
+            // Add detailed logging about the subscription
+            console.log(
+              `Webhook Debug: Retrieved subscription ${subscription.id} with status ${subscription.status}`
+            );
+            console.log(
+              `Webhook Debug: First subscription item price lookup_key: ${subscription.items.data[0]?.price?.lookup_key}`
+            );
+            console.log(
+              `Webhook Debug: First subscription item price ID: ${subscription.items.data[0]?.price?.id}`
+            );
+            console.log(
+              `Webhook Debug: Mapped plan: ${mapLookupKeyToPlan(
+                subscription.items.data[0]?.price?.lookup_key
+              )}`
+            );
+
             customerId = checkoutSession.customer;
             userIdFromMetadata =
               checkoutSession.client_reference_id ??
