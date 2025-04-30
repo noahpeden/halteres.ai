@@ -116,47 +116,31 @@ export default function WorkoutFormatSelector({
     onChange(newFormats);
   };
 
-  // Display selected formats summary
-  const selectedText =
-    selectedFormats.length > 0
-      ? selectedFormats
-          .map((id) => {
-            const format = workoutFormats.find((f) => f.id === id);
-            return format ? format.name : id;
-          })
-          .join(', ')
-      : 'Select Workout Formats';
-
   return (
-    <div className="collapse collapse-arrow border border-base-300 bg-base-100 rounded-box w-full">
-      <input type="checkbox" className="peer" />
-      <div className="collapse-title text-sm font-medium flex items-center">
-        {selectedText}
-      </div>
-      <div className="collapse-content max-h-60 overflow-y-auto">
-        <ul className="menu p-0 grid grid-cols-2 gap-2">
-          {workoutFormats.map((format) => (
-            <li key={format.id} className="py-1">
-              <label
-                htmlFor={`format-${format.id}`}
-                className="label cursor-pointer justify-start gap-3 hover:bg-base-200 rounded p-2"
-              >
-                <input
-                  type="checkbox"
-                  id={`format-${format.id}`}
-                  className="checkbox checkbox-primary"
-                  checked={selectedFormats.includes(format.id)}
-                  onChange={() => handleFormatChange(format.id)}
-                />
-                <span className="label-text flex items-center gap-2">
-                  <span>{format.icon}</span>
-                  <span>{format.name}</span>
-                </span>
-              </label>
-            </li>
-          ))}
-        </ul>
-      </div>
+    <div className="flex flex-wrap gap-2 py-2">
+      {workoutFormats.map((format) => {
+        const selected = selectedFormats.includes(format.id);
+        return (
+          <button
+            key={format.id}
+            type="button"
+            className={`flex items-center gap-2 px-3 py-1 rounded-full border transition-colors focus:outline-none focus:ring-2 focus:ring-primary/60 text-sm
+              ${
+                selected
+                  ? 'bg-primary text-white border-primary shadow'
+                  : 'bg-base-200 text-base-content border-base-300 hover:bg-base-300'
+              }
+            `}
+            aria-pressed={selected}
+            aria-label={format.name + (selected ? ' selected' : '')}
+            title={format.description}
+            onClick={() => handleFormatChange(format.id)}
+          >
+            <span>{format.icon}</span>
+            <span className="whitespace-nowrap">{format.name}</span>
+          </button>
+        );
+      })}
     </div>
   );
 }

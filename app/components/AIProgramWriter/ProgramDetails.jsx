@@ -87,49 +87,74 @@ export default function ProgramDetails({
             </select>
           </label>
         </div>
+        {/* Workout Duration */}
+        <div className="mb-4">
+          <label className="form-control">
+            <span className="label-text font-medium">
+              Workout Duration (minutes)
+            </span>
+            <input
+              type="number"
+              name="sessionDuration"
+              className="input input-bordered w-full"
+              placeholder="e.g., 60"
+              value={formData.sessionDetails?.duration_minutes || ''}
+              onChange={(e) => {
+                const value = e.target.value;
+                handleChange({
+                  target: {
+                    name: 'sessionDetails',
+                    value: {
+                      ...formData.sessionDetails,
+                      duration_minutes: value ? parseInt(value, 10) : null,
+                    },
+                  },
+                });
+              }}
+            />
+            <div className="label">
+              <span className="label-text-alt">
+                Approximate duration for each workout session.
+              </span>
+            </div>
+          </label>
+        </div>
 
-        {/* Workout Formats */}
-        <div>
+        {/* Workout Types to Include */}
+        <div className="col-span-2">
           <label className="form-control w-full">
-            <span className="label-text font-medium">Workout Formats</span>
+            <span className="label-text font-medium flex items-center">
+              Workout Types to Include
+              <div
+                className="tooltip tooltip-top tooltip-info ml-2"
+                data-tip="Select the types of workouts (e.g., EMOM, AMRAP, Circuit) you want included in your program. These are specific session styles, not the overall program approach."
+              >
+                <svg
+                  className="w-4 h-4 text-primary bg-white rounded-full"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M13 16h-1v-4h-1m1-4h.01M12 20a8 8 0 100-16 8 8 0 000 16z"
+                  ></path>
+                </svg>
+              </div>
+            </span>
             <WorkoutFormatSelector
               selectedFormats={formData.workoutFormats}
               onChange={handleWorkoutFormatChange}
             />
+            <span className="text-xs text-gray-500 mb-2">
+              Choose the types of workouts you want to see in your program.
+              These are the building blocks of each session.
+            </span>
           </label>
         </div>
-      </div>
-      {/* Workout Duration */}
-      <div className="mb-4">
-        <label className="form-control w-full">
-          <span className="label-text font-medium">
-            Workout Duration (minutes)
-          </span>
-          <input
-            type="number"
-            name="sessionDuration"
-            className="input input-bordered w-full"
-            placeholder="e.g., 60"
-            value={formData.sessionDetails?.duration_minutes || ''}
-            onChange={(e) => {
-              const value = e.target.value;
-              handleChange({
-                target: {
-                  name: 'sessionDetails',
-                  value: {
-                    ...formData.sessionDetails,
-                    duration_minutes: value ? parseInt(value, 10) : null,
-                  },
-                },
-              });
-            }}
-          />
-          <div className="label">
-            <span className="label-text-alt">
-              Approximate duration for each workout session.
-            </span>
-          </div>
-        </label>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

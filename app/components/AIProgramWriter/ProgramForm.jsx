@@ -1,12 +1,13 @@
 'use client';
 import { useCallback, useMemo } from 'react';
-import { difficulties, gymTypes } from '../utils';
+import { gymEquipmentPresets } from '../utils';
 import ProgramEssentials from './ProgramEssentials';
 import ProgramScheduling from './ProgramScheduling';
 import ProgramDetails from './ProgramDetails';
 import CustomWorkoutFormat from './CustomWorkoutFormat';
 import LoadingButton from './LoadingButton';
 import { handleFormChange as handleFormChangeUtil } from './formHandlers';
+import equipmentList from '@/utils/equipmentList';
 
 // Helper function (can be moved to utils)
 function isNewDay(lastGenerationDateStr) {
@@ -54,12 +55,46 @@ const ProgramForm = ({
     (e) => {
       const { name, value, type, checked } = e.target;
       const updateValue = type === 'checkbox' ? checked : value;
+
+      if (name === 'gymType') {
+        // Get the preset for the new gym type
+        const preset = gymEquipmentPresets[value] || [];
+        // Map preset IDs to equipment labels
+        const equipmentNames = preset
+          .map((id) => {
+            const equipment = equipmentList.find((item) => item.value === id);
+            return equipment ? equipment.label : null;
+          })
+          .filter(Boolean);
+        // Update gymType, equipment, and gymDetails.equipment
+        dispatch({
+          type: 'SET_FIELD_VALUE',
+          payload: { field: 'gymType', value },
+        });
+        dispatch({
+          type: 'SET_FIELD_VALUE',
+          payload: { field: 'equipment', value: preset },
+        });
+        dispatch({
+          type: 'SET_FIELD_VALUE',
+          payload: {
+            field: 'gymDetails',
+            value: {
+              ...formData.gymDetails,
+              gym_type: value,
+              equipment: equipmentNames,
+            },
+          },
+        });
+        return;
+      }
+
       dispatch({
         type: 'SET_FIELD_VALUE',
         payload: { field: name, value: updateValue },
       });
     },
-    [dispatch]
+    [dispatch, formData.gymDetails]
   );
 
   // --- Eligibility Logic ---

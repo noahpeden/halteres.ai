@@ -14,7 +14,15 @@ export default function ProgramEssentials({ formData, handleChange }) {
       {/* Training Methodology */}
       <div className="mb-4">
         <label className="form-control w-full">
-          <span className="label-text font-medium">Training Methodology</span>
+          <span className="label-text font-medium flex items-center">
+            Methodology (Overall Program Approach)
+            <div
+              className="tooltip tooltip-top tooltip-info ml-2"
+              data-tip="This determines the overall structure and philosophy of your program (e.g., Crossfit, Bodybuilding, Powerlifting, etc.). The AI will use this as the main guiding principle."
+            >
+              <InfoIcon className="w-4 h-4 text-primary bg-white rounded-full" />
+            </div>
+          </span>
           <ProgramTypeSelector
             selectedType={formData.trainingMethodology}
             onChange={(typeId) =>
@@ -23,6 +31,33 @@ export default function ProgramEssentials({ formData, handleChange }) {
               })
             }
           />
+          <span className="text-xs text-gray-500 mb-2">
+            Select the overall approach that will guide your program's structure
+            and progression.
+          </span>
+        </label>
+      </div>
+      {/* Periodization Type */}
+      <div className="mb-4">
+        <label className="form-control w-full">
+          <span className="label-text font-medium mb-1">
+            Periodization Type
+          </span>
+          <select
+            name="programType"
+            className="select select-bordered w-full"
+            value={formData.programType || ''}
+            onChange={handleChange}
+          >
+            <option value="" disabled>
+              Select Periodization Type
+            </option>
+            {programTypes.map((type) => (
+              <option key={type.value} value={type.value}>
+                {type.label}
+              </option>
+            ))}
+          </select>
         </label>
       </div>
 
@@ -81,30 +116,6 @@ export default function ProgramEssentials({ formData, handleChange }) {
         >
           Add Reference Workouts
         </button>
-      </div>
-
-      {/* Program Type */}
-      <div className="mt-4">
-        <label className="form-control w-full">
-          <span className="label-text font-medium mb-1">
-            Periodization Type (Optional)
-          </span>
-          <select
-            name="programType"
-            className="select select-bordered w-full"
-            value={formData.programType || ''}
-            onChange={handleChange}
-          >
-            <option value="" disabled>
-              Select Periodization Type
-            </option>
-            {programTypes.map((type) => (
-              <option key={type.value} value={type.value}>
-                {type.label}
-              </option>
-            ))}
-          </select>
-        </label>
       </div>
     </section>
   );
