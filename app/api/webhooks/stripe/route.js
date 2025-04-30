@@ -318,9 +318,12 @@ function mapLookupKeyToPlan(lookupKey) {
     );
     return null;
   }
-  const monthlyKey = process.env.STRIPE_LOOKUP_KEY_MONTHLY || 'monthly';
-  const quarterlyKey = process.env.STRIPE_LOOKUP_KEY_QUARTERLY || 'quarterly';
-  const annualKey = process.env.STRIPE_LOOKUP_KEY_ANNUAL || 'annual';
+  // Updated to match the lookup keys used in the pricing page
+  const monthlyKey =
+    process.env.STRIPE_LOOKUP_KEY_MONTHLY || 'standard_monthly';
+  const quarterlyKey =
+    process.env.STRIPE_LOOKUP_KEY_QUARTERLY || 'standard_quarterly';
+  const annualKey = process.env.STRIPE_LOOKUP_KEY_ANNUAL || 'standard_annual';
 
   switch (lookupKey) {
     case monthlyKey:
