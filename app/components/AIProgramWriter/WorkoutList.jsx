@@ -85,91 +85,89 @@ export default function WorkoutList({
             {weekGroup.workouts.map((workout, index) => (
               <div
                 key={`${weekGroup.week}-${index}`}
-                className="border rounded-md p-4 "
+                className="border rounded-md p-3 sm:p-4 flex flex-col w-full"
                 draggable
                 onDragStart={(e) => {
                   e.dataTransfer.setData('workout', JSON.stringify(workout));
                   onSelectWorkout(workout);
                 }}
               >
-                <div className="flex justify-between items-start">
-                  <h4 className="font-semibold">
+                <div className="flex justify-between items-center mb-1 w-full">
+                  <h4 className="font-semibold flex-1 break-words mr-2">
                     {workout.title ||
                       `Week ${weekGroup.week}, Day ${index + 1}`}
                   </h4>
-                  <div className="flex gap-2 items-center">
-                    <button
-                      className="btn btn-xs btn-ghost text-primary cursor-pointer"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onDatePick(workout);
-                      }}
-                      title="Adjust date"
-                    >
-                      {workout.tags?.suggestedDate
-                        ? formatDate(workout.tags.suggestedDate)
-                        : workout.suggestedDate
-                        ? formatDate(workout.suggestedDate)
-                        : 'Not scheduled'}
-                    </button>
-                    {workout.id && (
-                      <div className="dropdown dropdown-end">
-                        <button
-                          tabIndex={0}
-                          className="btn btn-sm btn-ghost btn-square"
-                          aria-label="More actions"
-                          title="More actions"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <MoreVertical className="h-5 w-5" />
-                        </button>
-                        <ul
-                          tabIndex={0}
-                          className="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-32"
-                        >
-                          <li>
-                            <button
-                              className="flex items-center gap-2 text-accent"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onEditWorkout(workout);
-                              }}
-                              title="Edit workout"
-                            >
-                              <Pencil className="h-4 w-4" /> Edit
-                            </button>
-                          </li>
-                          <li>
-                            <button
-                              className="flex items-center gap-2 text-error"
-                              onClick={(e) => onDeleteWorkout(workout.id, e)}
-                              title="Delete workout"
-                            >
-                              <Trash2 className="h-4 w-4" /> Delete
-                            </button>
-                          </li>
-                        </ul>
-                      </div>
-                    )}
-                  </div>
+                  {workout.id && (
+                    <div className="dropdown dropdown-end flex-shrink-0">
+                      <button
+                        tabIndex={0}
+                        className="btn btn-sm btn-ghost btn-square"
+                        aria-label="More actions"
+                        title="More actions"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <MoreVertical className="h-5 w-5" />
+                      </button>
+                      <ul
+                        tabIndex={0}
+                        className="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-32"
+                      >
+                        <li>
+                          <button
+                            className="flex items-center gap-2 text-accent w-full"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onEditWorkout(workout);
+                            }}
+                            title="Edit workout"
+                          >
+                            <Pencil className="h-4 w-4" /> Edit
+                          </button>
+                        </li>
+                        <li>
+                          <button
+                            className="flex items-center gap-2 text-error w-full"
+                            onClick={(e) => onDeleteWorkout(workout.id, e)}
+                            title="Delete workout"
+                          >
+                            <Trash2 className="h-4 w-4" /> Delete
+                          </button>
+                        </li>
+                      </ul>
+                    </div>
+                  )}
                 </div>
-                <div className="whitespace-pre-line mt-2 overflow-auto max-h-80">
+                <div className="mb-2">
+                  <button
+                    className="btn btn-xs btn-ghost text-primary cursor-pointer pl-0"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDatePick(workout);
+                    }}
+                    title="Adjust date"
+                  >
+                    {workout.tags?.suggestedDate
+                      ? formatDate(workout.tags.suggestedDate)
+                      : workout.suggestedDate
+                      ? formatDate(workout.suggestedDate)
+                      : 'Not scheduled'}
+                  </button>
+                </div>
+                <div className="whitespace-pre-line overflow-auto max-h-60 sm:max-h-80 text-sm mb-3 flex-grow">
                   {workout.body ||
                     workout.description ||
                     'No description available'}
                 </div>
-                <div className="flex justify-end items-center mt-2">
-                  <div className="flex gap-2 mt-3">
-                    <button
-                      className="btn btn-sm text-white btn-primary"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onViewDetails(workout);
-                      }}
-                    >
-                      View Details
-                    </button>
-                  </div>
+                <div className="flex justify-end items-center mt-auto">
+                  <button
+                    className="btn sm:btn-sm text-white btn-primary"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onViewDetails(workout);
+                    }}
+                  >
+                    View Details
+                  </button>
                 </div>
               </div>
             ))}

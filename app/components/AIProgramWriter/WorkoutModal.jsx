@@ -202,38 +202,50 @@ export default function WorkoutModal({
 
   return (
     <div
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-[9999] p-4 pt-20"
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-start sm:items-start justify-center z-[9999] p-0 sm:p-4 sm:pt-20"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
       aria-labelledby={titleId}
     >
       <div
-        className="bg-white/95 backdrop-blur-sm rounded-lg shadow-2xl max-w-3xl w-full max-h-[85vh] overflow-y-auto"
+        className="bg-white/95 backdrop-blur-sm rounded-none sm:rounded-lg shadow-2xl max-w-3xl w-full h-screen sm:h-auto sm:max-h-[85vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex justify-between items-center p-4 border-b">
-          <h3 id={titleId} className="text-xl font-bold mr-4">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 pt-16 sm:pt-4 border-b relative">
+          <button
+            onClick={onClose}
+            className="absolute lg:top-1 top-4 right-4 btn btn-circle btn-sm btn-ghost text-gray-500"
+            aria-label="Close modal"
+          >
+            ✕
+          </button>
+
+          <h3 id={titleId} className="text-xl font-bold mr-4 mb-3 sm:mb-0 pr-8">
             {displayWorkout.title}
           </h3>
-          <div className="flex items-center gap-2">
+
+          <div className="flex items-center gap-3 w-full sm:w-auto justify-start sm:justify-end">
             <div className="relative">
               <button
-                className="btn btn-sm btn-ghost btn-square text-blue-500 hover:bg-blue-100"
+                className="btn btn-sm btn-secondary text-white"
                 onClick={() => setShowEnhancePopover(true)}
                 aria-label="Regenerate Workout with AI"
                 disabled={isRegenerating}
                 title="Regenerate this workout with AI"
               >
-                {isRegenerating ? (
-                  <span className="loading loading-spinner loading-xs"></span>
-                ) : (
-                  <Sparkles className="h-4 w-4" />
-                )}
+                <div className="flex items-center">
+                  {isRegenerating ? (
+                    <span className="loading loading-spinner loading-xs mr-1"></span>
+                  ) : (
+                    <Sparkles className="h-4 w-4 mr-1" />
+                  )}
+                  <span>Enhance</span>
+                </div>
               </button>
               {showEnhancePopover && (
                 <div
-                  className="ai-enhance-popover absolute right-0 mt-2 z-50 bg-white border border-gray-200 rounded-lg shadow-lg p-4 w-80 flex flex-col gap-2"
+                  className="ai-enhance-popover fixed sm:absolute sm:top-full sm:right-0 inset-x-4 sm:inset-x-auto top-1/4 sm:top-auto mt-0 sm:mt-2 z-50 bg-white border border-gray-200 rounded-lg shadow-lg p-4 w-auto sm:w-80 max-w-[calc(100vw-2rem)] flex flex-col gap-2"
                   role="dialog"
                   aria-modal="true"
                 >
@@ -277,32 +289,27 @@ export default function WorkoutModal({
             </div>
             {onEditWorkout && (
               <button
-                className="btn btn-sm btn-ghost btn-square text-gray-500 hover:bg-gray-200"
+                className="btn btn-sm btn-outline"
                 onClick={() => {
                   onClose();
                   onEditWorkout(workout);
                 }}
                 aria-label="Edit Workout"
               >
-                <Pencil className="h-4 w-4" />
+                <Pencil className="h-4 w-4 mr-1" />
+                Edit
               </button>
             )}
             {onDeleteWorkout && (
               <button
-                className="btn btn-sm btn-ghost btn-square text-red-500 hover:bg-red-100"
+                className="btn btn-sm btn-outline btn-error"
                 onClick={() => onDeleteWorkout(workout.id)}
                 aria-label="Delete Workout"
               >
-                <Trash2 className="h-4 w-4" />
+                <Trash2 className="h-4 w-4 mr-1" />
+                Delete
               </button>
             )}
-            <button
-              onClick={onClose}
-              className="btn btn-sm btn-ghost btn-square text-gray-500 hover:bg-gray-200"
-              aria-label="Close modal"
-            >
-              ✕
-            </button>
           </div>
         </div>
 

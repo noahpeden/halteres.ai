@@ -115,7 +115,7 @@ export default function ProgramWriterPage() {
 
   return (
     <ProgramWriterProvider initialProgramId={programId}>
-      <div className="container mx-auto p-4 relative">
+      <div className="w-full max-w-full overflow-hidden relative">
         <div className="mb-6">
           {isEditingName ? (
             <div className="flex items-center gap-2">
@@ -171,14 +171,14 @@ export default function ProgramWriterPage() {
         )}
 
         {/* Main Content Area with Sidebar Layout */}
-        <div className="flex flex-col lg:flex-row gap-6">
+        <div className="flex flex-col lg:flex-row gap-6 w-full max-w-full overflow-hidden">
           {/* AI Program Writer (Main Content) - Dynamically sized */}
           <div
-            className={`flex-grow ${
+            className={`flex-grow w-full ${
               isSidebarCollapsed ? 'lg:w-full' : 'lg:w-2/3'
             } transition-all duration-300 ease-in-out`}
           >
-            <div className="bg-white rounded-lg shadow p-4 h-full">
+            <div className="bg-white rounded-lg shadow h-full w-full">
               <AIProgramWriter programId={programId} />
             </div>
           </div>
@@ -186,6 +186,7 @@ export default function ProgramWriterPage() {
           {/* Client Metrics Sidebar - Dynamically sized/hidden */}
           <div
             className={`flex-shrink-0 transition-all duration-300 ease-in-out 
+                        hidden lg:block /* Hide on small screens, block on large */ 
                         ${
                           isSidebarCollapsed
                             ? 'lg:w-0 opacity-0 pointer-events-none'

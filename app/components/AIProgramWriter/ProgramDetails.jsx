@@ -9,15 +9,15 @@ export default function ProgramDetails({
   equipmentSelector,
 }) {
   return (
-    <section className="bg-base-100 p-5 rounded-lg border border-base-300 shadow-sm">
+    <section className="bg-base-100 p-4 md:p-5 rounded-lg border border-base-300 shadow-sm w-full">
       <h2 className="text-xl font-semibold mb-4 text-primary">
         Program Details
       </h2>
 
       {/* Equipment Selector - Full width */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+      <div className="flex flex-col md:flex-row gap-4 md:gap-6 mb-6">
         {/* Gym Type */}
-        <div>
+        <div className="w-full md:w-1/2">
           <label className="form-control w-full">
             <span className="label-text font-medium">Gym Type</span>
             <select
@@ -42,7 +42,7 @@ export default function ProgramDetails({
         </div>
 
         {/* Difficulty */}
-        <div>
+        <div className="w-full md:w-1/2">
           <label className="form-control w-full">
             <span className="label-text font-medium">Difficulty Level</span>
             <select
@@ -67,9 +67,9 @@ export default function ProgramDetails({
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+      <div className="flex flex-col md:flex-row gap-4 md:gap-6 mb-6">
         {/* Focus Area */}
-        <div>
+        <div className="w-full md:w-1/2">
           <label className="form-control w-full">
             <span className="label-text font-medium">Focus Area</span>
             <select
@@ -88,8 +88,8 @@ export default function ProgramDetails({
           </label>
         </div>
         {/* Workout Duration */}
-        <div className="mb-4">
-          <label className="form-control">
+        <div className="w-full md:w-1/2">
+          <label className="form-control w-full">
             <span className="label-text font-medium">
               Workout Duration (minutes)
             </span>
@@ -119,78 +119,41 @@ export default function ProgramDetails({
             </div>
           </label>
         </div>
-
-        {/* Workout Types to Include */}
-        <div className="col-span-2">
-          <label className="form-control w-full">
-            <span className="label-text font-medium flex items-center">
-              Workout Types to Include
-              <div
-                className="tooltip tooltip-top tooltip-info ml-2"
-                data-tip="Select the types of workouts (e.g., EMOM, AMRAP, Circuit) you want included in your program. These are specific session styles, not the overall program approach."
-              >
-                <svg
-                  className="w-4 h-4 text-primary bg-white rounded-full"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  viewBox="0 0 24 24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M13 16h-1v-4h-1m1-4h.01M12 20a8 8 0 100-16 8 8 0 000 16z"
-                  ></path>
-                </svg>
-              </div>
-            </span>
-            <WorkoutFormatSelector
-              selectedFormats={formData.workoutFormats}
-              onChange={handleWorkoutFormatChange}
-            />
-            <span className="text-xs text-gray-500 mb-2">
-              Choose the types of workouts you want to see in your program.
-              These are the building blocks of each session.
-            </span>
-          </label>
-        </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Personalization */}
-        {/* <div className="flex flex-col gap-2">
-          <label className="label">
-            <span className="label-text font-medium">
-              Personalization (optional)
-            </span>
-          </label>
-          <textarea
-            name="personalization"
-            className="textarea textarea-bordered h-24"
-            value={formData.personalization}
-            onChange={handleChange}
-            placeholder="e.g., Specific exercise preferences, training style, or movement priorities"
+      <div className="mb-6 w-full">
+        <label className="form-control w-full">
+          <span className="label-text font-medium flex items-center">
+            Workout Types to Include
+            <div
+              className="tooltip tooltip-top tooltip-info ml-2"
+              data-tip="Select the types of workouts (e.g., EMOM, AMRAP, Circuit) you want included in your program. These are specific session styles, not the overall program approach."
+            >
+              <svg
+                className="w-4 h-4 text-primary bg-white rounded-full"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M13 16h-1v-4h-1m1-4h.01M12 20a8 8 0 100-16 8 8 0 000 16z"
+                ></path>
+              </svg>
+            </div>
+          </span>
+          <WorkoutFormatSelector
+            selectedFormats={formData.workoutFormats}
+            onChange={handleWorkoutFormatChange}
           />
-        </div> */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Training Goal */}
-          {/* <div>
-            <label className="form-control w-full">
-              <div className="label">
-                <span className="label-text">Training Goal</span>
-              </div>
-              <input
-                type="text"
-                name="goal"
-                className="input input-bordered w-full"
-                value={formData.goal}
-                onChange={handleChange}
-                placeholder="e.g., Strength, Muscle Gain, Conditioning"
-              />
-            </label>
-          </div> */}
-        </div>
+          <span className="text-xs text-gray-500 mt-1">
+            Choose the types of workouts you want to see in your program. These
+            are the building blocks of each session.
+          </span>
+        </label>
       </div>
     </section>
   );
