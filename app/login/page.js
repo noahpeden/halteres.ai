@@ -8,37 +8,12 @@ import { useEffect, useState } from 'react';
 export default function App() {
   const { session, supabase } = useAuth();
   const router = useRouter();
-  const [returnTo, setReturnTo] = useState(null);
-  const [isRedirecting, setIsRedirecting] = useState(false);
-
-  // Get the returnTo parameter safely on the client side
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      const returnToParam = params.get('returnTo');
-      if (returnToParam) {
-        // Remove any app.halteres.ai references from returnTo
-        const cleanReturnTo = returnToParam.replace(
-          'app.halteres.ai',
-          'www.halteres.ai'
-        );
-        setReturnTo(cleanReturnTo);
-      }
-    }
-  }, []);
 
   useEffect(() => {
-    if (session && !isRedirecting) {
-      setIsRedirecting(true);
-
-      // Handle redirection
-      if (returnTo) {
-        window.location.href = returnTo;
-      } else {
-        window.location.href = '/dashboard';
-      }
+    if (session) {
+      router.push('/dashboard');
     }
-  }, [session, returnTo, isRedirecting]);
+  }, [session, router]);
 
   if (!session) {
     return (
@@ -48,7 +23,11 @@ export default function App() {
             supabaseClient={supabase}
             appearance={{ theme: ThemeSupa }}
             providers={['google']}
-            redirectTo={returnTo || '/dashboard'}
+            redirectTo={
+              typeof window !== 'undefined'
+                ? `${window.location.origin}/dashboard`
+                : '/dashboard'
+            }
           />
         </div>
       </div>
