@@ -14,13 +14,16 @@ function calculateRemainingTrialDays(trialEndDateStr) {
 }
 
 export default function PricingClient({ user, profile, plans }) {
-  console.log('PricingClient', user, profile, plans);
   const stripePromise = useStripeContext();
   const router = useRouter();
   const [loadingPriceId, setLoadingPriceId] = useState(null);
   const [error, setError] = useState(null);
 
   const handleSubscribe = async (priceId) => {
+    console.log(
+      'handleSubscribe',
+      process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+    );
     setError(null);
 
     if (!user) {

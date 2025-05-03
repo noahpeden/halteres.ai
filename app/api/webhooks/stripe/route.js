@@ -32,7 +32,7 @@ async function updateSubscriptionStatus(
 
   // Construct the update payload carefully, avoid undefined values if possible
   const profileUpdateData = {
-    subscription_id: subscriptionId,
+    stripe_subscription_id: subscriptionId,
     subscription_status: status,
     // Only include plan if it's not null/undefined. Use null to clear the field.
     subscription_plan: plan !== undefined ? plan : null,
@@ -86,6 +86,53 @@ async function updateSubscriptionStatus(
     return { error: `Webhook handler error: ${updateError.message}` };
   }
 
+  // Verify the update was successful by fetching the profile again
+  try {
+    const { data: updatedProfile, error: verifyError } = await supabaseAdmin
+      .from('profiles')
+      .select(
+        'subscription_status, subscription_plan, stripe_subscription_id, current_period_end'
+      )
+      .eq('id', userId)
+      .single();
+
+    if (verifyError || !updatedProfile) {
+      console.error(
+        `Webhook Warning: Could not verify profile update for user ${userId}:`,
+        verifyError
+      );
+    } else {
+      console.log(
+        `Webhook Success: Profile update verified for user ${userId}:`,
+        {
+          status: updatedProfile.subscription_status,
+          plan: updatedProfile.subscription_plan,
+          subscriptionId: updatedProfile.stripe_subscription_id,
+          currentPeriodEnd: updatedProfile.current_period_end,
+        }
+      );
+
+      // Make sure the status actually changed
+      if (updatedProfile.subscription_status !== status) {
+        console.error(
+          `Webhook Warning: Profile update succeeded but status didn't change! Expected: ${status}, Actual: ${updatedProfile.subscription_status}`
+        );
+      }
+
+      // Make sure the subscription ID was updated correctly
+      if (updatedProfile.stripe_subscription_id !== subscriptionId) {
+        console.error(
+          `Webhook Warning: Profile update succeeded but subscription ID didn't match! Expected: ${subscriptionId}, Actual: ${updatedProfile.stripe_subscription_id}`
+        );
+      }
+    }
+  } catch (error) {
+    console.error(
+      `Webhook Warning: Error during verification of profile update:`,
+      error
+    );
+  }
+
   console.log(`Webhook: Successfully updated profile for user ${userId}`);
   return { success: true };
 }
@@ -110,6 +157,13 @@ export async function POST(req) {
       throw new Error('Missing Stripe signature');
     }
     event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
+
+    // Log the raw event data for debugging
+    console.log('Webhook: Received event type:', event.type);
+    console.log(
+      'Webhook: Event data object:',
+      JSON.stringify(event.data.object, null, 2)
+    );
   } catch (err) {
     console.error(`Webhook signature verification failed: ${err.message}`);
     return new NextResponse(

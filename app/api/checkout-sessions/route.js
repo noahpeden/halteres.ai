@@ -1,216 +1,155 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
+import { createClient } from '@supabase/supabase-js';
 import { stripe } from '@/utils/stripe';
 
-export async function POST(req) {
-  const cookieStore = cookies();
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-    {
-      cookies: {
-        get(name) {
-          return cookieStore.get(name)?.value;
-        },
-        set(name, value, options) {
-          cookieStore.set({ name, value, ...options });
-        },
-        remove(name, options) {
-          cookieStore.set({ name, value: '', ...options });
-        },
-      },
-    }
-  );
+// Verify we're using test keys
+const isTestMode = process.env.STRIPE_SECRET_KEY?.startsWith('sk_test_');
+const isPublishableKeyTestMode =
+  process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY?.startsWith('pk_test_');
 
+if (!isTestMode || !isPublishableKeyTestMode) {
+  console.error(`
+⚠️ MODE MISMATCH DETECTED ⚠️
+Secret key is in ${isTestMode ? 'TEST' : 'LIVE'} mode
+Publishable key is in ${isPublishableKeyTestMode ? 'TEST' : 'LIVE'} mode
+Make sure both keys are in TEST mode for local development.
+  `);
+}
+
+// Supabase admin client (service role)
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY,
+  {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+    },
+  }
+);
+
+export async function POST(req) {
+  console.log('checkout-sessions route', process.env.STRIPE_SECRET_KEY);
   try {
     const { priceId } = await req.json();
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
 
     if (!priceId) {
-      return new NextResponse(
-        JSON.stringify({ error: 'Price ID is required' }),
-        {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' },
-        }
-      );
-    }
-    if (!siteUrl) {
-      console.error('Missing NEXT_PUBLIC_SITE_URL environment variable');
-      return new NextResponse(
-        JSON.stringify({ error: 'Internal server configuration error' }),
-        {
-          status: 500,
-          headers: { 'Content-Type': 'application/json' },
-        }
+      return NextResponse.json(
+        { error: 'Price ID is required' },
+        { status: 400 }
       );
     }
 
-    // 1. Get authenticated user
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      console.error('API Authentication Error:', authError?.message);
-      return new NextResponse(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
-
-    // 2. Fetch user profile to get/create stripe_customer_id
-    // Use service role key for backend operations
-    const supabaseAdmin = createServerClient(
+    // Use Supabase SSR helper to get the user from cookies (server context)
+    const cookieStore = await cookies();
+    const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY, // Use Service Role Key here
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
       {
         cookies: {
           get(name) {
             return cookieStore.get(name)?.value;
           },
-          set(name, value, options) {
-            cookieStore.set({ name, value, ...options });
-          },
-          remove(name, options) {
-            cookieStore.set({ name, value: '', ...options });
-          },
-        },
-        auth: {
-          persistSession: false,
-          autoRefreshToken: false,
-          detectSessionInUrl: false,
+          set() {},
+          remove() {},
         },
       }
     );
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+    if (userError || !user) {
+      console.error('Error getting user from Supabase:', userError);
+      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+    }
 
+    // Fetch the profile for this user
     const { data: profile, error: profileError } = await supabaseAdmin
       .from('profiles')
-      .select('stripe_customer_id')
-      .eq('id', user.id) // Use user.id which links to profiles.id
+      .select('*')
+      .eq('id', user.id)
       .single();
-
-    if (profileError && profileError.code !== 'PGRST116') {
-      // PGRST116: row not found
-      console.error('Profile fetch error:', profileError);
-      return new NextResponse(
-        JSON.stringify({ error: 'Failed to retrieve user profile' }),
-        {
-          status: 500,
-          headers: { 'Content-Type': 'application/json' },
-        }
+    if (profileError || !profile) {
+      console.error('Error fetching user profile:', profileError);
+      return NextResponse.json(
+        { error: 'Error fetching user profile' },
+        { status: 404 }
       );
     }
 
-    let stripeCustomerId = profile?.stripe_customer_id;
+    console.log('Found user profile:', {
+      id: profile.id,
+      subscription_status: profile.subscription_status,
+      stripe_customer_id: profile.stripe_customer_id,
+    });
 
-    // 3. Create Stripe customer if needed
+    // Get or create Stripe customer
+    let stripeCustomerId = profile.stripe_customer_id;
     if (!stripeCustomerId) {
-      if (!user.email) {
-        return new NextResponse(
-          JSON.stringify({
-            error: 'User email is required to create Stripe customer',
-          }),
-          {
-            status: 400,
-            headers: { 'Content-Type': 'application/json' },
-          }
-        );
+      // Get user's email from Supabase auth
+      const { data: authUser, error: authError } =
+        await supabaseAdmin.auth.admin.getUserById(profile.id);
+      const userEmail = authUser?.user?.email || 'test@example.com';
+      if (authError) {
+        console.error('Error getting user email:', authError);
       }
       try {
-        console.log(
-          `Creating Stripe customer for user ${user.id} with email ${user.email}`
-        );
         const customer = await stripe.customers.create({
-          email: user.email,
-          metadata: {
-            supabaseUserId: user.id,
-          },
+          email: userEmail,
+          metadata: { supabaseUserId: profile.id },
         });
         stripeCustomerId = customer.id;
-        console.log(
-          `Created Stripe customer ${stripeCustomerId} for user ${user.id}`
-        );
-
-        // Update profile with new Stripe customer ID
+        // Update profile with new customer ID
         const { error: updateError } = await supabaseAdmin
           .from('profiles')
           .update({ stripe_customer_id: stripeCustomerId })
-          .eq('id', user.id);
-
+          .eq('id', profile.id);
         if (updateError) {
           console.error(
-            `Failed to update profile ${user.id} with Stripe Customer ID ${stripeCustomerId}:`,
+            'Failed to update profile with Stripe customer ID:',
             updateError
           );
-          // Non-fatal, proceed with checkout but log the error.
         }
       } catch (stripeError) {
         console.error('Stripe customer creation error:', stripeError);
-        // Use status code from stripeError if available, otherwise 500
-        const statusCode = stripeError.statusCode || 500;
-        return new NextResponse(
-          JSON.stringify({ error: `Stripe error: ${stripeError.message}` }),
-          {
-            status: statusCode,
-            headers: { 'Content-Type': 'application/json' },
-          }
+        return NextResponse.json(
+          { error: `Stripe error: ${stripeError.message}` },
+          { status: stripeError.statusCode || 500 }
         );
       }
     }
 
-    // 4. Create Stripe Checkout Session
+    // Create Stripe checkout session
     try {
       const session = await stripe.checkout.sessions.create({
         payment_method_types: ['card'],
         mode: 'subscription',
         customer: stripeCustomerId,
-        line_items: [
-          {
-            price: priceId,
-            quantity: 1,
-          },
-        ],
+        line_items: [{ price: priceId, quantity: 1 }],
         allow_promotion_codes: true,
         success_url: `${siteUrl}/dashboard?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${siteUrl}/pricing?checkout=cancelled`,
-        client_reference_id: user.id, // Link Supabase user ID
-        metadata: {
-          supabaseUserId: user.id,
-        },
+        client_reference_id: profile.id,
+        metadata: { supabaseUserId: profile.id },
       });
-
-      if (!session.id) {
-        throw new Error('Failed to create Stripe checkout session ID.');
-      }
-
       return NextResponse.json({ sessionId: session.id });
-    } catch (stripeSessionError) {
-      console.error(
-        'Stripe checkout session creation error:',
-        stripeSessionError
-      );
-      const statusCode = stripeSessionError.statusCode || 500;
-      return new NextResponse(
-        JSON.stringify({
-          error: `Stripe session error: ${stripeSessionError.message}`,
-        }),
-        {
-          status: statusCode,
-          headers: { 'Content-Type': 'application/json' },
-        }
+    } catch (stripeError) {
+      console.error('Stripe checkout session creation error:', stripeError);
+      return NextResponse.json(
+        { error: `Stripe session error: ${stripeError.message}` },
+        { status: stripeError.statusCode || 500 }
       );
     }
   } catch (error) {
-    console.error('Checkout Session General Error:', error);
-    return new NextResponse(
-      JSON.stringify({ error: 'Internal Server Error' }),
-      {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
-      }
+    console.error('General error in checkout API:', error);
+    return NextResponse.json(
+      { error: 'Internal Server Error' },
+      { status: 500 }
     );
   }
 }

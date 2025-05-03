@@ -11,13 +11,15 @@ export const StripeProvider = ({ children }) => {
   const [stripePromise, setStripePromise] = useState(null);
 
   useEffect(() => {
-    const publicKey = process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY;
+    const publicKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
     if (publicKey) {
       // Initialize Stripe only once with the publishable key
       // @ts-ignore - loadStripe type might expect specific options not used here
       setStripePromise(loadStripe(publicKey));
     } else {
-      console.warn('StripeContext: NEXT_PUBLIC_STRIPE_PUBLIC_KEY is not set.');
+      console.warn(
+        'StripeContext: NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY is not set.'
+      );
     }
   }, []); // Empty dependency array ensures this runs only once on mount
 

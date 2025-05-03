@@ -10,7 +10,14 @@ import { Calendar } from 'lucide-react';
 
 export default function Dashboard() {
   const router = useRouter();
-  const { user, supabase } = useAuth();
+  const {
+    user,
+    supabase,
+    profile,
+    refetchProfile,
+    subscriptionStatus,
+    generationsRemaining,
+  } = useAuth();
 
   const [programs, setPrograms] = useState([]);
   const [entities, setEntities] = useState([]);
@@ -34,6 +41,7 @@ export default function Dashboard() {
   const [selectedProgramId, setSelectedProgramId] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [filterEntityId, setFilterEntityId] = useState('all'); // State for entity filter
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Check if auth is ready
   useEffect(() => {
@@ -350,6 +358,19 @@ export default function Dashboard() {
     (program) =>
       filterEntityId === 'all' || program.entity_id === filterEntityId
   );
+
+  const handleRefreshProfile = async () => {
+    setIsRefreshing(true);
+    try {
+      await refetchProfile();
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  // Just for testing subscription status updates
+  // Can be removed after verifying fix works
+  const showRefreshButton = true;
 
   if (isLoading) {
     return (
@@ -895,6 +916,43 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
+
+        {/* Subscription Status Section */}
+        <div className="mt-4">
+          <div className="stats shadow w-full">
+            <div className="stat">
+              <div className="stat-title">Subscription Status</div>
+              <div className="stat-value text-xl">
+                {subscriptionStatus === 'active'
+                  ? 'Premium'
+                  : subscriptionStatus === 'trialing'
+                  ? 'Free Trial'
+                  : 'Free Tier'}
+              </div>
+            </div>
+            <div className="stat">
+              <div className="stat-title">Generations Remaining</div>
+              <div className="stat-value text-xl">
+                {subscriptionStatus === 'active'
+                  ? 'Unlimited'
+                  : generationsRemaining || 0}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Manual Refresh Button */}
+        {showRefreshButton && (
+          <div className="mt-4 flex justify-center">
+            <button
+              onClick={handleRefreshProfile}
+              className="btn btn-sm btn-outline"
+              disabled={isRefreshing}
+            >
+              {isRefreshing ? 'Refreshing...' : 'Refresh Profile Data'}
+            </button>
+          </div>
+        )}
       </div>
     </>
   );

@@ -110,7 +110,7 @@ export default async function PricingPage({ searchParams }) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     {
       cookies: {
-        get(name) {
+        async get(name) {
           return cookieStore.get(name)?.value;
         },
         set(name, value, options) {
@@ -126,7 +126,7 @@ export default async function PricingPage({ searchParams }) {
   // Fetch user subscription data with better error handling
   const { user, profile, error } = await fetchUserSubscription(supabase);
 
-  // Get error from URL query parameters (passed directly to page component in App Router)
+  // Access searchParams directly as the component is async
   const urlError = searchParams?.error || null;
 
   // Combine any URL error with the fetch error
