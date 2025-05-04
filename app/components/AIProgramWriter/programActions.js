@@ -221,16 +221,17 @@ export async function generateProgram({
                       setGeneratedDescription(data.description);
                     }
 
-                    // Normalize workout format
-                    const normalizedWorkouts = data.suggestions.map(
-                      (workout) => ({
+                    // Normalize workout format AND filter out reference workouts
+                    const normalizedWorkouts = data.suggestions
+                      .filter((workout) => !workout.is_reference) // Filter out reference workouts
+                      .map((workout) => ({
                         title: workout.title,
                         body: workout.body || workout.description,
                         description: workout.body || workout.description,
                         suggestedDate: workout.date || workout.suggestedDate,
                         date: workout.date || workout.suggestedDate,
-                      })
-                    );
+                        // Preserve other potential fields if needed, but is_reference is filtered above
+                      }));
 
                     setSuggestions(normalizedWorkouts);
 
@@ -284,14 +285,17 @@ export async function generateProgram({
             setGeneratedDescription(data.description);
           }
 
-          // Normalize workout format
-          const normalizedWorkouts = data.suggestions.map((workout) => ({
-            title: workout.title,
-            body: workout.body || workout.description,
-            description: workout.body || workout.description,
-            suggestedDate: workout.date || workout.suggestedDate,
-            date: workout.date || workout.suggestedDate,
-          }));
+          // Normalize workout format AND filter out reference workouts
+          const normalizedWorkouts = data.suggestions
+            .filter((workout) => !workout.is_reference) // Filter out reference workouts
+            .map((workout) => ({
+              title: workout.title,
+              body: workout.body || workout.description,
+              description: workout.body || workout.description,
+              suggestedDate: workout.date || workout.suggestedDate,
+              date: workout.date || workout.suggestedDate,
+              // Preserve other potential fields if needed, but is_reference is filtered above
+            }));
 
           setSuggestions(normalizedWorkouts);
 

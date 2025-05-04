@@ -1251,19 +1251,21 @@ export default function AIProgramWriter({ programId }) {
       )}
 
       {suggestions.length > 0 && (
-        <WorkoutList
-          workouts={suggestions.filter((w) => !w.is_reference)}
-          daysPerWeek={formData.daysPerWeek}
-          formatDate={formatDate}
-          onViewDetails={handleViewWorkoutDetailsWrapper}
-          onDatePick={handleDatePickerOpenWrapper}
-          onSelectWorkout={handleSaveEnhancedWorkout}
-          onDeleteWorkout={handleDeleteWorkout}
-          onEditWorkout={handleEditWorkout}
-          onMarkComplete={handleMarkComplete}
-          isLoading={isLoading}
-          generatedDescription={generatedDescription}
-        />
+        <>
+          <WorkoutList
+            workouts={suggestions.filter((w) => !w.is_reference)}
+            daysPerWeek={formData.daysPerWeek}
+            formatDate={formatDate}
+            onViewDetails={handleViewWorkoutDetailsWrapper}
+            onDatePick={handleDatePickerOpenWrapper}
+            onSelectWorkout={handleSaveEnhancedWorkout}
+            onDeleteWorkout={handleDeleteWorkout}
+            onEditWorkout={handleEditWorkout}
+            onMarkComplete={handleMarkComplete}
+            isLoading={isLoading}
+            generatedDescription={generatedDescription}
+          />
+        </>
       )}
 
       {isWorkoutModalOpen && (
