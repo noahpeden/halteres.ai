@@ -1,5 +1,5 @@
 'use client';
-import { Trash2, Pencil, MoreVertical } from 'lucide-react';
+import { Trash2, Pencil, MoreVertical, CheckCircle } from 'lucide-react';
 export default function WorkoutList({
   workouts,
   daysPerWeek,
@@ -9,6 +9,7 @@ export default function WorkoutList({
   onSelectWorkout,
   onDeleteWorkout,
   onEditWorkout,
+  onMarkComplete,
   generatedDescription,
   setFormData,
   showToastMessage,
@@ -85,7 +86,9 @@ export default function WorkoutList({
             {weekGroup.workouts.map((workout, index) => (
               <div
                 key={`${weekGroup.week}-${index}`}
-                className="border rounded-md p-3 sm:p-4 flex flex-col w-full"
+                className={`border rounded-md p-3 sm:p-4 flex flex-col w-full ${
+                  workout.completed ? 'bg-green-50 border-green-200' : ''
+                }`}
                 draggable
                 onDragStart={(e) => {
                   e.dataTransfer.setData('workout', JSON.stringify(workout));
@@ -96,6 +99,11 @@ export default function WorkoutList({
                   <h4 className="font-semibold flex-1 break-words mr-2">
                     {workout.title ||
                       `Week ${weekGroup.week}, Day ${index + 1}`}
+                    {workout.completed && (
+                      <span className="ml-2 text-green-600 text-sm font-normal">
+                        (Completed)
+                      </span>
+                    )}
                   </h4>
                   {workout.id && (
                     <div className="dropdown dropdown-end flex-shrink-0">
@@ -110,11 +118,11 @@ export default function WorkoutList({
                       </button>
                       <ul
                         tabIndex={0}
-                        className="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-32"
+                        className="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-40"
                       >
-                        <li>
+                        <li className="w-full">
                           <button
-                            className="flex items-center gap-2 text-accent w-full"
+                            className="flex items-center gap-2 w-full text-neutral"
                             onClick={(e) => {
                               e.stopPropagation();
                               onEditWorkout(workout);
@@ -124,9 +132,26 @@ export default function WorkoutList({
                             <Pencil className="h-4 w-4" /> Edit
                           </button>
                         </li>
-                        <li>
+                        <li className="w-full">
                           <button
-                            className="flex items-center gap-2 text-error w-full"
+                            className="flex items-center gap-2 w-full text-success"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onMarkComplete(workout);
+                            }}
+                            title={
+                              workout.completed
+                                ? 'Mark as incomplete'
+                                : 'Mark as complete'
+                            }
+                          >
+                            <CheckCircle className="h-4 w-4" />
+                            {workout.completed ? 'Incomplete' : 'Complete'}
+                          </button>
+                        </li>
+                        <li className="w-full">
+                          <button
+                            className="flex items-center gap-2 w-full text-error"
                             onClick={(e) => onDeleteWorkout(workout.id, e)}
                             title="Delete workout"
                           >

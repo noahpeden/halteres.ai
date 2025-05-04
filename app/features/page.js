@@ -10,8 +10,6 @@ import {
   CloudUpload,
 } from 'lucide-react';
 
-export const dynamic = 'force-dynamic';
-
 export const generateMetadata = () => {
   return {
     ...metadata,

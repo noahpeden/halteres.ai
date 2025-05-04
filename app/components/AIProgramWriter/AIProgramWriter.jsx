@@ -377,6 +377,61 @@ export default function AIProgramWriter({ programId }) {
     [dispatch]
   );
 
+  const handleMarkComplete = useCallback(
+    async (workout) => {
+      if (!workout.id) {
+        showToastMessage('Cannot update workout: missing id', 'error');
+        return;
+      }
+
+      try {
+        dispatch({ type: 'SET_LOADING', payload: true });
+
+        // Toggle completed status
+        const newCompletedStatus = !workout.completed;
+
+        // Update in Supabase
+        const { error } = await supabase
+          .from('program_workouts')
+          .update({
+            completed: newCompletedStatus,
+            completed_at: newCompletedStatus ? new Date().toISOString() : null,
+          })
+          .eq('id', workout.id);
+
+        if (error) throw error;
+
+        // Update local state
+        dispatch({
+          type: 'SET_SUGGESTIONS',
+          payload: suggestions.map((w) =>
+            w.id === workout.id
+              ? {
+                  ...w,
+                  completed: newCompletedStatus,
+                  completed_at: newCompletedStatus
+                    ? new Date().toISOString()
+                    : null,
+                }
+              : w
+          ),
+        });
+
+        showToastMessage(
+          newCompletedStatus
+            ? `Workout "${workout.title || 'Untitled'}" marked as complete`
+            : `Workout "${workout.title || 'Untitled'}" marked as incomplete`
+        );
+      } catch (error) {
+        console.error('Error updating workout completion status:', error);
+        showToastMessage('Failed to update workout status', 'error');
+      } finally {
+        dispatch({ type: 'SET_LOADING', payload: false });
+      }
+    },
+    [supabase, dispatch, suggestions, showToastMessage]
+  );
+
   // --- Effects ---
 
   useEffect(() => {
@@ -472,6 +527,8 @@ export default function AIProgramWriter({ programId }) {
               created_at: new Date().toISOString(),
               updated_at: new Date().toISOString(),
               is_reference: false,
+              completed: workout.completed || false,
+              completed_at: workout.completed_at || null,
             };
           });
 
@@ -594,7 +651,7 @@ export default function AIProgramWriter({ programId }) {
         const { data: savedWorkouts, error: workoutsError } = await supabase
           .from('program_workouts')
           .select(
-            'id, title, body, tags, created_at, scheduled_date, is_reference'
+            'id, title, body, tags, created_at, scheduled_date, is_reference, completed, completed_at'
           )
           .eq('program_id', programId)
           .eq('is_reference', false)
@@ -1203,6 +1260,7 @@ export default function AIProgramWriter({ programId }) {
           onSelectWorkout={handleSaveEnhancedWorkout}
           onDeleteWorkout={handleDeleteWorkout}
           onEditWorkout={handleEditWorkout}
+          onMarkComplete={handleMarkComplete}
           isLoading={isLoading}
           generatedDescription={generatedDescription}
         />

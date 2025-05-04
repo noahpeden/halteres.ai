@@ -25,6 +25,8 @@ export const processWorkoutForDisplay = (workout) => {
     tags: workout.tags || {},
     suggestedDate: suggestedDate,
     workoutDetails: workout.tags?.workoutDetails,
+    completed: workout.completed || false,
+    completed_at: workout.completed_at || null,
   };
 };
 
