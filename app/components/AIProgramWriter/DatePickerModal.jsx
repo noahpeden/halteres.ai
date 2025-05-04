@@ -43,7 +43,6 @@ export default function DatePickerModal({
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
               min={startDate}
-              max={endDate}
             />
           </div>
 
