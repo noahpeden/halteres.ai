@@ -797,15 +797,19 @@ export default function Dashboard() {
                 <label className="label">
                   <span className="label-text">Program Duration (weeks)</span>
                 </label>
-                <input
-                  type="number"
-                  min="1"
-                  max="52"
-                  className="input input-bordered w-full"
+                <select
+                  className="select select-bordered w-full"
                   value={programDuration}
                   onChange={(e) => setProgramDuration(parseInt(e.target.value))}
                   required
-                />
+                >
+                  {/* Generate options from 1 to 6 */}
+                  {Array.from({ length: 6 }, (_, i) => i + 1).map((num) => (
+                    <option key={num} value={num}>
+                      {num} {num === 1 ? 'week' : 'weeks'}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div className="form-control mb-4">
