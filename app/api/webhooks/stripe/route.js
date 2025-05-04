@@ -3,6 +3,13 @@ import { headers } from 'next/headers';
 import { stripe } from '@/utils/stripe';
 import { createClient } from '@supabase/supabase-js';
 
+// Disable Next.js body parsing for this route
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};
+
 const relevantEvents = new Set([
   'checkout.session.completed',
   'customer.subscription.updated',
