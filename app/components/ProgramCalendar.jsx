@@ -11,7 +11,8 @@ import enUS from 'date-fns/locale/en-US';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import { parseISO, isValid } from 'date-fns';
 
-import WorkoutModal from './AIProgramWriter/WorkoutModal';
+// Import the simpler version of WorkoutModal that doesn't rely on ProgramWriterContext
+import CalendarWorkoutModal from './CalendarWorkoutModal';
 import EditWorkoutModal from './AIProgramWriter/EditWorkoutModal';
 import Toast from './Toast';
 import { formatDate } from './AIProgramWriter/utils';
@@ -451,16 +452,13 @@ export default function ProgramCalendar({
       </div>
 
       {/* Workout Detail Modal */}
-      <WorkoutModal
+      <CalendarWorkoutModal
         isOpen={isModalOpen}
         workout={selectedWorkoutForModal}
         onClose={handleCloseModal}
-        onSelectWorkout={() => {
-          /* No date adjustment needed here */
-        }}
         formatDate={formatDate}
-        onDeleteWorkout={handleDeleteWorkout} // Pass the delete handler
-        onEditWorkout={handleEditWorkout} // Pass the edit handler
+        onDeleteWorkout={handleDeleteWorkout}
+        onEditWorkout={handleEditWorkout}
       />
 
       {/* Edit Workout Modal */}
