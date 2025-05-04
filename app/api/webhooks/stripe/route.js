@@ -383,3 +383,61 @@ export async function POST(req) {
 
   return new NextResponse(JSON.stringify({ received: true }), { status: 200 });
 }
+
+// --- Helper mapping functions (Plain JS) ---
+
+function mapLookupKeyToPlan(lookupKey) {
+  if (!lookupKey) {
+    console.warn(
+      'Webhook Warning: mapLookupKeyToPlan called with null or undefined lookupKey.'
+    );
+    return null;
+  }
+  // Updated to match the lookup keys used in the pricing page
+  const dailyKey = process.env.STRIPE_LOOKUP_KEY_DAILY || 'standard_daily';
+  const monthlyKey =
+    process.env.STRIPE_LOOKUP_KEY_MONTHLY || 'standard_monthly';
+  const quarterlyKey =
+    process.env.STRIPE_LOOKUP_KEY_QUARTERLY || 'standard_quarterly';
+  const annualKey = process.env.STRIPE_LOOKUP_KEY_ANNUAL || 'standard_annual';
+
+  switch (lookupKey) {
+    case dailyKey:
+      return 'daily';
+    case monthlyKey:
+      return 'monthly';
+    case quarterlyKey:
+      return 'quarterly';
+    case annualKey:
+      return 'annual';
+    default:
+      console.warn(
+        `Webhook Warning: Unrecognized Stripe price lookup key: ${lookupKey}`
+      );
+      return null;
+  }
+}
+
+function mapStripeStatus(stripeStatus) {
+  switch (stripeStatus) {
+    case 'trialing':
+      return 'trialing';
+    case 'active':
+      return 'active';
+    case 'canceled':
+      return 'canceled';
+    case 'past_due':
+      return 'past_due';
+    case 'incomplete':
+      return 'incomplete';
+    case 'incomplete_expired':
+      return 'incomplete_expired';
+    case 'unpaid':
+      return 'past_due'; // Map unpaid to past_due as well
+    default:
+      console.warn(
+        `Webhook Warning: Unrecognized Stripe subscription status: ${stripeStatus}`
+      );
+      return null;
+  }
+}
