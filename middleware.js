@@ -249,13 +249,14 @@ export const config = {
      * - public pages like /, /pricing, /features, /contact
      * It's generally safer to list paths to PROTECT rather than exclude.
      */
-    // Example protecting specific paths:
-    // '/dashboard/:path*',
-    // '/program/:path*',
-    // '/write-program/:path*',
-    // '/api/generate-program/:path*',
+    // Explicitly list paths to protect:
+    '/dashboard/:path*',
+    '/program/:path*',
+    '/write-program/:path*',
+    '/api/generate-program/:path*',
+    // Add any other paths that require auth/subscription checks here
 
-    // Example excluding paths (less safe, might miss new routes):
-    '/((?!api/webhooks|_next/static|_next/image|assets|favicon.ico|auth|login|pricing|features|contact|$).*)',
+    // The previous negative lookahead is removed:
+    // '/((?!api/webhooks|_next/static|_next/image|assets|favicon.ico|auth|login|pricing|features|contact|$).*)',
   ],
 };
