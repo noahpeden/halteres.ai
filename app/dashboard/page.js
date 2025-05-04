@@ -3,7 +3,6 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import TodayWorkouts from '@/components/TodayWorkouts';
 import UpcomingWorkouts from '@/components/UpcomingWorkouts';
 import { Clock } from 'lucide-react';
 import { Calendar } from 'lucide-react';
@@ -365,12 +364,20 @@ export default function Dashboard() {
         <div className="mb-8">
           <div className="flex justify-between items-center mb-4">
             <h1 className="text-2xl font-bold mb-6">Coach Dashboard</h1>
-            <label
-              htmlFor="entity-selection-modal"
-              className="btn btn-primary text-white"
-            >
-              Create New Program
-            </label>
+            <div className="flex gap-2">
+              <Link
+                href="/dashboard/manage/entities"
+                className="btn btn-outline"
+              >
+                Manage Clients/Classes
+              </Link>
+              <label
+                htmlFor="entity-selection-modal"
+                className="btn btn-primary text-white"
+              >
+                Create New Program
+              </label>
+            </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
             <div className="stat bg-white shadow rounded-lg">

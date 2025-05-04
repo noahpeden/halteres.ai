@@ -83,7 +83,6 @@ export async function middleware(req) {
 
   // If trying to access a protected route without being logged in, redirect to login
   if (!user && (isProtectedRoute || isGenerationRoute)) {
-    console.log(`Middleware: No user, redirecting from ${pathname} to /login`);
     const redirectUrl = req.nextUrl.clone();
     redirectUrl.pathname = '/login';
     redirectUrl.searchParams.set('redirectedFrom', pathname);
@@ -92,9 +91,6 @@ export async function middleware(req) {
 
   // User is logged in, check subscription status for protected/generation routes
   if (user && (isProtectedRoute || isGenerationRoute)) {
-    console.log(
-      `Middleware: User ${user.id} accessing ${pathname}. Checking profile...`
-    );
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select(
@@ -139,26 +135,16 @@ export async function middleware(req) {
       ? new Date(trial_end_date) < new Date()
       : true; // Treat missing end date as expired
 
-    console.log(
-      `Middleware: User ${user.id} Status: ${subscription_status}, Trial Ends: ${trial_end_date}, Trial Expired: ${trialExpired}, Gens Rem: ${generations_remaining}, Gens Today: ${generations_today}`
-    );
-
     // --- Generation Route Specific Checks ---
     if (isGenerationRoute) {
       if (isActive) {
         // Active subscribers have unlimited generations
-        console.log(
-          `Middleware: User ${user.id} has active subscription. Allowing generation.`
-        );
         return res; // Allow generation
       }
 
       if (isTrialing && !trialExpired) {
         // Check total trial generations remaining
         if (generations_remaining <= 0) {
-          console.log(
-            `Middleware: User ${user.id} trial limit reached (total). Redirecting.`
-          );
           const redirectUrl = req.nextUrl.clone();
           redirectUrl.pathname = '/pricing';
           redirectUrl.searchParams.set('reason', 'trial_limit_total');
@@ -169,9 +155,6 @@ export async function middleware(req) {
         // Need to reset daily count if it's a new day
         let currentDailyGenerations = generations_today;
         if (isNewDay(last_generation_date)) {
-          console.log(
-            `Middleware: New day detected for user ${user.id}. Resetting daily count.`
-          );
           // Technically, the middleware shouldn't update the DB directly.
           // The generation API itself should handle the reset and update.
           // For the check here, we assume the count *would* be reset.
@@ -179,9 +162,6 @@ export async function middleware(req) {
         }
 
         if (currentDailyGenerations >= 5) {
-          console.log(
-            `Middleware: User ${user.id} trial limit reached (daily). Redirecting.`
-          );
           const redirectUrl = req.nextUrl.clone();
           redirectUrl.pathname = '/pricing';
           redirectUrl.searchParams.set('reason', 'trial_limit_daily');
@@ -189,16 +169,10 @@ export async function middleware(req) {
         }
 
         // If passes all trial checks
-        console.log(
-          `Middleware: User ${user.id} on valid trial. Allowing generation.`
-        );
         return res; // Allow generation
       }
 
       // If not active and not on a valid trial, deny generation access
-      console.log(
-        `Middleware: User ${user.id} has no valid subscription/trial for generation. Redirecting.`
-      );
       const redirectUrl = req.nextUrl.clone();
       redirectUrl.pathname = '/pricing';
       redirectUrl.searchParams.set('reason', 'subscription_required');
@@ -208,16 +182,10 @@ export async function middleware(req) {
     // --- General Protected Route Checks (Non-Generation) ---
     if (isProtectedRoute) {
       if (isActive || (isTrialing && !trialExpired)) {
-        console.log(
-          `Middleware: User ${user.id} has valid access for ${pathname}. Allowing.`
-        );
         return res; // Allow access to general protected routes
       }
 
       // If not active or on valid trial, redirect to pricing
-      console.log(
-        `Middleware: User ${user.id} has no valid subscription/trial for ${pathname}. Redirecting.`
-      );
       const redirectUrl = req.nextUrl.clone();
       redirectUrl.pathname = '/pricing';
       redirectUrl.searchParams.set('reason', 'access_denied');

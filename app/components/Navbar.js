@@ -152,8 +152,15 @@ export default function Navbar() {
         </div>
 
         <div className="navbar-end">
+          {/* Premium User Badge - Moved Here */}
+          {session && isPremiumUser && (
+            <div className="badge badge-primary badge-sm mr-2 hidden sm:flex">
+              Premium
+            </div>
+          )}
+
           {/* Mobile menu button */}
-          <div className="dropdown dropdown-end  ml-2">
+          <div className="dropdown dropdown-end ml-2">
             <label tabIndex={0} className="btn btn-ghost btn-circle">
               <Menu className="h-5 w-5" />
             </label>
@@ -222,16 +229,31 @@ export default function Navbar() {
 
               {session && (
                 <>
-                  {isPremiumUser && (
+                  {/* Premium User Tag - Removed from here */}
+                  {/* {isPremiumUser && (
                     <li>
                       <div className="flex items-center justify-center px-4 py-2 font-semibold text-primary">
                         Premium User
                       </div>
                       <div className="divider my-0"></div>
                     </li>
+                  )} */}
+                  {/* Add Premium tag for mobile dropdown here if needed */}
+                  {isPremiumUser && (
+                    <li className="sm:hidden">
+                      <div className="badge badge-primary w-full justify-center">
+                        Premium
+                      </div>
+                      <div className="divider my-0"></div>
+                    </li>
                   )}
                   <li>
                     <Link href="/dashboard">Dashboard</Link>
+                  </li>
+                  <li>
+                    <Link href="/dashboard/manage/entities">
+                      Manage Clients/Classes
+                    </Link>
                   </li>
                   <li>
                     <Link href="/profile">Profile</Link>
