@@ -24,7 +24,9 @@ async function updateSubscriptionStatus(
   status,
   plan,
   currentPeriodEnd,
-  userIdFromMetadata
+  userIdFromMetadata,
+  priceId = null,
+  cancelAtPeriodEnd = false
 ) {
   console.log(
     `Webhook: Updating subscription for Stripe Customer ${stripeCustomerId}, Subscription ${subscriptionId}, Status: ${status}, Plan: ${plan}`
@@ -32,12 +34,18 @@ async function updateSubscriptionStatus(
 
   // Construct the update payload carefully, avoid undefined values if possible
   const profileUpdateData = {
-    subscription_id: subscriptionId,
+    stripe_subscription_id: subscriptionId,
     subscription_status: status,
     // Only include plan if it's not null/undefined. Use null to clear the field.
     subscription_plan: plan !== undefined ? plan : null,
     current_period_end: currentPeriodEnd.toISOString(),
+    cancel_at_period_end: cancelAtPeriodEnd,
   };
+
+  // Add price ID if provided
+  if (priceId) {
+    profileUpdateData.stripe_price_id = priceId;
+  }
 
   let userId = userIdFromMetadata;
 
@@ -165,6 +173,15 @@ export async function POST(req) {
             userIdFromMetadata =
               checkoutSession.client_reference_id ??
               checkoutSession.metadata?.supabaseUserId;
+
+            // If we have a user ID, update their profile with the customer ID
+            if (userIdFromMetadata) {
+              await supabaseAdmin
+                .from('profiles')
+                .update({ stripe_customer_id: customerId })
+                .eq('id', userIdFromMetadata);
+            }
+
             requiresUpdate = true;
           } else {
             console.warn(
@@ -280,6 +297,11 @@ export async function POST(req) {
           const finalPeriodEnd =
             periodEndToUpdate ?? new Date(currentPeriodEndTimestamp * 1000);
 
+          // Get the price ID for subscription
+          const priceId = subscription.items.data[0]?.price?.id || null;
+          // Get the cancel_at_period_end status
+          const cancelAtPeriodEnd = subscription.cancel_at_period_end || false;
+
           if (!finalStatus) {
             console.warn(
               `Webhook: Could not map Stripe status '${subscription.status}' to a known status string for subscription ${subscription.id}. Skipping update.`
@@ -290,7 +312,7 @@ export async function POST(req) {
             );
           } else {
             console.log(
-              `Webhook Info: Calling updateSubscriptionStatus for sub ${subscription.id}, customer ${customerId}, status ${finalStatus}, plan ${finalPlan}`
+              `Webhook Info: Calling updateSubscriptionStatus for sub ${subscription.id}, customer ${customerId}, status ${finalStatus}, plan ${finalPlan}, price ${priceId}, cancelAtPeriodEnd: ${cancelAtPeriodEnd}`
             );
             const { error } = await updateSubscriptionStatus(
               customerId,
@@ -298,7 +320,9 @@ export async function POST(req) {
               finalStatus,
               finalPlan,
               finalPeriodEnd,
-              userIdFromMetadata
+              userIdFromMetadata,
+              priceId,
+              cancelAtPeriodEnd
             );
             if (error) {
               return new NextResponse(JSON.stringify({ error }), {
@@ -336,6 +360,7 @@ function mapLookupKeyToPlan(lookupKey) {
     return null;
   }
   // Updated to match the lookup keys used in the pricing page
+  const dailyKey = process.env.STRIPE_LOOKUP_KEY_DAILY || 'standard_daily';
   const monthlyKey =
     process.env.STRIPE_LOOKUP_KEY_MONTHLY || 'standard_monthly';
   const quarterlyKey =
@@ -343,6 +368,8 @@ function mapLookupKeyToPlan(lookupKey) {
   const annualKey = process.env.STRIPE_LOOKUP_KEY_ANNUAL || 'standard_annual';
 
   switch (lookupKey) {
+    case dailyKey:
+      return 'daily';
     case monthlyKey:
       return 'monthly';
     case quarterlyKey:

@@ -134,6 +134,19 @@ export default async function PricingPage({ searchParams }) {
 
   // Define plan details (could also fetch from DB/Stripe if dynamic)
   const plans = [
+    // {
+    //   name: 'Daily Access',
+    //   priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_DAILY,
+    //   price: '$19',
+    //   interval: '/ day',
+    //   features: [
+    //     'Unlimited Generations for 24 Hours',
+    //     'Full Feature Access',
+    //     'One-time Payment',
+    //     'Perfect for Quick Projects',
+    //   ],
+    //   lookupKey: process.env.STRIPE_LOOKUP_KEY_DAILY || 'standard_daily',
+    // },
     {
       name: 'Monthly',
       priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY,
@@ -198,7 +211,7 @@ export default async function PricingPage({ searchParams }) {
           </p>
         </div>
 
-        {displayError && (
+        {displayError && user && (
           <div className="alert alert-error shadow-lg mb-8">
             <div>
               <svg

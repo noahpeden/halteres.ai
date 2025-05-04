@@ -98,6 +98,52 @@ export default function ProfilePage() {
     }
   };
 
+  const handleCancelSubscription = async () => {
+    const confirmed = window.confirm(
+      "Are you sure you want to cancel your subscription? You'll lose access to premium features at the end of your current billing period."
+    );
+
+    if (!confirmed) return;
+
+    setLoading(true);
+    setMessage({ type: '', text: '' });
+
+    try {
+      const response = await fetch('/api/cancel-subscription', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to cancel subscription');
+      }
+
+      // Refresh profile data to show updated status
+      const { data: updatedProfile, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+      if (profileError) throw profileError;
+      setProfile(updatedProfile);
+
+      setMessage({
+        type: 'success',
+        text: 'Subscription canceled successfully. You will have access until the end of your current billing period.',
+      });
+    } catch (error) {
+      console.error('Error canceling subscription:', error);
+      setMessage({ type: 'error', text: error.message });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen pt-24 flex items-center justify-center">
@@ -124,6 +170,11 @@ export default function ProfilePage() {
                     <Crown className="h-5 w-5 text-primary" />
                     <span className="text-primary font-medium">
                       Premium Member
+                      {profile?.cancel_at_period_end && (
+                        <span className="ml-2 text-sm text-warning">
+                          (Cancels at period end)
+                        </span>
+                      )}
                     </span>
                   </>
                 ) : (
@@ -143,9 +194,25 @@ export default function ProfilePage() {
               )}
               {profile?.subscription_status === 'active' &&
                 profile?.current_period_end && (
-                  <div className="mt-2 text-sm text-gray-600">
-                    Next billing date:{' '}
-                    {new Date(profile.current_period_end).toLocaleDateString()}
+                  <div className="mt-2">
+                    <div className="text-sm text-gray-600 mb-2">
+                      Next billing date:{' '}
+                      {new Date(
+                        profile.current_period_end
+                      ).toLocaleDateString()}
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleCancelSubscription}
+                        className="btn btn-sm btn-error"
+                        disabled={loading}
+                      >
+                        Cancel Subscription
+                      </button>
+                      <Link href="/pricing" className="btn btn-sm btn-outline">
+                        Change Plan
+                      </Link>
+                    </div>
                   </div>
                 )}
             </div>
@@ -186,14 +253,7 @@ export default function ProfilePage() {
                 <label className="label">
                   <span className="label-text">Email</span>
                 </label>
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  className="input input-bordered"
-                  placeholder="Your email address"
-                />
+                <span className="text-gray-600">{formData.email}</span>
               </div>
 
               <div className="form-control">

@@ -82,8 +82,19 @@ export default function PricingClient({ user, profile, plans }) {
     : 0;
   const generationsLeft = profile?.generations_remaining ?? 0;
 
+  // Refresh the page after a short delay if redirected from a successful checkout
+  useEffect(() => {
+    const query = new URLSearchParams(window.location.search);
+    if (query.get('checkout') === 'success') {
+      // Give the webhook a moment to process before refreshing
+      setTimeout(() => {
+        window.location.href = '/pricing?refresh=true';
+      }, 5000);
+    }
+  }, []);
+
   return (
-    <div className="space-y-8 lg:space-y-0 lg:grid lg:grid-cols-3 lg:gap-8">
+    <div className="space-y-8 lg:space-y-0 lg:grid lg:grid-cols-4 lg:gap-6">
       {error && (
         <div className="col-span-full alert alert-error shadow-lg">
           <div>

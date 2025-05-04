@@ -125,6 +125,36 @@ export default function AIProgramWriter({ programId }) {
   // --- Event Handlers ---
 
   const handleGenerateClick = useCallback(() => {
+    // First check subscription status and trial limitations
+    if (subscriptionStatus === 'trialing') {
+      // Check if trial has expired
+      const trialEndDateObj = trialEndDate ? new Date(trialEndDate) : null;
+      const now = new Date();
+      if (trialEndDateObj && trialEndDateObj < now) {
+        showToastMessage(
+          'Your free trial has expired. Please upgrade to continue.',
+          'error'
+        );
+        return;
+      }
+
+      // Check if user has generations remaining
+      if (generationsRemaining <= 0) {
+        showToastMessage(
+          'You have used all your free generations. Please upgrade to continue.',
+          'error'
+        );
+        return;
+      }
+    } else if (subscriptionStatus !== 'active') {
+      // Not on trial and not active - redirect to pricing
+      showToastMessage('Please subscribe to generate programs.', 'error');
+      setTimeout(() => {
+        window.location.href = '/pricing';
+      }, 1500);
+      return;
+    }
+
     const isReGenerating = suggestions && suggestions.length > 0;
     dispatch({
       type: 'OPEN_CONFIRMATION_MODAL',
@@ -140,7 +170,14 @@ export default function AIProgramWriter({ programId }) {
           : 'Generate Workouts',
       },
     });
-  }, [dispatch, suggestions]);
+  }, [
+    dispatch,
+    suggestions,
+    subscriptionStatus,
+    trialEndDate,
+    generationsRemaining,
+    showToastMessage,
+  ]);
 
   const handleConfirmGenerate = useCallback(async () => {
     console.log(JSON.stringify(formData, null, 2));

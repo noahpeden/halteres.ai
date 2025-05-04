@@ -147,7 +147,9 @@ export async function POST(request) {
     // Check subscription status and generation counts
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('subscription_status, generations_remaining, subscription_plan')
+      .select(
+        'subscription_status, generations_remaining, subscription_plan, trial_end_date'
+      )
       .eq('id', userId)
       .single();
 
@@ -165,7 +167,33 @@ export async function POST(request) {
     // Skip generation limit check for paid subscribers
     const isPaidSubscriber =
       profile.subscription_status === 'active' &&
-      profile.subscription_plan !== null;
+      profile.subscription_plan !== null &&
+      ['monthly', 'quarterly', 'annual', 'daily'].includes(
+        profile.subscription_plan
+      );
+
+    // Check if trial has expired for trialing users
+    if (profile.subscription_status === 'trialing') {
+      const trialEndDate = profile.trial_end_date
+        ? new Date(profile.trial_end_date)
+        : null;
+
+      if (trialEndDate && trialEndDate < new Date()) {
+        logWithTimestamp('Trial expired', {
+          userId,
+          trialEndDate: profile.trial_end_date,
+        });
+
+        return NextResponse.json(
+          {
+            error: 'Trial expired',
+            details:
+              'Your free trial has expired. Please upgrade to a paid plan to continue.',
+          },
+          { status: 403 }
+        );
+      }
+    }
 
     // If user is not a paid subscriber and has no generations left, block the request
     if (!isPaidSubscriber && profile.generations_remaining <= 0) {
@@ -1325,9 +1353,13 @@ async function isPaidSubscriberCheck(supabase, userId) {
       return false;
     }
 
+    // Check if user has an active subscription with any paid plan (monthly, quarterly, annual, or daily)
     return (
       profile.subscription_status === 'active' &&
-      profile.subscription_plan !== null
+      profile.subscription_plan !== null &&
+      ['monthly', 'quarterly', 'annual', 'daily'].includes(
+        profile.subscription_plan
+      )
     );
   } catch (error) {
     logWithTimestamp('Exception checking subscription status', {
