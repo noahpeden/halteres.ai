@@ -49,7 +49,8 @@ async function updateSubscriptionStatus(
     ...(currentPeriodEnd && {
       current_period_end: currentPeriodEnd.toISOString(),
     }),
-    cancel_at_period_end: cancelAtPeriodEnd,
+    // Temporarily comment out to avoid schema cache/missing column error
+    // cancel_at_period_end: cancelAtPeriodEnd,
     // Conditionally add stripe_price_id only if provided
     ...(priceId && { stripe_price_id: priceId }),
   };
