@@ -45,14 +45,14 @@ async function updateSubscriptionStatus(
     subscription_status: status,
     // Only include plan if it's not null/undefined. Use null to clear the field.
     subscription_plan: plan !== undefined ? plan : null,
-    current_period_end: currentPeriodEnd.toISOString(),
+    // Conditionally add current_period_end only if it's a valid date
+    ...(currentPeriodEnd && {
+      current_period_end: currentPeriodEnd.toISOString(),
+    }),
     cancel_at_period_end: cancelAtPeriodEnd,
+    // Conditionally add stripe_price_id only if provided
+    ...(priceId && { stripe_price_id: priceId }),
   };
-
-  // Add price ID if provided
-  if (priceId) {
-    profileUpdateData.stripe_price_id = priceId;
-  }
 
   let userId = userIdFromMetadata;
 
@@ -287,130 +287,99 @@ export async function POST(req) {
       // Common logic for subscription updates
       if (requiresUpdate && subscription && customerId) {
         const currentPeriodEndTimestamp = subscription.current_period_end;
-        if (typeof currentPeriodEndTimestamp !== 'number') {
+        let finalPeriodEnd = null; // Default to null
+
+        // Check if the timestamp is valid
+        if (typeof currentPeriodEndTimestamp === 'number') {
+          // If a specific periodEndToUpdate was set (e.g., for failed payment), use it, otherwise use the subscription's
+          finalPeriodEnd =
+            periodEndToUpdate ?? new Date(currentPeriodEndTimestamp * 1000);
+        } else {
+          // Timestamp is invalid (undefined, null, etc.)
+          if (event.type === 'checkout.session.completed') {
+            // For checkout completion, this might be a timing issue.
+            // Log a warning but allow the update for status/plan/IDs.
+            // The date should arrive with customer.subscription.updated later.
+            console.warn(
+              `Webhook Warning: current_period_end timestamp (${currentPeriodEndTimestamp}) invalid for subscription ${subscription.id} during checkout.session.completed. Proceeding without date.`
+            );
+            // finalPeriodEnd remains null, update will proceed without it
+          } else {
+            // For other events, an invalid timestamp is a real error. Skip update.
+            console.error(
+              `Webhook Error: Invalid current_period_end timestamp (${currentPeriodEndTimestamp}) for subscription ${subscription.id} during event ${event.type}. Skipping update.`
+            );
+            // Skip the update call below by returning early
+            return new NextResponse(
+              JSON.stringify({
+                received: true,
+                warning: 'Skipped update due to invalid period end timestamp.',
+              }),
+              { status: 200 }
+            );
+          }
+        }
+
+        // Determine final status and plan (logic remains the same)
+        const finalStatus =
+          statusToUpdate ?? mapStripeStatus(subscription.status);
+        const finalPlan =
+          event.type === 'customer.subscription.deleted'
+            ? null
+            : planToUpdate ??
+              mapLookupKeyToPlan(subscription.items.data[0]?.price?.lookup_key);
+        // const finalPeriodEnd = <-- This is now handled above
+        //   periodEndToUpdate ?? new Date(currentPeriodEndTimestamp * 1000);
+
+        // Get the price ID for subscription
+        const priceId = subscription.items.data[0]?.price?.id || null;
+        // Get the cancel_at_period_end status
+        const cancelAtPeriodEnd = subscription.cancel_at_period_end || false;
+
+        if (!finalStatus) {
+          console.warn(
+            `Webhook: Could not map Stripe status '${subscription.status}' to a known status string for subscription ${subscription.id}. Skipping update.`
+          );
+        } else if (finalStatus === 'active' && !finalPlan) {
           console.error(
-            `Webhook Error: Invalid current_period_end timestamp (${currentPeriodEndTimestamp}) for subscription ${subscription.id}. Skipping update.`
+            `Webhook Error: Cannot set status to 'active' without a valid plan mapping for subscription ${subscription.id} (Lookup Key: ${subscription.items.data[0]?.price?.lookup_key}). Skipping update.`
           );
         } else {
-          const finalStatus =
-            statusToUpdate ?? mapStripeStatus(subscription.status);
-          const finalPlan =
-            event.type === 'customer.subscription.deleted'
-              ? null
-              : planToUpdate ??
-                mapLookupKeyToPlan(
-                  subscription.items.data[0]?.price?.lookup_key
-                );
-          const finalPeriodEnd =
-            periodEndToUpdate ?? new Date(currentPeriodEndTimestamp * 1000);
-
-          // Get the price ID for subscription
-          const priceId = subscription.items.data[0]?.price?.id || null;
-          // Get the cancel_at_period_end status
-          const cancelAtPeriodEnd = subscription.cancel_at_period_end || false;
-
-          if (!finalStatus) {
-            console.warn(
-              `Webhook: Could not map Stripe status '${subscription.status}' to a known status string for subscription ${subscription.id}. Skipping update.`
-            );
-          } else if (finalStatus === 'active' && !finalPlan) {
-            console.error(
-              `Webhook Error: Cannot set status to 'active' without a valid plan mapping for subscription ${subscription.id} (Lookup Key: ${subscription.items.data[0]?.price?.lookup_key}). Skipping update.`
-            );
-          } else {
-            console.log(
-              `Webhook Info: Calling updateSubscriptionStatus for sub ${subscription.id}, customer ${customerId}, status ${finalStatus}, plan ${finalPlan}, price ${priceId}, cancelAtPeriodEnd: ${cancelAtPeriodEnd}`
-            );
-            const { error } = await updateSubscriptionStatus(
-              customerId,
-              subscription.id,
-              finalStatus,
-              finalPlan,
-              finalPeriodEnd,
-              userIdFromMetadata,
-              priceId,
-              cancelAtPeriodEnd
-            );
-            if (error) {
-              return new NextResponse(JSON.stringify({ error }), {
-                status: 500,
-              });
-            }
+          console.log(
+            // Updated log to show potentially null finalPeriodEnd
+            `Webhook Info: Calling updateSubscriptionStatus for sub ${subscription.id}, customer ${customerId}, status ${finalStatus}, plan ${finalPlan}, price ${priceId}, cancelAtPeriodEnd: ${cancelAtPeriodEnd}, periodEnd: ${finalPeriodEnd}`
+          );
+          const { error } = await updateSubscriptionStatus(
+            customerId,
+            subscription.id,
+            finalStatus,
+            finalPlan,
+            finalPeriodEnd, // Pass the potentially null Date object
+            userIdFromMetadata,
+            priceId,
+            cancelAtPeriodEnd
+          );
+          if (error) {
+            return new NextResponse(JSON.stringify({ error }), {
+              status: 500,
+            });
           }
         }
       } else if (requiresUpdate) {
         console.log(
-          `Webhook: Update required for event ${event.type} but subscription or customerId was missing. Skipping common update logic.`
+          `Webhook: Skipping update for subscription ${subscription.id} due to missing data.`
         );
       }
-    } catch (error) {
-      console.error(`Webhook handler error for event ${event.type}:`, error);
+    } catch (err) {
+      console.error(`Webhook Error: Unhandled error: ${err.message}`);
       return new NextResponse(
-        JSON.stringify({ error: `Webhook handler error: ${error.message}` }),
+        JSON.stringify({ error: `Webhook error: ${err.message}` }),
         { status: 500 }
       );
     }
   } else {
-    console.log(`Webhook: Ignoring irrelevant event type: ${event.type}`);
+    console.log(`Webhook: Received irrelevant event: ${event.type}`);
   }
 
   return new NextResponse(JSON.stringify({ received: true }), { status: 200 });
-}
-
-// --- Helper mapping functions (Plain JS) ---
-
-function mapLookupKeyToPlan(lookupKey) {
-  if (!lookupKey) {
-    console.warn(
-      'Webhook Warning: mapLookupKeyToPlan called with null or undefined lookupKey.'
-    );
-    return null;
-  }
-  // Updated to match the lookup keys used in the pricing page
-  const dailyKey = process.env.STRIPE_LOOKUP_KEY_DAILY || 'standard_daily';
-  const monthlyKey =
-    process.env.STRIPE_LOOKUP_KEY_MONTHLY || 'standard_monthly';
-  const quarterlyKey =
-    process.env.STRIPE_LOOKUP_KEY_QUARTERLY || 'standard_quarterly';
-  const annualKey = process.env.STRIPE_LOOKUP_KEY_ANNUAL || 'standard_annual';
-
-  switch (lookupKey) {
-    case dailyKey:
-      return 'daily';
-    case monthlyKey:
-      return 'monthly';
-    case quarterlyKey:
-      return 'quarterly';
-    case annualKey:
-      return 'annual';
-    default:
-      console.warn(
-        `Webhook Warning: Unrecognized Stripe price lookup key: ${lookupKey}`
-      );
-      return null;
-  }
-}
-
-function mapStripeStatus(stripeStatus) {
-  switch (stripeStatus) {
-    case 'trialing':
-      return 'trialing';
-    case 'active':
-      return 'active';
-    case 'canceled':
-      return 'canceled';
-    case 'past_due':
-      return 'past_due';
-    case 'incomplete':
-      return 'incomplete';
-    case 'incomplete_expired':
-      return 'incomplete_expired';
-    case 'unpaid':
-      return 'past_due';
-    default:
-      console.warn(
-        `Webhook Warning: Unrecognized Stripe subscription status: ${stripeStatus}`
-      );
-      return null;
-  }
 }
