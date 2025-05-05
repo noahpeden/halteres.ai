@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import UpcomingWorkouts from '@/components/UpcomingWorkouts';
 import { Clock } from 'lucide-react';
 import { Calendar } from 'lucide-react';
+import { ProgramWriterProvider } from '@/contexts/ProgramWriterContext';
 
 export default function Dashboard() {
   const router = useRouter();
@@ -538,7 +539,9 @@ export default function Dashboard() {
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-semibold">Upcoming Workouts</h2>
           </div>
-          <UpcomingWorkouts />
+          <ProgramWriterProvider>
+            <UpcomingWorkouts />
+          </ProgramWriterProvider>
         </div>
 
         {/* Friends & Family Feedback Section */}
