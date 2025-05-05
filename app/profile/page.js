@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { useRouter } from 'next/navigation';
-import { Crown, ArrowUpRight } from 'lucide-react';
+import { Crown, ArrowUpRight, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 
 export default function ProfilePage() {
@@ -12,6 +12,7 @@ export default function ProfilePage() {
   const supabase = createClientComponentClient();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(false);
   const [profile, setProfile] = useState(null);
   const [formData, setFormData] = useState({
     full_name: '',
@@ -21,6 +22,16 @@ export default function ProfilePage() {
     confirm_password: '',
   });
   const [message, setMessage] = useState({ type: '', text: '' });
+
+  // Modal states
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [showDeactivateModal, setShowDeactivateModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showResumeModal, setShowResumeModal] = useState(false);
+  const [deleteConfirmation, setDeleteConfirmation] = useState('');
+
+  // Check if subscription is canceled (in the database)
+  const [isSubscriptionCanceled, setIsSubscriptionCanceled] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -35,6 +46,7 @@ export default function ProfilePage() {
           .select('*')
           .eq('id', user.id)
           .single();
+        console.log('Profile data:', data);
 
         if (error) throw error;
 
@@ -44,6 +56,32 @@ export default function ProfilePage() {
           full_name: data.full_name || '',
           email: data.email || '',
         }));
+
+        // Check subscription status from Stripe directly if we have a subscription ID
+        if (
+          data.subscription_status === 'active' &&
+          data.stripe_subscription_id
+        ) {
+          try {
+            const response = await fetch(
+              `/api/check-subscription-status?subscription_id=${data.stripe_subscription_id}`,
+              {
+                method: 'GET',
+              }
+            );
+
+            if (response.ok) {
+              const stripeData = await response.json();
+              console.log('Stripe subscription data:', stripeData);
+              if (stripeData.cancel_at_period_end) {
+                setIsSubscriptionCanceled(true);
+              }
+            }
+          } catch (stripeError) {
+            console.error('Error checking Stripe subscription:', stripeError);
+          }
+        }
+
         setLoading(false);
       } catch (error) {
         console.error('Error fetching profile:', error);
@@ -99,13 +137,10 @@ export default function ProfilePage() {
   };
 
   const handleCancelSubscription = async () => {
-    const confirmed = window.confirm(
-      "Are you sure you want to cancel your subscription? You'll lose access to premium features at the end of your current billing period."
-    );
+    // Close modal
+    setShowCancelModal(false);
 
-    if (!confirmed) return;
-
-    setLoading(true);
+    setActionLoading(true);
     setMessage({ type: '', text: '' });
 
     try {
@@ -140,7 +175,123 @@ export default function ProfilePage() {
       console.error('Error canceling subscription:', error);
       setMessage({ type: 'error', text: error.message });
     } finally {
-      setLoading(false);
+      setActionLoading(false);
+    }
+  };
+
+  const handleResumeSubscription = async () => {
+    // Close modal
+    setShowResumeModal(false);
+
+    setActionLoading(true);
+    setMessage({ type: '', text: '' });
+
+    try {
+      const response = await fetch('/api/resume-subscription', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to resume subscription');
+      }
+
+      // Refresh profile data to show updated status
+      const { data: updatedProfile, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+      if (profileError) throw profileError;
+      setProfile(updatedProfile);
+
+      setMessage({
+        type: 'success',
+        text: 'Your subscription has been resumed successfully.',
+      });
+    } catch (error) {
+      console.error('Error resuming subscription:', error);
+      setMessage({ type: 'error', text: error.message });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleDeactivateAccount = async () => {
+    // Close modal
+    setShowDeactivateModal(false);
+
+    setActionLoading(true);
+    setMessage({ type: '', text: '' });
+
+    try {
+      const response = await fetch('/api/deactivate-account', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to deactivate account');
+      }
+
+      // Sign out after deactivation
+      await supabase.auth.signOut();
+
+      // Redirect to home page
+      router.push('/?message=account-deactivated');
+    } catch (error) {
+      console.error('Error deactivating account:', error);
+      setMessage({ type: 'error', text: error.message });
+      setActionLoading(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    // Validate confirmation text
+    if (deleteConfirmation !== 'DELETE') {
+      setMessage({
+        type: 'error',
+        text: 'Please type DELETE to confirm account deletion',
+      });
+      return;
+    }
+
+    // Close modal
+    setShowDeleteModal(false);
+    setDeleteConfirmation('');
+
+    setActionLoading(true);
+    setMessage({ type: '', text: '' });
+
+    try {
+      const response = await fetch('/api/delete-account', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to delete account');
+      }
+
+      // Account is deleted, redirect to home page
+      router.push('/?message=account-deleted');
+    } catch (error) {
+      console.error('Error deleting account:', error);
+      setMessage({ type: 'error', text: error.message });
+      setActionLoading(false);
     }
   };
 
@@ -192,29 +343,54 @@ export default function ProfilePage() {
                   </Link>
                 </div>
               )}
-              {profile?.subscription_status === 'active' &&
-                profile?.current_period_end && (
-                  <div className="mt-2">
+              {profile?.subscription_status === 'active' && (
+                <div className="mt-2">
+                  {profile?.current_period_end && (
                     <div className="text-sm text-gray-600 mb-2">
-                      Next billing date:{' '}
-                      {new Date(
-                        profile.current_period_end
-                      ).toLocaleDateString()}
+                      {isSubscriptionCanceled ? (
+                        <span className="text-error">
+                          Your subscription will end on{' '}
+                          {new Date(
+                            profile.current_period_end
+                          ).toLocaleDateString()}
+                        </span>
+                      ) : (
+                        <span>
+                          Next billing date:{' '}
+                          {new Date(
+                            profile.current_period_end
+                          ).toLocaleDateString()}
+                        </span>
+                      )}
                     </div>
-                    <div className="flex gap-2">
+                  )}
+                  <div className="flex gap-2">
+                    {isSubscriptionCanceled ? (
                       <button
-                        onClick={handleCancelSubscription}
-                        className="btn btn-sm btn-error"
-                        disabled={loading}
+                        onClick={() => setShowResumeModal(true)}
+                        className="btn btn-sm btn-primary text-white"
+                        disabled={actionLoading}
+                      >
+                        Resume Subscription
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => setShowCancelModal(true)}
+                        className="btn btn-sm btn-secondary text-white"
+                        disabled={actionLoading}
                       >
                         Cancel Subscription
                       </button>
-                      <Link href="/pricing" className="btn btn-sm btn-outline">
-                        Change Plan
-                      </Link>
-                    </div>
+                    )}
+                    <Link
+                      href="/pricing"
+                      className="btn btn-sm btn-accent btn-outline"
+                    >
+                      Change Plan
+                    </Link>
                   </div>
-                )}
+                </div>
+              )}
             </div>
 
             {/* Usage Stats */}
@@ -304,9 +480,199 @@ export default function ProfilePage() {
                 </button>
               </div>
             </form>
+
+            {/* Account Management */}
+            <div className="divider my-8"></div>
+            <div className="mb-4">
+              <h3 className="text-lg font-semibold mb-4 flex items-center">
+                <AlertTriangle className="h-5 w-5 text-warning mr-2" />
+                Account Management
+              </h3>
+              <div className="flex flex-col gap-4">
+                <div className="bg-base-200 p-4 rounded-lg">
+                  <h4 className="font-medium mb-2">Deactivate Account</h4>
+                  <p className="text-sm mb-3">
+                    Temporarily deactivate your account. You can reactivate it
+                    by logging in again.
+                  </p>
+                  <button
+                    onClick={() => setShowDeactivateModal(true)}
+                    className="btn btn-sm btn-warning"
+                    disabled={actionLoading}
+                  >
+                    {actionLoading ? 'Processing...' : 'Deactivate Account'}
+                  </button>
+                </div>
+
+                <div className="bg-error bg-opacity-10 p-4 rounded-lg text-white">
+                  <h4 className="font-medium mb-2">
+                    Delete Account Permanently
+                  </h4>
+                  <p className="text-sm mb-3">
+                    This action is irreversible. All your data will be
+                    permanently deleted.
+                  </p>
+                  <button
+                    onClick={() => setShowDeleteModal(true)}
+                    className="btn btn-sm  text-white btn-outline"
+                    disabled={actionLoading}
+                  >
+                    {actionLoading ? 'Processing...' : 'Delete Account'}
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
+
+      {/* Cancel Subscription Modal */}
+      <dialog
+        id="cancel_subscription_modal"
+        className={`modal ${showCancelModal ? 'modal-open' : ''}`}
+      >
+        <div className="modal-box">
+          <h3 className="font-bold text-lg">Cancel Subscription</h3>
+          <p className="py-4">
+            Are you sure you want to cancel your subscription? You'll lose
+            access to premium features at the end of your current billing
+            period.
+          </p>
+          <div className="modal-action">
+            <button className="btn" onClick={() => setShowCancelModal(false)}>
+              Nevermind
+            </button>
+            <button
+              className="btn btn-error"
+              onClick={handleCancelSubscription}
+              disabled={actionLoading}
+            >
+              {actionLoading ? 'Processing...' : 'Cancel Subscription'}
+            </button>
+          </div>
+        </div>
+        <form method="dialog" className="modal-backdrop">
+          <button onClick={() => setShowCancelModal(false)}>close</button>
+        </form>
+      </dialog>
+
+      {/* Resume Subscription Modal */}
+      <dialog
+        id="resume_subscription_modal"
+        className={`modal ${showResumeModal ? 'modal-open' : ''}`}
+      >
+        <div className="modal-box">
+          <h3 className="font-bold text-lg">Resume Subscription</h3>
+          <p className="py-4">
+            Would you like to resume your subscription? You'll continue to have
+            access to all premium features and your subscription will renew as
+            scheduled.
+          </p>
+          <div className="modal-action">
+            <button className="btn" onClick={() => setShowResumeModal(false)}>
+              Cancel
+            </button>
+            <button
+              className="btn btn-success text-white"
+              onClick={handleResumeSubscription}
+              disabled={actionLoading}
+            >
+              {actionLoading ? 'Processing...' : 'Resume Subscription'}
+            </button>
+          </div>
+        </div>
+        <form method="dialog" className="modal-backdrop">
+          <button onClick={() => setShowResumeModal(false)}>close</button>
+        </form>
+      </dialog>
+
+      {/* Deactivate Account Modal */}
+      <dialog
+        id="deactivate_account_modal"
+        className={`modal ${showDeactivateModal ? 'modal-open' : ''}`}
+      >
+        <div className="modal-box">
+          <h3 className="font-bold text-lg">Deactivate Account</h3>
+          <p className="py-4">
+            Are you sure you want to deactivate your account? You can reactivate
+            it later by logging in again, but you won't be able to use the app
+            while deactivated.
+          </p>
+          <div className="modal-action">
+            <button
+              className="btn"
+              onClick={() => setShowDeactivateModal(false)}
+            >
+              Cancel
+            </button>
+            <button
+              className="btn btn-warning"
+              onClick={handleDeactivateAccount}
+              disabled={actionLoading}
+            >
+              {actionLoading ? 'Processing...' : 'Deactivate Account'}
+            </button>
+          </div>
+        </div>
+        <form method="dialog" className="modal-backdrop">
+          <button onClick={() => setShowDeactivateModal(false)}>close</button>
+        </form>
+      </dialog>
+
+      {/* Delete Account Modal */}
+      <dialog
+        id="delete_account_modal"
+        className={`modal ${showDeleteModal ? 'modal-open' : ''}`}
+      >
+        <div className="modal-box">
+          <h3 className="font-bold text-lg text-error">
+            Delete Account Permanently
+          </h3>
+          <p className="py-4">
+            <strong>WARNING:</strong> This action is irreversible. All your data
+            will be permanently deleted.
+          </p>
+          <p className="mb-4">
+            To confirm deletion, please type <strong>DELETE</strong> in the
+            field below:
+          </p>
+          <input
+            type="text"
+            value={deleteConfirmation}
+            onChange={(e) => setDeleteConfirmation(e.target.value)}
+            className="input input-bordered w-full"
+            placeholder="Type DELETE to confirm"
+          />
+          <div className="modal-action">
+            <button
+              className="btn"
+              onClick={() => {
+                setShowDeleteModal(false);
+                setDeleteConfirmation('');
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              className="btn btn-error"
+              onClick={handleDeleteAccount}
+              disabled={actionLoading || deleteConfirmation !== 'DELETE'}
+            >
+              {actionLoading ? 'Processing...' : 'Delete Account'}
+            </button>
+          </div>
+        </div>
+        <form method="dialog" className="modal-backdrop">
+          <button
+            onClick={() => {
+              setShowDeleteModal(false);
+              setDeleteConfirmation('');
+            }}
+          >
+            close
+          </button>
+        </form>
+      </dialog>
     </div>
   );
 }
