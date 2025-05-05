@@ -45,9 +45,7 @@ export default async function RootLayout({ children }) {
       lang="en"
     >
       <head>
-        <link rel="icon" href="/favicon.ico" />
-        <link rel="shortcut icon" href="/favicon-16x16.png" />
-        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+        <link rel="icon" href="/favicon.jpeg" type="image/jpeg" />
         <link rel="manifest" href="/site.webmanifest" />
       </head>
       <body suppressHydrationWarning={true}>
