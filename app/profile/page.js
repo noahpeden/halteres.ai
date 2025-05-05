@@ -27,7 +27,11 @@ export default function ProfilePage() {
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [showDeactivateModal, setShowDeactivateModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showResumeModal, setShowResumeModal] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState('');
+
+  // Check if subscription is canceled (in the database)
+  const [isSubscriptionCanceled, setIsSubscriptionCanceled] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -42,6 +46,7 @@ export default function ProfilePage() {
           .select('*')
           .eq('id', user.id)
           .single();
+        console.log('Profile data:', data);
 
         if (error) throw error;
 
@@ -51,6 +56,32 @@ export default function ProfilePage() {
           full_name: data.full_name || '',
           email: data.email || '',
         }));
+
+        // Check subscription status from Stripe directly if we have a subscription ID
+        if (
+          data.subscription_status === 'active' &&
+          data.stripe_subscription_id
+        ) {
+          try {
+            const response = await fetch(
+              `/api/check-subscription-status?subscription_id=${data.stripe_subscription_id}`,
+              {
+                method: 'GET',
+              }
+            );
+
+            if (response.ok) {
+              const stripeData = await response.json();
+              console.log('Stripe subscription data:', stripeData);
+              if (stripeData.cancel_at_period_end) {
+                setIsSubscriptionCanceled(true);
+              }
+            }
+          } catch (stripeError) {
+            console.error('Error checking Stripe subscription:', stripeError);
+          }
+        }
+
         setLoading(false);
       } catch (error) {
         console.error('Error fetching profile:', error);
@@ -142,6 +173,49 @@ export default function ProfilePage() {
       });
     } catch (error) {
       console.error('Error canceling subscription:', error);
+      setMessage({ type: 'error', text: error.message });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleResumeSubscription = async () => {
+    // Close modal
+    setShowResumeModal(false);
+
+    setActionLoading(true);
+    setMessage({ type: '', text: '' });
+
+    try {
+      const response = await fetch('/api/resume-subscription', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to resume subscription');
+      }
+
+      // Refresh profile data to show updated status
+      const { data: updatedProfile, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+      if (profileError) throw profileError;
+      setProfile(updatedProfile);
+
+      setMessage({
+        type: 'success',
+        text: 'Your subscription has been resumed successfully.',
+      });
+    } catch (error) {
+      console.error('Error resuming subscription:', error);
       setMessage({ type: 'error', text: error.message });
     } finally {
       setActionLoading(false);
@@ -273,22 +347,41 @@ export default function ProfilePage() {
                 <div className="mt-2">
                   {profile?.current_period_end && (
                     <div className="text-sm text-gray-600 mb-2">
-                      Next billing date:{' '}
-                      {new Date(
-                        profile.current_period_end
-                      ).toLocaleDateString()}
+                      {isSubscriptionCanceled ? (
+                        <span className="text-error">
+                          Your subscription will end on{' '}
+                          {new Date(
+                            profile.current_period_end
+                          ).toLocaleDateString()}
+                        </span>
+                      ) : (
+                        <span>
+                          Next billing date:{' '}
+                          {new Date(
+                            profile.current_period_end
+                          ).toLocaleDateString()}
+                        </span>
+                      )}
                     </div>
                   )}
                   <div className="flex gap-2">
-                    <button
-                      onClick={() => setShowCancelModal(true)}
-                      className="btn btn-sm btn-secondary text-white"
-                      disabled={actionLoading || profile?.cancel_at_period_end}
-                    >
-                      {profile?.cancel_at_period_end
-                        ? 'Subscription Canceled'
-                        : 'Cancel Subscription'}
-                    </button>
+                    {isSubscriptionCanceled ? (
+                      <button
+                        onClick={() => setShowResumeModal(true)}
+                        className="btn btn-sm btn-primary text-white"
+                        disabled={actionLoading}
+                      >
+                        Resume Subscription
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => setShowCancelModal(true)}
+                        className="btn btn-sm btn-secondary text-white"
+                        disabled={actionLoading}
+                      >
+                        Cancel Subscription
+                      </button>
+                    )}
                     <Link
                       href="/pricing"
                       className="btn btn-sm btn-accent btn-outline"
@@ -460,6 +553,36 @@ export default function ProfilePage() {
         </div>
         <form method="dialog" className="modal-backdrop">
           <button onClick={() => setShowCancelModal(false)}>close</button>
+        </form>
+      </dialog>
+
+      {/* Resume Subscription Modal */}
+      <dialog
+        id="resume_subscription_modal"
+        className={`modal ${showResumeModal ? 'modal-open' : ''}`}
+      >
+        <div className="modal-box">
+          <h3 className="font-bold text-lg">Resume Subscription</h3>
+          <p className="py-4">
+            Would you like to resume your subscription? You'll continue to have
+            access to all premium features and your subscription will renew as
+            scheduled.
+          </p>
+          <div className="modal-action">
+            <button className="btn" onClick={() => setShowResumeModal(false)}>
+              Cancel
+            </button>
+            <button
+              className="btn btn-success text-white"
+              onClick={handleResumeSubscription}
+              disabled={actionLoading}
+            >
+              {actionLoading ? 'Processing...' : 'Resume Subscription'}
+            </button>
+          </div>
+        </div>
+        <form method="dialog" className="modal-backdrop">
+          <button onClick={() => setShowResumeModal(false)}>close</button>
         </form>
       </dialog>
 
