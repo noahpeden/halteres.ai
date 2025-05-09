@@ -148,6 +148,94 @@ export async function POST(req) {
       switch (event.type) {
         case 'checkout.session.completed':
           const checkoutSession = event.data.object;
+
+          // Handle one-time purchases separately
+          if (
+            checkoutSession.mode === 'payment' &&
+            checkoutSession.payment_status === 'paid'
+          ) {
+            console.log(
+              `Webhook Info: Processing one-time payment for session ${checkoutSession.id}`
+            );
+
+            // Extract customer and user info
+            customerId = checkoutSession.customer;
+            userIdFromMetadata =
+              checkoutSession.client_reference_id ??
+              checkoutSession.metadata?.supabaseUserId;
+
+            // Check if this is a personal pack - use lookup key or price ID instead of just amount
+            const lineItems = await stripe.checkout.sessions.listLineItems(
+              checkoutSession.id
+            );
+            const isPriceMatch = lineItems.data.some(
+              (item) =>
+                item.price.id ===
+                  process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_PERSONAL_ONE_TIME ||
+                item.price.lookup_key === 'standard_personal_one_time'
+            );
+
+            const isPersonalPack =
+              checkoutSession.metadata?.isOneTime === 'true' && isPriceMatch;
+
+            if (isPersonalPack && userIdFromMetadata) {
+              console.log(
+                `Webhook: Processing Personal Pack purchase for user ${userIdFromMetadata}`
+              );
+
+              try {
+                // First get the current generations_remaining
+                const { data: userProfile, error: profileError } =
+                  await supabaseAdmin
+                    .from('profiles')
+                    .select('generations_remaining')
+                    .eq('id', userIdFromMetadata)
+                    .single();
+
+                if (profileError) {
+                  console.error(
+                    `Webhook Error: Failed to fetch profile for user ${userIdFromMetadata}:`,
+                    profileError
+                  );
+                  break;
+                }
+
+                // Calculate new generations count (current + 10)
+                const currentGenerations =
+                  userProfile.generations_remaining || 0;
+                const newGenerations = currentGenerations + 10;
+
+                // Update the profile with new generations count
+                const { error: updateError } = await supabaseAdmin
+                  .from('profiles')
+                  .update({
+                    generations_remaining: newGenerations,
+                    stripe_customer_id: customerId, // Ensure customer ID is saved
+                  })
+                  .eq('id', userIdFromMetadata);
+
+                if (updateError) {
+                  console.error(
+                    `Webhook Error: Failed to update generations for user ${userIdFromMetadata}:`,
+                    updateError
+                  );
+                } else {
+                  console.log(
+                    `Webhook: Successfully added 10 generations to user ${userIdFromMetadata}. New total: ${newGenerations}`
+                  );
+                }
+              } catch (error) {
+                console.error(
+                  'Webhook Error: Failed to process Personal Pack purchase:',
+                  error
+                );
+              }
+
+              break; // Exit early as we've handled the one-time purchase
+            }
+          }
+
+          // Continue with subscription handling (existing code)
           const checkoutSubscriptionId = checkoutSession.subscription;
           if (
             checkoutSession.mode === 'subscription' &&
@@ -220,22 +308,66 @@ export async function POST(req) {
           break;
 
         case 'invoice.paid':
-          const invoicePaid = event.data.object;
-          const paidSubscriptionId = invoicePaid.subscription;
-          if (paidSubscriptionId && invoicePaid.customer) {
+          subscription = event.data.object.subscription;
+          customerId = event.data.object.customer;
+
+          // Retrieve full subscription details to get the current price/plan
+          const paidSubscription = await stripe.subscriptions.retrieve(
+            subscription
+          );
+          const lookupKey = paidSubscription.items.data[0]?.price?.lookup_key;
+
+          // Update subscription details
+          requiresUpdate = true;
+          planToUpdate = mapLookupKeyToPlan(lookupKey);
+          statusToUpdate = 'active';
+
+          // Check if this is the personal plan with monthly limit
+          if (lookupKey === 'standard_personal_monthly') {
             console.log(
-              `Webhook Info: Processing invoice.paid for invoice ${invoicePaid.id}, sub ${paidSubscriptionId}`
+              `Webhook: Processing invoice payment for Personal Plan subscription ${subscription}`
             );
-            subscription = await stripe.subscriptions.retrieve(
-              paidSubscriptionId
-            );
-            customerId = invoicePaid.customer;
-            userIdFromMetadata = subscription?.metadata?.supabaseUserId;
-            requiresUpdate = true;
-          } else {
-            console.warn(
-              `Webhook: Ignoring invoice.paid event without subscription/customer. Invoice ID: ${invoicePaid.id}`
-            );
+
+            try {
+              // Find the user ID associated with this customer
+              const { data: customerProfiles, error: customerError } =
+                await supabaseAdmin
+                  .from('profiles')
+                  .select('id')
+                  .eq('stripe_customer_id', customerId)
+                  .limit(1);
+
+              if (customerError || !customerProfiles?.length) {
+                console.error(
+                  `Webhook Error: Failed to find user for Stripe customer ${customerId}:`,
+                  customerError
+                );
+              } else {
+                const userId = customerProfiles[0].id;
+
+                // Reset generations_remaining to 10 for new billing cycle
+                const { error: updateError } = await supabaseAdmin
+                  .from('profiles')
+                  .update({ generations_remaining: 10 })
+                  .eq('id', userId);
+
+                if (updateError) {
+                  console.error(
+                    `Webhook Error: Failed to reset generations for Personal Plan user ${userId}:`,
+                    updateError
+                  );
+                } else {
+                  console.log(
+                    `Webhook: Successfully reset generations to 10 for Personal Plan user ${userId}`
+                  );
+                }
+              }
+            } catch (error) {
+              console.error(
+                'Webhook Error: Failed to process Personal Plan invoice payment:',
+                error
+              );
+            }
           }
           break;
 
@@ -388,35 +520,16 @@ export async function POST(req) {
 // --- Helper mapping functions (Plain JS) ---
 
 function mapLookupKeyToPlan(lookupKey) {
-  if (!lookupKey) {
-    console.warn(
-      'Webhook Warning: mapLookupKeyToPlan called with null or undefined lookupKey.'
-    );
-    return null;
-  }
-  // Updated to match the lookup keys used in the pricing page
-  const dailyKey = process.env.STRIPE_LOOKUP_KEY_DAILY || 'standard_daily';
-  const monthlyKey =
-    process.env.STRIPE_LOOKUP_KEY_MONTHLY || 'standard_monthly';
-  const quarterlyKey =
-    process.env.STRIPE_LOOKUP_KEY_QUARTERLY || 'standard_quarterly';
-  const annualKey = process.env.STRIPE_LOOKUP_KEY_ANNUAL || 'standard_annual';
+  if (!lookupKey) return null;
 
-  switch (lookupKey) {
-    case dailyKey:
-      return 'daily';
-    case monthlyKey:
-      return 'monthly';
-    case quarterlyKey:
-      return 'quarterly';
-    case annualKey:
-      return 'annual';
-    default:
-      console.warn(
-        `Webhook Warning: Unrecognized Stripe price lookup key: ${lookupKey}`
-      );
-      return null;
-  }
+  const planMap = {
+    standard_monthly: 'monthly',
+    standard_quarterly: 'quarterly',
+    standard_annual: 'annual',
+    standard_personal_monthly: 'personal',
+  };
+
+  return planMap[lookupKey] || null;
 }
 
 function mapStripeStatus(stripeStatus) {

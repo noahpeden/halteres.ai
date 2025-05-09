@@ -24,7 +24,7 @@ export async function POST(req) {
   );
 
   try {
-    const { priceId } = await req.json();
+    const { priceId, isOneTime } = await req.json();
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
 
     if (!priceId) {
@@ -163,9 +163,9 @@ export async function POST(req) {
 
     // 4. Create Stripe Checkout Session
     try {
-      const session = await stripe.checkout.sessions.create({
+      const sessionConfig = {
         payment_method_types: ['card'],
-        mode: 'subscription',
+        mode: isOneTime ? 'payment' : 'subscription',
         customer: stripeCustomerId,
         line_items: [
           {
@@ -179,8 +179,11 @@ export async function POST(req) {
         client_reference_id: user.id, // Link Supabase user ID
         metadata: {
           supabaseUserId: user.id,
+          isOneTime: isOneTime ? 'true' : 'false',
         },
-      });
+      };
+
+      const session = await stripe.checkout.sessions.create(sessionConfig);
 
       if (!session.id) {
         throw new Error('Failed to create Stripe checkout session ID.');

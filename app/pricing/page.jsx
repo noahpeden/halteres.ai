@@ -131,19 +131,6 @@ export default async function PricingPage({ searchParams }) {
 
   // Define plan details (could also fetch from DB/Stripe if dynamic)
   const plans = [
-    // {
-    //   name: 'Daily Access',
-    //   priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_DAILY,
-    //   price: '$19',
-    //   interval: '/ day',
-    //   features: [
-    //     'Unlimited Generations for 24 Hours',
-    //     'Full Feature Access',
-    //     'One-time Payment',
-    //     'Perfect for Quick Projects',
-    //   ],
-    //   lookupKey: process.env.STRIPE_LOOKUP_KEY_DAILY || 'standard_daily',
-    // },
     {
       name: 'Monthly',
       priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY,
@@ -197,10 +184,10 @@ export default async function PricingPage({ searchParams }) {
       <main className="max-w-7xl mx-auto py-16 px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
           <h1 className="text-4xl font-extrabold text-base-content sm:text-5xl sm:tracking-tight lg:text-6xl">
-            Simple, Flexible Pricing
+            Simple, Flexible Pricing for Personal Trainers and Coaches
           </h1>
           <p className="mt-5 max-w-xl mx-auto text-xl text-base-content/80">
-            Choose the plan that fits your fitness journey. Upgrade, downgrade,
+            Choose the plan that fits your fitness business. Upgrade, downgrade,
             or cancel anytime.
           </p>
           <p className="mt-2 text-sm text-base-content/60">
