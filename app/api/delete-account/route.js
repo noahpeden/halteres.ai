@@ -47,11 +47,22 @@ export async function POST(req) {
       }
     }
 
-    // Delete the user's data from all related tables
-    // Note: This assumes you have proper cascade deletes set up in your database
-    // or you'll need to explicitly delete from each related table
+    // Manually delete user data in the correct order to handle foreign key constraints
 
-    // Delete user from auth system
+    // 1. Delete program_workouts related to user's entities (no cascade)
+    const { error: workoutsError } = await supabase.rpc('delete_user_data', {
+      user_id: userId,
+    });
+
+    if (workoutsError) {
+      console.error('Error deleting user data:', workoutsError);
+      return NextResponse.json(
+        { error: 'Failed to delete user data' },
+        { status: 500 }
+      );
+    }
+
+    // 2. Delete user from auth system (which will cascade to profiles)
     const { error: authError } = await supabase.auth.admin.deleteUser(userId);
 
     if (authError) {
