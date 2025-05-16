@@ -504,20 +504,25 @@ export default function ProfilePage() {
                   </button>
                 </div>
 
-                <div className="bg-error bg-opacity-10 p-4 rounded-lg text-white">
-                  <h4 className="font-medium mb-2">
-                    Delete Account Permanently
+                <div className="bg-error bg-opacity-10 p-4 rounded-lg">
+                  <h4 className="font-medium mb-2 text-error">
+                    Delete Account & Data
                   </h4>
-                  <p className="text-sm mb-3">
-                    This action is irreversible. All your data will be
-                    permanently deleted.
+                  <p className="text-sm mb-3 text-base-content">
+                    This action has two steps:
                   </p>
+                  <ol className="text-sm mb-3 text-base-content list-decimal list-inside">
+                    <li className="mb-1">
+                      Deactivate your account (immediate)
+                    </li>
+                    <li>Request permanent data deletion via email</li>
+                  </ol>
                   <button
                     onClick={() => setShowDeleteModal(true)}
-                    className="btn btn-sm  text-white btn-outline"
+                    className="btn btn-sm btn-error"
                     disabled={actionLoading}
                   >
-                    {actionLoading ? 'Processing...' : 'Delete Account'}
+                    {actionLoading ? 'Processing...' : 'Start Deletion Process'}
                   </button>
                 </div>
               </div>
@@ -626,15 +631,21 @@ export default function ProfilePage() {
       >
         <div className="modal-box">
           <h3 className="font-bold text-lg text-error">
-            Delete Account Permanently
+            Account Deletion Process
           </h3>
-          <p className="py-4">
-            <strong>WARNING:</strong> This action is irreversible. All your data
-            will be permanently deleted.
-          </p>
+          <div className="py-4">
+            <p className="mb-3">
+              <strong>Step 1:</strong> Deactivate your account (happens
+              immediately when you click the button below)
+            </p>
+            <p>
+              <strong>Step 2:</strong> For permanent data deletion, please
+              email: <span className="font-medium">noah@halteres.ai</span>
+            </p>
+          </div>
           <p className="mb-4">
-            To confirm deletion, please type <strong>DELETE</strong> in the
-            field below:
+            To confirm you want to start this process, please type{' '}
+            <strong>DELETE</strong> in the field below:
           </p>
           <input
             type="text"
@@ -658,7 +669,7 @@ export default function ProfilePage() {
               onClick={handleDeleteAccount}
               disabled={actionLoading || deleteConfirmation !== 'DELETE'}
             >
-              {actionLoading ? 'Processing...' : 'Delete Account'}
+              {actionLoading ? 'Processing...' : 'Deactivate My Account'}
             </button>
           </div>
         </div>
