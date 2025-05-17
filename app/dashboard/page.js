@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -11,6 +11,7 @@ import { ProgramWriterProvider } from '@/contexts/ProgramWriterContext';
 export default function Dashboard() {
   const router = useRouter();
   const { user, supabase } = useAuth();
+  const isMounted = useRef(true);
 
   const [programs, setPrograms] = useState([]);
   const [entities, setEntities] = useState([]);
@@ -35,159 +36,168 @@ export default function Dashboard() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [filterEntityId, setFilterEntityId] = useState('all'); // State for entity filter
 
+  // Set up cleanup function
+  useEffect(() => {
+    return () => {
+      isMounted.current = false;
+      console.log('[Dashboard] Component unmounting, cleanup performed');
+    };
+  }, []);
+
   // Check if auth is ready
   useEffect(() => {
     if (user !== null) {
+      console.log('[Dashboard] Auth is ready.');
       setAuthReady(true);
     }
   }, [user]);
 
   useEffect(() => {
-    async function fetchData() {
-      if (!user) return;
+    console.log(
+      '[Dashboard] Main useEffect triggered. AuthReady:',
+      authReady,
+      'User:',
+      !!user
+    );
 
+    async function fetchData() {
+      console.log('[Dashboard] fetchData called. User:', !!user);
+      if (!user) {
+        console.log('[Dashboard] fetchData: User not available, returning.');
+        return;
+      }
+
+      const startTime = performance.now();
       setIsLoading(true);
       try {
-        // Fetch entities first
+        console.log('[Dashboard] Fetching entities...');
         const { data: entitiesData, error: entitiesError } = await supabase
           .from('entities')
           .select('*')
           .eq('user_id', user.id)
           .order('name', { ascending: true });
 
+        if (!isMounted.current) return;
+
         if (entitiesError) throw entitiesError;
         setEntities(entitiesData || []);
+        console.log(
+          `[Dashboard] Fetched ${entitiesData?.length || 0} entities.`
+        );
 
-        // Get array of entity IDs belonging to this user
         const entityIds = entitiesData.map((entity) => entity.id);
 
-        // Fetch programs for all entities belonging to this user
+        console.log('[Dashboard] Fetching programs...');
         const { data: programsData, error: programsError } = await supabase
           .from('programs')
           .select('*')
           .in('entity_id', entityIds.length > 0 ? entityIds : [])
           .order('created_at', { ascending: false });
 
+        if (!isMounted.current) return;
+
         if (programsError) throw programsError;
         setPrograms(programsData || []);
+        console.log(
+          `[Dashboard] Fetched ${programsData?.length || 0} programs.`
+        );
 
-        // Calculate stats
+        // Calculate stats more efficiently
         const today = new Date();
         const todayStr = today.toISOString().split('T')[0];
 
-        // Get count of upcoming workouts
-        const { data: allWorkouts, error: workoutsError } = await supabase
-          .from('program_workouts')
-          .select('*');
+        const nextWeek = new Date(today);
+        nextWeek.setDate(today.getDate() + 7);
+        const nextWeekStr = nextWeek.toISOString().split('T')[0];
 
-        if (workoutsError) {
-          console.error('Error fetching workouts:', workoutsError);
-        } else {
-          console.log(`Retrieved ${allWorkouts?.length || 0} total workouts`);
+        let activeWorkoutsCount = 0;
+        let upcomingWorkoutsCount = 0;
 
-          // Filter for today's workouts
-          const todaysWorkouts = (allWorkouts || []).filter((workout) => {
-            // Check both scheduled_date and tags fields
-            const scheduledDate = workout.scheduled_date;
-            const tagDate =
-              workout.tags?.scheduled_date ||
-              workout.tags?.suggestedDate ||
-              workout.tags?.date;
+        if (entityIds.length > 0) {
+          console.log('[Dashboard] Fetching active workouts count...');
+          const { count: activeCount, error: activeError } = await supabase
+            .from('program_workouts')
+            .select('id', { count: 'exact', head: true })
+            .eq('scheduled_date', todayStr)
+            .in('entity_id', entityIds)
+            .eq('is_reference', false); // Assuming we only count non-reference workouts for stats
 
-            let workoutDate = null;
+          if (!isMounted.current) return;
 
-            // Try scheduled_date
-            if (scheduledDate) {
-              try {
-                const date = new Date(scheduledDate);
-                if (!isNaN(date.getTime())) {
-                  workoutDate = date.toISOString().split('T')[0];
-                }
-              } catch (e) {
-                /* invalid date */
-              }
-            }
+          if (activeError) {
+            console.error(
+              '[Dashboard] Error fetching active workouts count:',
+              activeError
+            );
+          } else {
+            activeWorkoutsCount = activeCount || 0;
+          }
 
-            // Try tags date if scheduled_date didn't work
-            if (!workoutDate && tagDate) {
-              try {
-                const date = new Date(tagDate);
-                if (!isNaN(date.getTime())) {
-                  workoutDate = date.toISOString().split('T')[0];
-                }
-              } catch (e) {
-                /* invalid date */
-              }
-            }
+          console.log('[Dashboard] Fetching upcoming workouts count...');
+          const { count: upcomingCount, error: upcomingError } = await supabase
+            .from('program_workouts')
+            .select('id', { count: 'exact', head: true })
+            .gt('scheduled_date', todayStr)
+            .lte('scheduled_date', nextWeekStr)
+            .in('entity_id', entityIds)
+            .eq('is_reference', false); // Assuming we only count non-reference workouts for stats
 
-            // Check if workout is scheduled for today
-            return workoutDate === today.toISOString().split('T')[0];
-          });
+          if (!isMounted.current) return;
 
-          // Filter for upcoming workouts (next 7 days, not including today)
-          const nextWeek = new Date(today);
-          nextWeek.setDate(today.getDate() + 7);
-          const nextWeekStr = nextWeek.toISOString().split('T')[0];
+          if (upcomingError) {
+            console.error(
+              '[Dashboard] Error fetching upcoming workouts count:',
+              upcomingError
+            );
+          } else {
+            upcomingWorkoutsCount = upcomingCount || 0;
+          }
+        }
 
-          const upcomingWorkouts = (allWorkouts || []).filter((workout) => {
-            // Check both scheduled_date and tags fields
-            const scheduledDate = workout.scheduled_date;
-            const tagDate =
-              workout.tags?.scheduled_date ||
-              workout.tags?.suggestedDate ||
-              workout.tags?.date;
+        console.log(
+          `[Dashboard] Active workouts: ${activeWorkoutsCount}, Upcoming workouts: ${upcomingWorkoutsCount}`
+        );
 
-            let workoutDate = null;
-
-            // Try scheduled_date
-            if (scheduledDate) {
-              try {
-                const date = new Date(scheduledDate);
-                if (!isNaN(date.getTime())) {
-                  workoutDate = date.toISOString().split('T')[0];
-                }
-              } catch (e) {
-                /* invalid date */
-              }
-            }
-
-            // Try tags date if scheduled_date didn't work
-            if (!workoutDate && tagDate) {
-              try {
-                const date = new Date(tagDate);
-                if (!isNaN(date.getTime())) {
-                  workoutDate = date.toISOString().split('T')[0];
-                }
-              } catch (e) {
-                /* invalid date */
-              }
-            }
-
-            // Check if workout is in the future (after today but before or on next week)
-            return workoutDate > todayStr && workoutDate <= nextWeekStr;
-          });
-
-          console.log(
-            `Found ${todaysWorkouts.length} workouts for today and ${upcomingWorkouts.length} upcoming workouts`
-          );
-
+        if (isMounted.current) {
           setStats({
             totalPrograms: programsData?.length || 0,
-            activeWorkouts: todaysWorkouts.length,
-            upcomingWorkouts: upcomingWorkouts.length,
+            activeWorkouts: activeWorkoutsCount,
+            upcomingWorkouts: upcomingWorkoutsCount,
           });
         }
       } catch (error) {
-        console.error('Error fetching data:', error);
+        console.error('[Dashboard] Error in fetchData:', error);
+        if (isMounted.current) {
+          setErrorMessage(error.message || 'Failed to fetch dashboard data.');
+        }
       } finally {
-        setIsLoading(false);
+        if (isMounted.current) {
+          setIsLoading(false);
+          console.log(
+            `[Dashboard] fetchData finished in ${
+              performance.now() - startTime
+            }ms`
+          );
+        }
       }
     }
 
-    if (authReady) {
+    if (authReady && user && isMounted.current) {
+      console.log(
+        '[Dashboard] Auth is ready and user exists, calling fetchData.'
+      );
       fetchData();
+    } else {
+      console.log(
+        '[Dashboard] Auth not ready or user does not exist, not calling fetchData. AuthReady:',
+        authReady,
+        'User:',
+        !!user
+      );
+      // If not fetching, ensure loading is false if it was set true by a previous quick render cycle
+      if (isLoading && isMounted.current) setIsLoading(false);
     }
-  }, [user, supabase, authReady]);
+  }, [user, supabase, authReady]); // Keep dependencies as they are critical for re-fetching on auth change
 
   // Calculate end date based on start date and duration
   const calculateEndDate = () => {
@@ -498,12 +508,14 @@ export default function Dashboard() {
                         {program.description || 'No description available'}
                       </p>
                       <div className="card-actions justify-end mt-4">
-                        <Link
-                          href={`/program/${program.id}/writer`}
+                        <button
+                          onClick={() =>
+                            router.push(`/program/${program.id}/writer`)
+                          }
                           className="btn btn-primary btn-sm"
                         >
                           Open
-                        </Link>
+                        </button>
                         <button
                           onClick={() => {
                             setSelectedProgramId(program.id);
@@ -539,7 +551,8 @@ export default function Dashboard() {
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-semibold">Upcoming Workouts</h2>
           </div>
-          <ProgramWriterProvider>
+          {/* Create a unique ProgramWriterProvider for Dashboard */}
+          <ProgramWriterProvider initialProgramId="dashboard-view">
             <UpcomingWorkouts />
           </ProgramWriterProvider>
         </div>

@@ -101,22 +101,45 @@ export default function AIProgramWriter({ programId }) {
     customSectionName,
     customSectionDuration,
     customSectionDescription,
+    isStreamingGeneration,
   } = state;
 
   const loadingTimer = useRef(null);
   const isAutoUpdating = useRef(false);
   const debounceTimerRef = useRef(null);
+  const isMounted = useRef(true);
   const [isReferenceWorkoutModalOpen, setReferenceWorkoutModalOpen] =
     useState(false);
   const [dbReferenceWorkouts, setDbReferenceWorkouts] = useState([]);
+
+  // --- Main cleanup function - runs when component unmounts ---
+  useEffect(() => {
+    return () => {
+      isMounted.current = false;
+      console.log(
+        '[AIProgramWriter] Component unmounting, cleaning up resources'
+      );
+
+      // Clear all timers
+      if (loadingTimer.current) clearTimeout(loadingTimer.current);
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+
+      // Reset other state
+      isAutoUpdating.current = false;
+    };
+  }, []);
 
   // --- Utility Functions ---
 
   const showToastMessage = useCallback(
     (message, type = 'success') => {
+      if (!isMounted.current) return;
+
       dispatch({ type: 'SHOW_TOAST', payload: { message, type } });
       setTimeout(() => {
-        dispatch({ type: 'HIDE_TOAST' });
+        if (isMounted.current) {
+          dispatch({ type: 'HIDE_TOAST' });
+        }
       }, 5000);
     },
     [dispatch]
@@ -150,7 +173,9 @@ export default function AIProgramWriter({ programId }) {
       // Not on trial and not active - redirect to pricing
       showToastMessage('Please subscribe to generate programs.', 'error');
       setTimeout(() => {
-        window.location.href = '/pricing';
+        if (isMounted.current) {
+          window.location.href = '/pricing';
+        }
       }, 1500);
       return;
     }
@@ -194,22 +219,47 @@ export default function AIProgramWriter({ programId }) {
     generateProgram({
       programId,
       formData,
-      setIsLoading: (loading) =>
-        dispatch({ type: 'SET_LOADING', payload: loading }),
-      setSuggestions: (newSuggestions) =>
-        dispatch({ type: 'SET_SUGGESTIONS', payload: newSuggestions }),
+      setIsLoading: (loading) => {
+        if (isMounted.current) {
+          dispatch({ type: 'SET_LOADING', payload: loading });
+        }
+      },
+      setSuggestions: (newSuggestions) => {
+        if (isMounted.current) {
+          dispatch({ type: 'SET_SUGGESTIONS', payload: newSuggestions });
+        }
+      },
       showToastMessage,
-      setGenerationStage: (stage) =>
-        dispatch({ type: 'SET_GENERATION_STAGE', payload: stage }),
-      setFormData: (data) =>
-        dispatch({ type: 'UPDATE_FORM_DATA', payload: data }),
-      setGeneratedDescription: (desc) =>
-        dispatch({ type: 'SET_GENERATED_DESCRIPTION', payload: desc }),
-      setLoadingTimer: (timer) => (loadingTimer.current = timer),
-      setServerStatus: (status) =>
-        dispatch({ type: 'SET_SERVER_STATUS', payload: status }),
-      setLoadingDuration: (duration) =>
-        dispatch({ type: 'SET_LOADING_DURATION', payload: duration }),
+      setGenerationStage: (stage) => {
+        if (isMounted.current) {
+          dispatch({ type: 'SET_GENERATION_STAGE', payload: stage });
+        }
+      },
+      setFormData: (data) => {
+        if (isMounted.current) {
+          dispatch({ type: 'UPDATE_FORM_DATA', payload: data });
+        }
+      },
+      setGeneratedDescription: (desc) => {
+        if (isMounted.current) {
+          dispatch({ type: 'SET_GENERATED_DESCRIPTION', payload: desc });
+        }
+      },
+      setLoadingTimer: (timer) => {
+        if (isMounted.current) {
+          loadingTimer.current = timer;
+        }
+      },
+      setServerStatus: (status) => {
+        if (isMounted.current) {
+          dispatch({ type: 'SET_SERVER_STATUS', payload: status });
+        }
+      },
+      setLoadingDuration: (duration) => {
+        if (isMounted.current) {
+          dispatch({ type: 'SET_LOADING_DURATION', payload: duration });
+        }
+      },
       refetchProfile,
     });
   }, [programId, formData, dispatch, showToastMessage, refetchProfile]);
@@ -454,11 +504,17 @@ export default function AIProgramWriter({ programId }) {
 
   useEffect(() => {
     async function autoSaveGeneratedWorkouts() {
-      if (!programId || suggestions.length === 0 || isLoading) {
+      if (
+        !programId ||
+        suggestions.length === 0 ||
+        isLoading ||
+        isStreamingGeneration
+      ) {
         console.log('[AutoSave] Not saving, conditions not met:', {
           hasProgramId: !!programId,
           suggestionCount: suggestions.length,
           isLoading,
+          isStreamingGeneration,
         });
         return;
       }
@@ -601,6 +657,7 @@ export default function AIProgramWriter({ programId }) {
     suggestions,
     supabase,
     isLoading,
+    isStreamingGeneration,
     formData.entityId,
     dispatch,
     showToastMessage,
@@ -707,7 +764,11 @@ export default function AIProgramWriter({ programId }) {
   }, [programId, supabase, dispatch, showToastMessage]);
 
   const debouncedAutoSave = useCallback(async () => {
-    if (!isDirty || autoSaveState === AUTO_SAVE_STATES.SAVING) {
+    if (
+      !isMounted.current ||
+      !isDirty ||
+      autoSaveState === AUTO_SAVE_STATES.SAVING
+    ) {
       return;
     }
 
@@ -730,6 +791,8 @@ export default function AIProgramWriter({ programId }) {
         generatedDescription,
       });
 
+      if (!isMounted.current) return;
+
       if (success) {
         dispatch({ type: 'SET_INITIAL_FORM_DATA_CLONE' });
         dispatch({ type: 'SET_DIRTY', payload: false });
@@ -737,14 +800,21 @@ export default function AIProgramWriter({ programId }) {
           type: 'SET_AUTO_SAVE_STATE',
           payload: AUTO_SAVE_STATES.DONE,
         });
-        setTimeout(() => {
-          if (state.autoSaveState === AUTO_SAVE_STATES.DONE && !state.isDirty) {
+        const timerId = setTimeout(() => {
+          if (
+            isMounted.current &&
+            state.autoSaveState === AUTO_SAVE_STATES.DONE &&
+            !state.isDirty
+          ) {
             dispatch({
               type: 'SET_AUTO_SAVE_STATE',
               payload: AUTO_SAVE_STATES.IDLE,
             });
           }
         }, 2500);
+        // Store the timer ID to clear on unmount
+        if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+        debounceTimerRef.current = timerId;
       } else {
         dispatch({
           type: 'SET_AUTO_SAVE_STATE',
@@ -753,14 +823,16 @@ export default function AIProgramWriter({ programId }) {
       }
     } catch (error) {
       console.error('Error calling autoSaveProgramDetails:', error);
-      dispatch({
-        type: 'SET_AUTO_SAVE_STATE',
-        payload: AUTO_SAVE_STATES.ERROR,
-      });
-      showToastMessage(
-        'An unexpected error occurred during auto-save.',
-        'error'
-      );
+      if (isMounted.current) {
+        dispatch({
+          type: 'SET_AUTO_SAVE_STATE',
+          payload: AUTO_SAVE_STATES.ERROR,
+        });
+        showToastMessage(
+          'An unexpected error occurred during auto-save.',
+          'error'
+        );
+      }
     }
   }, [
     programId,
@@ -806,8 +878,11 @@ export default function AIProgramWriter({ programId }) {
         clearTimeout(debounceTimerRef.current);
       }
 
+      // Set up new debounce timer for auto-save
       debounceTimerRef.current = setTimeout(() => {
-        debouncedAutoSave();
+        if (isMounted.current) {
+          debouncedAutoSave();
+        }
       }, 1500);
     } else {
       if (isDirty) {
@@ -829,6 +904,7 @@ export default function AIProgramWriter({ programId }) {
     debouncedAutoSave,
   ]);
 
+  /* Temporarily commented out for debugging navigation freeze
   useEffect(() => {
     const handleBeforeUnload = (event) => {
       if (isDirty) {
@@ -846,6 +922,7 @@ export default function AIProgramWriter({ programId }) {
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
   }, [isDirty]);
+  */
 
   // --- Form Field Handlers (Wrapped) ---
 
@@ -856,14 +933,16 @@ export default function AIProgramWriter({ programId }) {
       (!formData.equipment || formData.equipment.length === 0)
     ) {
       const newEquipment = gymEquipmentPresets[formData.gymType] || [];
-      dispatch({
-        type: 'SET_FIELD_VALUE',
-        payload: { field: 'equipment', value: newEquipment },
-      });
-      const allSelected =
-        equipmentList.length > 0 &&
-        newEquipment.length === equipmentList.length;
-      dispatch({ type: 'SET_ALL_EQUIPMENT_SELECTED', payload: allSelected });
+      if (isMounted.current) {
+        dispatch({
+          type: 'SET_FIELD_VALUE',
+          payload: { field: 'equipment', value: newEquipment },
+        });
+        const allSelected =
+          equipmentList.length > 0 &&
+          newEquipment.length === equipmentList.length;
+        dispatch({ type: 'SET_ALL_EQUIPMENT_SELECTED', payload: allSelected });
+      }
     }
   }, [formData.gymType, formData.equipment, dispatch]);
 

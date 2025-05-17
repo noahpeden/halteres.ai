@@ -5,7 +5,7 @@ const ProgramWriterContext = createContext();
 
 export const useProgramWriterContext = () => useContext(ProgramWriterContext);
 
-const initialState = {
+export const initialState = {
   programId: null,
   formData: {
     name: '',
@@ -57,16 +57,17 @@ const initialState = {
   // UI States
   showToast: false,
   toastMessage: '',
-  toastType: 'success',
+  toastType: 'info', // 'success', 'error', 'info', 'warning'
   showEquipment: false,
   allEquipmentSelected: false,
   hasCustomWorkoutFormat: false,
   customSectionName: '',
-  customSectionDuration: '',
+  customSectionDuration: '1', // Default to 1 week
   customSectionDescription: '',
+  isStreamingGeneration: false, // Added for streaming state
 };
 
-function programWriterReducer(state, action) {
+export const programWriterReducer = (state, action) => {
   switch (action.type) {
     case 'SET_INITIAL_DATA':
       // Only set initial values if not already set or if programId changes
@@ -98,6 +99,7 @@ function programWriterReducer(state, action) {
       return {
         ...state,
         initialFormData: JSON.parse(JSON.stringify(state.formData)),
+        isDirty: false, // Should be clean after cloning for new baseline
       };
     case 'UPDATE_FORM_DATA':
       return { ...state, formData: { ...state.formData, ...action.payload } };
@@ -265,10 +267,20 @@ function programWriterReducer(state, action) {
       };
     case 'CLOSE_CONFIRMATION_MODAL':
       return { ...state, isConfirmationModalOpen: false };
+    // New actions for streaming
+    case 'SET_STREAMING_GENERATION':
+      return { ...state, isStreamingGeneration: action.payload };
+    case 'CLEAR_SUGGESTIONS':
+      return { ...state, suggestions: [], generatedDescription: '' }; // Also clear description
+    case 'APPEND_SUGGESTIONS':
+      return {
+        ...state,
+        suggestions: [...(state.suggestions || []), ...action.payload],
+      };
     default:
       throw new Error(`Unhandled action type: ${action.type}`);
   }
-}
+};
 
 export const ProgramWriterProvider = ({ children, initialProgramId }) => {
   // Initialize state with potential override for programId

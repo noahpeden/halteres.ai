@@ -223,9 +223,17 @@ export async function POST(request) {
     const referenceInput = requestData.referenceInput || '';
 
     // Critical parameters - ensure they have fallback values
-    const numberOfWeeks = parseInt(
+    let numberOfWeeks = parseInt(
       requestData.duration_weeks || requestData.numberOfWeeks || 4
     );
+    // Cap numberOfWeeks for multi-week generation
+    if (numberOfWeeks > 1) {
+      numberOfWeeks = Math.min(numberOfWeeks, 6);
+      logWithTimestamp(
+        `Number of weeks set to ${numberOfWeeks} for multi-week generation.`
+      );
+    }
+
     const daysPerWeek = parseInt(
       requestData.days_per_week || requestData.daysPerWeek || 3
     );
@@ -253,18 +261,23 @@ export async function POST(request) {
     });
 
     // Calculate total number of workouts
-    const totalWorkouts = parseInt(numberOfWeeks) * parseInt(daysPerWeek);
+    const totalWorkouts = numberOfWeeks * daysPerWeek; // Use potentially capped numberOfWeeks
 
-    // Check if this is a large program (more than 20 workouts)
-    const isLargeProgram = totalWorkouts > 20;
-    logWithTimestamp('Program size check', {
+    // Check if this is a multi-week program
+    const isMultiWeekProgram = numberOfWeeks > 1;
+    logWithTimestamp('Program type check', {
       totalWorkouts,
-      isLargeProgram,
+      isMultiWeekProgram,
+      numberOfWeeks,
     });
 
-    // If this is a large program, use a chunked approach
-    if (isLargeProgram) {
+    // If this is a multi-week program, use a chunked streaming approach
+    if (isMultiWeekProgram) {
+      logWithTimestamp(
+        `Initiating multi-week streamed generation for ${numberOfWeeks} weeks.`
+      );
       return generateLargeProgram(
+        // This will now return a NextResponse with a stream
         requestData,
         {
           programId,
@@ -274,17 +287,18 @@ export async function POST(request) {
           description,
           personalization,
           workoutFormats,
-          numberOfWeeks,
+          numberOfWeeks, // Pass the potentially capped numberOfWeeks
           daysPerWeek,
           programType,
           equipment,
           trainingType,
           startDate,
-          totalWorkouts,
+          totalWorkouts, // Based on capped numberOfWeeks
           referenceInput,
         },
         supabase,
-        openai
+        openai,
+        userId // Pass userId for profile updates
       );
     }
 
@@ -666,8 +680,14 @@ export async function POST(request) {
   }
 }
 
-// New function to handle large program generation
-async function generateLargeProgram(requestData, params, supabase, openai) {
+// Modified function to handle large program generation with streaming
+async function generateLargeProgram(
+  requestData,
+  params,
+  supabase,
+  openai,
+  userId
+) {
   const {
     programId,
     goal,
@@ -676,7 +696,7 @@ async function generateLargeProgram(requestData, params, supabase, openai) {
     description,
     personalization,
     workoutFormats,
-    numberOfWeeks,
+    numberOfWeeks, // This is the capped numberOfWeeks
     daysPerWeek,
     programType,
     equipment,
@@ -686,269 +706,372 @@ async function generateLargeProgram(requestData, params, supabase, openai) {
     referenceInput,
   } = params;
 
-  logWithTimestamp('Starting large program generation', { totalWorkouts });
-
-  // Get selected days of the week from request data
-  const selectedDaysOfWeek = requestData.calendar_data?.days_of_week || [];
-
-  // Generate suggested dates array based on selected days of the week
-  const suggestedDates = [];
-  const today = new Date();
-  const startingDate = startDate ? new Date(startDate) : today;
-
-  // If we have selected days, use them to generate dates
-  if (selectedDaysOfWeek.length > 0) {
-    let currentDate = new Date(startingDate);
-    let workoutsAdded = 0;
-
-    // Keep going until we have enough workouts
-    while (workoutsAdded < totalWorkouts) {
-      const dayOfWeek = currentDate.getDay(); // 0 = Sunday, 1 = Monday, etc.
-
-      if (selectedDaysOfWeek.includes(dayOfWeek)) {
-        suggestedDates.push(currentDate.toISOString().split('T')[0]);
-        workoutsAdded++;
-      }
-
-      // Move to next day
-      currentDate.setDate(currentDate.getDate() + 1);
-    }
-  } else {
-    // Fallback: simple sequential dates if no days are selected
-    for (let i = 0; i < totalWorkouts; i++) {
-      const workoutDate = new Date(startingDate);
-      workoutDate.setDate(startingDate.getDate() + i);
-      suggestedDates.push(workoutDate.toISOString().split('T')[0]);
-    }
-  }
-
-  // Verify user access to the program
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  if (!session) {
-    logWithTimestamp('Authentication failed');
-    return NextResponse.json(
-      { error: 'Authentication required' },
-      { status: 401 }
-    );
-  }
-  logWithTimestamp('Authentication successful', { userId: session.user.id });
-
-  // Prepare to split into chunks - we'll generate by week
-  const chunksToGenerate = numberOfWeeks;
-  const weeksPerChunk = 1; // Generate one week at a time
-  const workoutsPerChunk = daysPerWeek * weeksPerChunk;
-
-  logWithTimestamp('Chunk configuration', {
-    chunksToGenerate,
-    weeksPerChunk,
-    workoutsPerChunk,
+  logWithTimestamp('Starting large program generation (streaming)', {
+    totalWorkouts,
+    numberOfWeeks,
   });
 
-  // Prepare the common prompt elements
-  const commonPromptElements = await preparePromptElements(
-    programId,
-    supabase,
-    {
-      goal,
-      difficulty,
-      focusArea,
-      description,
-      personalization,
-      equipment,
-      workoutFormats,
-      trainingType,
-      selectedDaysOfWeek,
-      referenceInput,
-    }
-  );
+  const stream = new ReadableStream({
+    async start(controller) {
+      const encoder = new TextEncoder();
+      const sendEvent = (eventData) => {
+        controller.enqueue(
+          encoder.encode(`data: ${JSON.stringify(eventData)}
 
-  // Generate each chunk (week) separately
-  const allWorkouts = [];
-  let programOverview = '';
-  let programTitle = `Training Program for ${goal}`;
-  let programDescription = `A comprehensive ${numberOfWeeks}-week ${difficulty} training program focused on ${
-    focusArea || goal
-  }`;
+`)
+        );
+      };
 
-  // Generate overview and basic program structure first
-  try {
-    logWithTimestamp('Generating program overview and structure');
+      try {
+        // Get entity_id from the program for saving workouts
+        let entityId = null;
+        if (programId) {
+          const { data: programData, error: programError } = await supabase
+            .from('programs')
+            .select('entity_id')
+            .eq('id', programId)
+            .single();
+          if (programError) {
+            logWithTimestamp('[MultiWeek] Error fetching program entity_id', {
+              error: programError,
+            });
+            // Send error event and close? Or continue without entityId if it's not critical for prompt?
+            // For saving workouts, it is critical.
+            sendEvent({
+              type: 'error',
+              message: 'Failed to fetch program details for saving.',
+              details: programError.message,
+            });
+            controller.close();
+            return;
+          }
+          entityId = programData?.entity_id;
+          if (!entityId) {
+            logWithTimestamp('[MultiWeek] entity_id not found for program', {
+              programId,
+            });
+            sendEvent({
+              type: 'error',
+              message: 'Program entity ID not found, cannot save workouts.',
+            });
+            controller.close();
+            return;
+          }
+        } else {
+          logWithTimestamp(
+            '[MultiWeek] programId is missing, cannot determine entity_id or save workouts.'
+          );
+          sendEvent({
+            type: 'error',
+            message:
+              'Program ID is missing, cannot generate multi-week program.',
+          });
+          controller.close();
+          return;
+        }
 
-    const overviewPrompt = createOverviewPrompt(
-      numberOfWeeks,
-      daysPerWeek,
-      programType,
-      commonPromptElements,
-      trainingType,
-      referenceInput
-    );
-
-    const overviewResponse = await openai.chat.completions.create({
-      model: 'gpt-4.1',
-      messages: [
-        {
-          role: 'system',
-          content: commonPromptElements.systemPrompt,
-        },
-        {
-          role: 'user',
-          content: overviewPrompt,
-        },
-      ],
-      response_format: { type: 'json_object' },
-    });
-
-    if (
-      overviewResponse.choices &&
-      overviewResponse.choices[0] &&
-      overviewResponse.choices[0].message
-    ) {
-      const overviewContent = JSON.parse(
-        overviewResponse.choices[0].message.content
-      );
-      if (overviewContent.title) programTitle = overviewContent.title;
-      if (overviewContent.description)
-        programDescription = overviewContent.description;
-      if (overviewContent.overview) programOverview = overviewContent.overview;
-      logWithTimestamp('Successfully generated program overview');
-    }
-  } catch (overviewError) {
-    logWithTimestamp('Error generating program overview', {
-      error: overviewError.message,
-    });
-    // Continue with default title/description if overview generation fails
-  }
-
-  // Now generate each week with parallel processing and improved error handling
-  const weekGenerationPromises = [];
-
-  for (let weekNumber = 1; weekNumber <= chunksToGenerate; weekNumber++) {
-    // Create a promise for each week
-    const weekPromise = generateWeek(
-      weekNumber,
-      numberOfWeeks,
-      daysPerWeek,
-      suggestedDates,
-      commonPromptElements,
-      programType,
-      trainingType,
-      allWorkouts,
-      openai,
-      referenceInput
-    );
-
-    weekGenerationPromises.push(weekPromise);
-  }
-
-  try {
-    // Process weeks in parallel with a limit of 2 concurrent generations
-    // This helps manage API load while still making progress
-    const results = [];
-    const concurrencyLimit = 2;
-
-    for (let i = 0; i < weekGenerationPromises.length; i += concurrencyLimit) {
-      const chunk = weekGenerationPromises.slice(i, i + concurrencyLimit);
-      const chunkResults = await Promise.allSettled(chunk);
-      results.push(...chunkResults);
-    }
-
-    // Process results and add successful weeks to allWorkouts
-    results.forEach((result, index) => {
-      const weekNumber = index + 1;
-
-      if (
-        result.status === 'fulfilled' &&
-        result.value &&
-        result.value.length > 0
-      ) {
-        logWithTimestamp(`Successfully generated week ${weekNumber}`, {
-          workoutCount: result.value.length,
-        });
-        allWorkouts.push(...result.value);
-      } else {
-        // For failed weeks, generate placeholders
-        logWithTimestamp(
-          `Failed to generate week ${weekNumber}, creating placeholders`,
+        // Prepare common prompt elements
+        const commonPromptElements = await preparePromptElements(
+          programId, // Pass programId here
+          supabase,
+          openai, // preparePromptElements now needs openai for RAG
           {
-            error: result.reason ? result.reason.message : 'Unknown error',
+            // This inner object is the 'params' for preparePromptElements
+            goal,
+            difficulty,
+            focusArea,
+            description,
+            personalization,
+            equipment,
+            workoutFormats,
+            trainingType,
+            selectedDaysOfWeek: requestData.calendar_data?.days_of_week || [],
+            referenceInput,
+            entityId, // Pass entityId for context if needed by prompts
           }
         );
 
-        // Create placeholder workouts for the failed week
-        const startWorkoutIndex = (weekNumber - 1) * workoutsPerChunk;
-        const endWorkoutIndex = Math.min(
-          weekNumber * workoutsPerChunk - 1,
-          totalWorkouts - 1
-        );
-        const weekDates = suggestedDates.slice(
-          startWorkoutIndex,
-          endWorkoutIndex + 1
+        // Generate and send program overview first
+        let programOverview = '';
+        let programTitle = `Training Program for ${goal}`;
+        let programOverallDescription = `A comprehensive ${numberOfWeeks}-week ${difficulty} training program focused on ${
+          focusArea || goal
+        }`;
+
+        try {
+          logWithTimestamp(
+            '[MultiWeek] Generating program overview and structure'
+          );
+          const overviewPrompt = createOverviewPrompt(
+            numberOfWeeks,
+            daysPerWeek,
+            programType,
+            commonPromptElements,
+            trainingType,
+            referenceInput
+          );
+
+          const overviewResponse = await openai.chat.completions.create({
+            model: 'gpt-4.1', // or the model specified in commonPromptElements
+            messages: [
+              { role: 'system', content: commonPromptElements.systemPrompt },
+              { role: 'user', content: overviewPrompt },
+            ],
+            response_format: { type: 'json_object' },
+          });
+
+          if (
+            overviewResponse.choices &&
+            overviewResponse.choices[0] &&
+            overviewResponse.choices[0].message
+          ) {
+            const overviewContent = JSON.parse(
+              overviewResponse.choices[0].message.content
+            );
+            if (overviewContent.title) programTitle = overviewContent.title;
+            if (overviewContent.description)
+              programOverallDescription = overviewContent.description;
+            if (overviewContent.overview)
+              programOverview = overviewContent.overview;
+            logWithTimestamp(
+              '[MultiWeek] Successfully generated program overview'
+            );
+          }
+        } catch (overviewError) {
+          logWithTimestamp('[MultiWeek] Error generating program overview', {
+            error: overviewError.message,
+          });
+          // Continue with default title/description if overview generation fails
+        }
+        sendEvent({
+          type: 'overview',
+          title: programTitle,
+          description: programOverallDescription,
+          overview: programOverview,
+          programId,
+        });
+
+        // Clear existing non-reference workouts for this program ONCE
+        if (programId) {
+          logWithTimestamp(
+            `[MultiWeek] Clearing existing non-reference workouts for programId: ${programId}`
+          );
+          const { error: deleteError } = await supabase
+            .from('program_workouts')
+            .delete()
+            .eq('program_id', programId)
+            .eq('is_reference', false);
+
+          if (deleteError) {
+            logWithTimestamp('[MultiWeek] Error deleting old workouts', {
+              error: deleteError,
+              programId,
+            });
+            sendEvent({
+              type: 'init_error',
+              message: `Warning: Failed to clear old workouts: ${deleteError.message}. Generation will proceed.`,
+            });
+          }
+        }
+
+        // Generate suggested dates array
+        const suggestedDates = [];
+        const today = new Date();
+        const startingDate = startDate ? new Date(startDate) : today;
+        const selectedDaysOfWeek =
+          requestData.calendar_data?.days_of_week || [];
+
+        if (selectedDaysOfWeek.length > 0) {
+          let currentDate = new Date(startingDate);
+          let workoutsAdded = 0;
+          while (workoutsAdded < totalWorkouts) {
+            const dayOfWeek = currentDate.getDay();
+            if (selectedDaysOfWeek.includes(dayOfWeek)) {
+              suggestedDates.push(currentDate.toISOString().split('T')[0]);
+              workoutsAdded++;
+            }
+            currentDate.setDate(currentDate.getDate() + 1);
+          }
+        } else {
+          for (let i = 0; i < totalWorkouts; i++) {
+            const workoutDate = new Date(startingDate);
+            workoutDate.setDate(startingDate.getDate() + i);
+            suggestedDates.push(workoutDate.toISOString().split('T')[0]);
+          }
+        }
+
+        let accumulatedWorkouts = [];
+        for (let weekNumber = 1; weekNumber <= numberOfWeeks; weekNumber++) {
+          try {
+            const weekWorkouts = await generateWeek(
+              weekNumber,
+              numberOfWeeks,
+              daysPerWeek,
+              suggestedDates, // Full list of suggested dates for the whole program
+              commonPromptElements,
+              programType,
+              trainingType,
+              [...accumulatedWorkouts], // Pass previously generated workouts for context
+              openai,
+              referenceInput
+            );
+
+            // Save these weekWorkouts to Supabase
+            if (
+              programId &&
+              entityId &&
+              weekWorkouts &&
+              weekWorkouts.length > 0
+            ) {
+              const workoutInserts = weekWorkouts.map((workout) => {
+                const tagsWithoutDate = { ...(workout.tags || {}) };
+                delete tagsWithoutDate.suggestedDate; // Ensure no old date fields in tags
+                delete tagsWithoutDate.scheduled_date;
+                return {
+                  program_id: programId,
+                  entity_id: entityId,
+                  title: workout.title,
+                  body: workout.body || workout.description,
+                  tags: tagsWithoutDate,
+                  scheduled_date: workout.date
+                    ? new Date(workout.date).toISOString()
+                    : null,
+                  is_reference: false,
+                  completed: false,
+                  created_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString(),
+                };
+              });
+
+              const { error: insertError } = await supabase
+                .from('program_workouts')
+                .insert(workoutInserts)
+                .select();
+              if (insertError) {
+                logWithTimestamp(
+                  `[MultiWeek] Error saving week ${weekNumber} to DB`,
+                  { error: insertError }
+                );
+                sendEvent({
+                  type: 'save_error',
+                  weekNumber,
+                  message: `Failed to save week ${weekNumber} workouts.`,
+                });
+                // Decide if we should still send the workouts to client or send placeholders
+              } else {
+                logWithTimestamp(
+                  `[MultiWeek] Successfully saved week ${weekNumber} to DB`
+                );
+              }
+            }
+
+            accumulatedWorkouts.push(...weekWorkouts);
+            sendEvent({
+              type: 'week',
+              weekNumber,
+              workouts: weekWorkouts,
+              programId,
+            });
+          } catch (error) {
+            logWithTimestamp(
+              `[MultiWeek] Failed to generate week ${weekNumber}`,
+              { error: error.message }
+            );
+            // Create placeholder workouts for the failed week
+            const startWorkoutIndexOfFailedWeek =
+              (weekNumber - 1) * daysPerWeek;
+            const endWorkoutIndexOfFailedWeek = Math.min(
+              weekNumber * daysPerWeek - 1,
+              totalWorkouts - 1
+            );
+            const weekDatesForPlaceholder = suggestedDates.slice(
+              startWorkoutIndexOfFailedWeek,
+              endWorkoutIndexOfFailedWeek + 1
+            );
+
+            const placeholderWorkouts = createPlaceholderWorkouts(
+              weekNumber,
+              weekDatesForPlaceholder,
+              daysPerWeek
+            );
+
+            // Optionally save placeholders to DB
+            if (
+              programId &&
+              entityId &&
+              placeholderWorkouts &&
+              placeholderWorkouts.length > 0
+            ) {
+              const placeholderInserts = placeholderWorkouts.map(
+                (pWorkout) => ({
+                  program_id: programId,
+                  entity_id: entityId,
+                  title: pWorkout.title,
+                  body: pWorkout.body,
+                  tags: { placeholder: true },
+                  scheduled_date: pWorkout.date
+                    ? new Date(pWorkout.date).toISOString()
+                    : null,
+                  is_reference: false,
+                  completed: false,
+                  created_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString(),
+                })
+              );
+              await supabase
+                .from('program_workouts')
+                .insert(placeholderInserts); // fire and forget for placeholders
+            }
+
+            accumulatedWorkouts.push(...placeholderWorkouts);
+            sendEvent({
+              type: 'week_error',
+              weekNumber,
+              message: `Failed to generate week ${weekNumber}. Placeholders provided.`,
+              workouts: placeholderWorkouts,
+              programId,
+            });
+          }
+        }
+
+        // Update profile after generation process is complete or significantly progressed
+        await updateProfileAfterGeneration(
+          supabase,
+          userId,
+          await isPaidSubscriberCheck(supabase, userId)
         );
 
-        const placeholderWorkouts = createPlaceholderWorkouts(
-          weekNumber,
-          weekDates
-        );
-        allWorkouts.push(...placeholderWorkouts);
+        sendEvent({
+          type: 'complete',
+          allWorkouts: accumulatedWorkouts,
+          programId,
+          message: 'Program generation complete.',
+        });
+      } catch (error) {
+        logWithTimestamp('[MultiWeek] General error in stream processing', {
+          error: error.message,
+          stack: error.stack,
+        });
+        sendEvent({
+          type: 'fatal_error',
+          message: 'A critical error occurred during program generation.',
+          details: error.message,
+        });
+      } finally {
+        controller.close();
       }
-    });
-  } catch (parallelError) {
-    logWithTimestamp('Error in parallel week generation', {
-      error: parallelError.message,
-    });
-
-    // If we have a catastrophic error, make sure we still return something
-    if (allWorkouts.length === 0) {
-      // Create placeholder workouts for all weeks
-      for (let weekNumber = 1; weekNumber <= chunksToGenerate; weekNumber++) {
-        const startWorkoutIndex = (weekNumber - 1) * workoutsPerChunk;
-        const endWorkoutIndex = Math.min(
-          weekNumber * workoutsPerChunk - 1,
-          totalWorkouts - 1
-        );
-        const weekDates = suggestedDates.slice(
-          startWorkoutIndex,
-          endWorkoutIndex + 1
-        );
-
-        const placeholderWorkouts = createPlaceholderWorkouts(
-          weekNumber,
-          weekDates
-        );
-        allWorkouts.push(...placeholderWorkouts);
-      }
-    }
-  }
-
-  // Sort workouts by date to ensure correct order
-  allWorkouts.sort((a, b) => new Date(a.date) - new Date(b.date));
-
-  // Update the user's profile after successful generation
-  await updateProfileAfterGeneration(
-    supabase,
-    session.user.id,
-    // We need to check if user is paid subscriber here too
-    // since we don't have access to the isPaidSubscriber variable from main function
-    await isPaidSubscriberCheck(supabase, session.user.id)
-  );
-
-  // Return the complete program
-  logWithTimestamp('Large program generation complete', {
-    totalWorkoutsGenerated: allWorkouts.length,
+    },
   });
 
-  return NextResponse.json(
-    {
-      message: 'Program generated successfully',
-      title: programTitle,
-      description: programDescription,
-      overview: programOverview || 'No overview provided',
-      suggestions: allWorkouts,
+  return new NextResponse(stream, {
+    status: 200,
+    headers: {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache, no-transform',
+      Connection: 'keep-alive',
+      'X-Accel-Buffering': 'no', // For Nginx
     },
-    { status: 200 }
-  );
+  });
 }
 
 // Helper function to create a program overview prompt
@@ -1123,45 +1246,61 @@ async function generateWeek(
 }
 
 // Helper function to create placeholder workouts when generation fails
-function createPlaceholderWorkouts(weekNumber, weekDates) {
-  return weekDates.map((date, index) => {
-    const dayNumber = index + 1;
+function createPlaceholderWorkouts(weekNumber, weekDates, daysPerWeek) {
+  const placeholders = [];
+  // Ensure we create daysPerWeek placeholders if weekDates is short, or use weekDates.length
+  const numPlaceholders = weekDates.length > 0 ? weekDates.length : daysPerWeek;
 
-    return {
-      title: `Week ${weekNumber}, Day ${dayNumber}: Workout`,
+  for (let i = 0; i < numPlaceholders; i++) {
+    const dayNumber = i + 1;
+    const date =
+      weekDates[i] ||
+      new Date(
+        new Date().setDate(new Date().getDate() + (weekNumber - 1) * 7 + i)
+      )
+        .toISOString()
+        .split('T')[0]; // fallback date
+
+    placeholders.push({
+      title: `Week ${weekNumber}, Day ${dayNumber}: Placeholder Workout`,
       body: `## Stimulus and Strategy
-This is a placeholder workout. The AI was unable to generate this specific workout.
+This is a placeholder workout. The AI was unable to generate this specific workout. Review and fill in details.
 
 ## Warm-up
 5 minutes of light cardio
 Dynamic stretching for major muscle groups
 
-## Strength Work
-Squats: 4 sets of 10 reps
-Push-ups: 4 sets of 10 reps
-Rows: 4 sets of 10 reps
+## Workout
+(Define exercises, sets, reps, and rest periods here)
 
-## Conditioning Work
-AMRAP in 12 minutes:
-10 Burpees
+Example:
+Strength Work:
+Squats: 3 sets of 8-10 reps
+Bench Press: 3 sets of 8-10 reps
+Rows: 3 sets of 8-10 reps
+
+Conditioning:
+AMRAP 10 minutes:
+5 Pull-ups
+10 Push-ups
 15 Air Squats
-20 Mountain Climbers
 
 ## Cool-down
 5 minutes of light cardio
 Static stretching for major muscle groups
 
 ## Coaching Cues
-- Maintain proper form throughout all exercises
-- Breathe properly during lifts
-- Scale as needed based on your fitness level`,
+- Focus on proper form.
+- Adjust intensity as needed.`,
       date: date,
-    };
-  });
+      isPlaceholder: true,
+    });
+  }
+  return placeholders;
 }
 
 // Helper function to prepare common prompt elements
-async function preparePromptElements(programId, supabase, params) {
+async function preparePromptElements(programId, supabase, openai, params) {
   const {
     goal,
     difficulty,
@@ -1173,6 +1312,7 @@ async function preparePromptElements(programId, supabase, params) {
     trainingType,
     selectedDaysOfWeek,
     referenceInput,
+    entityId, // Added entityId
   } = params;
 
   // Get the day names from the day numbers for the prompt
@@ -1189,13 +1329,35 @@ async function preparePromptElements(programId, supabase, params) {
     .map((dayNum) => dayNames[dayNum])
     .join(', ');
 
-  // Fetch client metrics if program ID exists
+  // Fetch client metrics using entityId if provided, otherwise try via programId
   let clientMetricsData = null;
-  if (programId) {
+  if (entityId) {
     try {
-      logWithTimestamp('Fetching client metrics', { programId });
-
-      // Get entity_id from the program
+      logWithTimestamp('Fetching client metrics using provided entityId', {
+        entityId,
+      });
+      const { data: entityData, error: entityError } = await supabase
+        .from('entities')
+        .select('*')
+        .eq('id', entityId)
+        .single();
+      if (entityError) {
+        logWithTimestamp('Error fetching client metrics with entityId', {
+          error: entityError,
+        });
+      } else if (entityData) {
+        logWithTimestamp('Found client metrics with entityId', { entityData });
+        clientMetricsData = entityData;
+      }
+    } catch (err) {
+      logWithTimestamp('Error processing client metrics with entityId', {
+        error: err.message,
+      });
+    }
+  } else if (programId) {
+    // Fallback to fetching via programId if entityId was not directly passed
+    try {
+      logWithTimestamp('Fetching client metrics via programId', { programId });
       const { data: programData, error: programError } = await supabase
         .from('programs')
         .select('entity_id')
@@ -1336,6 +1498,7 @@ async function preparePromptElements(programId, supabase, params) {
     trainingType,
     referenceInput,
     ragMatchedWorkouts,
+    entityId, // Make sure to return entityId if it's fetched/used here
   };
 }
 
