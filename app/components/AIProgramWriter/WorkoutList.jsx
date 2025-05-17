@@ -1,5 +1,14 @@
 'use client';
-import { Trash2, Pencil, MoreVertical, CheckCircle } from 'lucide-react';
+import {
+  Trash2,
+  Pencil,
+  MoreVertical,
+  CheckCircle,
+  Send,
+  ExternalLink,
+  Share2,
+  Eye,
+} from 'lucide-react';
 export default function WorkoutList({
   workouts,
   daysPerWeek,
@@ -13,6 +22,8 @@ export default function WorkoutList({
   generatedDescription,
   setFormData,
   showToastMessage,
+  isViewOnlyMode,
+  onOpenFullScreen,
 }) {
   if (!workouts || workouts.length === 0) return null;
 
@@ -118,46 +129,101 @@ export default function WorkoutList({
                       </button>
                       <ul
                         tabIndex={0}
-                        className="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-40"
+                        className="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-48"
                       >
+                        {!isViewOnlyMode && (
+                          <>
+                            <li className="w-full">
+                              <button
+                                className="flex items-center gap-2 w-full text-neutral"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onEditWorkout(workout);
+                                }}
+                                title="Edit workout"
+                              >
+                                <Pencil className="h-4 w-4" /> Edit
+                              </button>
+                            </li>
+                            <li className="w-full">
+                              <button
+                                className="flex items-center gap-2 w-full text-success"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onMarkComplete(workout);
+                                }}
+                                title={
+                                  workout.completed
+                                    ? 'Mark as incomplete'
+                                    : 'Mark as complete'
+                                }
+                              >
+                                <CheckCircle className="h-4 w-4" />
+                                {workout.completed ? 'Incomplete' : 'Complete'}
+                              </button>
+                            </li>
+                          </>
+                        )}
                         <li className="w-full">
                           <button
-                            className="flex items-center gap-2 w-full text-neutral"
+                            className="flex items-center gap-2 w-full text-info"
                             onClick={(e) => {
                               e.stopPropagation();
-                              onEditWorkout(workout);
+                              showToastMessage(
+                                'Send to Client clicked for "' +
+                                  (workout.title || 'Workout') +
+                                  '" (not implemented yet)',
+                                'info'
+                              );
                             }}
-                            title="Edit workout"
+                            title="Send workout to client"
                           >
-                            <Pencil className="h-4 w-4" /> Edit
+                            <Send className="h-4 w-4" /> Send to Client
                           </button>
                         </li>
                         <li className="w-full">
                           <button
-                            className="flex items-center gap-2 w-full text-success"
+                            className="flex items-center gap-2 w-full text-secondary"
                             onClick={(e) => {
                               e.stopPropagation();
-                              onMarkComplete(workout);
+                              if (onOpenFullScreen) {
+                                onOpenFullScreen(workout);
+                              }
                             }}
-                            title={
-                              workout.completed
-                                ? 'Mark as incomplete'
-                                : 'Mark as complete'
-                            }
+                            title="View workout in full screen"
                           >
-                            <CheckCircle className="h-4 w-4" />
-                            {workout.completed ? 'Incomplete' : 'Complete'}
+                            <ExternalLink className="h-4 w-4" /> Full Screen
                           </button>
                         </li>
                         <li className="w-full">
                           <button
-                            className="flex items-center gap-2 w-full text-error"
-                            onClick={(e) => onDeleteWorkout(workout.id, e)}
-                            title="Delete workout"
+                            className="flex items-center gap-2 w-full text-accent"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              showToastMessage(
+                                'Share clicked for "' +
+                                  (workout.title || 'Workout') +
+                                  '" (not implemented yet)',
+                                'info'
+                              );
+                            }}
+                            title="Share workout"
                           >
-                            <Trash2 className="h-4 w-4" /> Delete
+                            <Share2 className="h-4 w-4" /> Share
                           </button>
                         </li>
+                        {!isViewOnlyMode && (
+                          <li className="w-full">
+                            <div className="divider my-1"></div>
+                            <button
+                              className="flex items-center gap-2 w-full text-error"
+                              onClick={(e) => onDeleteWorkout(workout.id, e)}
+                              title="Delete workout"
+                            >
+                              <Trash2 className="h-4 w-4" /> Delete
+                            </button>
+                          </li>
+                        )}
                       </ul>
                     </div>
                   )}
@@ -183,7 +249,7 @@ export default function WorkoutList({
                     workout.description ||
                     'No description available'}
                 </div>
-                <div className="flex justify-end items-center mt-auto">
+                <div className="flex justify-between items-center mt-auto">
                   <button
                     className="btn sm:btn-sm text-white btn-primary"
                     onClick={(e) => {
@@ -191,7 +257,7 @@ export default function WorkoutList({
                       onViewDetails(workout);
                     }}
                   >
-                    View Details
+                    <Eye className="h-4 w-4 mr-1 sm:mr-2" /> View Details
                   </button>
                 </div>
               </div>

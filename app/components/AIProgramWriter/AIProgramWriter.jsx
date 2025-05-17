@@ -36,6 +36,7 @@ import EditWorkoutModalComponent from './EditWorkoutModal';
 import AutoSaveStatusIndicatorComponent from './AutoSaveStatusIndicator';
 import ConfirmationModalComponent from './ConfirmationModal'; // Assuming this exists now
 import ReferenceWorkoutSearchModal from './ReferenceWorkoutSearchModal';
+import FullScreenWorkoutModalComponent from './FullScreenWorkoutModal'; // Import FullScreenWorkoutModal
 
 import { InfoIcon } from 'lucide-react';
 
@@ -50,6 +51,7 @@ const RescheduleModal = memo(RescheduleModalComponent);
 const EditWorkoutModal = memo(EditWorkoutModalComponent);
 const AutoSaveStatusIndicator = memo(AutoSaveStatusIndicatorComponent);
 const ConfirmationModal = memo(ConfirmationModalComponent);
+const FullScreenWorkoutModal = memo(FullScreenWorkoutModalComponent); // Memoize
 
 const AUTO_SAVE_STATES = {
   IDLE: 'idle',
@@ -59,7 +61,7 @@ const AUTO_SAVE_STATES = {
   ERROR: 'error',
 };
 
-export default function AIProgramWriter({ programId }) {
+export default function AIProgramWriter({ programId, isViewOnlyMode }) {
   const {
     supabase,
     subscriptionStatus,
@@ -102,6 +104,11 @@ export default function AIProgramWriter({ programId }) {
     customSectionDuration,
     customSectionDescription,
   } = state;
+
+  // Add state for Full Screen Modal
+  const [isFullScreenModalOpen, setIsFullScreenModalOpen] = useState(false);
+  const [selectedWorkoutForFullScreen, setSelectedWorkoutForFullScreen] =
+    useState(null);
 
   const loadingTimer = useRef(null);
   const isAutoUpdating = useRef(false);
@@ -1107,6 +1114,17 @@ export default function AIProgramWriter({ programId }) {
     [programId, supabase]
   );
 
+  // --- Full Screen Modal Handlers ---
+  const handleOpenFullScreenModal = useCallback((workout) => {
+    setSelectedWorkoutForFullScreen(workout);
+    setIsFullScreenModalOpen(true);
+  }, []);
+
+  const handleCloseFullScreenModal = useCallback(() => {
+    setIsFullScreenModalOpen(false);
+    setSelectedWorkoutForFullScreen(null);
+  }, []);
+
   // --- Enhanced Workout Save Handler ---
   const handleSaveEnhancedWorkout = async (workout) => {
     if (!workout.id) {
@@ -1156,11 +1174,13 @@ export default function AIProgramWriter({ programId }) {
         />
       )}
 
-      <AutoSaveStatusIndicator
-        autoSaveState={autoSaveState}
-        isDirty={isDirty}
-      />
-      {programId && (
+      {!isViewOnlyMode && (
+        <AutoSaveStatusIndicator
+          autoSaveState={autoSaveState}
+          isDirty={isDirty}
+        />
+      )}
+      {programId && !isViewOnlyMode && (
         <div className="flex justify-end items-center mt-6 mb-6">
           <div
             className="tooltip tooltip-top tooltip-info mr-2"
@@ -1184,64 +1204,68 @@ export default function AIProgramWriter({ programId }) {
           </button>
         </div>
       )}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <ProgramForm
-          dispatch={dispatch}
-          handleWorkoutFormatChange={handleWorkoutFormatChange}
-          handleDayOfWeekChange={handleDayOfWeekChangeWrapper}
-          generateProgram={handleGenerateClick}
-          addCustomSection={addCustomSection}
-          removeCustomSection={removeCustomSection}
-          handleProgramTypeChange={handleProgramTypeChange}
-          formData={{
-            ...formData,
-            onOpenReferenceWorkoutModal: handleOpenReferenceWorkoutModal,
-          }}
-          isLoading={isLoading}
-          suggestions={suggestions}
-          generationStage={generationStage}
-          loadingDuration={loadingDuration}
-          hasCustomWorkoutFormat={hasCustomWorkoutFormat}
-          setHasCustomWorkoutFormat={handleSetHasCustomFormat}
-          customSectionName={customSectionName}
-          setCustomSectionName={(value) =>
-            handleSetCustomSectionField('customSectionName', value)
-          }
-          customSectionDuration={customSectionDuration}
-          setCustomSectionDuration={(value) =>
-            handleSetCustomSectionField('customSectionDuration', value)
-          }
-          customSectionDescription={customSectionDescription}
-          setCustomSectionDescription={(value) =>
-            handleSetCustomSectionField('customSectionDescription', value)
-          }
-          equipmentSelector={
-            <EquipmentSelector
-              equipment={formData.equipment}
-              onEquipmentChange={handleEquipmentChangeWrapper}
-              equipmentList={equipmentList}
-              allEquipmentSelected={allEquipmentSelected}
-              isVisible={showEquipment}
-              onToggleVisibility={handleToggleEquipment}
-            />
-          }
-          subscriptionStatus={subscriptionStatus}
-          trialEndDate={trialEndDate}
-          generationsRemaining={generationsRemaining}
-          generationsToday={generationsToday}
-          lastGenerationDate={lastGenerationDate}
-        />
-      </div>
+      {!isViewOnlyMode && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <ProgramForm
+            dispatch={dispatch}
+            handleWorkoutFormatChange={handleWorkoutFormatChange}
+            handleDayOfWeekChange={handleDayOfWeekChangeWrapper}
+            generateProgram={handleGenerateClick}
+            addCustomSection={addCustomSection}
+            removeCustomSection={removeCustomSection}
+            handleProgramTypeChange={handleProgramTypeChange}
+            formData={{
+              ...formData,
+              onOpenReferenceWorkoutModal: handleOpenReferenceWorkoutModal,
+            }}
+            isLoading={isLoading}
+            suggestions={suggestions}
+            generationStage={generationStage}
+            loadingDuration={loadingDuration}
+            hasCustomWorkoutFormat={hasCustomWorkoutFormat}
+            setHasCustomWorkoutFormat={handleSetHasCustomFormat}
+            customSectionName={customSectionName}
+            setCustomSectionName={(value) =>
+              handleSetCustomSectionField('customSectionName', value)
+            }
+            customSectionDuration={customSectionDuration}
+            setCustomSectionDuration={(value) =>
+              handleSetCustomSectionField('customSectionDuration', value)
+            }
+            customSectionDescription={customSectionDescription}
+            setCustomSectionDescription={(value) =>
+              handleSetCustomSectionField('customSectionDescription', value)
+            }
+            equipmentSelector={
+              <EquipmentSelector
+                equipment={formData.equipment}
+                onEquipmentChange={handleEquipmentChangeWrapper}
+                equipmentList={equipmentList}
+                allEquipmentSelected={allEquipmentSelected}
+                isVisible={showEquipment}
+                onToggleVisibility={handleToggleEquipment}
+              />
+            }
+            subscriptionStatus={subscriptionStatus}
+            trialEndDate={trialEndDate}
+            generationsRemaining={generationsRemaining}
+            generationsToday={generationsToday}
+            lastGenerationDate={lastGenerationDate}
+          />
+        </div>
+      )}
 
-      <ReferenceWorkouts
-        workouts={dbReferenceWorkouts}
-        supabase={supabase}
-        onRemove={async (id) => {
-          await supabase.from('program_workouts').delete().eq('id', id);
-          setDbReferenceWorkouts((prev) => prev.filter((w) => w.id !== id));
-        }}
-        showToastMessage={showToastMessage}
-      />
+      {!isViewOnlyMode && (
+        <ReferenceWorkouts
+          workouts={dbReferenceWorkouts}
+          supabase={supabase}
+          onRemove={async (id) => {
+            await supabase.from('program_workouts').delete().eq('id', id);
+            setDbReferenceWorkouts((prev) => prev.filter((w) => w.id !== id));
+          }}
+          showToastMessage={showToastMessage}
+        />
+      )}
 
       {suggestions.length > 0 && (
         <div className="flex justify-between items-center mt-6">
@@ -1264,6 +1288,8 @@ export default function AIProgramWriter({ programId }) {
             onMarkComplete={handleMarkComplete}
             isLoading={isLoading}
             generatedDescription={generatedDescription}
+            isViewOnlyMode={isViewOnlyMode}
+            onOpenFullScreen={handleOpenFullScreenModal}
           />
         </>
       )}
@@ -1330,6 +1356,13 @@ export default function AIProgramWriter({ programId }) {
         onSelect={handleReferenceWorkoutsSelected}
         selectedWorkouts={dbReferenceWorkouts}
         initialSearchText={formData.referenceInput || ''}
+      />
+
+      {/* Render FullScreenWorkoutModal */}
+      <FullScreenWorkoutModal
+        isOpen={isFullScreenModalOpen}
+        workout={selectedWorkoutForFullScreen}
+        onClose={handleCloseFullScreenModal}
       />
     </div>
   );

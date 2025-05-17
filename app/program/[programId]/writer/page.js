@@ -4,7 +4,15 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useRouter, useParams } from 'next/navigation';
 import AIProgramWriter from '@/components/AIProgramWriter/AIProgramWriter';
 import ClientMetricsTab from '@/components/ClientMetricsTab';
-import { Edit2, Check, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import {
+  Edit2,
+  Check,
+  X,
+  ChevronLeft,
+  ChevronRight,
+  Eye,
+  EyeOff,
+} from 'lucide-react';
 import { ProgramWriterProvider } from '@/contexts/ProgramWriterContext';
 
 export default function ProgramWriterPage() {
@@ -22,6 +30,8 @@ export default function ProgramWriterPage() {
 
   // State for sidebar collapse
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  // State for View Only mode
+  const [isViewOnlyMode, setIsViewOnlyMode] = useState(false);
 
   // Handler to toggle sidebar collapse
   const toggleSidebarCollapse = () => {
@@ -113,6 +123,14 @@ export default function ProgramWriterPage() {
     setIsEditingName(false);
   };
 
+  const toggleViewOnlyMode = () => {
+    setIsViewOnlyMode(!isViewOnlyMode);
+    // Optionally, ensure sidebar is collapsed in view-only mode
+    if (!isViewOnlyMode) {
+      setIsSidebarCollapsed(true);
+    }
+  };
+
   return (
     <ProgramWriterProvider initialProgramId={programId}>
       <div className="w-full max-w-full overflow-hidden relative">
@@ -149,18 +167,33 @@ export default function ProgramWriterPage() {
                   onClick={() => setIsEditingName(true)}
                 />
               </div>
-              {clientName && (
+              {clientName && !isViewOnlyMode && (
                 <p className="text-xl text-gray-500">
                   {clientName} ({clientType})
                 </p>
               )}
+              <button
+                onClick={toggleViewOnlyMode}
+                className="btn btn-ghost btn-sm"
+                title={
+                  isViewOnlyMode
+                    ? 'Exit View Only Mode'
+                    : 'Enter View Only Mode'
+                }
+              >
+                {isViewOnlyMode ? (
+                  <EyeOff className="h-5 w-5" />
+                ) : (
+                  <Eye className="h-5 w-5" />
+                )}
+              </button>
             </div>
           )}
           <p className="text-practical-gray">{programDescription}</p>
         </div>
 
         {/* Open Sidebar Button - Visible only when collapsed */}
-        {isSidebarCollapsed && (
+        {isSidebarCollapsed && !isViewOnlyMode && (
           <button
             onClick={toggleSidebarCollapse}
             className="fixed top-1/2 right-0 transform -translate-y-1/2 z-20 btn btn-primary btn-circle shadow-lg lg:flex hidden"
@@ -175,11 +208,14 @@ export default function ProgramWriterPage() {
           {/* AI Program Writer (Main Content) - Dynamically sized */}
           <div
             className={`flex-grow w-full ${
-              isSidebarCollapsed ? 'lg:w-full' : 'lg:w-2/3'
+              isSidebarCollapsed || isViewOnlyMode ? 'lg:w-full' : 'lg:w-2/3'
             } transition-all duration-300 ease-in-out`}
           >
             <div className="bg-white rounded-lg shadow h-full w-full">
-              <AIProgramWriter programId={programId} />
+              <AIProgramWriter
+                programId={programId}
+                isViewOnlyMode={isViewOnlyMode}
+              />
             </div>
           </div>
 
@@ -188,7 +224,7 @@ export default function ProgramWriterPage() {
             className={`flex-shrink-0 transition-all duration-300 ease-in-out 
                         hidden lg:block /* Hide on small screens, block on large */ 
                         ${
-                          isSidebarCollapsed
+                          isSidebarCollapsed || isViewOnlyMode
                             ? 'lg:w-0 opacity-0 pointer-events-none'
                             : 'lg:w-1/3 opacity-100 pointer-events-auto'
                         }`}

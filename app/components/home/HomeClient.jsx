@@ -115,8 +115,8 @@ export default function HomeClient() {
                   alt="HalteresAI dashboard showing workout calendar and programming interface"
                   width={500}
                   height={300}
-                  layout="responsive"
                   className="rounded-md"
+                  unoptimized
                 />
               </div>
             </div>
@@ -137,8 +137,8 @@ export default function HomeClient() {
                   alt="HalteresAI program writer in action, generating custom workouts"
                   width={500}
                   height={300}
-                  layout="responsive"
                   className="rounded-md"
+                  unoptimized
                 />
               </div>
             </div>
@@ -159,8 +159,8 @@ export default function HomeClient() {
                   alt="HalteresAI reference library showing various workout templates and movements"
                   width={500}
                   height={300}
-                  layout="responsive"
                   className="rounded-md"
+                  unoptimized
                 />
               </div>
             </div>
@@ -181,8 +181,8 @@ export default function HomeClient() {
                   alt="HalteresAI client metrics dashboard showing performance tracking and progress"
                   width={500}
                   height={300}
-                  layout="responsive"
                   className="rounded-md"
+                  unoptimized
                 />
               </div>
             </div>
