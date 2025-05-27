@@ -1,7 +1,22 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { ArrowRight, LightBulb, DollarSign, Clock, Users } from 'lucide-react';
+import { 
+  ArrowRight, 
+  DollarSign, 
+  Clock, 
+  Users, 
+  Zap, 
+  TrendingUp, 
+  Target,
+  CheckCircle,
+  Star,
+  Play,
+  BarChart3,
+  Calendar,
+  Bot,
+  Sparkles
+} from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import Image from 'next/image';
 import programWriter from '@/assets/program writer.gif';
@@ -24,178 +39,407 @@ export default function HomeClient() {
     }
   };
 
-  const Feature = ({ icon, title, description }) => (
-    <div className="flex flex-col items-center p-6 bg-white rounded-lg shadow-md">
-      {icon}
-      <h3 className="mt-4 text-xl font-semibold">{title}</h3>
-      <p className="mt-2 text-gray-600 text-center">{description}</p>
+  const ValueProp = ({ icon, title, description, highlight }) => (
+    <div className="flex flex-col items-center p-8 bg-white rounded-2xl shadow-lg border border-gray-100 hover:shadow-xl transition-all duration-300">
+      <div className="p-4 bg-primary/10 rounded-full mb-6">
+        {icon}
+      </div>
+      <h3 className="text-2xl font-bold mb-4 text-center">{title}</h3>
+      <p className="text-gray-600 text-center leading-relaxed">{description}</p>
+      {highlight && (
+        <div className="mt-4 px-4 py-2 bg-green-100 text-green-800 rounded-full text-sm font-semibold">
+          {highlight}
+        </div>
+      )}
+    </div>
+  );
+
+  const FeatureShowcase = ({ title, description, image, imageAlt, reverse = false, badge }) => (
+    <div className={`flex flex-col ${reverse ? 'lg:flex-row-reverse' : 'lg:flex-row'} items-center gap-12 mb-20`}>
+      <div className="lg:w-1/2 space-y-6">
+        {badge && (
+          <div className="inline-flex items-center px-4 py-2 bg-primary/10 text-primary rounded-full text-sm font-semibold">
+            {badge}
+          </div>
+        )}
+        <h3 className="text-3xl lg:text-4xl font-bold text-gray-900">{title}</h3>
+        <p className="text-xl text-gray-600 leading-relaxed">{description}</p>
+      </div>
+      <div className="lg:w-1/2">
+        <div className="bg-white p-6 rounded-2xl shadow-xl border border-gray-100">
+          <Image
+            src={image}
+            alt={imageAlt}
+            width={600}
+            height={400}
+            className="rounded-xl w-full h-auto"
+            priority
+          />
+        </div>
+      </div>
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
       {/* Hero Section */}
-      <section className="text-black-1 py-12">
-        <div className="container mx-auto px-4 py-8 md:py-16 text-center">
-          <div className="flex justify-center mb-6">
-            <Image
-              src={logo}
-              alt="HalteresAI Logo"
-              width={120}
-              height={120}
-              className="rounded-lg"
-              priority
-            />
+      <section className="relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-blue-600/5"></div>
+        <div className="relative container mx-auto px-4 py-20 lg:py-32">
+          <div className="grid lg:grid-cols-2 gap-16 items-center">
+            {/* Left Column - Content */}
+            <div className="space-y-8">
+              <div className="flex items-center space-x-3">
+                <Image
+                  src={logo}
+                  alt="Halteres.ai Logo"
+                  width={48}
+                  height={48}
+                  className="rounded-lg"
+                  priority
+                />
+                <span className="text-2xl font-bold text-primary">Halteres.ai</span>
+              </div>
+              
+              <div className="space-y-6">
+                <h1 className="text-5xl lg:text-6xl font-bold text-gray-900 leading-tight">
+                  Stop Spending Hours on Programming.
+                  <span className="text-primary block">Start Making More Money.</span>
+                </h1>
+                
+                <p className="text-xl lg:text-2xl text-gray-600 leading-relaxed">
+                  AI-powered workout programming that takes <strong>2 minutes instead of 2 hours</strong>. 
+                  Free up your time to take on more clients while delivering state-of-the-art programming quality.
+                </p>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-4">
+                <button
+                  onClick={() => push()}
+                  className="bg-primary text-white px-8 py-4 rounded-xl font-semibold text-lg hover:bg-primary/90 transition duration-300 flex items-center justify-center shadow-lg"
+                >
+                  Start Free Trial
+                  <ArrowRight className="w-5 h-5 ml-2" />
+                </button>
+                <div className="flex items-center space-x-2 text-gray-600">
+                  <CheckCircle className="w-5 h-5 text-green-500" />
+                  <span>No credit card required</span>
+                </div>
+              </div>
+
+              {/* Quick Stats */}
+              <div className="flex flex-wrap gap-8 pt-4">
+                <div className="flex items-center space-x-2">
+                  <Clock className="w-6 h-6 text-primary" />
+                  <div>
+                    <div className="font-bold text-2xl text-gray-900">2 min</div>
+                    <div className="text-sm text-gray-600">vs 2 hours</div>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Users className="w-6 h-6 text-primary" />
+                  <div>
+                    <div className="font-bold text-2xl text-gray-900">3x</div>
+                    <div className="text-sm text-gray-600">more clients</div>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <DollarSign className="w-6 h-6 text-primary" />
+                  <div>
+                    <div className="font-bold text-2xl text-gray-900">$500+</div>
+                    <div className="text-sm text-gray-600">extra monthly</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Right Column - Loom Video */}
+            <div className="relative">
+              <div className="bg-white p-6 rounded-3xl shadow-2xl border border-gray-100">
+                <div className="rounded-2xl overflow-hidden">
+                  {/* Loom Video Embed */}
+                  <div style={{position: 'relative', paddingBottom: '93.5064935064935%', height: 0}}>
+                    <iframe 
+                      src="https://www.loom.com/embed/3e1ef91a6ff24c4c97ef4d7916e60b73?sid=fd29ac4b-e6fd-4d99-8882-5fd92d938ede" 
+                      frameBorder="0" 
+                      webkitallowfullscreen="true" 
+                      mozallowfullscreen="true" 
+                      allowFullScreen 
+                      style={{position: 'absolute', top: 0, left: 0, width: '100%', height: '100%'}}
+                      className="rounded-2xl"
+                    />
+                  </div>
+                </div>
+                <div className="mt-4 text-center">
+                  <p className="text-sm text-gray-600">See how quickly you can program 2 weeks of workouts</p>
+                </div>
+              </div>
+              
+              {/* Floating badges */}
+              <div className="absolute -top-4 -right-4 bg-green-500 text-white px-4 py-2 rounded-full text-sm font-semibold shadow-lg">
+                ⚡ 60x Faster
+              </div>
+              <div className="absolute -bottom-4 -left-4 bg-blue-500 text-white px-4 py-2 rounded-full text-sm font-semibold shadow-lg">
+                🏆 Pro Quality
+              </div>
+            </div>
           </div>
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">
-            Elevate Your Fitness Programming with{' '}
-            <span className="text-blue-600">HalteresAI</span>
-          </h1>
-          <p className="text-xl mb-8 max-w-3xl mx-auto">
-            AI-Powered, Personalized Workouts for Fitness Professionals
-          </p>
-          <button
-            onClick={() => push()}
-            className="bg-primary text-white px-6 py-3 rounded-full font-semibold hover:bg-blue-100 transition duration-300 flex items-center mx-auto"
-            aria-label="Get Started with HalteresAI"
-          >
-            Get Started!
-            <ArrowRight className="w-4 h-4 ml-2" />
-          </button>
         </div>
       </section>
-      <div className="flex justify-center p-8 bg-gray-50 rounded-xl shadow-lg">
-        <Image
-          src={dashboard}
-          alt="HalteresAI dashboard showing workout calendar and programming interface"
-          width={800}
-          height={800}
-          className="rounded-lg"
-          priority
-        />
-      </div>
 
-      {/* Why HalteresAI is Great - Features Section */}
-      <section className="py-16">
+      {/* Value Proposition Section */}
+      <section className="py-20 bg-white">
         <div className="container mx-auto px-4">
-          <h2 className="text-3xl font-bold text-center mb-12">
-            The HalteresAI Advantage
-          </h2>
-          <div className="text-center max-w-4xl mx-auto">
-            <p className="text-lg">
-              HalteresAI adapts to your gym's equipment, schedule, and members,
-              delivering personalized, efficient workout plans that save time
-              and maximize results for your coaching business.
+          <div className="text-center mb-16">
+            <h2 className="text-4xl lg:text-5xl font-bold text-gray-900 mb-6">
+              Why Fitness Professionals Choose Halteres.ai
+            </h2>
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+              Transform your programming workflow and scale your business without sacrificing quality
             </p>
           </div>
+
+          <div className="grid md:grid-cols-3 gap-8">
+            <ValueProp
+              icon={<Clock className="w-8 h-8 text-primary" />}
+              title="Save 10+ Hours Per Week"
+              description="Generate comprehensive 2-week programs in under 2 minutes. Spend your time coaching, not programming."
+              highlight="60x Faster Than Manual"
+            />
+            <ValueProp
+              icon={<DollarSign className="w-8 h-8 text-primary" />}
+              title="Increase Revenue by 50%+"
+              description="Take on 3-5 more clients with the time you save. That's $500-$2000+ extra monthly revenue."
+              highlight="ROI in First Month"
+            />
+            <ValueProp
+              icon={<Target className="w-8 h-8 text-primary" />}
+              title="State-of-the-Art Quality"
+              description="AI trained on proven methodologies ensures every workout is perfectly structured and progressively challenging."
+              highlight="Science-Based"
+            />
+          </div>
         </div>
       </section>
 
-      {/* Tailored for Fitness Professionals Section */}
-      <section className="bg-gray-200 py-16">
+      {/* Problem/Solution Section */}
+      <section className="py-20 bg-gray-50">
         <div className="container mx-auto px-4">
-          <h2 className="text-3xl font-bold text-center mb-12">
-            Tailored for Fitness Professionals
-          </h2>
-          <div className="space-y-12">
-            <div className="flex flex-col md:flex-row items-center">
-              <div className="md:w-1/2 mb-4 md:mb-0 md:pr-8">
-                <h3 className="text-2xl font-semibold mb-2">
-                  1. Comprehensive Dashboard
-                </h3>
-                <p className="text-gray-700">
-                  Manage your entire facility's programming from a single,
-                  intuitive dashboard. View upcoming workouts, track metrics,
-                  and organize your programming calendar with ease.
-                </p>
-              </div>
-              <div className="md:w-1/2 bg-white p-4 rounded-lg shadow-md">
-                <Image
-                  src={dashboard}
-                  alt="HalteresAI dashboard showing workout calendar and programming interface"
-                  width={500}
-                  height={300}
-                  layout="responsive"
-                  className="rounded-md"
-                />
-              </div>
-            </div>
-            <div className="flex flex-col md:flex-row-reverse items-center">
-              <div className="md:w-1/2 mb-4 md:mb-0 md:pl-8">
-                <h3 className="text-2xl font-semibold mb-2">
-                  2. AI-Powered Program Creator
-                </h3>
-                <p className="text-gray-700">
-                  Our advanced algorithms create varied, challenging workouts
-                  that align with proven methodologies while considering your
-                  facility's unique factors and equipment.
-                </p>
-              </div>
-              <div className="md:w-1/2 bg-white p-4 rounded-lg shadow-md">
-                <Image
-                  src={programWriter}
-                  alt="HalteresAI program writer in action, generating custom workouts"
-                  width={500}
-                  height={300}
-                  layout="responsive"
-                  className="rounded-md"
-                />
+          <div className="grid lg:grid-cols-2 gap-16 items-center">
+            <div className="space-y-8">
+              <div className="space-y-6">
+                <h2 className="text-4xl lg:text-5xl font-bold text-gray-900">
+                  Stop Losing Money to Time-Consuming Programming
+                </h2>
+                <div className="space-y-4 text-lg text-gray-600">
+                  <div className="flex items-start space-x-3">
+                    <div className="bg-red-100 p-1 rounded-full mt-1">
+                      <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                    </div>
+                    <p>Spending 2-4 hours per client on workout programming</p>
+                  </div>
+                  <div className="flex items-start space-x-3">
+                    <div className="bg-red-100 p-1 rounded-full mt-1">
+                      <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                    </div>
+                    <p>Turning away new clients because you're at capacity</p>
+                  </div>
+                  <div className="flex items-start space-x-3">
+                    <div className="bg-red-100 p-1 rounded-full mt-1">
+                      <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                    </div>
+                    <p>Copy-pasting old workouts because you don't have time to create new ones</p>
+                  </div>
+                  <div className="flex items-start space-x-3">
+                    <div className="bg-red-100 p-1 rounded-full mt-1">
+                      <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                    </div>
+                    <p>Staying up late to finish programming for tomorrow's sessions</p>
+                  </div>
+                </div>
               </div>
             </div>
-            <div className="flex flex-col md:flex-row items-center">
-              <div className="md:w-1/2 mb-4 md:mb-0 md:pr-8">
-                <h3 className="text-2xl font-semibold mb-2">
-                  3. Workout Reference Library
-                </h3>
-                <p className="text-gray-700">
-                  Access our extensive library of workout templates and
-                  movements to find inspiration or quickly adapt existing
-                  programs to your needs.
-                </p>
-              </div>
-              <div className="md:w-1/2 bg-white p-4 rounded-lg shadow-md">
-                <Image
-                  src={referencer}
-                  alt="HalteresAI reference library showing various workout templates and movements"
-                  width={500}
-                  height={300}
-                  layout="responsive"
-                  className="rounded-md"
-                />
-              </div>
-            </div>
-            <div className="flex flex-col md:flex-row-reverse items-center">
-              <div className="md:w-1/2 mb-4 md:mb-0 md:pl-8">
-                <h3 className="text-2xl font-semibold mb-2">
-                  4. Client Metrics Tracking
-                </h3>
-                <p className="text-gray-700">
-                  Track client progress, performance metrics, and workout
-                  history with detailed analytics to help optimize your
-                  programming for individual needs.
-                </p>
-              </div>
-              <div className="md:w-1/2 bg-white p-4 rounded-lg shadow-md">
-                <Image
-                  src={clientMetrics}
-                  alt="HalteresAI client metrics dashboard showing performance tracking and progress"
-                  width={500}
-                  height={300}
-                  layout="responsive"
-                  className="rounded-md"
-                />
+
+            <div className="space-y-8">
+              <div className="bg-white p-8 rounded-2xl shadow-xl border border-gray-100">
+                <h3 className="text-2xl font-bold mb-6 text-center">Revenue Calculator</h3>
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
+                    <span>Current clients:</span>
+                    <span className="font-bold">20</span>
+                  </div>
+                  <div className="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
+                    <span>Time saved per week:</span>
+                    <span className="font-bold text-green-600">12 hours</span>
+                  </div>
+                  <div className="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
+                    <span>Additional clients possible:</span>
+                    <span className="font-bold text-blue-600">+4 clients</span>
+                  </div>
+                  <div className="border-t pt-4">
+                    <div className="flex justify-between items-center p-4 bg-primary/10 rounded-lg">
+                      <span className="font-bold">Extra monthly revenue:</span>
+                      <span className="font-bold text-2xl text-primary">$1,200</span>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
-          <div className="text-center mt-10">
+        </div>
+      </section>
+
+      {/* Feature Showcase Section */}
+      <section className="py-20 bg-white">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-20">
+            <h2 className="text-4xl lg:text-5xl font-bold text-gray-900 mb-6">
+              Everything You Need to Scale Your Business
+            </h2>
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+              Professional-grade tools designed specifically for personal trainers and CrossFit coaches
+            </p>
+          </div>
+
+          <div className="space-y-32">
+            <FeatureShowcase
+              badge="🚀 Core Feature"
+              title="Generate Complete 2-Week Programs in 2 Minutes"
+              description="Our AI analyzes your client's goals, available equipment, training methodology, and creates scientifically-backed programs with perfect progression. No more staying up late writing workouts."
+              image={programWriter}
+              imageAlt="AI Program Writer generating a complete 2-week workout program with customized exercises and progression"
+            />
+
+            <FeatureShowcase
+              badge="📊 Business Intelligence"
+              title="Manage All Your Clients From One Dashboard"
+              description="See every client's program at a glance. Track who's completed workouts, schedule upcoming sessions, and identify opportunities to optimize your programming efficiency."
+              image={dashboard}
+              imageAlt="Comprehensive dashboard showing client overview, program schedules, and workout completion tracking"
+              reverse={true}
+            />
+
+            <FeatureShowcase
+              badge="🔍 AI-Powered Search"
+              title="Find Any Workout Across the Web in Seconds"
+              description="Our AI agent searches the entire internet to find the perfect reference workouts for your needs. Access 2,000+ curated workouts in our database, plus unlimited web results. No more endless Google searches."
+              image={referencer}
+              imageAlt="AI-powered workout search showing web results and curated database workouts with intelligent filtering"
+              reverse={true}
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* Coming Soon Section */}
+      <section className="py-20 bg-gradient-to-br from-gray-50 to-blue-50">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-16">
+            <div className="inline-flex items-center px-4 py-2 bg-blue-100 text-blue-800 rounded-full text-sm font-semibold mb-6">
+              🚀 Coming Soon
+            </div>
+            <h2 className="text-4xl lg:text-5xl font-bold text-gray-900 mb-6">
+              Even More Ways to Grow Your Business
+            </h2>
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+              We're constantly building new features to help fitness professionals scale their businesses
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div className="bg-white p-8 rounded-2xl shadow-lg border border-gray-100 relative overflow-hidden">
+              <div className="absolute top-4 right-4 bg-blue-500 text-white px-3 py-1 rounded-full text-xs font-semibold">
+                Coming Soon
+              </div>
+              <div className="p-4 bg-blue-50 rounded-full w-16 h-16 flex items-center justify-center mb-6">
+                <BarChart3 className="w-8 h-8 text-blue-600" />
+              </div>
+              <h3 className="text-2xl font-bold mb-4">Advanced Progress Tracking</h3>
+              <p className="text-gray-600 leading-relaxed">
+                Monitor client PRs, completion rates, and program adherence. Use data-driven insights to demonstrate value and justify premium pricing.
+              </p>
+            </div>
+
+            <div className="bg-white p-8 rounded-2xl shadow-lg border border-gray-100 relative overflow-hidden">
+              <div className="absolute top-4 right-4 bg-blue-500 text-white px-3 py-1 rounded-full text-xs font-semibold">
+                Coming Soon
+              </div>
+              <div className="p-4 bg-green-50 rounded-full w-16 h-16 flex items-center justify-center mb-6">
+                <Sparkles className="w-8 h-8 text-green-600" />
+              </div>
+              <h3 className="text-2xl font-bold mb-4">Smart Workout Recommendations</h3>
+              <p className="text-gray-600 leading-relaxed">
+                AI-powered suggestions based on client performance, preferences, and progress patterns to optimize results automatically.
+              </p>
+            </div>
+
+            <div className="bg-white p-8 rounded-2xl shadow-lg border border-gray-100 relative overflow-hidden">
+              <div className="absolute top-4 right-4 bg-blue-500 text-white px-3 py-1 rounded-full text-xs font-semibold">
+                Coming Soon
+              </div>
+              <div className="p-4 bg-purple-50 rounded-full w-16 h-16 flex items-center justify-center mb-6">
+                <TrendingUp className="w-8 h-8 text-purple-600" />
+              </div>
+              <h3 className="text-2xl font-bold mb-4">Business Analytics</h3>
+              <p className="text-gray-600 leading-relaxed">
+                Track revenue per client, program effectiveness, and business growth metrics to make data-driven decisions about your coaching business.
+              </p>
+            </div>
+          </div>
+
+          <div className="text-center mt-12">
+            <p className="text-lg text-gray-600 mb-6">
+              Want to influence our roadmap? Join our community and help shape the future of fitness programming.
+            </p>
             <button
               onClick={() => push()}
-              className="bg-blue-600 text-white px-6 py-3 rounded-full font-semibold hover:bg-blue-700 transition duration-300 flex items-center mx-auto"
-              aria-label="Start using HalteresAI"
+              className="bg-primary text-white px-8 py-4 rounded-xl font-semibold text-lg hover:bg-primary/90 transition duration-300 inline-flex items-center"
             >
-              Get Started
-              <ArrowRight className="w-4 h-4 ml-2" />
+              Join Beta Program
+              <ArrowRight className="w-5 h-5 ml-2" />
             </button>
+          </div>
+        </div>
+      </section>
+
+      {/* Social Proof & CTA Section */}
+      <section className="py-20 bg-primary">
+        <div className="container mx-auto px-4 text-center">
+          <div className="max-w-4xl mx-auto space-y-8">
+            <h2 className="text-4xl lg:text-5xl font-bold text-white mb-6">
+              Join 500+ Fitness Professionals Making More Money
+            </h2>
+            
+            <div className="grid md:grid-cols-3 gap-8 text-white">
+              <div className="space-y-2">
+                <div className="text-4xl font-bold">500+</div>
+                <div className="text-lg">Active Trainers</div>
+              </div>
+              <div className="space-y-2">
+                <div className="text-4xl font-bold">10,000+</div>
+                <div className="text-lg">Programs Created</div>
+              </div>
+              <div className="space-y-2">
+                <div className="text-4xl font-bold">95%</div>
+                <div className="text-lg">Time Savings</div>
+              </div>
+            </div>
+
+            <div className="space-y-6 pt-8">
+              <p className="text-xl text-blue-100">
+                Start your free trial today. No credit card required.
+              </p>
+              <button
+                onClick={() => push()}
+                className="bg-white text-primary px-10 py-4 rounded-xl font-bold text-xl hover:bg-gray-100 transition duration-300 inline-flex items-center shadow-xl"
+              >
+                Start Free Trial
+                <ArrowRight className="w-6 h-6 ml-3" />
+              </button>
+              <p className="text-sm text-blue-200">
+                ✓ 14-day free trial ✓ No setup fees ✓ Cancel anytime
+              </p>
+            </div>
           </div>
         </div>
       </section>
