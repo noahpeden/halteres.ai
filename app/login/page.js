@@ -190,9 +190,9 @@ export default function LoginPage() {
           <div className="space-y-4">
             <h2 className="text-2xl font-bold text-center">Reset Password</h2>
             <form onSubmit={handlePasswordReset} className="space-y-4">
-              <div className="form-control">
+              <div className="w-full">
                 <label className="label">
-                  <span className="label-text">Email</span>
+                  <span className="text-sm">Email</span>
                 </label>
                 <input
                   type="email"
@@ -204,7 +204,7 @@ export default function LoginPage() {
                 />
               </div>
 
-              <div className="form-control mt-4">
+              <div className="w-full mt-4">
                 <button
                   type="submit"
                   className={`btn btn-primary w-full ${
@@ -246,9 +246,9 @@ export default function LoginPage() {
 
             {activeTab === 'login' ? (
               <form onSubmit={handleLogin} className="space-y-4">
-                <div className="form-control">
+                <div className="w-full">
                   <label className="label">
-                    <span className="label-text">Email</span>
+                    <span className="text-sm">Email</span>
                   </label>
                   <input
                     type="email"
@@ -260,9 +260,9 @@ export default function LoginPage() {
                   />
                 </div>
 
-                <div className="form-control">
+                <div className="w-full">
                   <label className="label">
-                    <span className="label-text">Password</span>
+                    <span className="text-sm">Password</span>
                   </label>
                   <input
                     type="password"
@@ -275,7 +275,7 @@ export default function LoginPage() {
                   <label className="label">
                     <button
                       type="button"
-                      className="label-text-alt link link-hover"
+                      className="text-xs link link-hover"
                       onClick={() => setShowResetForm(true)}
                     >
                       Forgot password?
@@ -283,7 +283,7 @@ export default function LoginPage() {
                   </label>
                 </div>
 
-                <div className="form-control mt-4">
+                <div className="w-full mt-4">
                   <button
                     type="submit"
                     className={`btn btn-primary w-full ${
@@ -297,9 +297,9 @@ export default function LoginPage() {
               </form>
             ) : (
               <form onSubmit={handleSignup} className="space-y-4">
-                <div className="form-control">
+                <div className="w-full">
                   <label className="label">
-                    <span className="label-text">Email</span>
+                    <span className="text-sm">Email</span>
                   </label>
                   <input
                     type="email"
@@ -311,9 +311,9 @@ export default function LoginPage() {
                   />
                 </div>
 
-                <div className="form-control">
+                <div className="w-full">
                   <label className="label">
-                    <span className="label-text">Password</span>
+                    <span className="text-sm">Password</span>
                   </label>
                   <input
                     type="password"
@@ -325,9 +325,9 @@ export default function LoginPage() {
                   />
                 </div>
 
-                <div className="form-control">
+                <div className="w-full">
                   <label className="label">
-                    <span className="label-text">Confirm Password</span>
+                    <span className="text-sm">Confirm Password</span>
                   </label>
                   <input
                     type="password"
@@ -339,7 +339,7 @@ export default function LoginPage() {
                   />
                 </div>
 
-                <div className="form-control mt-4">
+                <div className="w-full mt-4">
                   <button
                     type="submit"
                     className={`btn btn-primary w-full ${
@@ -355,7 +355,7 @@ export default function LoginPage() {
 
             <div className="divider">OR</div>
 
-            <div className="form-control">
+            <div className="w-full">
               <button
                 type="button"
                 onClick={handleGoogleLogin}

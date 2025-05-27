@@ -1,6 +1,8 @@
 'use client';
+import { useState } from 'react';
 import { difficulties, gymTypes, focusAreas } from '../utils';
 import WorkoutFormatSelector from '@/components/selectors/WorkoutFormatSelector';
+import { ChevronDown } from 'lucide-react';
 
 export default function ProgramDetails({
   formData,
@@ -8,6 +10,51 @@ export default function ProgramDetails({
   handleWorkoutFormatChange,
   equipmentSelector,
 }) {
+  const [openDropdowns, setOpenDropdowns] = useState({
+    gymType: false,
+    difficulty: false,
+    focusArea: false,
+  });
+
+  const selectedGymType = gymTypes.find(
+    (type) => type.value === formData.gymType
+  );
+  const selectedDifficulty = difficulties.find(
+    (diff) => diff.value === formData.difficulty
+  );
+  const selectedFocusArea = focusAreas.find(
+    (area) => area.value === formData.focusArea
+  );
+
+  const toggleDropdown = (dropdownName) => {
+    setOpenDropdowns((prev) => ({
+      ...prev,
+      [dropdownName]: !prev[dropdownName],
+    }));
+  };
+
+  const closeDropdown = (dropdownName) => {
+    setOpenDropdowns((prev) => ({
+      ...prev,
+      [dropdownName]: false,
+    }));
+  };
+
+  const handleGymTypeSelect = (value) => {
+    handleChange({ target: { name: 'gymType', value } });
+    closeDropdown('gymType');
+  };
+
+  const handleDifficultySelect = (value) => {
+    handleChange({ target: { name: 'difficulty', value } });
+    closeDropdown('difficulty');
+  };
+
+  const handleFocusAreaSelect = (value) => {
+    handleChange({ target: { name: 'focusArea', value } });
+    closeDropdown('focusArea');
+  };
+
   return (
     <section className="bg-base-100 p-4 md:p-5 rounded-lg border border-base-300 shadow-sm w-full">
       <h2 className="text-xl font-semibold mb-4 text-primary">
@@ -18,22 +65,38 @@ export default function ProgramDetails({
       <div className="flex flex-col md:flex-row gap-4 md:gap-6 mb-6">
         {/* Gym Type */}
         <div className="w-full md:w-1/2">
-          <label className="form-control w-full">
-            <span className="label-text font-medium">Gym Type</span>
-            <select
-              name="gymType"
-              className="select select-bordered w-full"
-              value={formData.gymType}
-              onChange={handleChange}
-            >
-              {gymTypes.map((type) => (
-                <option key={type.value} value={type.value}>
-                  {type.label}
-                </option>
-              ))}
-            </select>
+          <label className="w-full">
+            <span className="text-sm font-medium">Gym Type</span>
+            <details className="dropdown w-full" open={openDropdowns.gymType}>
+              <summary
+                className="btn btn-outline w-full justify-between"
+                onClick={(e) => {
+                  e.preventDefault();
+                  toggleDropdown('gymType');
+                }}
+              >
+                <span>
+                  {selectedGymType ? selectedGymType.label : 'Select gym type'}
+                </span>
+                <ChevronDown className="h-4 w-4" />
+              </summary>
+              <ul className="menu dropdown-content bg-base-100 rounded-box z-1 w-full p-2 shadow-sm">
+                {gymTypes.map((type) => (
+                  <li key={type.value}>
+                    <button
+                      className={`w-full ${
+                        formData.gymType === type.value ? 'active' : ''
+                      }`}
+                      onClick={() => handleGymTypeSelect(type.value)}
+                    >
+                      {type.label}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </details>
             <div className="label">
-              <span className="label-text-alt text-accent">
+              <span className="text-xs text-accent">
                 Use the equipment selector below to further customize the gym
                 equipment available
               </span>
@@ -43,20 +106,41 @@ export default function ProgramDetails({
 
         {/* Difficulty */}
         <div className="w-full md:w-1/2">
-          <label className="form-control w-full">
-            <span className="label-text font-medium">Difficulty Level</span>
-            <select
-              name="difficulty"
-              className="select select-bordered w-full"
-              value={formData.difficulty}
-              onChange={handleChange}
+          <label className="w-full">
+            <span className="text-sm font-medium">Difficulty Level</span>
+            <details
+              className="dropdown w-full"
+              open={openDropdowns.difficulty}
             >
-              {difficulties.map((difficulty) => (
-                <option key={difficulty.value} value={difficulty.value}>
-                  {difficulty.label}
-                </option>
-              ))}
-            </select>
+              <summary
+                className="btn btn-outline w-full justify-between"
+                onClick={(e) => {
+                  e.preventDefault();
+                  toggleDropdown('difficulty');
+                }}
+              >
+                <span>
+                  {selectedDifficulty
+                    ? selectedDifficulty.label
+                    : 'Select difficulty'}
+                </span>
+                <ChevronDown className="h-4 w-4" />
+              </summary>
+              <ul className="menu dropdown-content bg-base-100 rounded-box z-1 w-full p-2 shadow-sm">
+                {difficulties.map((difficulty) => (
+                  <li key={difficulty.value}>
+                    <button
+                      className={`w-full ${
+                        formData.difficulty === difficulty.value ? 'active' : ''
+                      }`}
+                      onClick={() => handleDifficultySelect(difficulty.value)}
+                    >
+                      {difficulty.label}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </details>
           </label>
         </div>
       </div>
@@ -70,33 +154,60 @@ export default function ProgramDetails({
       <div className="flex flex-col md:flex-row gap-4 md:gap-6 mb-6">
         {/* Focus Area */}
         <div className="w-full md:w-1/2">
-          <label className="form-control w-full">
-            <span className="label-text font-medium">Focus Area</span>
-            <select
-              name="focusArea"
-              className="select select-bordered w-full"
-              value={formData.focusArea}
-              onChange={handleChange}
-            >
-              <option value="">Select a focus area</option>
-              {focusAreas.map((area) => (
-                <option key={area.value} value={area.value}>
-                  {area.label}
-                </option>
-              ))}
-            </select>
+          <label className="w-full">
+            <span className="text-sm font-medium">Focus Area</span>
+            <details className="dropdown w-full" open={openDropdowns.focusArea}>
+              <summary
+                className="btn btn-outline w-full justify-between"
+                onClick={(e) => {
+                  e.preventDefault();
+                  toggleDropdown('focusArea');
+                }}
+              >
+                <span>
+                  {selectedFocusArea
+                    ? selectedFocusArea.label
+                    : 'Select a focus area'}
+                </span>
+                <ChevronDown className="h-4 w-4" />
+              </summary>
+              <ul className="menu dropdown-content bg-base-100 rounded-box z-1 w-full p-2 shadow-sm max-h-60 overflow-y-auto">
+                <li>
+                  <button
+                    className={`w-full ${
+                      formData.focusArea === '' ? 'active' : ''
+                    }`}
+                    onClick={() => handleFocusAreaSelect('')}
+                  >
+                    Select a focus area
+                  </button>
+                </li>
+                {focusAreas.map((area) => (
+                  <li key={area.value}>
+                    <button
+                      className={`w-full ${
+                        formData.focusArea === area.value ? 'active' : ''
+                      }`}
+                      onClick={() => handleFocusAreaSelect(area.value)}
+                    >
+                      {area.label}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </details>
           </label>
         </div>
         {/* Workout Duration */}
         <div className="w-full md:w-1/2">
-          <label className="form-control w-full">
-            <span className="label-text font-medium">
+          <label className="w-full">
+            <span className="text-sm font-medium">
               Workout Duration (minutes)
             </span>
             <input
               type="number"
               name="sessionDuration"
-              className="input input-bordered w-full"
+              className="input input-bordered w-full border-base-300 focus:border-primary"
               placeholder="e.g., 60"
               value={formData.sessionDetails?.duration_minutes || ''}
               onChange={(e) => {
@@ -113,7 +224,7 @@ export default function ProgramDetails({
               }}
             />
             <div className="label">
-              <span className="label-text-alt">
+              <span className="text-xs">
                 Approximate duration for each workout session.
               </span>
             </div>
@@ -122,8 +233,8 @@ export default function ProgramDetails({
       </div>
 
       <div className="mb-6 w-full">
-        <label className="form-control w-full">
-          <span className="label-text font-medium flex items-center">
+        <label className="w-full">
+          <span className="text-sm font-medium flex items-center">
             Workout Types to Include
             <div
               className="tooltip tooltip-top tooltip-info ml-2"

@@ -13,6 +13,12 @@ import {
   Info,
   Clock,
   Newspaper,
+  Home,
+  LayoutDashboard,
+  Users,
+  User,
+  LogOut,
+  Building,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 export default function Navbar() {
@@ -164,111 +170,145 @@ export default function Navbar() {
             <label tabIndex={0} className="btn btn-ghost btn-circle">
               <Menu className="h-5 w-5" />
             </label>
-            <ul
+            <div
               tabIndex={0}
-              className="menu menu-sm dropdown-content z-[1] p-2 shadow bg-base-100 rounded-box w-52"
+              className="dropdown-content z-[1] mt-3 w-80 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden"
             >
               {!session && (
-                <>
-                  <li>
-                    <NavLink href="/">Home</NavLink>
-                  </li>
+                <div className="p-4">
+                  {/* Header */}
+                  <div className="pb-4 mb-4 border-b border-gray-100">
+                    <h3 className="font-bold text-lg text-gray-900">Menu</h3>
+                  </div>
 
-                  <li>
-                    <details>
-                      <summary>Product</summary>
-                      <ul>
-                        {productItems.map((item, index) => (
-                          <li key={index}>
-                            <NavLink href={item.href}>
-                              <div className="flex items-center">
-                                {item.icon && (
-                                  <item.icon className="mr-2 h-4 w-4" />
-                                )}
-                                {item.label}
-                              </div>
-                            </NavLink>
-                          </li>
-                        ))}
-                      </ul>
-                    </details>
-                  </li>
+                  {/* Navigation Items */}
+                  <div className="space-y-2">
+                    <NavLink 
+                      href="/"
+                      className="flex items-center p-3 rounded-xl hover:bg-gray-50 transition-all duration-200"
+                    >
+                      <Home className="w-5 h-5 mr-3 text-gray-600" />
+                      <span className="font-medium text-gray-900">Home</span>
+                    </NavLink>
 
-                  <li>
-                    <details>
-                      <summary>Resources</summary>
-                      <ul>
-                        {resourcesItems.map((item, index) => (
-                          <li key={index}>
-                            <NavLink href={item.href}>
-                              <div className="flex items-center">
-                                {item.icon && (
-                                  <item.icon className="mr-2 h-4 w-4" />
-                                )}
-                                {item.label}
-                              </div>
-                            </NavLink>
-                          </li>
-                        ))}
-                      </ul>
-                    </details>
-                  </li>
+                    {/* Product Section */}
+                    <div className="pt-2">
+                      <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                        Product
+                      </div>
+                      {productItems.map((item, index) => (
+                        <NavLink
+                          key={index}
+                          href={item.href}
+                          className="flex items-center p-3 rounded-xl hover:bg-gray-50 transition-all duration-200"
+                        >
+                          <item.icon className="w-5 h-5 mr-3 text-gray-600" />
+                          <span className="font-medium text-gray-900">{item.label}</span>
+                        </NavLink>
+                      ))}
+                    </div>
 
-                  <li>
-                    <NavLink href="/company">Company</NavLink>
-                  </li>
-                  <div className="divider"></div>
+                    {/* Resources Section */}
+                    <div className="pt-2">
+                      <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                        Resources
+                      </div>
+                      {resourcesItems.map((item, index) => (
+                        <NavLink
+                          key={index}
+                          href={item.href}
+                          className="flex items-center p-3 rounded-xl hover:bg-gray-50 transition-all duration-200"
+                        >
+                          <item.icon className="w-5 h-5 mr-3 text-gray-600" />
+                          <span className="font-medium text-gray-900">{item.label}</span>
+                        </NavLink>
+                      ))}
+                    </div>
 
-                  <Link href="/login">
-                    <button className="btn btn-primary text-white btn-sm w-full">
-                      Login
-                    </button>
-                  </Link>
-                </>
+                    <NavLink 
+                      href="/company"
+                      className="flex items-center p-3 rounded-xl hover:bg-gray-50 transition-all duration-200"
+                    >
+                      <Building className="w-5 h-5 mr-3 text-gray-600" />
+                      <span className="font-medium text-gray-900">About</span>
+                    </NavLink>
+                  </div>
+
+                  {/* Login Button */}
+                  <div className="pt-4 mt-4 border-t border-gray-100">
+                    <Link href="/login" className="block">
+                      <button className="btn btn-primary text-white w-full">
+                        Get Started
+                      </button>
+                    </Link>
+                  </div>
+                </div>
               )}
 
               {session && (
-                <>
-                  {/* Premium User Tag - Removed from here */}
-                  {/* {isPremiumUser && (
-                    <li>
-                      <div className="flex items-center justify-center px-4 py-2 font-semibold text-primary">
-                        Premium User
+                <div className="p-4">
+                  {/* Header with Premium Badge */}
+                  <div className="pb-4 mb-4 border-b border-gray-100">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-bold text-lg text-gray-900">Account</h3>
+                      {isPremiumUser && (
+                        <span className="badge badge-primary badge-sm">Premium</span>
+                      )}
+                    </div>
+                    {user?.email && (
+                      <p className="text-sm text-gray-600 mt-1 truncate">{user.email}</p>
+                    )}
+                  </div>
+
+                  {/* Navigation Items */}
+                  <div className="space-y-2">
+                    <Link 
+                      href="/dashboard"
+                      className="flex items-center p-3 rounded-xl hover:bg-gray-50 transition-all duration-200"
+                    >
+                      <LayoutDashboard className="w-5 h-5 mr-3 text-gray-600" />
+                      <div>
+                        <div className="font-medium text-gray-900">Dashboard</div>
+                        <div className="text-sm text-gray-500">Overview of programs</div>
                       </div>
-                      <div className="divider my-0"></div>
-                    </li>
-                  )} */}
-                  {/* Add Premium tag for mobile dropdown here if needed */}
-                  {isPremiumUser && (
-                    <li className="sm:hidden">
-                      <div className="badge badge-primary w-full justify-center">
-                        Premium
-                      </div>
-                      <div className="divider my-0"></div>
-                    </li>
-                  )}
-                  <li>
-                    <Link href="/dashboard">Dashboard</Link>
-                  </li>
-                  <li>
-                    <Link href="/dashboard/manage/entities">
-                      Manage Clients/Classes
                     </Link>
-                  </li>
-                  <li>
-                    <Link href="/profile">Profile</Link>
-                  </li>
-                  <li>
+
+                    <Link 
+                      href="/dashboard/manage/entities"
+                      className="flex items-center p-3 rounded-xl hover:bg-gray-50 transition-all duration-200"
+                    >
+                      <Users className="w-5 h-5 mr-3 text-gray-600" />
+                      <div>
+                        <div className="font-medium text-gray-900">Manage Clients</div>
+                        <div className="text-sm text-gray-500">Add and organize clients</div>
+                      </div>
+                    </Link>
+
+                    <Link 
+                      href="/profile"
+                      className="flex items-center p-3 rounded-xl hover:bg-gray-50 transition-all duration-200"
+                    >
+                      <User className="w-5 h-5 mr-3 text-gray-600" />
+                      <div>
+                        <div className="font-medium text-gray-900">Profile</div>
+                        <div className="text-sm text-gray-500">Account settings</div>
+                      </div>
+                    </Link>
+                  </div>
+
+                  {/* Logout Button */}
+                  <div className="pt-4 mt-4 border-t border-gray-100">
                     <button
                       onClick={handleLogout}
-                      className="text-error w-full justify-start"
+                      className="flex items-center p-3 rounded-xl hover:bg-red-50 transition-all duration-200 w-full text-red-600"
                     >
-                      Log out
+                      <LogOut className="w-5 h-5 mr-3" />
+                      <span className="font-medium">Log out</span>
                     </button>
-                  </li>
-                </>
+                  </div>
+                </div>
               )}
-            </ul>
+            </div>
           </div>
         </div>
       </div>

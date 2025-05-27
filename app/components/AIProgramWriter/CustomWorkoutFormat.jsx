@@ -17,7 +17,7 @@ export default function CustomWorkoutFormat({
     <div className="flex flex-col gap-2">
       <div className="flex justify-between items-center">
         <label className="label">
-          <span className="label-text font-medium">
+          <span className="text-sm font-medium">
             Custom Workout Sections
           </span>
         </label>
@@ -39,7 +39,7 @@ export default function CustomWorkoutFormat({
           <div className="flex flex-col gap-2">
             <input
               type="text"
-              className="input input-bordered w-full"
+              className="input input-bordered w-full border-base-300 focus:border-primary"
               placeholder="Section Name (e.g., Skill Work)"
               value={customSectionName}
               onChange={(e) => setCustomSectionName(e.target.value)}
@@ -49,7 +49,7 @@ export default function CustomWorkoutFormat({
           <div className="flex flex-col gap-2">
             <input
               type="text"
-              className="input input-bordered w-full"
+              className="input input-bordered w-full border-base-300 focus:border-primary"
               placeholder="Duration (e.g., 15 min, optional)"
               value={customSectionDuration}
               onChange={(e) => setCustomSectionDuration(e.target.value)}
@@ -58,7 +58,7 @@ export default function CustomWorkoutFormat({
 
           <div className="flex flex-col gap-2">
             <textarea
-              className="textarea textarea-bordered h-20 w-full"
+              className="textarea textarea-bordered h-20 w-full border-base-300 focus:border-primary"
               placeholder="Description (e.g., Focus on technique development, optional)"
               value={customSectionDescription}
               onChange={(e) => setCustomSectionDescription(e.target.value)}

@@ -73,7 +73,7 @@ export default function EditWorkoutModal({
                 name="title"
                 value={editedWorkout.title}
                 onChange={handleChange}
-                className="input input-bordered w-full"
+                className="input input-bordered w-full border-base-300 focus:border-primary"
                 required
               />
             </div>
@@ -86,7 +86,7 @@ export default function EditWorkoutModal({
                 name="body"
                 value={editedWorkout.body}
                 onChange={handleChange}
-                className="textarea textarea-bordered w-full h-96"
+                className="textarea textarea-bordered w-full h-96 border-base-300 focus:border-primary"
                 required
               />
             </div>

@@ -42,15 +42,15 @@ export default function RescheduleModal({
             </div>
           </div>
 
-          <div className="form-control mb-6">
-            <label className="label">
-              <span className="label-text">New Start Date</span>
+          <div className="mb-4">
+            <label className="block text-sm font-medium mb-1">
+              New Start Date
             </label>
             <input
               type="date"
-              className="input input-bordered w-full"
-              value={newStartDate || currentStartDate}
+              value={newStartDate || ''}
               onChange={(e) => setNewStartDate(e.target.value)}
+              className="input input-bordered w-full border-base-300 focus:border-primary"
               min={(() => {
                 const tomorrow = new Date();
                 tomorrow.setDate(tomorrow.getDate() + 1);

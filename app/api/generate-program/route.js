@@ -30,8 +30,6 @@ async function updateProfileAfterGeneration(
     // Prepare base update data
     const updateData = {
       last_generation_date: currentDate,
-      // We no longer use supabase.sql here for generations_today
-      // It will be handled below if needed or fetched first.
     };
 
     // Fetch current profile values first
@@ -40,7 +38,7 @@ async function updateProfileAfterGeneration(
     });
     const { data: currentProfile, error: fetchError } = await supabase
       .from('profiles')
-      .select('generations_today, generations_remaining, free_generations_used')
+      .select('generations_remaining, free_generations_used')
       .eq('id', userId)
       .single();
 
@@ -56,8 +54,6 @@ async function updateProfileAfterGeneration(
       currentProfile,
     });
 
-    // Always increment generations_today
-    updateData.generations_today = (currentProfile.generations_today || 0) + 1;
 
     // Only update free generation counters for non-paid subscribers
     if (!isPaidSubscriber) {

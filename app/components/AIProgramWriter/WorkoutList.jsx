@@ -106,21 +106,12 @@ export default function WorkoutList({
                     )}
                   </h4>
                   {workout.id && (
-                    <div className="dropdown dropdown-end flex-shrink-0">
-                      <button
-                        tabIndex={0}
-                        className="btn btn-sm btn-ghost btn-square"
-                        aria-label="More actions"
-                        title="More actions"
-                        onClick={(e) => e.stopPropagation()}
-                      >
+                    <details className="dropdown dropdown-end flex-shrink-0">
+                      <summary className="btn btn-sm btn-ghost btn-square">
                         <MoreVertical className="h-5 w-5" />
-                      </button>
-                      <ul
-                        tabIndex={0}
-                        className="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-40"
-                      >
-                        <li className="w-full">
+                      </summary>
+                      <ul className="menu dropdown-content bg-base-100 rounded-box z-1 w-40 p-2 shadow-sm">
+                        <li>
                           <button
                             className="flex items-center gap-2 w-full text-neutral"
                             onClick={(e) => {
@@ -132,7 +123,7 @@ export default function WorkoutList({
                             <Pencil className="h-4 w-4" /> Edit
                           </button>
                         </li>
-                        <li className="w-full">
+                        <li>
                           <button
                             className="flex items-center gap-2 w-full text-success"
                             onClick={(e) => {
@@ -149,7 +140,7 @@ export default function WorkoutList({
                             {workout.completed ? 'Incomplete' : 'Complete'}
                           </button>
                         </li>
-                        <li className="w-full">
+                        <li>
                           <button
                             className="flex items-center gap-2 w-full text-error"
                             onClick={(e) => onDeleteWorkout(workout.id, e)}
@@ -159,7 +150,7 @@ export default function WorkoutList({
                           </button>
                         </li>
                       </ul>
-                    </div>
+                    </details>
                   )}
                 </div>
                 <div className="mb-2">

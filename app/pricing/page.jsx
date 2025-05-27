@@ -45,7 +45,7 @@ async function fetchUserSubscription(supabase) {
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select(
-        'subscription_status, subscription_plan, trial_end_date, generations_remaining, generations_today, last_generation_date'
+        'subscription_status, subscription_plan, trial_end_date, generations_remaining, last_generation_date'
       )
       .eq('id', user.id)
       .single();

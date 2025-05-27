@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { ChevronDown } from 'lucide-react';
 
 // Define default options outside the component
 const defaultTypeOptions = [
@@ -21,26 +22,44 @@ export default function ProgramTypeSelector({
   onChange,
   options = defaultTypeOptions,
 }) {
-  const handleChange = (e) => {
-    const value = e.target.value;
+  const selectedOption = options.find((option) => option.id === selectedType);
+
+  const handleOptionSelect = (value) => {
     onChange(value);
   };
 
   return (
-    <select
-      className="select select-bordered w-full bg-white"
-      value={selectedType}
-      onChange={handleChange}
-      data-testid="program-type-selector"
-    >
-      <option value="" disabled>
-        Select training methodology
-      </option>
-      {options.map((type) => (
-        <option key={type.id} value={type.id}>
-          {type.icon} {type.name}
-        </option>
-      ))}
-    </select>
+    <details className="dropdown w-full" data-testid="program-type-selector">
+      <summary className="btn btn-outline w-full justify-between">
+        <span className="flex items-center gap-2">
+          {selectedOption ? (
+            <>
+              <span>{selectedOption.icon}</span>
+              <span>{selectedOption.name}</span>
+            </>
+          ) : (
+            <span className="text-base-content/70">
+              Select training methodology
+            </span>
+          )}
+        </span>
+        <ChevronDown className="h-4 w-4" />
+      </summary>
+      <ul className="menu dropdown-content bg-base-100 rounded-box z-1 w-full p-2 shadow-sm max-h-60 overflow-y-auto">
+        {options.map((type) => (
+          <li key={type.id}>
+            <button
+              className={`flex items-center gap-2 w-full ${
+                selectedType === type.id ? 'active' : ''
+              }`}
+              onClick={() => handleOptionSelect(type.id)}
+            >
+              <span>{type.icon}</span>
+              <span>{type.name}</span>
+            </button>
+          </li>
+        ))}
+      </ul>
+    </details>
   );
 }

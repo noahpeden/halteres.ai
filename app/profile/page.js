@@ -2,14 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from '@/utils/supabase/client';
 import { useRouter } from 'next/navigation';
 import { Crown, ArrowUpRight, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 
 export default function ProfilePage() {
   const { user } = useAuth();
-  const supabase = createClientComponentClient();
+  const supabase = createClient();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
@@ -304,160 +304,221 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="min-h-screen pt-24 px-4">
-      <div className="max-w-2xl mx-auto">
-        <div className="card bg-base-100 shadow-xl">
+    <div className="min-h-screen pt-24 px-4 bg-base-200">
+      <div className="max-w-4xl mx-auto space-y-6">
+        {/* Page Header */}
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-base-content">
+            Account Settings
+          </h1>
+          <p className="text-base-content/70 mt-2">
+            Manage your account and subscription preferences
+          </p>
+        </div>
+
+        {/* Account Overview Card */}
+        <div className="card bg-base-100 shadow-lg">
           <div className="card-body">
-            <h2 className="card-title text-2xl mb-6">Profile Settings</h2>
-
-            {/* Subscription Status */}
-            <div className="mb-8">
-              <h3 className="text-lg font-semibold mb-2">
-                Subscription Status
-              </h3>
-              <div className="flex items-center gap-2">
-                {profile?.subscription_status === 'active' ? (
-                  <>
-                    <Crown className="h-5 w-5 text-primary" />
-                    <span className="text-primary font-medium">
-                      Premium Member
-                      {profile?.cancel_at_period_end && (
-                        <span className="ml-2 text-sm text-warning">
-                          (Cancels at period end)
-                        </span>
-                      )}
-                    </span>
-                  </>
-                ) : (
-                  <span className="text-gray-600">Free Account</span>
-                )}
-              </div>
-              {profile?.subscription_status === 'trialing' && (
-                <div className="mt-2">
-                  <div className="text-sm text-warning mb-2">
-                    Trial ends on{' '}
-                    {new Date(profile.trial_end_date).toLocaleDateString()}
-                  </div>
-                  <Link href="/pricing" className="btn btn-primary btn-sm">
-                    Upgrade to Premium <ArrowUpRight className="h-4 w-4 ml-1" />
-                  </Link>
-                </div>
-              )}
-              {profile?.subscription_status === 'active' && (
-                <div className="mt-2">
-                  {profile?.current_period_end && (
-                    <div className="text-sm text-gray-600 mb-2">
-                      {isSubscriptionCanceled ? (
-                        <span className="text-error">
-                          Your subscription will end on{' '}
-                          {new Date(
-                            profile.current_period_end
-                          ).toLocaleDateString()}
-                        </span>
-                      ) : (
-                        <span>
-                          Next billing date:{' '}
-                          {new Date(
-                            profile.current_period_end
-                          ).toLocaleDateString()}
-                        </span>
-                      )}
-                    </div>
-                  )}
-                  <div className="flex gap-2">
-                    {isSubscriptionCanceled ? (
-                      <button
-                        onClick={() => setShowResumeModal(true)}
-                        className="btn btn-sm btn-primary text-white"
-                        disabled={actionLoading}
-                      >
-                        Resume Subscription
-                      </button>
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-4">
+                <div>
+                  <h2 className="text-xl font-semibold">
+                    {formData.full_name || 'Welcome!'}
+                  </h2>
+                  <p className="text-base-content/70">{formData.email}</p>
+                  <div className="flex items-center gap-2 mt-2">
+                    {profile?.subscription_status === 'active' ? (
+                      <>
+                        <Crown className="h-4 w-4 text-primary" />
+                        <span className="badge badge-primary">Premium</span>
+                        {isSubscriptionCanceled && (
+                          <span className="badge badge-warning">
+                            Ending Soon
+                          </span>
+                        )}
+                      </>
+                    ) : profile?.subscription_status === 'trialing' ? (
+                      <>
+                        <span className="badge badge-info">Free Trial</span>
+                      </>
                     ) : (
-                      <button
-                        onClick={() => setShowCancelModal(true)}
-                        className="btn btn-sm btn-secondary text-white"
-                        disabled={actionLoading}
-                      >
-                        Cancel Subscription
-                      </button>
+                      <span className="badge badge-ghost">Free Account</span>
                     )}
-                    <Link
-                      href="/pricing"
-                      className="btn btn-sm btn-accent btn-outline"
-                    >
-                      Change Plan
-                    </Link>
                   </div>
                 </div>
+              </div>
+              {profile?.subscription_status !== 'active' && (
+                <Link href="/pricing" className="btn btn-primary btn-sm">
+                  Upgrade <ArrowUpRight className="h-4 w-4 ml-1" />
+                </Link>
               )}
             </div>
+          </div>
+        </div>
 
-            {/* Usage Stats */}
-            <div className="mb-8">
-              <h3 className="text-lg font-semibold mb-2">Usage</h3>
-              <div className="stats shadow">
-                <div className="stat">
-                  <div className="stat-title">Generations Remaining</div>
-                  <div className="stat-value">
-                    {profile?.generations_remaining || 0}
-                  </div>
-                  <div className="stat-desc">
-                    Today's generations: {profile?.generations_today || 0}
-                  </div>
+        {/* Quick Stats */}
+        {profile && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {profile.subscription_status === 'trialing' && (
+              <div className="stat bg-base-100 rounded-lg shadow">
+                <div className="stat-title">Trial Days Left</div>
+                <div className="stat-value text-info">
+                  {profile.trial_end_date
+                    ? Math.max(
+                        0,
+                        Math.ceil(
+                          (new Date(profile.trial_end_date) - new Date()) /
+                            (1000 * 60 * 60 * 24)
+                        )
+                      )
+                    : 0}
+                </div>
+                <div className="stat-desc">
+                  Ends{' '}
+                  {profile.trial_end_date
+                    ? new Date(profile.trial_end_date).toLocaleDateString()
+                    : 'Soon'}
                 </div>
               </div>
+            )}
+
+            <div className="stat bg-base-100 rounded-lg shadow">
+              <div className="stat-title">Generations Left</div>
+              <div className="stat-value text-primary">
+                {profile?.subscription_status === 'active'
+                  ? '∞'
+                  : profile?.generations_remaining || 0}
+              </div>
+              <div className="stat-desc">
+                {profile?.subscription_status === 'active'
+                  ? 'Unlimited'
+                  : 'Remaining in trial'}
+              </div>
             </div>
+          </div>
+        )}
 
-            {/* Update Form */}
+        {/* Subscription Management */}
+        {profile?.subscription_status === 'active' && (
+          <div className="card bg-base-100 shadow-lg">
+            <div className="card-body">
+              <h3 className="card-title">Subscription Management</h3>
+
+              {profile?.current_period_end && (
+                <div className="mb-4">
+                  <p className="text-sm text-base-content/70">
+                    {isSubscriptionCanceled ? (
+                      <span className="text-error">
+                        Your subscription will end on{' '}
+                        {new Date(
+                          profile.current_period_end
+                        ).toLocaleDateString()}
+                      </span>
+                    ) : (
+                      <span>
+                        Next billing date:{' '}
+                        {new Date(
+                          profile.current_period_end
+                        ).toLocaleDateString()}
+                      </span>
+                    )}
+                  </p>
+                </div>
+              )}
+
+              <div className="flex flex-wrap gap-2">
+                {isSubscriptionCanceled ? (
+                  <button
+                    onClick={() => setShowResumeModal(true)}
+                    className="btn btn-primary btn-sm"
+                    disabled={actionLoading}
+                  >
+                    Resume Subscription
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => setShowCancelModal(true)}
+                    className="btn btn-outline btn-sm"
+                    disabled={actionLoading}
+                  >
+                    Cancel Subscription
+                  </button>
+                )}
+                <Link href="/pricing" className="btn btn-ghost btn-sm">
+                  Change Plan
+                </Link>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Profile Information */}
+        <div className="card bg-base-100 shadow-lg">
+          <div className="card-body">
+            <h3 className="card-title mb-4">Profile Information</h3>
+
             <form onSubmit={handleProfileUpdate} className="space-y-4">
-              <div className="form-control">
-                <label className="label">
-                  <span className="label-text">Full Name</span>
-                </label>
-                <input
-                  type="text"
-                  name="full_name"
-                  value={formData.full_name}
-                  onChange={handleInputChange}
-                  className="input input-bordered"
-                  placeholder="Your full name"
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="label">
+                    <span className="text-sm font-medium">Full Name</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="full_name"
+                    value={formData.full_name}
+                    onChange={handleInputChange}
+                    className="input input-bordered w-full"
+                    placeholder="Enter your full name"
+                  />
+                </div>
+
+                <div>
+                  <label className="label">
+                    <span className="text-sm font-medium">Email Address</span>
+                  </label>
+                  <input
+                    type="email"
+                    value={formData.email}
+                    className="input input-bordered w-full bg-base-200"
+                    disabled
+                    placeholder="Email cannot be changed"
+                  />
+                </div>
               </div>
 
-              <div className="form-control">
-                <label className="label">
-                  <span className="label-text">Email</span>
-                </label>
-                <span className="text-gray-600">{formData.email}</span>
-              </div>
+              <div className="divider">Change Password</div>
 
-              <div className="form-control">
-                <label className="label">
-                  <span className="label-text">New Password</span>
-                </label>
-                <input
-                  type="password"
-                  name="new_password"
-                  value={formData.new_password}
-                  onChange={handleInputChange}
-                  className="input input-bordered"
-                  placeholder="New password"
-                />
-              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="label">
+                    <span className="text-sm font-medium">New Password</span>
+                  </label>
+                  <input
+                    type="password"
+                    name="new_password"
+                    value={formData.new_password}
+                    onChange={handleInputChange}
+                    className="input input-bordered w-full"
+                    placeholder="Enter new password"
+                  />
+                </div>
 
-              <div className="form-control">
-                <label className="label">
-                  <span className="label-text">Confirm New Password</span>
-                </label>
-                <input
-                  type="password"
-                  name="confirm_password"
-                  value={formData.confirm_password}
-                  onChange={handleInputChange}
-                  className="input input-bordered"
-                  placeholder="Confirm new password"
-                />
+                <div>
+                  <label className="label">
+                    <span className="text-sm font-medium">
+                      Confirm Password
+                    </span>
+                  </label>
+                  <input
+                    type="password"
+                    name="confirm_password"
+                    value={formData.confirm_password}
+                    onChange={handleInputChange}
+                    className="input input-bordered w-full"
+                    placeholder="Confirm new password"
+                  />
+                </div>
               </div>
 
               {message.text && (
@@ -470,60 +531,78 @@ export default function ProfilePage() {
                 </div>
               )}
 
-              <div className="card-actions justify-end mt-6">
+              <div className="card-actions justify-end pt-4">
                 <button
                   type="submit"
                   className="btn btn-primary"
                   disabled={loading}
                 >
-                  {loading ? 'Updating...' : 'Update Profile'}
+                  {loading ? (
+                    <>
+                      <span className="loading loading-spinner loading-sm"></span>
+                      Updating...
+                    </>
+                  ) : (
+                    'Save Changes'
+                  )}
                 </button>
               </div>
             </form>
+          </div>
+        </div>
 
-            {/* Account Management */}
-            <div className="divider my-8"></div>
-            <div className="mb-4">
-              <h3 className="text-lg font-semibold mb-4 flex items-center">
-                <AlertTriangle className="h-5 w-5 text-warning mr-2" />
-                Account Management
-              </h3>
-              <div className="flex flex-col gap-4">
-                <div className="bg-base-200 p-4 rounded-lg">
-                  <h4 className="font-medium mb-2">Deactivate Account</h4>
-                  <p className="text-sm mb-3">
-                    Temporarily deactivate your account. You can reactivate it
-                    by logging in again.
-                  </p>
-                  <button
-                    onClick={() => setShowDeactivateModal(true)}
-                    className="btn btn-sm btn-warning"
-                    disabled={actionLoading}
-                  >
-                    {actionLoading ? 'Processing...' : 'Deactivate Account'}
-                  </button>
+        {/* Account Management */}
+        <div className="card bg-base-100 shadow-lg">
+          <div className="card-body">
+            <h3 className="card-title mb-4 flex items-center">
+              <AlertTriangle className="h-5 w-5 text-warning mr-2" />
+              Account Management
+            </h3>
+
+            <div className="space-y-4">
+              <div className="alert alert-warning">
+                <AlertTriangle className="h-4 w-4" />
+                <span className="text-sm">
+                  These actions are permanent and cannot be undone.
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="card bg-warning/10 border border-warning/20">
+                  <div className="card-body p-4">
+                    <h4 className="font-semibold text-warning mb-2">
+                      Deactivate Account
+                    </h4>
+                    <p className="text-sm mb-3 text-base-content/80">
+                      Temporarily disable your account. You can reactivate by
+                      logging in again.
+                    </p>
+                    <button
+                      onClick={() => setShowDeactivateModal(true)}
+                      className="btn btn-warning btn-sm w-full"
+                      disabled={actionLoading}
+                    >
+                      {actionLoading ? 'Processing...' : 'Deactivate Account'}
+                    </button>
+                  </div>
                 </div>
 
-                <div className="bg-error bg-opacity-10 p-4 rounded-lg">
-                  <h4 className="font-medium mb-2 text-error">
-                    Delete Account & Data
-                  </h4>
-                  <p className="text-sm mb-3 text-base-content">
-                    This action has two steps:
-                  </p>
-                  <ol className="text-sm mb-3 text-base-content list-decimal list-inside">
-                    <li className="mb-1">
-                      Deactivate your account (immediate)
-                    </li>
-                    <li>Request permanent data deletion via email</li>
-                  </ol>
-                  <button
-                    onClick={() => setShowDeleteModal(true)}
-                    className="btn btn-sm btn-error"
-                    disabled={actionLoading}
-                  >
-                    {actionLoading ? 'Processing...' : 'Start Deletion Process'}
-                  </button>
+                <div className="card bg-error/10 border border-error/20">
+                  <div className="card-body p-4">
+                    <h4 className="font-semibold text-error mb-2">
+                      Delete Account
+                    </h4>
+                    <p className="text-sm mb-3 text-base-content/80">
+                      Permanently delete your account and all associated data.
+                    </p>
+                    <button
+                      onClick={() => setShowDeleteModal(true)}
+                      className="btn btn-error btn-sm w-full"
+                      disabled={actionLoading}
+                    >
+                      {actionLoading ? 'Processing...' : 'Delete Account'}
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>

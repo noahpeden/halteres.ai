@@ -331,9 +331,9 @@ export default function AIWorkoutReferencer({ programId }) {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="form-control w-full">
+              <label className="w-full w-full">
                 <div className="label">
-                  <span className="label-text">Training Goal</span>
+                  <span className="text-sm">Training Goal</span>
                 </div>
                 <select
                   name="goal"
@@ -350,9 +350,9 @@ export default function AIWorkoutReferencer({ programId }) {
               </label>
             </div>
             <div>
-              <label className="form-control w-full">
+              <label className="w-full w-full">
                 <div className="label">
-                  <span className="label-text">Difficulty Level</span>
+                  <span className="text-sm">Difficulty Level</span>
                 </div>
                 <select
                   name="difficulty"
@@ -372,9 +372,9 @@ export default function AIWorkoutReferencer({ programId }) {
               </label>
             </div>
             <div>
-              <label className="form-control w-full">
+              <label className="w-full w-full">
                 <div className="label">
-                  <span className="label-text">Focus Area</span>
+                  <span className="text-sm">Focus Area</span>
                 </div>
                 <select
                   name="focusArea"
@@ -392,9 +392,9 @@ export default function AIWorkoutReferencer({ programId }) {
               </label>
             </div>
             <div>
-              <label className="form-control w-full">
+              <label className="w-full w-full">
                 <div className="label">
-                  <span className="label-text">Duration (minutes)</span>
+                  <span className="text-sm">Duration (minutes)</span>
                 </div>
                 <input
                   type="number"
@@ -408,9 +408,9 @@ export default function AIWorkoutReferencer({ programId }) {
               </label>
             </div>
             <div>
-              <label className="form-control w-full">
+              <label className="w-full w-full">
                 <div className="label">
-                  <span className="label-text">Gym Type</span>
+                  <span className="text-sm">Gym Type</span>
                 </div>
                 <select
                   name="gymType"
@@ -432,7 +432,7 @@ export default function AIWorkoutReferencer({ programId }) {
           </div>
           <div>
             <div className="label">
-              <span className="label-text">Workout Format</span>
+              <span className="text-sm">Workout Format</span>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
               {workoutFormats.map((formatOption) => (
@@ -501,9 +501,9 @@ export default function AIWorkoutReferencer({ programId }) {
           </div>
 
           <div>
-            <label className="form-control w-full">
+            <label className="w-full w-full">
               <div className="label">
-                <span className="label-text">Search Query</span>
+                <span className="text-sm">Search Query</span>
               </div>
               <input
                 type="text"

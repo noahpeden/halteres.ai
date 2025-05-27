@@ -33,16 +33,17 @@ export default function DatePickerModal({
             </p>
           </div>
 
-          <div className="form-control mb-6">
+          <div className="w-full mb-6">
             <label className="label">
-              <span className="label-text">Date</span>
+              <span className="text-sm">Date</span>
             </label>
             <input
               type="date"
-              className="input input-bordered w-full"
-              value={selectedDate}
+              value={selectedDate || ''}
               onChange={(e) => setSelectedDate(e.target.value)}
+              className="input input-bordered w-full border-base-300 focus:border-primary"
               min={startDate}
+              max={endDate}
             />
           </div>
 

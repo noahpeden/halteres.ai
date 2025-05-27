@@ -379,7 +379,7 @@ export default function AIWorkoutSuggestions({ programId, onSelectWorkout }) {
 
       <div className="mb-6">
         <label className="label">
-          <span className="label-text">Reference Workout (Optional)</span>
+          <span className="text-sm">Reference Workout (Optional)</span>
         </label>
         {selectedReference ? (
           <div className="border rounded-md p-3 relative">
@@ -451,7 +451,7 @@ export default function AIWorkoutSuggestions({ programId, onSelectWorkout }) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="label">
-              <span className="label-text">Goal</span>
+              <span className="text-sm">Goal</span>
             </label>
             <select
               className="select select-bordered w-full"
@@ -469,7 +469,7 @@ export default function AIWorkoutSuggestions({ programId, onSelectWorkout }) {
 
           <div>
             <label className="label">
-              <span className="label-text">Difficulty</span>
+              <span className="text-sm">Difficulty</span>
             </label>
             <select
               className="select select-bordered w-full"
@@ -487,7 +487,7 @@ export default function AIWorkoutSuggestions({ programId, onSelectWorkout }) {
 
           <div>
             <label className="label">
-              <span className="label-text">Focus Area</span>
+              <span className="text-sm">Focus Area</span>
             </label>
             <select
               className="select select-bordered w-full"
@@ -506,7 +506,7 @@ export default function AIWorkoutSuggestions({ programId, onSelectWorkout }) {
 
           <div>
             <label className="label">
-              <span className="label-text">Duration (days)</span>
+              <span className="text-sm">Duration (days)</span>
             </label>
             <select
               className="select select-bordered w-full"
@@ -525,7 +525,7 @@ export default function AIWorkoutSuggestions({ programId, onSelectWorkout }) {
 
           <div>
             <label className="label">
-              <span className="label-text">Gym Type</span>
+              <span className="text-sm">Gym Type</span>
             </label>
             <select
               className="select select-bordered w-full"
@@ -545,7 +545,7 @@ export default function AIWorkoutSuggestions({ programId, onSelectWorkout }) {
 
       <div className="mb-6">
         <label className="label">
-          <span className="label-text">Workout Formats</span>
+          <span className="text-sm">Workout Formats</span>
         </label>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-2 p-2 border rounded-md">
           {workoutFormats.map((format) => (
@@ -566,7 +566,7 @@ export default function AIWorkoutSuggestions({ programId, onSelectWorkout }) {
       <div className="mb-6">
         <div className="flex justify-between items-center mb-2">
           <label className="label">
-            <span className="label-text">Available Equipment</span>
+            <span className="text-sm">Available Equipment</span>
           </label>
           <button
             className="btn btn-sm btn-ghost"
@@ -612,7 +612,7 @@ export default function AIWorkoutSuggestions({ programId, onSelectWorkout }) {
 
       <div className="mb-6">
         <label className="label">
-          <span className="label-text">Personalization</span>
+          <span className="text-sm">Personalization</span>
         </label>
         <input
           type="text"
@@ -626,7 +626,7 @@ export default function AIWorkoutSuggestions({ programId, onSelectWorkout }) {
 
       <div className="mb-6">
         <label className="label">
-          <span className="label-text">Additional Notes</span>
+          <span className="text-sm">Additional Notes</span>
         </label>
         <textarea
           className="textarea textarea-bordered w-full"
@@ -640,7 +640,7 @@ export default function AIWorkoutSuggestions({ programId, onSelectWorkout }) {
 
       <div className="mb-6">
         <label className="label">
-          <span className="label-text">Special Quirks or Preferences</span>
+          <span className="text-sm">Special Quirks or Preferences</span>
         </label>
         <textarea
           className="textarea textarea-bordered w-full"

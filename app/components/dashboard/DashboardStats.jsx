@@ -1,0 +1,51 @@
+'use client';
+import { Calendar, Clock } from 'lucide-react';
+
+export default function DashboardStats({ stats }) {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+      <div className="stat bg-white shadow rounded-lg">
+        <div className="stat-figure text-primary">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-8 w-8"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+            />
+          </svg>
+        </div>
+        <div className="stat-title">Total Programs</div>
+        <div className="stat-value text-primary">{stats.totalPrograms}</div>
+      </div>
+
+      <div className="stat bg-white shadow rounded-lg">
+        <div className="stat-title">Today's Workouts</div>
+        <div className="flex items-center justify-between">
+          <div className="stat-value text-secondary">
+            {stats.activeWorkouts}
+          </div>
+          <div className="stat-figure text-secondary">
+            <Calendar className="h-8 w-8" />
+          </div>
+        </div>
+      </div>
+
+      <div className="stat bg-white shadow rounded-lg">
+        <div className="stat-title">This Week's Workouts</div>
+        <div className="flex items-center justify-between">
+          <div className="stat-value text-accent">{stats.upcomingWorkouts}</div>
+          <div className="stat-figure text-accent">
+            <Clock className="h-8 w-8" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

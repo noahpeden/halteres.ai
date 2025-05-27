@@ -72,7 +72,7 @@ export default function ReferenceWorkoutSearchModal({
         <div className="flex gap-2 mb-4">
           <input
             type="text"
-            className="input input-bordered w-full"
+            className="input input-bordered w-full border-base-300 focus:border-primary"
             placeholder="Search for workouts (e.g. Fran, EMOM, strength)"
             value={searchText}
             onChange={(e) => setSearchText(e.target.value)}

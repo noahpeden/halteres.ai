@@ -25,6 +25,7 @@ export default function ProgramWriterPage() {
 
   // Handler to toggle sidebar collapse
   const toggleSidebarCollapse = () => {
+    console.log('toggleSidebarCollapse', isSidebarCollapsed);
     setIsSidebarCollapsed(!isSidebarCollapsed);
   };
 
@@ -166,7 +167,7 @@ export default function ProgramWriterPage() {
             className="fixed top-1/2 right-0 transform -translate-y-1/2 z-20 btn btn-primary btn-circle shadow-lg lg:flex hidden"
             aria-label="Expand Sidebar"
           >
-            <ChevronLeft size={20} />
+            <ChevronRight size={20} />
           </button>
         )}
 

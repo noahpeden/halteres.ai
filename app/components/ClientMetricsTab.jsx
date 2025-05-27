@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 
 // Conversion helpers
 const kgToLbs = (kg) => (kg ? kg * 2.20462 : 0);
@@ -399,9 +399,9 @@ export default function ClientMetricsTab({
 
         {!(isCollapsed && viewMode === 'sidebar') && (
           <div className="flex space-x-2 items-center flex-shrink-0">
-            <div className="form-control">
+            <div className="w-full">
               <label className="label cursor-pointer">
-                <span className="label-text mr-2">
+                <span className="text-sm mr-2">
                   {useImperial ? 'Imperial' : 'Metric'}
                 </span>
                 <input
@@ -433,16 +433,6 @@ export default function ClientMetricsTab({
               </button>
             )}
 
-            {/* Internal Close Button for Sidebar - ADD THIS */}
-            {viewMode === 'sidebar' && (
-              <button
-                onClick={onToggleCollapse}
-                className="btn btn-ghost btn-sm btn-square ml-1"
-                aria-label="Collapse Sidebar"
-              >
-                <ChevronRight size={18} />
-              </button>
-            )}
           </div>
         )}
       </div>
@@ -513,9 +503,9 @@ export default function ClientMetricsTab({
               <h3 className="text-lg font-medium mb-2">1RM Lifts</h3>
               {isEditing || showEditByDefault ? (
                 <div className="space-y-2">
-                  <div className="form-control">
+                  <div className="w-full">
                     <label className="label">
-                      <span className="label-text">
+                      <span className="text-sm">
                         Bench Press ({useImperial ? 'lbs' : 'kg'})
                       </span>
                     </label>
@@ -531,9 +521,9 @@ export default function ClientMetricsTab({
                       }
                     />
                   </div>
-                  <div className="form-control">
+                  <div className="w-full">
                     <label className="label">
-                      <span className="label-text">
+                      <span className="text-sm">
                         Squat ({useImperial ? 'lbs' : 'kg'})
                       </span>
                     </label>
@@ -549,9 +539,9 @@ export default function ClientMetricsTab({
                       }
                     />
                   </div>
-                  <div className="form-control">
+                  <div className="w-full">
                     <label className="label">
-                      <span className="label-text">
+                      <span className="text-sm">
                         Deadlift ({useImperial ? 'lbs' : 'kg'})
                       </span>
                     </label>
@@ -602,9 +592,9 @@ export default function ClientMetricsTab({
               <h3 className="text-lg font-medium mb-2">Physical Stats</h3>
               {isEditing || showEditByDefault ? (
                 <div className="space-y-2">
-                  <div className="form-control">
+                  <div className="w-full">
                     <label className="label">
-                      <span className="label-text">
+                      <span className="text-sm">
                         Height {useImperial ? '(ft-in)' : '(cm)'}
                       </span>
                     </label>
@@ -669,9 +659,9 @@ export default function ClientMetricsTab({
                       />
                     )}
                   </div>
-                  <div className="form-control">
+                  <div className="w-full">
                     <label className="label">
-                      <span className="label-text">
+                      <span className="text-sm">
                         Weight ({useImperial ? 'lbs' : 'kg'})
                       </span>
                     </label>
@@ -688,9 +678,9 @@ export default function ClientMetricsTab({
                       }
                     />
                   </div>
-                  <div className="form-control">
+                  <div className="w-full">
                     <label className="label">
-                      <span className="label-text">Mile Time (min:sec)</span>
+                      <span className="text-sm">Mile Time (min:sec)</span>
                     </label>
                     <input
                       type="text"
@@ -737,9 +727,9 @@ export default function ClientMetricsTab({
               <h3 className="text-lg font-medium mb-2">Recovery & Injuries</h3>
               {isEditing || showEditByDefault ? (
                 <div className="space-y-2">
-                  <div className="form-control">
+                  <div className="w-full">
                     <label className="label">
-                      <span className="label-text">Recovery Score (1-10)</span>
+                      <span className="text-sm">Recovery Score (1-10)</span>
                     </label>
                     <input
                       type="number"
@@ -755,9 +745,9 @@ export default function ClientMetricsTab({
                       }
                     />
                   </div>
-                  <div className="form-control">
+                  <div className="w-full">
                     <label className="label">
-                      <span className="label-text">Injury History</span>
+                      <span className="text-sm">Injury History</span>
                     </label>
                     <textarea
                       className="textarea textarea-bordered w-full"

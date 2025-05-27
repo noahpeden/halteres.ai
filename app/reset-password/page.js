@@ -130,9 +130,9 @@ export default function ResetPasswordPage() {
         )}
 
         <form onSubmit={handleResetPassword} className="space-y-4">
-          <div className="form-control">
+          <div className="w-full">
             <label className="label">
-              <span className="label-text">New Password</span>
+              <span className="text-sm">New Password</span>
             </label>
             <input
               type="password"
@@ -145,9 +145,9 @@ export default function ResetPasswordPage() {
             />
           </div>
 
-          <div className="form-control">
+          <div className="w-full">
             <label className="label">
-              <span className="label-text">Confirm New Password</span>
+              <span className="text-sm">Confirm New Password</span>
             </label>
             <input
               type="password"
@@ -160,7 +160,7 @@ export default function ResetPasswordPage() {
             />
           </div>
 
-          <div className="form-control mt-6">
+          <div className="w-full mt-6">
             <button
               type="submit"
               className={`btn btn-primary w-full ${loading ? 'loading' : ''}`}

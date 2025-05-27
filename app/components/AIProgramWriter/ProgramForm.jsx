@@ -9,29 +9,6 @@ import LoadingButton from './LoadingButton';
 import { handleFormChange as handleFormChangeUtil } from './formHandlers';
 import equipmentList from '@/utils/equipmentList';
 
-// Helper function (can be moved to utils)
-function isNewDay(lastGenerationDateStr) {
-  if (!lastGenerationDateStr) return true;
-  const lastDate = new Date(lastGenerationDateStr);
-
-  // Check if lastDate is a valid date object
-  if (!(lastDate instanceof Date) || isNaN(lastDate.getTime())) {
-    console.warn(
-      'Invalid lastGenerationDateStr received:',
-      lastGenerationDateStr
-    );
-    // Treat invalid date as needing a reset for safety, effectively a 'new day'
-    return true;
-  }
-
-  const today = new Date();
-  // Compare year, month, and day only
-  return (
-    today.getFullYear() !== lastDate.getFullYear() ||
-    today.getMonth() !== lastDate.getMonth() ||
-    today.getDate() !== lastDate.getDate()
-  );
-}
 
 const ProgramForm = ({
   formData,
@@ -48,7 +25,6 @@ const ProgramForm = ({
   subscriptionStatus,
   trialEndDate,
   generationsRemaining,
-  generationsToday,
   lastGenerationDate,
 }) => {
   const handleChange = useCallback(
@@ -137,19 +113,7 @@ const ProgramForm = ({
         };
       }
 
-      // Check 3: Daily Generation Limit (handle null/undefined)
-      const dailyLimit = 5;
-      const isDifferentDay = isNewDay(lastGenerationDate);
-      const todayCount = generationsToday ?? 0; // Default to 0 if null/undefined
-      const dailyGenerationsUsed = isDifferentDay ? 0 : todayCount;
-      const underDailyLimit = dailyGenerationsUsed < dailyLimit;
-
-      if (!underDailyLimit) {
-        return {
-          isEligibleToGenerate: false,
-          disabledReason: `You've reached your daily limit of ${dailyLimit} generations. Try again tomorrow or upgrade for unlimited access.`,
-        };
-      }
+      // Note: Daily generation limits removed as generations_today tracking was inaccurate
 
       // If all trial checks pass
       return { isEligibleToGenerate: true, disabledReason: null };
@@ -164,7 +128,6 @@ const ProgramForm = ({
     subscriptionStatus,
     trialEndDate,
     generationsRemaining,
-    generationsToday,
     lastGenerationDate,
   ]);
 

@@ -207,9 +207,9 @@ const CreateEditEntityModal = ({
         <form onSubmit={handleSubmit}>
           {/* Core Entity Fields */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-            <div className="form-control">
+            <div className="w-full">
               <label className="label">
-                <span className="label-text">Name</span>
+                <span className="text-sm">Name</span>
               </label>
               <input
                 type="text"
@@ -221,9 +221,9 @@ const CreateEditEntityModal = ({
                 disabled={isSubmitting}
               />
             </div>
-            <div className="form-control">
+            <div className="w-full">
               <label className="label">
-                <span className="label-text">Type</span>
+                <span className="text-sm">Type</span>
               </label>
               <select
                 className="select select-bordered w-full"
@@ -245,9 +245,9 @@ const CreateEditEntityModal = ({
             <div className="mt-6 border-t pt-4">
               <div className="flex justify-between items-center mb-4">
                 <h4 className="text-md font-semibold">Client Metrics</h4>
-                <div className="form-control">
+                <div className="w-full">
                   <label className="label cursor-pointer">
-                    <span className="label-text mr-2">
+                    <span className="text-sm mr-2">
                       {useImperial ? 'Imperial' : 'Metric'}
                     </span>
                     <input
@@ -266,9 +266,9 @@ const CreateEditEntityModal = ({
                 {/* --- 1RM Lifts --- */}
                 <div className="space-y-2">
                   <h5 className="font-medium mb-1 text-sm">1RM Lifts</h5>
-                  <div className="form-control">
+                  <div className="w-full">
                     <label className="label py-1">
-                      <span className="label-text text-xs">
+                      <span className="text-sm text-xs">
                         Bench Press ({useImperial ? 'lbs' : 'kg'})
                       </span>
                     </label>
@@ -285,9 +285,9 @@ const CreateEditEntityModal = ({
                       disabled={isSubmitting}
                     />
                   </div>
-                  <div className="form-control">
+                  <div className="w-full">
                     <label className="label py-1">
-                      <span className="label-text text-xs">
+                      <span className="text-sm text-xs">
                         Squat ({useImperial ? 'lbs' : 'kg'})
                       </span>
                     </label>
@@ -304,9 +304,9 @@ const CreateEditEntityModal = ({
                       disabled={isSubmitting}
                     />
                   </div>
-                  <div className="form-control">
+                  <div className="w-full">
                     <label className="label py-1">
-                      <span className="label-text text-xs">
+                      <span className="text-sm text-xs">
                         Deadlift ({useImperial ? 'lbs' : 'kg'})
                       </span>
                     </label>
@@ -328,9 +328,9 @@ const CreateEditEntityModal = ({
                 {/* --- Physical Stats --- */}
                 <div className="space-y-2">
                   <h5 className="font-medium mb-1 text-sm">Physical Stats</h5>
-                  <div className="form-control">
+                  <div className="w-full">
                     <label className="label py-1">
-                      <span className="label-text text-xs">
+                      <span className="text-sm text-xs">
                         Height {useImperial ? '(ft-in)' : '(cm)'}
                       </span>
                     </label>
@@ -384,9 +384,9 @@ const CreateEditEntityModal = ({
                       />
                     )}
                   </div>
-                  <div className="form-control">
+                  <div className="w-full">
                     <label className="label py-1">
-                      <span className="label-text text-xs">
+                      <span className="text-sm text-xs">
                         Weight ({useImperial ? 'lbs' : 'kg'})
                       </span>
                     </label>
@@ -404,9 +404,9 @@ const CreateEditEntityModal = ({
                       disabled={isSubmitting}
                     />
                   </div>
-                  <div className="form-control">
+                  <div className="w-full">
                     <label className="label py-1">
-                      <span className="label-text text-xs">
+                      <span className="text-sm text-xs">
                         Mile Time (min:sec)
                       </span>
                     </label>
@@ -426,9 +426,9 @@ const CreateEditEntityModal = ({
                 {/* --- Recovery & Injuries --- */}
                 <div className="space-y-2">
                   <h5 className="font-medium mb-1 text-sm">Other</h5>
-                  <div className="form-control">
+                  <div className="w-full">
                     <label className="label py-1">
-                      <span className="label-text text-xs">
+                      <span className="text-sm text-xs">
                         Recovery Score (1-10)
                       </span>
                     </label>
@@ -447,9 +447,9 @@ const CreateEditEntityModal = ({
                       disabled={isSubmitting}
                     />
                   </div>
-                  <div className="form-control">
+                  <div className="w-full">
                     <label className="label py-1">
-                      <span className="label-text text-xs">Injury History</span>
+                      <span className="text-sm text-xs">Injury History</span>
                     </label>
                     <textarea
                       className="textarea textarea-bordered textarea-sm w-full"
@@ -461,9 +461,9 @@ const CreateEditEntityModal = ({
                       disabled={isSubmitting}
                     ></textarea>
                   </div>
-                  <div className="form-control">
+                  <div className="w-full">
                     <label className="label py-1">
-                      <span className="label-text text-xs">Gender</span>
+                      <span className="text-sm text-xs">Gender</span>
                     </label>
                     <select
                       className="select select-bordered select-sm w-full"

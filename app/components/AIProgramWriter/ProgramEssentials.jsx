@@ -1,8 +1,22 @@
 'use client';
+import { useRef, useState } from 'react';
 import ProgramTypeSelector from '@/components/selectors/ProgramTypeSelector';
 import { programTypes } from '@/components/utils';
-import { InfoIcon } from 'lucide-react';
+import { InfoIcon, ChevronDown } from 'lucide-react';
+
 export default function ProgramEssentials({ formData, handleChange }) {
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  
+  const selectedProgramType = programTypes.find(
+    (type) => type.value === formData.programType
+  );
+
+  const handleProgramTypeSelect = (value) => {
+    handleChange({ target: { name: 'programType', value } });
+    // Close the dropdown after selection
+    setDropdownOpen(false);
+  };
+
   return (
     <section className="bg-base-100 p-5 rounded-lg border border-base-300 shadow-sm h-full flex flex-col">
       <h2 className="text-xl font-semibold  text-primary">Essentials</h2>
@@ -13,8 +27,8 @@ export default function ProgramEssentials({ formData, handleChange }) {
 
       {/* Training Methodology */}
       <div className="mb-4">
-        <label className="form-control w-full">
-          <span className="label-text font-medium flex items-center">
+        <label className="w-full">
+          <span className="text-sm font-medium flex items-center">
             Methodology (Overall Program Approach)
             <div
               className="tooltip tooltip-top tooltip-info ml-2"
@@ -39,33 +53,46 @@ export default function ProgramEssentials({ formData, handleChange }) {
       </div>
       {/* Periodization Type */}
       <div className="mb-4">
-        <label className="form-control w-full">
-          <span className="label-text font-medium mb-1">
+        <label className="w-full">
+          <span className="text-sm font-medium mb-1">
             Periodization Type
           </span>
-          <select
-            name="programType"
-            className="select select-bordered w-full"
-            value={formData.programType || ''}
-            onChange={handleChange}
+          <details 
+            open={dropdownOpen} 
+            onToggle={(e) => setDropdownOpen(e.target.open)}
+            className="dropdown w-full"
           >
-            <option value="" disabled>
-              Select Periodization Type
-            </option>
-            {programTypes.map((type) => (
-              <option key={type.value} value={type.value}>
-                {type.label}
-              </option>
-            ))}
-          </select>
+            <summary className="btn btn-outline w-full justify-between">
+              <span>
+                {selectedProgramType
+                  ? selectedProgramType.label
+                  : 'Select Periodization Type'}
+              </span>
+              <ChevronDown className="h-4 w-4" />
+            </summary>
+            <ul className="menu dropdown-content bg-base-100 rounded-box z-1 w-full p-2 shadow-sm">
+              {programTypes.map((type) => (
+                <li key={type.value}>
+                  <button
+                    className={`w-full ${
+                      formData.programType === type.value ? 'active' : ''
+                    }`}
+                    onClick={() => handleProgramTypeSelect(type.value)}
+                  >
+                    {type.label}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </details>
         </label>
       </div>
 
       {/* Program Description */}
       <div className="">
-        <label className="form-control w-full h-full flex flex-col">
+        <label className="w-full h-full flex flex-col">
           <div className="flex items-center">
-            <span className="label-text font-medium">Program Description</span>
+            <span className="text-sm font-medium">Program Description</span>
             <div
               className="tooltip tooltip-top tooltip-info ml-2"
               data-tip="Specific requirements for your program"
@@ -74,11 +101,10 @@ export default function ProgramEssentials({ formData, handleChange }) {
             </div>
           </div>
           <textarea
-            name="description"
-            className="textarea textarea-bordered w-full flex-grow"
-            placeholder="Describe your program to determine the overall style, e.g. 'Strength program for powerlifters, no gymnastics, no overhead pressing"
+            className="textarea textarea-bordered w-full border-base-300 focus:border-primary"
             value={formData.description}
             onChange={handleChange}
+            name="description"
             rows="3"
           ></textarea>
         </label>
@@ -86,9 +112,9 @@ export default function ProgramEssentials({ formData, handleChange }) {
 
       {/* Previous Workout/Program Input */}
       <div className="mt-4">
-        <label className="form-control w-full">
+        <label className="w-full">
           <div className="flex items-center">
-            <span className="label-text font-medium">
+            <span className="text-sm font-medium">
               Previous Workout/Program (Optional)
             </span>
             <div
@@ -100,7 +126,7 @@ export default function ProgramEssentials({ formData, handleChange }) {
           </div>
           <textarea
             name="referenceInput"
-            className="textarea textarea-bordered w-full"
+            className="textarea textarea-bordered w-full border-base-300 focus:border-primary"
             placeholder="Paste your own workout text here (e.g., a specific WOD, a previous program structure)"
             value={formData.referenceInput || ''}
             onChange={handleChange}

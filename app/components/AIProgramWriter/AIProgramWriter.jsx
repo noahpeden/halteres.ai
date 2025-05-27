@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useRef, useCallback, memo, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useRouter } from 'next/navigation';
 import equipmentList from '@/utils/equipmentList';
 import { gymEquipmentPresets } from '../utils';
 import Toast from '../Toast';
@@ -60,12 +61,12 @@ const AUTO_SAVE_STATES = {
 };
 
 export default function AIProgramWriter({ programId }) {
+  const router = useRouter();
   const {
     supabase,
     subscriptionStatus,
     trialEndDate,
     generationsRemaining,
-    generationsToday,
     lastGenerationDate,
     refetchProfile,
   } = useAuth();
@@ -180,7 +181,6 @@ export default function AIProgramWriter({ programId }) {
   ]);
 
   const handleConfirmGenerate = useCallback(async () => {
-    console.log(JSON.stringify(formData, null, 2));
     dispatch({ type: 'CLOSE_CONFIRMATION_MODAL' });
     if (!programId) {
       showToastMessage(
@@ -455,20 +455,12 @@ export default function AIProgramWriter({ programId }) {
   useEffect(() => {
     async function autoSaveGeneratedWorkouts() {
       if (!programId || suggestions.length === 0 || isLoading) {
-        console.log('[AutoSave] Not saving, conditions not met:', {
-          hasProgramId: !!programId,
-          suggestionCount: suggestions.length,
-          isLoading,
-        });
         return;
       }
 
       // Check if any workouts need to be saved (don't have IDs)
       const hasNewWorkouts = suggestions.some((workout) => !workout.id);
       if (!hasNewWorkouts) {
-        console.log(
-          '[AutoSave] All workouts already have IDs, nothing to save'
-        );
         return;
       }
 
@@ -479,9 +471,6 @@ export default function AIProgramWriter({ programId }) {
       dispatch({ type: 'SET_LOADING', payload: true });
 
       try {
-        console.log(
-          `[AutoSave] Deleting old workouts for programId: ${programId}`
-        );
         const { error: deleteError } = await supabase
           .from('program_workouts')
           .delete()
@@ -508,12 +497,6 @@ export default function AIProgramWriter({ programId }) {
             delete tagsWithoutDate.scheduled_date;
 
             const dateValue = workout.suggestedDate || workout.date || null;
-            console.log('[AutoSave] Processing workout for insert:', {
-              title: workout.title,
-              dateValue,
-              hasDate: !!workout.date,
-              hasSuggestedDate: !!workout.suggestedDate,
-            });
 
             return {
               program_id: programId,
@@ -533,7 +516,6 @@ export default function AIProgramWriter({ programId }) {
           });
 
         if (workoutInserts.length === 0) {
-          console.log('[AutoSave] No new workouts to insert.');
           if (autoSaveState !== AUTO_SAVE_STATES.ERROR) {
             dispatch({
               type: 'SET_AUTO_SAVE_STATE',
@@ -544,7 +526,6 @@ export default function AIProgramWriter({ programId }) {
           return;
         }
 
-        console.log('[AutoSave] Inserting workouts:', workoutInserts.length);
         const { data: newWorkouts, error: insertError } = await supabase
           .from('program_workouts')
           .insert(workoutInserts)
@@ -553,10 +534,6 @@ export default function AIProgramWriter({ programId }) {
         if (insertError) throw insertError;
 
         if (newWorkouts && newWorkouts.length > 0) {
-          console.log(
-            '[AutoSave] Successfully inserted workouts:',
-            newWorkouts.length
-          );
           const updatedSuggestions = suggestions.map((suggestion) => {
             const saved = newWorkouts.find(
               (nw) => nw.title === suggestion.title && !suggestion.id
@@ -705,6 +682,7 @@ export default function AIProgramWriter({ programId }) {
     fetchProgramData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [programId, supabase, dispatch, showToastMessage]);
+
 
   const debouncedAutoSave = useCallback(async () => {
     if (!isDirty || autoSaveState === AUTO_SAVE_STATES.SAVING) {
@@ -979,9 +957,14 @@ export default function AIProgramWriter({ programId }) {
 
   const handleViewWorkoutDetailsWrapper = useCallback(
     (workout) => {
-      dispatch({ type: 'OPEN_WORKOUT_MODAL', payload: workout });
+      if (workout.id) {
+        router.push(`/program/${programId}/workout/${workout.id}`);
+      } else {
+        // Fallback to modal for workouts without IDs
+        dispatch({ type: 'OPEN_WORKOUT_MODAL', payload: workout });
+      }
     },
-    [dispatch]
+    [router, programId, dispatch]
   );
 
   const handleDatePickerOpenWrapper = useCallback(
@@ -1228,7 +1211,6 @@ export default function AIProgramWriter({ programId }) {
           subscriptionStatus={subscriptionStatus}
           trialEndDate={trialEndDate}
           generationsRemaining={generationsRemaining}
-          generationsToday={generationsToday}
           lastGenerationDate={lastGenerationDate}
         />
       </div>
@@ -1264,6 +1246,8 @@ export default function AIProgramWriter({ programId }) {
             onMarkComplete={handleMarkComplete}
             isLoading={isLoading}
             generatedDescription={generatedDescription}
+            setFormData={(data) => dispatch({ type: 'UPDATE_FORM_DATA', payload: data })}
+            showToastMessage={showToastMessage}
           />
         </>
       )}

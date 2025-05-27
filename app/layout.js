@@ -43,6 +43,7 @@ export default async function RootLayout({ children }) {
     <html
       className={`${nunitoSans.variable} ${poppins.variable} ${inter.className}`}
       lang="en"
+      data-theme="light"
     >
       <head>
         <link rel="icon" href="/favicon.jpeg" type="image/jpeg" />

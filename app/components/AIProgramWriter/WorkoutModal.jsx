@@ -255,7 +255,7 @@ export default function WorkoutModal({
                   <input
                     id="enhance-input"
                     ref={enhanceInputRef}
-                    className="input input-bordered w-full mb-2"
+                    className="input input-bordered w-full mb-2 border-base-300 focus:border-primary"
                     type="text"
                     placeholder="e.g. Add more cardio, make it harder, etc."
                     value={enhanceText}

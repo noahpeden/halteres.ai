@@ -652,9 +652,9 @@ export default function UpcomingWorkouts() {
                         >
                           View Details
                         </button>
-                        <div className="form-control">
+                        <div className="w-full">
                           <label className="label cursor-pointer p-0">
-                            <span className="label-text text-xs mr-2">
+                            <span className="text-sm text-xs mr-2">
                               Completed
                             </span>
                             <input
