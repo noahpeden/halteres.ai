@@ -1,21 +1,16 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { 
-  ArrowRight, 
-  DollarSign, 
-  Clock, 
-  Users, 
-  Zap, 
-  TrendingUp, 
+import {
+  ArrowRight,
+  DollarSign,
+  Clock,
+  Users,
+  TrendingUp,
   Target,
   CheckCircle,
-  Star,
-  Play,
   BarChart3,
-  Calendar,
-  Bot,
-  Sparkles
+  Sparkles,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import Image from 'next/image';
@@ -41,9 +36,7 @@ export default function HomeClient() {
 
   const ValueProp = ({ icon, title, description, highlight }) => (
     <div className="flex flex-col items-center p-8 bg-white rounded-2xl shadow-lg border border-gray-100 hover:shadow-xl transition-all duration-300">
-      <div className="p-4 bg-primary/10 rounded-full mb-6">
-        {icon}
-      </div>
+      <div className="p-4 bg-primary/10 rounded-full mb-6">{icon}</div>
       <h3 className="text-2xl font-bold mb-4 text-center">{title}</h3>
       <p className="text-gray-600 text-center leading-relaxed">{description}</p>
       {highlight && (
@@ -54,15 +47,28 @@ export default function HomeClient() {
     </div>
   );
 
-  const FeatureShowcase = ({ title, description, image, imageAlt, reverse = false, badge }) => (
-    <div className={`flex flex-col ${reverse ? 'lg:flex-row-reverse' : 'lg:flex-row'} items-center gap-12 mb-20`}>
+  const FeatureShowcase = ({
+    title,
+    description,
+    image,
+    imageAlt,
+    reverse = false,
+    badge,
+  }) => (
+    <div
+      className={`flex flex-col ${
+        reverse ? 'lg:flex-row-reverse' : 'lg:flex-row'
+      } items-center gap-12 mb-20`}
+    >
       <div className="lg:w-1/2 space-y-6">
         {badge && (
           <div className="inline-flex items-center px-4 py-2 bg-primary/10 text-primary rounded-full text-sm font-semibold">
             {badge}
           </div>
         )}
-        <h3 className="text-3xl lg:text-4xl font-bold text-gray-900">{title}</h3>
+        <h3 className="text-3xl lg:text-4xl font-bold text-gray-900">
+          {title}
+        </h3>
         <p className="text-xl text-gray-600 leading-relaxed">{description}</p>
       </div>
       <div className="lg:w-1/2">
@@ -98,18 +104,24 @@ export default function HomeClient() {
                   className="rounded-lg"
                   priority
                 />
-                <span className="text-2xl font-bold text-primary">Halteres.ai</span>
+                <span className="text-2xl font-bold text-primary">
+                  Halteres.ai
+                </span>
               </div>
-              
+
               <div className="space-y-6">
                 <h1 className="text-5xl lg:text-6xl font-bold text-gray-900 leading-tight">
                   Stop Spending Hours on Programming.
-                  <span className="text-primary block">Start Making More Money.</span>
+                  <span className="text-primary block">
+                    Start Making More Money.
+                  </span>
                 </h1>
-                
+
                 <p className="text-xl lg:text-2xl text-gray-600 leading-relaxed">
-                  AI-powered workout programming that takes <strong>2 minutes instead of 2 hours</strong>. 
-                  Free up your time to take on more clients while delivering state-of-the-art programming quality.
+                  AI-powered workout programming that takes{' '}
+                  <strong>2 minutes instead of 2 hours</strong>. Free up your
+                  time to take on more clients while delivering state-of-the-art
+                  programming quality.
                 </p>
               </div>
 
@@ -132,7 +144,9 @@ export default function HomeClient() {
                 <div className="flex items-center space-x-2">
                   <Clock className="w-6 h-6 text-primary" />
                   <div>
-                    <div className="font-bold text-2xl text-gray-900">2 min</div>
+                    <div className="font-bold text-2xl text-gray-900">
+                      2 min
+                    </div>
                     <div className="text-sm text-gray-600">vs 2 hours</div>
                   </div>
                 </div>
@@ -146,7 +160,9 @@ export default function HomeClient() {
                 <div className="flex items-center space-x-2">
                   <DollarSign className="w-6 h-6 text-primary" />
                   <div>
-                    <div className="font-bold text-2xl text-gray-900">$500+</div>
+                    <div className="font-bold text-2xl text-gray-900">
+                      $500+
+                    </div>
                     <div className="text-sm text-gray-600">extra monthly</div>
                   </div>
                 </div>
@@ -158,23 +174,37 @@ export default function HomeClient() {
               <div className="bg-white p-6 rounded-3xl shadow-2xl border border-gray-100">
                 <div className="rounded-2xl overflow-hidden">
                   {/* Loom Video Embed */}
-                  <div style={{position: 'relative', paddingBottom: '93.5064935064935%', height: 0}}>
-                    <iframe 
-                      src="https://www.loom.com/embed/3e1ef91a6ff24c4c97ef4d7916e60b73?sid=fd29ac4b-e6fd-4d99-8882-5fd92d938ede" 
-                      frameBorder="0" 
-                      webkitallowfullscreen="true" 
-                      mozallowfullscreen="true" 
-                      allowFullScreen 
-                      style={{position: 'absolute', top: 0, left: 0, width: '100%', height: '100%'}}
+                  <div
+                    style={{
+                      position: 'relative',
+                      paddingBottom: '93.5064935064935%',
+                      height: 0,
+                    }}
+                  >
+                    <iframe
+                      src="https://www.loom.com/embed/3e1ef91a6ff24c4c97ef4d7916e60b73?sid=fd29ac4b-e6fd-4d99-8882-5fd92d938ede"
+                      style={{
+                        border: 'none',
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: '100%',
+                      }}
+                      webkitallowfullscreen="true"
+                      mozallowfullscreen="true"
+                      allowFullScreen
                       className="rounded-2xl"
                     />
                   </div>
                 </div>
                 <div className="mt-4 text-center">
-                  <p className="text-sm text-gray-600">See how quickly you can program 2 weeks of workouts</p>
+                  <p className="text-sm text-gray-600">
+                    See how quickly you can program 2 weeks of workouts
+                  </p>
                 </div>
               </div>
-              
+
               {/* Floating badges */}
               <div className="absolute -top-4 -right-4 bg-green-500 text-white px-4 py-2 rounded-full text-sm font-semibold shadow-lg">
                 ⚡ 60x Faster
@@ -195,7 +225,8 @@ export default function HomeClient() {
               Why Fitness Professionals Choose Halteres.ai
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Transform your programming workflow and scale your business without sacrificing quality
+              Transform your programming workflow and scale your business
+              without sacrificing quality
             </p>
           </div>
 
@@ -248,13 +279,19 @@ export default function HomeClient() {
                     <div className="bg-red-100 p-1 rounded-full mt-1">
                       <div className="w-2 h-2 bg-red-500 rounded-full"></div>
                     </div>
-                    <p>Copy-pasting old workouts because you don't have time to create new ones</p>
+                    <p>
+                      Copy-pasting old workouts because you don't have time to
+                      create new ones
+                    </p>
                   </div>
                   <div className="flex items-start space-x-3">
                     <div className="bg-red-100 p-1 rounded-full mt-1">
                       <div className="w-2 h-2 bg-red-500 rounded-full"></div>
                     </div>
-                    <p>Staying up late to finish programming for tomorrow's sessions</p>
+                    <p>
+                      Staying up late to finish programming for tomorrow's
+                      sessions
+                    </p>
                   </div>
                 </div>
               </div>
@@ -262,7 +299,9 @@ export default function HomeClient() {
 
             <div className="space-y-8">
               <div className="bg-white p-8 rounded-2xl shadow-xl border border-gray-100">
-                <h3 className="text-2xl font-bold mb-6 text-center">Revenue Calculator</h3>
+                <h3 className="text-2xl font-bold mb-6 text-center">
+                  Revenue Calculator
+                </h3>
                 <div className="space-y-4">
                   <div className="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
                     <span>Current clients:</span>
@@ -279,7 +318,9 @@ export default function HomeClient() {
                   <div className="border-t pt-4">
                     <div className="flex justify-between items-center p-4 bg-primary/10 rounded-lg">
                       <span className="font-bold">Extra monthly revenue:</span>
-                      <span className="font-bold text-2xl text-primary">$1,200</span>
+                      <span className="font-bold text-2xl text-primary">
+                        $1,200
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -297,7 +338,8 @@ export default function HomeClient() {
               Everything You Need to Scale Your Business
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Professional-grade tools designed specifically for personal trainers and CrossFit coaches
+              Professional-grade tools designed specifically for personal
+              trainers and CrossFit coaches
             </p>
           </div>
 
@@ -342,7 +384,8 @@ export default function HomeClient() {
               Even More Ways to Grow Your Business
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              We're constantly building new features to help fitness professionals scale their businesses
+              We're constantly building new features to help fitness
+              professionals scale their businesses
             </p>
           </div>
 
@@ -354,9 +397,13 @@ export default function HomeClient() {
               <div className="p-4 bg-blue-50 rounded-full w-16 h-16 flex items-center justify-center mb-6">
                 <BarChart3 className="w-8 h-8 text-blue-600" />
               </div>
-              <h3 className="text-2xl font-bold mb-4">Advanced Progress Tracking</h3>
+              <h3 className="text-2xl font-bold mb-4">
+                Advanced Progress Tracking
+              </h3>
               <p className="text-gray-600 leading-relaxed">
-                Monitor client PRs, completion rates, and program adherence. Use data-driven insights to demonstrate value and justify premium pricing.
+                Monitor client PRs, completion rates, and program adherence. Use
+                data-driven insights to demonstrate value and justify premium
+                pricing.
               </p>
             </div>
 
@@ -367,9 +414,12 @@ export default function HomeClient() {
               <div className="p-4 bg-green-50 rounded-full w-16 h-16 flex items-center justify-center mb-6">
                 <Sparkles className="w-8 h-8 text-green-600" />
               </div>
-              <h3 className="text-2xl font-bold mb-4">Smart Workout Recommendations</h3>
+              <h3 className="text-2xl font-bold mb-4">
+                Smart Workout Recommendations
+              </h3>
               <p className="text-gray-600 leading-relaxed">
-                AI-powered suggestions based on client performance, preferences, and progress patterns to optimize results automatically.
+                AI-powered suggestions based on client performance, preferences,
+                and progress patterns to optimize results automatically.
               </p>
             </div>
 
@@ -382,14 +432,17 @@ export default function HomeClient() {
               </div>
               <h3 className="text-2xl font-bold mb-4">Business Analytics</h3>
               <p className="text-gray-600 leading-relaxed">
-                Track revenue per client, program effectiveness, and business growth metrics to make data-driven decisions about your coaching business.
+                Track revenue per client, program effectiveness, and business
+                growth metrics to make data-driven decisions about your coaching
+                business.
               </p>
             </div>
           </div>
 
           <div className="text-center mt-12">
             <p className="text-lg text-gray-600 mb-6">
-              Want to influence our roadmap? Join our community and help shape the future of fitness programming.
+              Want to influence our roadmap? Join our community and help shape
+              the future of fitness programming.
             </p>
             <button
               onClick={() => push()}
@@ -409,7 +462,7 @@ export default function HomeClient() {
             <h2 className="text-4xl lg:text-5xl font-bold text-white mb-6">
               Join 500+ Fitness Professionals Making More Money
             </h2>
-            
+
             <div className="grid md:grid-cols-3 gap-8 text-white">
               <div className="space-y-2">
                 <div className="text-4xl font-bold">500+</div>
