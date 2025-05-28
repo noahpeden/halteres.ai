@@ -14,7 +14,13 @@ export default function WorkoutList({
   setFormData,
   showToastMessage,
 }) {
-  if (!workouts || workouts.length === 0) return null;
+  // Debug: Log when WorkoutList re-renders
+  console.log('[WorkoutList] Rendering with', workouts ? workouts.length : 0, 'workouts');
+  
+  if (!workouts || workouts.length === 0) {
+    console.log('[WorkoutList] No workouts to display');
+    return null;
+  }
 
   // Group workouts by week for display
   const groupWorkoutsByWeek = () => {
@@ -85,7 +91,7 @@ export default function WorkoutList({
           <div className="grid grid-cols-1 gap-4">
             {weekGroup.workouts.map((workout, index) => (
               <div
-                key={`${weekGroup.week}-${index}`}
+                key={workout.streamingId || `${weekGroup.week}-${index}-${workout.title}`}
                 className={`border rounded-md p-3 sm:p-4 flex flex-col w-full ${
                   workout.completed ? 'bg-green-50 border-green-200' : ''
                 }`}

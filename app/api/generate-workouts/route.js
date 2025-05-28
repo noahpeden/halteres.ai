@@ -131,7 +131,7 @@ export async function POST(req) {
 
     // Generate workouts using OpenAI
     const response = await openai.chat.completions.create({
-      model: 'gpt-4o',
+      model: 'gpt-4.1',
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt },

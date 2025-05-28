@@ -4,7 +4,7 @@ import ProgramTypeSelector from '@/components/selectors/ProgramTypeSelector';
 import { programTypes } from '@/components/utils';
 import { InfoIcon, ChevronDown } from 'lucide-react';
 
-export default function ProgramEssentials({ formData, handleChange }) {
+export default function ProgramEssentials({ formData, handleChange, triggerAutoSave }) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   
   const selectedProgramType = programTypes.find(
@@ -39,11 +39,12 @@ export default function ProgramEssentials({ formData, handleChange }) {
           </span>
           <ProgramTypeSelector
             selectedType={formData.trainingMethodology}
-            onChange={(typeId) =>
+            onChange={(typeId) => {
               handleChange({
                 target: { name: 'trainingMethodology', value: typeId },
-              })
-            }
+              });
+              if (triggerAutoSave) triggerAutoSave();
+            }}
           />
           <span className="text-xs text-gray-500 mb-2">
             Select the overall approach that will guide your program's structure
@@ -77,7 +78,10 @@ export default function ProgramEssentials({ formData, handleChange }) {
                     className={`w-full ${
                       formData.programType === type.value ? 'active' : ''
                     }`}
-                    onClick={() => handleProgramTypeSelect(type.value)}
+                    onClick={() => {
+                      handleProgramTypeSelect(type.value);
+                      if (triggerAutoSave) triggerAutoSave();
+                    }}
                   >
                     {type.label}
                   </button>
@@ -104,6 +108,7 @@ export default function ProgramEssentials({ formData, handleChange }) {
             className="textarea textarea-bordered w-full border-base-300 focus:border-primary"
             value={formData.description}
             onChange={handleChange}
+            onBlur={() => triggerAutoSave && triggerAutoSave()}
             name="description"
             rows="3"
           ></textarea>
@@ -130,6 +135,7 @@ export default function ProgramEssentials({ formData, handleChange }) {
             placeholder="Paste your own workout text here (e.g., a specific WOD, a previous program structure)"
             value={formData.referenceInput || ''}
             onChange={handleChange}
+            onBlur={() => triggerAutoSave && triggerAutoSave()}
             rows="3"
           ></textarea>
         </label>

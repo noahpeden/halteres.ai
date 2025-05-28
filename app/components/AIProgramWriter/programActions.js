@@ -1,4 +1,6 @@
 'use client';
+import { flushSync } from 'react-dom';
+import { startTransition } from 'react';
 import equipmentList from '@/utils/equipmentList';
 import { dayNameToNumber } from './utils';
 import { calculateEndDate } from './dateHandlers';
@@ -23,395 +25,525 @@ export async function generateProgram({
   setLoadingTimer,
   setFormData,
   setGeneratedDescription,
+  setAiStreamingContent,
+  showAiStream,
+  hideAiStream,
+  dispatch,
   refetchProfile,
 }) {
-  setIsLoading(true);
-  setSuggestions([]);
-  showToastMessage('Generating program...');
-  setGenerationStage('preparing');
-  setServerStatus(null);
+  return new Promise(async (resolve, reject) => {
+    setIsLoading(true);
+    setSuggestions([]);
+    showToastMessage('Generating program...');
+    setGenerationStage('preparing');
+    setServerStatus(null);
 
-  // Start a timer to track loading duration
-  const startTime = Date.now();
-  const timer = setInterval(() => {
-    const elapsed = Math.floor((Date.now() - startTime) / 1000);
-    setLoadingDuration(elapsed);
+    // Start a timer to track loading duration
+    const startTime = Date.now();
+    const timer = setInterval(() => {
+      const elapsed = Math.floor((Date.now() - startTime) / 1000);
+      setLoadingDuration(elapsed);
 
-    // After 45 seconds, show warning about possible timeout
-    if (elapsed > 45 && setGenerationStage === 'generating') {
-      setGenerationStage('longRunning');
-    }
-  }, 1000);
-
-  setLoadingTimer(timer);
-
-  // Retry mechanism counter
-  let retryCount = 0;
-  let lastError = null;
-
-  while (retryCount <= MAX_RETRIES) {
-    try {
-      // If this is a retry, show message to user
-      if (retryCount > 0) {
-        showToastMessage(
-          `Retry attempt ${retryCount} of ${MAX_RETRIES}...`,
-          'warning'
-        );
-        setGenerationStage('retrying');
-        // Add a small delay before retrying
-        await delay(RETRY_DELAY);
+      // After 45 seconds, show warning about possible timeout
+      if (elapsed > 45 && setGenerationStage === 'generating') {
+        setGenerationStage('longRunning');
       }
+    }, 1000);
 
-      // Get the equipment names instead of IDs
-      const selectedEquipmentNames = formData.equipment
-        .map((id) => {
-          const equipment = equipmentList.find((item) => item.value === id);
-          return equipment ? equipment.label : '';
-        })
-        .filter(Boolean);
+    setLoadingTimer(timer);
 
-      // Convert day names to day numbers for API consistency
-      const daysOfWeekNumbers = formData.daysOfWeek.map(
-        (day) => dayNameToNumber[day]
-      );
+    // Retry mechanism counter
+    let retryCount = 0;
+    let lastError = null;
 
-      // Prepare gym_details with equipment and gym type
-      const gymDetails = {
-        ...formData.gymDetails,
-        equipment: selectedEquipmentNames,
-        gym_type: formData.gymType,
-      };
-
-      // Prepare periodization with program type
-      const periodizationData = {
-        ...formData.periodization,
-        program_type: formData.programType,
-      };
-
-      setGenerationStage('generating');
-
-      // Create request body
-      const requestBody = JSON.stringify({
-        ...(programId ? { programId } : {}),
-        name: formData.name,
-        description: formData.description,
-        goal: formData.goal,
-        difficulty: formData.difficulty,
-        focus_area: formData.focusArea,
-        personalization: formData.personalization,
-        trainingMethodology: formData.trainingMethodology,
-        duration_weeks: parseInt(formData.numberOfWeeks, 10),
-        days_per_week: parseInt(formData.daysPerWeek, 10),
-        entityId: formData.entityId,
-        gym_details: gymDetails,
-        periodization: periodizationData,
-        calendar_data: {
-          start_date: formData.startDate,
-          end_date: formData.endDate,
-          days_per_week: parseInt(formData.daysPerWeek, 10),
-          days_of_week: daysOfWeekNumbers,
-        },
-        session_details: formData.sessionDetails,
-        program_overview: formData.programOverview,
-      });
-
-      // Adjust workout_format based on custom sections (logic from source component)
-      const finalRequestBody = JSON.parse(requestBody);
-      if (formData.customWorkoutSections.length > 0) {
-        finalRequestBody.workout_format = {
-          sections: formData.customWorkoutSections,
-          formatNames: formData.workoutFormats,
-        };
-      } else {
-        // Send only format names if no custom sections
-        finalRequestBody.workout_format = formData.workoutFormats;
-      }
-
-      // Create a controller to abort the fetch if needed
-      const controller = new AbortController();
-      const signal = controller.signal;
-
-      // Set a timeout of 2.5 minutes (150 seconds)
-      const timeoutId = setTimeout(() => {
-        controller.abort();
-      }, 150000);
-
-      const response = await fetch('/api/generate-program', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'text/event-stream',
-        },
-        body: JSON.stringify(finalRequestBody),
-        signal,
-      });
-
-      // Check for timeout and server errors that should trigger retry
-      if (!response.ok) {
-        const statusCode = response.status;
-
-        // Clear the timeout since we're handling the response now
-        clearTimeout(timeoutId);
-
-        // If we get a 504 Gateway Timeout or 503 Service Unavailable, retry
-        if (
-          (statusCode === 504 || statusCode === 503) &&
-          retryCount < MAX_RETRIES
-        ) {
-          retryCount++;
-          lastError = new Error(
-            `Server returned ${statusCode} error. Retrying...`
+    while (retryCount <= MAX_RETRIES) {
+      try {
+        // If this is a retry, show message to user
+        if (retryCount > 0) {
+          showToastMessage(
+            `Retry attempt ${retryCount} of ${MAX_RETRIES}...`,
+            'warning'
           );
-          continue; // Skip to next retry iteration
+          setGenerationStage('retrying');
+          // Add a small delay before retrying
+          await delay(RETRY_DELAY);
         }
 
-        throw new Error(`Server returned error: ${statusCode}`);
-      }
+        // Get the equipment names instead of IDs
+        const selectedEquipmentNames = formData.equipment
+          .map((id) => {
+            const equipment = equipmentList.find((item) => item.value === id);
+            return equipment ? equipment.label : '';
+          })
+          .filter(Boolean);
 
-      // Check if we got an event stream response
-      const contentType = response.headers.get('content-type');
-      if (contentType && contentType.includes('text/event-stream')) {
-        // Process the stream
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = '';
+        // Convert day names to day numbers for API consistency
+        const daysOfWeekNumbers = formData.daysOfWeek.map(
+          (day) => dayNameToNumber[day]
+        );
 
-        while (true) {
-          const { value, done } = await reader.read();
-          if (done) break;
+        // Prepare gym_details with equipment and gym type
+        const gymDetails = {
+          ...formData.gymDetails,
+          equipment: selectedEquipmentNames,
+          gym_type: formData.gymType,
+        };
 
-          // Decode the chunk and add to buffer
-          buffer += decoder.decode(value, { stream: true });
+        // Prepare periodization with program type
+        const periodizationData = {
+          ...formData.periodization,
+          program_type: formData.programType,
+        };
 
-          // Process complete messages from buffer
-          let messages = buffer.split('\n\n');
-          buffer = messages.pop() || ''; // Keep the last incomplete message in buffer
+        setGenerationStage('generating');
 
-          for (const message of messages) {
-            if (message.trim() && message.startsWith('data: ')) {
-              try {
-                const data = JSON.parse(message.substring(6));
-                setServerStatus(data);
+        // Create request body
+        const requestBody = JSON.stringify({
+          ...(programId ? { programId } : {}),
+          name: formData.name,
+          description: formData.description,
+          goal: formData.goal,
+          difficulty: formData.difficulty,
+          focus_area: formData.focusArea,
+          personalization: formData.personalization,
+          trainingMethodology: formData.trainingMethodology,
+          duration_weeks: parseInt(formData.numberOfWeeks, 10),
+          days_per_week: parseInt(formData.daysPerWeek, 10),
+          entityId: formData.entityId,
+          gym_details: gymDetails,
+          periodization: periodizationData,
+          calendar_data: {
+            start_date: formData.startDate,
+            end_date: formData.endDate,
+            days_per_week: parseInt(formData.daysPerWeek, 10),
+            days_of_week: daysOfWeekNumbers,
+          },
+          session_details: formData.sessionDetails,
+          program_overview: formData.programOverview,
+        });
 
-                // Update UI based on status
-                if (data.status === 'ai_request') {
-                  setGenerationStage('generating');
-                } else if (
-                  data.status === 'ai_response_received' ||
-                  data.status === 'parsing'
-                ) {
-                  setGenerationStage('processing');
-                } else if (
-                  data.status.includes('saving') ||
-                  data.status.includes('finalizing')
-                ) {
-                  setGenerationStage('finalizing');
-                } else if (data.status === 'complete') {
-                  // Process the final result
-                  if (data.suggestions && data.suggestions.length > 0) {
-                    // Update state with program information
+        // Adjust workout_format based on custom sections (logic from source component)
+        const finalRequestBody = JSON.parse(requestBody);
+        if (formData.customWorkoutSections.length > 0) {
+          finalRequestBody.workout_format = {
+            sections: formData.customWorkoutSections,
+            formatNames: formData.workoutFormats,
+          };
+        } else {
+          // Send only format names if no custom sections
+          finalRequestBody.workout_format = formData.workoutFormats;
+        }
+
+        // Create a controller to abort the fetch if needed
+        const controller = new AbortController();
+        const signal = controller.signal;
+
+        // Calculate timeout based on program size
+        // For large programs (5+ weeks), use a longer timeout
+        const numberOfWeeks = parseInt(formData.numberOfWeeks, 10);
+        const timeoutDuration = numberOfWeeks >= 5 ? 300000 : 150000; // 5 minutes for large programs, 2.5 minutes for smaller ones
+
+        // Set a timeout
+        const timeoutId = setTimeout(() => {
+          controller.abort();
+        }, timeoutDuration);
+
+        const response = await fetch('/api/generate-program', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'text/event-stream',
+          },
+          body: JSON.stringify(finalRequestBody),
+          signal,
+        });
+
+        // Check for timeout and server errors that should trigger retry
+        if (!response.ok) {
+          const statusCode = response.status;
+
+          // Clear the timeout since we're handling the response now
+          clearTimeout(timeoutId);
+
+          // If we get a 504 Gateway Timeout or 503 Service Unavailable, retry
+          if (
+            (statusCode === 504 || statusCode === 503) &&
+            retryCount < MAX_RETRIES
+          ) {
+            retryCount++;
+            lastError = new Error(
+              `Server returned ${statusCode} error. Retrying...`
+            );
+            continue; // Skip to next retry iteration
+          }
+
+          throw new Error(`Server returned error: ${statusCode}`);
+        }
+
+        // Check if we got an event stream response
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('text/event-stream')) {
+          // Process the stream
+          const sessionId = `session_${Date.now()}`;
+          console.log(`[Streaming] Starting SSE session: ${sessionId}`);
+
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder();
+          let buffer = '';
+
+          while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+
+            // Decode the chunk and add to buffer
+            buffer += decoder.decode(value, { stream: true });
+
+            // Process complete messages from buffer
+            let messages = buffer.split('\n\n');
+            buffer = messages.pop() || ''; // Keep the last incomplete message in buffer
+
+            for (const message of messages) {
+              if (message.trim() && message.startsWith('data: ')) {
+                try {
+                  const data = JSON.parse(message.substring(6));
+                  console.log(`[Streaming ${sessionId}] Received event:`, data);
+                  setServerStatus(data);
+
+                  // Update UI based on type
+                  if (data.type === 'ai_request') {
+                    setGenerationStage('generating');
+                    showAiStream(); // Show the AI streaming container
+                  } else if (data.type === 'ai_content_stream') {
+                    // Handle real-time AI content streaming
+                    setAiStreamingContent(data.fullContent);
+                  } else if (data.type === 'ai_response_received') {
+                    setGenerationStage('processing');
+                    // Keep AI stream visible during response processing
+                  } else if (data.type === 'parsing') {
+                    setGenerationStage('processing');
+                    hideAiStream(); // Hide the streaming content when parsing starts
+                  } else if (data.type === 'program_metadata') {
+                    // Handle program metadata and clear existing suggestions
+                    console.log(
+                      '[Streaming] Program metadata received:',
+                      data.title
+                    );
+                    setSuggestions([]); // Clear previous workouts for streaming
+                    showToastMessage(
+                      `Program created: ${data.title}`,
+                      'success'
+                    );
+
                     if (!programId && data.title) {
                       setFormData((prev) => ({
                         ...prev,
                         name: data.title || prev.name,
                       }));
                     }
-
-                    if (!programId && data.description) {
+                    if (data.description) {
+                      console.log('[Streaming] Setting program description');
                       setGeneratedDescription(data.description);
                     }
+                  } else if (data.type === 'workout_generated') {
+                    // Handle individual workout streaming
+                    console.log(
+                      '[Streaming] Adding workout:',
+                      data.index,
+                      data.workout.title
+                    );
+                    setGenerationStage('finalizing');
+                    const workout = data.workout;
 
-                    // Normalize workout format AND filter out reference workouts
-                    const normalizedWorkouts = data.suggestions
-                      .filter((workout) => !workout.is_reference) // Filter out reference workouts
-                      .map((workout) => ({
-                        title: workout.title,
-                        body: workout.body || workout.description,
-                        description: workout.body || workout.description,
-                        suggestedDate: workout.date || workout.suggestedDate,
-                        date: workout.date || workout.suggestedDate,
-                        // Preserve other potential fields if needed, but is_reference is filtered above
-                      }));
+                    // Add workout to suggestions incrementally - force immediate render
+                    const newWorkout = {
+                      title: workout.title,
+                      body: workout.body,
+                      description: workout.body,
+                      suggestedDate: workout.date,
+                      date: workout.date,
+                      // Add unique timestamp to force re-render
+                      streamingId: `workout_${data.index}_${Date.now()}`,
+                    };
 
-                    setSuggestions(normalizedWorkouts);
+                    // Use flushSync to force synchronous update
+                    flushSync(() => {
+                      setSuggestions((prev) => {
+                        console.log(
+                          '[Streaming] Previous suggestions count:',
+                          prev.length
+                        );
+                        // Simple append approach to avoid index issues
+                        const newSuggestions = [...prev, newWorkout];
+                        console.log(
+                          '[Streaming] Updated suggestions, total count:',
+                          newSuggestions.length
+                        );
+                        return newSuggestions;
+                      });
+                    });
 
+                    // Show a toast for each workout added
                     showToastMessage(
-                      programId
-                        ? 'Program generated and saved successfully! You can now add workouts to your calendar.'
-                        : 'Program generated successfully!'
+                      `Workout ${data.index + 1}/${data.total}: ${
+                        workout.title
+                      }`,
+                      'success'
+                    );
+                  } else if (
+                    data.type === 'saving' ||
+                    data.type === 'finalizing'
+                  ) {
+                    setGenerationStage('finalizing');
+                  } else if (data.type === 'complete') {
+                    console.log('[Streaming] Generation complete');
+                    setIsLoading(false);
+                    setGenerationStage('complete');
+
+                    // Immediately trigger a program data refresh
+                    if (dispatch) {
+                      dispatch({ type: 'TRIGGER_PROGRAM_REFRESH' });
+                    }
+
+                    // Set preventFetch flag to prevent fetchProgramData from clearing workouts
+                    if (dispatch) {
+                      dispatch({ type: 'SET_PREVENT_FETCH', payload: true });
+                      // Clear the flag after a delay and trigger a refresh
+                      setTimeout(() => {
+                        dispatch({ type: 'SET_PREVENT_FETCH', payload: false });
+                        // Trigger a refresh by clearing generation stage
+                        setTimeout(() => {
+                          dispatch({
+                            type: 'SET_GENERATION_STAGE',
+                            payload: null,
+                          });
+                        }, 100);
+                      }, 5000); // Reduced to 5 seconds
+                    }
+
+                    // Get current suggestions count for completion message
+                    setSuggestions((currentSuggestions) => {
+                      const workoutCount = currentSuggestions.length;
+                      showToastMessage(
+                        programId
+                          ? `Program complete! Generated ${workoutCount} workouts. You can now add them to your calendar.`
+                          : `Program complete! Generated ${workoutCount} workouts.`,
+                        'success'
+                      );
+                      return currentSuggestions; // Return unchanged
+                    });
+
+                    // Clear the timer
+                    if (timer) {
+                      clearInterval(timer);
+                      setLoadingTimer(null);
+                    }
+
+                    // Call refetchProfile if provided
+                    if (refetchProfile) {
+                      // Delay refetchProfile to allow auto-save to complete
+                      setTimeout(() => {
+                        console.log(
+                          '[generateProgram SSE] Calling refetchProfile...'
+                        );
+                        refetchProfile();
+                      }, 5000); // 5 second delay
+                    }
+
+                    resolve();
+                  } else if (data.type === 'error') {
+                    console.error('[Streaming] Error event:', data);
+                    setIsLoading(false);
+                    setGenerationStage('error');
+                    showToastMessage(
+                      data.error || 'Failed to generate program',
+                      'error'
                     );
 
-                    // Refresh the auth context profile after generation completes
-                    if (refetchProfile) {
-                      console.log(
-                        '[generateProgram SSE] Calling refetchProfile...'
-                      );
-                      refetchProfile();
+                    // Clear the timer
+                    if (timer) {
+                      clearInterval(timer);
+                      setLoadingTimer(null);
                     }
+
+                    reject(
+                      new Error(data.error || 'Failed to generate program')
+                    );
                   }
-                  break;
-                } else if (data.status === 'error') {
-                  throw new Error(
-                    data.details?.message ||
-                      'An error occurred during generation'
-                  );
+                } catch (e) {
+                  console.error('Error parsing SSE message:', e, message);
                 }
-              } catch (e) {
-                console.error('Error parsing SSE message:', e, message);
               }
             }
           }
-        }
-        // After SSE loop finishes (implicitly successful if no error thrown)
-        clearTimeout(timeoutId);
-        lastError = null; // Ensure no error is carried forward if stream completes
-        break; // Break outer retry loop
-      } else {
-        // Process normal JSON response
-        const data = await response.json();
-
-        setGenerationStage('finalizing');
-
-        if (data.suggestions && data.suggestions.length > 0) {
-          // Update state with program information
-          if (!programId && data.title) {
-            setFormData((prev) => ({
-              ...prev,
-              name: data.title || prev.name,
-            }));
-          }
-
-          if (!programId && data.description) {
-            setGeneratedDescription(data.description);
-          }
-
-          // Normalize workout format AND filter out reference workouts
-          const normalizedWorkouts = data.suggestions
-            .filter((workout) => !workout.is_reference) // Filter out reference workouts
-            .map((workout) => ({
-              title: workout.title,
-              body: workout.body || workout.description,
-              description: workout.body || workout.description,
-              suggestedDate: workout.date || workout.suggestedDate,
-              date: workout.date || workout.suggestedDate,
-              // Preserve other potential fields if needed, but is_reference is filtered above
-            }));
-
-          setSuggestions(normalizedWorkouts);
-
-          // Show success message
-          showToastMessage(
-            programId
-              ? 'Program generated and saved successfully! You can now add workouts to your calendar.'
-              : 'Program generated successfully!'
-          );
-
-          // Refresh the auth context profile after generation completes
-          if (refetchProfile) {
-            console.log('[generateProgram JSON] Calling refetchProfile...');
-            refetchProfile();
-          }
+          // After SSE loop finishes (implicitly successful if no error thrown)
+          clearTimeout(timeoutId);
+          lastError = null; // Ensure no error is carried forward if stream completes
+          break; // Break outer retry loop
         } else {
-          showToastMessage(
-            'No program workouts were generated. Please try again.'
-          );
+          // Process normal JSON response
+          const data = await response.json();
+
+          setGenerationStage('finalizing');
+
+          if (data.suggestions && data.suggestions.length > 0) {
+            // Set preventFetch flag to prevent fetchProgramData from clearing workouts
+            if (dispatch) {
+              dispatch({ type: 'SET_PREVENT_FETCH', payload: true });
+              // Clear the flag after a delay and trigger a refresh
+              setTimeout(() => {
+                dispatch({ type: 'SET_PREVENT_FETCH', payload: false });
+                // Trigger a refresh by clearing generation stage
+                setTimeout(() => {
+                  dispatch({ type: 'SET_GENERATION_STAGE', payload: null });
+                }, 100);
+              }, 5000); // Reduced to 5 seconds
+            }
+
+            // Update state with program information
+            if (!programId && data.title) {
+              setFormData((prev) => ({
+                ...prev,
+                name: data.title || prev.name,
+              }));
+            }
+
+            if (!programId && data.description) {
+              setGeneratedDescription(data.description);
+            }
+
+            // Normalize workout format AND filter out reference workouts
+            const normalizedWorkouts = data.suggestions
+              .filter((workout) => !workout.is_reference) // Filter out reference workouts
+              .map((workout) => ({
+                title: workout.title,
+                body: workout.body || workout.description,
+                description: workout.body || workout.description,
+                suggestedDate: workout.date || workout.suggestedDate,
+                date: workout.date || workout.suggestedDate,
+                // Preserve other potential fields if needed, but is_reference is filtered above
+              }));
+
+            setSuggestions(normalizedWorkouts);
+
+            // Show success message
+            showToastMessage(
+              programId
+                ? 'Program generated and saved successfully! You can now add workouts to your calendar.'
+                : 'Program generated successfully!'
+            );
+
+            // Refresh the auth context profile after generation completes
+            if (refetchProfile) {
+              // Delay refetchProfile to allow auto-save to complete
+              setTimeout(() => {
+                console.log('[generateProgram JSON] Calling refetchProfile...');
+                refetchProfile();
+              }, 5000); // 2 second delay
+            }
+          } else {
+            showToastMessage(
+              'No program workouts were generated. Please try again.'
+            );
+          }
+
+          // If we get here, the request was successful
+          clearTimeout(timeoutId);
+          lastError = null; // Ensure no error is carried forward
+          break; // Exit the retry loop on success
+        }
+      } catch (error) {
+        console.error('Error:', error);
+
+        // Track the last error for reporting after all retries fail
+        lastError = error;
+
+        // Determine if this is a retryable error
+        const isNetworkError =
+          error.name === 'TypeError' && error.message.includes('network');
+        const isTimeoutError =
+          error.name === 'AbortError' || error.message.includes('timed out');
+        const isGatewayError =
+          error.message.includes('504') || error.message.includes('Gateway');
+        const isServiceUnavailable =
+          error.message.includes('503') ||
+          error.message.includes('Service Unavailable');
+
+        const isRetryableError =
+          isNetworkError ||
+          isTimeoutError ||
+          isGatewayError ||
+          isServiceUnavailable;
+
+        // If error is retryable and we have retries left
+        if (isRetryableError && retryCount < MAX_RETRIES) {
+          retryCount++;
+
+          // Don't break the loop - continue to next retry iteration
+          continue;
         }
 
-        // If we get here, the request was successful
-        clearTimeout(timeoutId);
-        lastError = null; // Ensure no error is carried forward
-        break; // Exit the retry loop on success
+        // If we've exhausted retries or error is not retryable, exit the loop
+        break;
       }
-    } catch (error) {
-      console.error('Error:', error);
-
-      // Track the last error for reporting after all retries fail
-      lastError = error;
-
-      // Determine if this is a retryable error
-      const isNetworkError =
-        error.name === 'TypeError' && error.message.includes('network');
-      const isTimeoutError =
-        error.name === 'AbortError' || error.message.includes('timed out');
-      const isGatewayError =
-        error.message.includes('504') || error.message.includes('Gateway');
-      const isServiceUnavailable =
-        error.message.includes('503') ||
-        error.message.includes('Service Unavailable');
-
-      const isRetryableError =
-        isNetworkError ||
-        isTimeoutError ||
-        isGatewayError ||
-        isServiceUnavailable;
-
-      // If error is retryable and we have retries left
-      if (isRetryableError && retryCount < MAX_RETRIES) {
-        retryCount++;
-
-        // Don't break the loop - continue to next retry iteration
-        continue;
-      }
-
-      // If we've exhausted retries or error is not retryable, exit the loop
-      break;
     }
-  }
 
-  // If we get here with lastError, it means all retries failed
-  if (lastError) {
-    console.error('All retry attempts failed:', lastError);
+    // If we get here with lastError, it means all retries failed
+    if (lastError) {
+      console.error('All retry attempts failed:', lastError);
 
-    // Clean up the timer
+      // Clean up the timer
+      clearInterval(timer);
+
+      // Show appropriate error message based on error type
+      if (
+        lastError.name === 'AbortError' ||
+        lastError.message.includes('timed out')
+      ) {
+        showToastMessage(
+          `Program generation timed out after ${MAX_RETRIES} attempts. Please try again later with a smaller program or fewer requirements.`,
+          'error'
+        );
+      } else if (
+        lastError.message.includes('504') ||
+        lastError.message.includes('Gateway')
+      ) {
+        showToastMessage(
+          `Gateway timeout after ${MAX_RETRIES} retry attempts. The server is taking too long to respond. Please try again later or generate a simpler program.`,
+          'error'
+        );
+      } else if (
+        lastError.message.includes('network') ||
+        lastError.message.includes('fetch')
+      ) {
+        showToastMessage(
+          `Network error during program generation. Please check your connection and try again.`,
+          'error'
+        );
+      } else {
+        showToastMessage(
+          `Program generation failed: ${lastError.message}`,
+          'error'
+        );
+      }
+
+      setIsLoading(false);
+      reject(lastError);
+      return; // Exit the function
+    }
+
+    // If we reached here with no lastError, the operation completed successfully
     clearInterval(timer);
-
-    // Show appropriate error message based on error type
-    if (
-      lastError.name === 'AbortError' ||
-      lastError.message.includes('timed out')
-    ) {
-      showToastMessage(
-        `Program generation timed out after ${MAX_RETRIES} attempts. Please try again later with a smaller program or fewer requirements.`,
-        'error'
-      );
-    } else if (
-      lastError.message.includes('504') ||
-      lastError.message.includes('Gateway')
-    ) {
-      showToastMessage(
-        `Gateway timeout after ${MAX_RETRIES} retry attempts. The server is taking too long to respond. Please try again later or generate a simpler program.`,
-        'error'
-      );
-    } else if (
-      lastError.message.includes('network') ||
-      lastError.message.includes('fetch')
-    ) {
-      showToastMessage(
-        `Network error during program generation. Please check your connection and try again.`,
-        'error'
-      );
-    } else {
-      showToastMessage(
-        `Program generation failed: ${lastError.message}`,
-        'error'
-      );
-    }
-
     setIsLoading(false);
-    return; // Exit the function
-  }
 
-  // If we reached here with no lastError, the operation completed successfully
-  clearInterval(timer);
-  setIsLoading(false);
-
-  // Clean up remaining state
-  setGenerationStage(null);
-  setLoadingDuration(0);
-  setServerStatus(null);
-  if (setLoadingTimer) {
-    setLoadingTimer(null);
-  }
+    // Clean up remaining state
+    setGenerationStage(null);
+    setLoadingDuration(0);
+    setServerStatus(null);
+    if (setLoadingTimer) {
+      setLoadingTimer(null);
+    }
+    resolve();
+  });
 }
 
 // Save program
