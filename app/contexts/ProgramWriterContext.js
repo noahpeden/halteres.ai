@@ -31,6 +31,7 @@ const initialState = {
     trainingMethodology: '',
     referenceInput: '',
     customWorkoutSections: [],
+    selectedModel: 'anthropic', // Default to Claude Sonnet 4
   },
   suggestions: [],
   referenceWorkouts: [],

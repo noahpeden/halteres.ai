@@ -107,6 +107,7 @@ ${
 }
 ${personalization ? `Personalization: ${personalization}` : ''}
 ${formattedPeriodizationGuidelines}
+${context.formattedWeekSpecificContext}
 ${clientMetrics || ''}
 ${referenceWorkouts || ''}
 ${formatSchedulingRequirements(suggestedDates, daysPerWeek, selectedDayNames)}

@@ -136,7 +136,11 @@ export async function generateProgram({
         controller.abort();
       }, 150000);
 
-      const response = await fetch('/api/generate-program', {
+      // Use Claude Sonnet 4 (Anthropic) as the default model
+      const apiEndpoint = '/api/generate-program-anthropic';
+      console.log(`[Program Generation] Using Claude Sonnet 4 via ${apiEndpoint}`);
+
+      const response = await fetch(apiEndpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

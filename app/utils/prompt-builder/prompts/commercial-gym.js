@@ -92,6 +92,7 @@ ${context.formattedRagMatchedWorkouts}
 ${context.clientMetrics ? `\n${context.clientMetrics}` : ''}
 ${context.referenceWorkouts ? `\n${context.referenceWorkouts}` : ''}
 ${formattedPeriodizationGuidelines}
+${context.formattedWeekSpecificContext}
 ${formatSchedulingRequirements(suggestedDates, daysPerWeek, selectedDayNames)}
 
 For the program description, include:

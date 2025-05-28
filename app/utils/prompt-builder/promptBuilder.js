@@ -113,6 +113,8 @@ export default function promptBuilder(context, trainingType) {
     formattedPeriodizationGuidelines: formatPeriodizationSection(
       context.programType || context.periodization?.program_type || 'linear'
     ),
+    // Add week-specific context for progressive program development
+    formattedWeekSpecificContext: formatWeekSpecificContext(context),
   };
 
   // Handle both new training methodology types and legacy gym types for backward compatibility
@@ -340,6 +342,83 @@ User-Provided Reference Material:
 ${referenceInput.trim()}
 ---
 IMPORTANT: Consider the structure, style, and content of the above user-provided reference material when generating the program. Treat it as a key example of what the user is looking for, alongside their main description/goal.`;
+}
+
+/**
+ * Formats previous workouts for week-specific generation
+ * @param {Array} previousWorkouts - Array of previously generated workouts
+ * @param {number} weekNumber - Current week number being generated
+ * @param {number} totalWeeks - Total weeks in the program
+ * @returns {string} Formatted string for progressive program development
+ */
+function formatPreviousWorkouts(previousWorkouts, weekNumber, totalWeeks) {
+  if (!previousWorkouts || !Array.isArray(previousWorkouts) || previousWorkouts.length === 0) {
+    return '';
+  }
+
+  const previousWorkoutSummary = previousWorkouts
+    .map((workout, index) => {
+      const workoutWeek = Math.floor(index / (previousWorkouts.length / (weekNumber - 1))) + 1;
+      return `${workout.title}:\n${workout.body.substring(0, 200)}...`;
+    })
+    .join('\n\n');
+
+  return `
+PREVIOUS WORKOUTS CONTEXT (for Week ${weekNumber} of ${totalWeeks}):
+The following workouts have already been generated for this program. Use this context to ensure proper progression, avoid repetition, and maintain periodization consistency:
+
+${previousWorkoutSummary}
+
+PROGRESSION REQUIREMENTS:
+- Week ${weekNumber} should build logically on the previous weeks
+- Adjust intensity/volume appropriate for this phase of the ${totalWeeks}-week program
+- Maintain movement pattern variety while respecting periodization
+- Consider fatigue accumulation and recovery needs based on previous workouts
+- Ensure exercises progress in complexity/load from previous weeks where appropriate
+
+IMPORTANT: This is Week ${weekNumber} of ${totalWeeks}, so adjust the programming phase accordingly (early program vs mid-program vs final weeks).`;
+}
+
+/**
+ * Formats week-specific generation context
+ * @param {Object} context - The week-specific context
+ * @returns {string} Formatted string for week-specific prompts
+ */
+function formatWeekSpecificContext(context) {
+  const { isWeekSpecific, weekNumber, totalWeeks, previousWorkouts, daysPerWeek } = context;
+  
+  if (!isWeekSpecific) {
+    return '';
+  }
+
+  let weekContext = `
+WEEK-SPECIFIC GENERATION (Week ${weekNumber} of ${totalWeeks}):
+- Generate ONLY the workouts for Week ${weekNumber}
+- This week should have exactly ${daysPerWeek} workouts
+- Focus on this specific week's role in the overall ${totalWeeks}-week progression`;
+
+  // Add progression guidance based on week position
+  const progressPercentage = weekNumber / totalWeeks;
+  if (progressPercentage <= 0.25) {
+    weekContext += `
+- EARLY PROGRAM PHASE: Focus on movement quality, base building, and establishing patterns
+- Conservative loads and emphasis on technique`;
+  } else if (progressPercentage <= 0.75) {
+    weekContext += `
+- MID PROGRAM PHASE: Progressive overload, increased complexity, peak intensity building
+- Build on movement patterns established in earlier weeks`;
+  } else {
+    weekContext += `
+- LATE PROGRAM PHASE: Peak performance, advanced movements, or taper/deload depending on goals
+- Culmination of the training progression from previous weeks`;
+  }
+
+  // Add previous workout context if available
+  if (previousWorkouts && previousWorkouts.length > 0) {
+    weekContext += formatPreviousWorkouts(previousWorkouts, weekNumber, totalWeeks);
+  }
+
+  return weekContext;
 }
 
 /**

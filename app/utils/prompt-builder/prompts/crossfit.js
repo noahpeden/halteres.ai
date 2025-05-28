@@ -124,6 +124,7 @@ ${context.clientMetrics ? `\n${context.clientMetrics}` : ''}
 ${context.referenceWorkouts ? `\n${context.referenceWorkouts}` : ''}
 ${customFormatSection}
 ${formattedPeriodizationGuidelines}
+${context.formattedWeekSpecificContext}
 ${formatSchedulingRequirements(suggestedDates, daysPerWeek, selectedDayNames)}
 
 For the program description, include:

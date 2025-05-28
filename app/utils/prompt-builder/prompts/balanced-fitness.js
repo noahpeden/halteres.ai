@@ -120,6 +120,7 @@ ${
     : ''
 }
 ${formattedPeriodizationGuidelines}
+${context.formattedWeekSpecificContext}
 ${formatSchedulingRequirements(suggestedDates, daysPerWeek, selectedDayNames)}
 
 For the program description, include:

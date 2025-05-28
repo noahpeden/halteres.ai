@@ -140,9 +140,9 @@ export async function POST(req) {
     Your goal is to create a high-quality, personalized workout program that matches or exceeds the detail and specificity of professionally curated fitness workouts.
     `;
 
-    // Generate workouts using Anthropic
+    // Generate workouts using Anthropic Claude Sonnet 4
     const response = await anthropic.messages.create({
-      model: 'claude-3-7-sonnet-20250219',
+      model: 'claude-sonnet-4-20250514',
       max_tokens: 4000,
       temperature: 0.7,
       system: systemPrompt,

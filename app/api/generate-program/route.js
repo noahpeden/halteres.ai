@@ -746,6 +746,7 @@ async function generateLargeProgram(requestData, params, supabase, openai) {
   const commonPromptElements = await preparePromptElements(
     programId,
     supabase,
+    openai,
     {
       goal,
       difficulty,
@@ -839,18 +840,20 @@ async function generateLargeProgram(requestData, params, supabase, openai) {
   }
 
   try {
-    // Process weeks in parallel with a limit of 2 concurrent generations
-    // This helps manage API load while still making progress
-    const results = [];
+    // Process weeks with retry logic instead of placeholders
+    const maxRetries = 3;
     const concurrencyLimit = 2;
+    const failedWeeks = [];
 
+    // First attempt: Process weeks in parallel
+    const results = [];
     for (let i = 0; i < weekGenerationPromises.length; i += concurrencyLimit) {
       const chunk = weekGenerationPromises.slice(i, i + concurrencyLimit);
       const chunkResults = await Promise.allSettled(chunk);
       results.push(...chunkResults);
     }
 
-    // Process results and add successful weeks to allWorkouts
+    // Process results and identify failed weeks
     results.forEach((result, index) => {
       const weekNumber = index + 1;
 
@@ -864,58 +867,102 @@ async function generateLargeProgram(requestData, params, supabase, openai) {
         });
         allWorkouts.push(...result.value);
       } else {
-        // For failed weeks, generate placeholders
         logWithTimestamp(
-          `Failed to generate week ${weekNumber}, creating placeholders`,
+          `Week ${weekNumber} failed, will retry`,
           {
             error: result.reason ? result.reason.message : 'Unknown error',
           }
         );
-
-        // Create placeholder workouts for the failed week
-        const startWorkoutIndex = (weekNumber - 1) * workoutsPerChunk;
-        const endWorkoutIndex = Math.min(
-          weekNumber * workoutsPerChunk - 1,
-          totalWorkouts - 1
-        );
-        const weekDates = suggestedDates.slice(
-          startWorkoutIndex,
-          endWorkoutIndex + 1
-        );
-
-        const placeholderWorkouts = createPlaceholderWorkouts(
-          weekNumber,
-          weekDates
-        );
-        allWorkouts.push(...placeholderWorkouts);
+        failedWeeks.push(weekNumber);
       }
     });
-  } catch (parallelError) {
-    logWithTimestamp('Error in parallel week generation', {
-      error: parallelError.message,
-    });
 
-    // If we have a catastrophic error, make sure we still return something
-    if (allWorkouts.length === 0) {
-      // Create placeholder workouts for all weeks
-      for (let weekNumber = 1; weekNumber <= chunksToGenerate; weekNumber++) {
-        const startWorkoutIndex = (weekNumber - 1) * workoutsPerChunk;
-        const endWorkoutIndex = Math.min(
-          weekNumber * workoutsPerChunk - 1,
-          totalWorkouts - 1
-        );
-        const weekDates = suggestedDates.slice(
-          startWorkoutIndex,
-          endWorkoutIndex + 1
-        );
-
-        const placeholderWorkouts = createPlaceholderWorkouts(
+    // Retry failed weeks individually
+    for (let retry = 1; retry <= maxRetries && failedWeeks.length > 0; retry++) {
+      logWithTimestamp(`Retry attempt ${retry} for ${failedWeeks.length} failed weeks`);
+      
+      const retryPromises = failedWeeks.map(weekNumber => 
+        generateWeek(
           weekNumber,
-          weekDates
-        );
-        allWorkouts.push(...placeholderWorkouts);
+          numberOfWeeks,
+          daysPerWeek,
+          suggestedDates,
+          commonPromptElements,
+          programType,
+          trainingType,
+          allWorkouts,
+          openai,
+          referenceInput
+        )
+      );
+
+      const retryResults = await Promise.allSettled(retryPromises);
+      const stillFailedWeeks = [];
+
+      retryResults.forEach((result, index) => {
+        const weekNumber = failedWeeks[index];
+
+        if (
+          result.status === 'fulfilled' &&
+          result.value &&
+          result.value.length > 0
+        ) {
+          logWithTimestamp(`Retry ${retry}: Successfully generated week ${weekNumber}`, {
+            workoutCount: result.value.length,
+          });
+          // Insert workouts in correct position
+          const insertIndex = (weekNumber - 1) * workoutsPerChunk;
+          allWorkouts.splice(insertIndex, 0, ...result.value);
+        } else {
+          logWithTimestamp(
+            `Retry ${retry}: Week ${weekNumber} still failing`,
+            {
+              error: result.reason ? result.reason.message : 'Unknown error',
+            }
+          );
+          stillFailedWeeks.push(weekNumber);
+        }
+      });
+
+      // Update failed weeks list
+      failedWeeks.length = 0;
+      failedWeeks.push(...stillFailedWeeks);
+
+      // Add delay between retry attempts to avoid rate limiting
+      if (failedWeeks.length > 0 && retry < maxRetries) {
+        logWithTimestamp(`Waiting 2 seconds before retry attempt ${retry + 1}`);
+        await new Promise(resolve => setTimeout(resolve, 2000));
       }
     }
+
+    // If some weeks still failed after all retries, fail the entire request
+    if (failedWeeks.length > 0) {
+      logWithTimestamp(`Failed to generate weeks after ${maxRetries} retries`, {
+        failedWeeks,
+      });
+      
+      return NextResponse.json(
+        {
+          error: `Failed to generate program: Could not create workouts for week(s) ${failedWeeks.join(', ')} after ${maxRetries} retry attempts. Please try again.`,
+          details: `The AI was unable to generate complete workouts for ${failedWeeks.length} week(s). This may be due to temporary API issues or overly specific requirements.`,
+        },
+        { status: 500 }
+      );
+    }
+
+  } catch (parallelError) {
+    logWithTimestamp('Critical error in week generation', {
+      error: parallelError.message,
+      stack: parallelError.stack,
+    });
+    
+    return NextResponse.json(
+      {
+        error: 'Failed to generate program due to a critical error',
+        details: parallelError.message,
+      },
+      { status: 500 }
+    );
   }
 
   // Sort workouts by date to ensure correct order
@@ -1118,46 +1165,10 @@ async function generateWeek(
   }
 }
 
-// Helper function to create placeholder workouts when generation fails
-function createPlaceholderWorkouts(weekNumber, weekDates) {
-  return weekDates.map((date, index) => {
-    const dayNumber = index + 1;
-
-    return {
-      title: `Week ${weekNumber}, Day ${dayNumber}: Workout`,
-      body: `## Stimulus and Strategy
-This is a placeholder workout. The AI was unable to generate this specific workout.
-
-## Warm-up
-5 minutes of light cardio
-Dynamic stretching for major muscle groups
-
-## Strength Work
-Squats: 4 sets of 10 reps
-Push-ups: 4 sets of 10 reps
-Rows: 4 sets of 10 reps
-
-## Conditioning Work
-AMRAP in 12 minutes:
-10 Burpees
-15 Air Squats
-20 Mountain Climbers
-
-## Cool-down
-5 minutes of light cardio
-Static stretching for major muscle groups
-
-## Coaching Cues
-- Maintain proper form throughout all exercises
-- Breathe properly during lifts
-- Scale as needed based on your fitness level`,
-      date: date,
-    };
-  });
-}
+// Note: Placeholder workouts removed - we now use retry logic instead of failing gracefully with placeholders
 
 // Helper function to prepare common prompt elements
-async function preparePromptElements(programId, supabase, params) {
+async function preparePromptElements(programId, supabase, openai, params) {
   const {
     goal,
     difficulty,

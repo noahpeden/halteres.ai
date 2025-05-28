@@ -26,6 +26,7 @@ export default function ProgramDetails({
     (area) => area.value === formData.focusArea
   );
 
+
   const toggleDropdown = (dropdownName) => {
     setOpenDropdowns((prev) => ({
       ...prev,

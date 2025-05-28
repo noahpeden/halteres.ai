@@ -318,8 +318,8 @@ export default function AIWorkoutSuggestions({ programId, onSelectWorkout }) {
         },
       };
 
-      // Call API to generate workouts
-      const response = await fetch('/api/generate-workouts', {
+      // Call API to generate workouts using Claude Sonnet 4
+      const response = await fetch('/api/generate-workouts-anthropic', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
