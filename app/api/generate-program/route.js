@@ -557,9 +557,9 @@ async function generateLargeProgram(
           message: `Processing batch: weeks ${startWeek}-${endWeek}...`,
         });
 
-        // Create promises only for this batch
+        // Create promises only for this batch with retry logic
         for (let weekNumber = startWeek; weekNumber <= endWeek; weekNumber++) {
-          const weekPromise = generateWeek(
+          const weekPromise = generateWeekWithRetry(
             weekNumber,
             numberOfWeeks,
             daysPerWeek,
@@ -569,7 +569,8 @@ async function generateLargeProgram(
             trainingType,
             allWorkouts,
             openai,
-            referenceInput
+            referenceInput,
+            3 // max retries
           );
           batchPromises.push(weekPromise);
         }
@@ -908,6 +909,58 @@ Response format:
   return overviewPrompt;
 }
 
+// Helper function to generate a single week with retry logic
+async function generateWeekWithRetry(
+  weekNumber,
+  totalWeeks,
+  daysPerWeek,
+  allSuggestedDates,
+  commonPromptElements,
+  programType,
+  trainingType,
+  existingWorkouts,
+  openai,
+  referenceInput,
+  maxRetries = 3
+) {
+  let lastError;
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      logWithTimestamp(`Generating week ${weekNumber}, attempt ${attempt}/${maxRetries}`);
+      
+      const result = await generateWeek(
+        weekNumber,
+        totalWeeks,
+        daysPerWeek,
+        allSuggestedDates,
+        commonPromptElements,
+        programType,
+        trainingType,
+        existingWorkouts,
+        openai,
+        referenceInput
+      );
+      
+      // If successful, return the result
+      return result;
+    } catch (error) {
+      lastError = error;
+      logWithTimestamp(`Week ${weekNumber} generation failed on attempt ${attempt}`, {
+        error: error.message
+      });
+      
+      // If this is the last attempt, throw the error
+      if (attempt === maxRetries) {
+        throw lastError;
+      }
+      
+      // Wait a bit before retrying (exponential backoff)
+      await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, attempt - 1)));
+    }
+  }
+}
+
 // Helper function to generate a single week (returns a promise)
 async function generateWeek(
   weekNumber,
@@ -940,10 +993,25 @@ async function generateWeek(
   // Create week-specific context for promptBuilder
   const weekPromptContext = {
     ...commonPromptElements,
+    // Add prompt template expected property names (underscore format)
+    focus_area: commonPromptElements.focusArea,
+    workout_format: commonPromptElements.workoutFormats,
+    gym_details: {
+      equipment: commonPromptElements.equipment
+    },
+    calendar_data: {
+      days_of_week: [],
+      start_date: ''
+    },
+    periodization: {
+      program_type: programType
+    },
+    // Week-specific properties
     programType,
     weekNumber,
     totalWeeks,
     daysPerWeek,
+    numberOfWeeks: totalWeeks,
     previousWorkouts: existingWorkouts,
     suggestedDates: chunkDates,
     referenceInput,
