@@ -9,6 +9,7 @@ export default function ProgramDetails({
   handleChange,
   handleWorkoutFormatChange,
   equipmentSelector,
+  triggerAutoSave,
 }) {
   const [openDropdowns, setOpenDropdowns] = useState({
     gymType: false,
@@ -43,16 +44,19 @@ export default function ProgramDetails({
   const handleGymTypeSelect = (value) => {
     handleChange({ target: { name: 'gymType', value } });
     closeDropdown('gymType');
+    if (triggerAutoSave) triggerAutoSave();
   };
 
   const handleDifficultySelect = (value) => {
     handleChange({ target: { name: 'difficulty', value } });
     closeDropdown('difficulty');
+    if (triggerAutoSave) triggerAutoSave();
   };
 
   const handleFocusAreaSelect = (value) => {
     handleChange({ target: { name: 'focusArea', value } });
     closeDropdown('focusArea');
+    if (triggerAutoSave) triggerAutoSave();
   };
 
   return (
@@ -222,6 +226,7 @@ export default function ProgramDetails({
                   },
                 });
               }}
+              onBlur={() => triggerAutoSave && triggerAutoSave()}
             />
             <div className="label">
               <span className="text-xs">
@@ -258,7 +263,10 @@ export default function ProgramDetails({
           </span>
           <WorkoutFormatSelector
             selectedFormats={formData.workoutFormats}
-            onChange={handleWorkoutFormatChange}
+            onChange={(formats) => {
+              handleWorkoutFormatChange(formats);
+              if (triggerAutoSave) triggerAutoSave();
+            }}
           />
           <span className="text-xs text-gray-500 mt-1">
             Choose the types of workouts you want to see in your program. These

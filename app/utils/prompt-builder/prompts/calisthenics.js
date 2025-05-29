@@ -67,7 +67,12 @@ export function calisthenicsPrompt(context) {
   const hasInjuryHistory = context.hasInjuryHistory || false;
 
   // Build the Calisthenics prompt
-  return `Generate a ${numberOfWeeks}-week calisthenics (bodyweight training) program with the following parameters:
+  const isGeneratingSpecificWeek = context.isWeekSpecific;
+  const weekSpecificInfo = isGeneratingSpecificWeek ? 
+    `Week ${context.weekNumber} of ${context.totalWeeks}` : 
+    `${numberOfWeeks}-week`;
+  
+  return `Generate a ${isGeneratingSpecificWeek ? 'single week' : numberOfWeeks + '-week'} calisthenics (bodyweight training) program with the following parameters:
 
 ${
   description
@@ -80,13 +85,15 @@ Please prioritize these specific requirements above all else in program design.
 Difficulty: ${difficulty}
 Days Per Week: ${daysPerWeek} days
 Selected Training Days: ${selectedDayNames || 'All available days'}
-Total Length: ${numberOfWeeks} weeks
+${isGeneratingSpecificWeek ? `Current Week: ${weekSpecificInfo}` : `Total Length: ${numberOfWeeks} weeks`}
 ${
   focus_area ? `Focus Area/Skills: ${focus_area}` : ''
 } // e.g., Handstand, Muscle-up
 ${formatEquipmentRestrictions(equipment)}
 
-IMPORTANT DURATION: The program MUST be exactly ${numberOfWeeks} week(s) long. Generate exactly ${totalWorkouts} workouts total.
+${isGeneratingSpecificWeek ? 
+`CRITICAL: You are generating ONLY Week ${context.weekNumber} of a ${context.totalWeeks}-week program. Generate exactly ${context.workoutsThisWeek || daysPerWeek} workouts for this week ONLY. Do NOT generate workouts for other weeks.` :
+`IMPORTANT DURATION: The program MUST be exactly ${numberOfWeeks} week(s) long. Generate exactly ${totalWorkouts} workouts total.`}
 
 REQUIRED WORKOUT STRUCTURE: Focus primarily on progressive bodyweight exercises. Include skill work, strength development through progressions (e.g., push-up variations, pull-up variations), and bodyweight conditioning. Use ONLY the available equipment, which might include pull-up bars or rings if specified.
 
@@ -97,7 +104,17 @@ ${clientMetrics || ''}
 ${referenceWorkouts || ''}
 ${additionalNotes ? `\\nAdditional Notes: ${additionalNotes}` : ''}
 ${formattedPeriodizationGuidelines}
-${formatSchedulingRequirements(suggestedDates, daysPerWeek, selectedDayNames)}
+${context.formattedDates ? `
+WORKOUT SCHEDULING REQUIREMENTS:
+Selected Training Days: ${selectedDayNames || 'All available days'}
+
+⚠️ CRITICAL SCHEDULING REQUIREMENT ⚠️
+The workouts MUST be scheduled on the EXACT dates below. These dates follow the user's selected training days (${selectedDayNames}). DO NOT create workouts on any other dates.
+
+${context.formattedDates}
+
+IMPORTANT: Each workout you generate MUST be assigned to one of the above dates. The "date" field in each workout object MUST match one of these dates EXACTLY, and all dates must be used.
+` : formatSchedulingRequirements(suggestedDates, daysPerWeek, selectedDayNames)}
 
 For the program description, include:
 1. A concise overview reflecting the CRITICAL REQUIREMENTS, Goal (Calisthenics), ACTUAL duration (${numberOfWeeks} weeks), difficulty, and focus on bodyweight skills and strength progressions.
@@ -114,6 +131,8 @@ General Calisthenics Guidelines (Apply *only if* they DO NOT CONFLICT with CRITI
 
 The program MUST follow logical progression based on the selected program type (${programType}) AND the client's requirements, using bodyweight exercise progressions effectively.
 Ensure proper periodization, skill development focus (if any), and sufficient recovery *within the constraints provided*.
+
+CRITICAL TITLE FORMATTING: For workout titles, use the ACTUAL week and day numbers based on the scheduling information provided above. For example, if generating workouts for Week 3, the titles should say "Week 3, Day 1", "Week 3, Day 2", etc. DO NOT use "Week 1" for all workouts - use the correct week number for each workout based on its position in the program schedule.
 
 Your response MUST be in this exact JSON format:
 {
@@ -200,6 +219,8 @@ ${
 - Common form errors to avoid
 \`\`\`
 
-The "workouts" array MUST contain exactly ${totalWorkouts} workouts, covering exactly ${numberOfWeeks} week(s).
+${isGeneratingSpecificWeek ? 
+`The "workouts" array MUST contain exactly ${context.workoutsThisWeek || daysPerWeek} workouts for Week ${context.weekNumber} ONLY.` :
+`The "workouts" array MUST contain exactly ${totalWorkouts} workouts, covering exactly ${numberOfWeeks} week(s).`}
 `;
 }

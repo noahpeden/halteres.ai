@@ -67,7 +67,12 @@ export function powerliftingPrompt(context) {
   const hasInjuryHistory = context.hasInjuryHistory || false;
 
   // Build the Powerlifting prompt
-  return `Generate a ${numberOfWeeks}-week powerlifting training program with the following parameters:
+  const isGeneratingSpecificWeek = context.isWeekSpecific;
+  const weekSpecificInfo = isGeneratingSpecificWeek ? 
+    `Week ${context.weekNumber} of ${context.totalWeeks}` : 
+    `${numberOfWeeks}-week`;
+  
+  return `Generate a ${isGeneratingSpecificWeek ? 'single week' : numberOfWeeks + '-week'} powerlifting training program with the following parameters:
 
 ${
   description
@@ -80,11 +85,13 @@ Please prioritize these specific requirements above all else in program design.
 Difficulty: ${difficulty}
 Days Per Week: ${daysPerWeek} days
 Selected Training Days: ${selectedDayNames || 'All available days'}
-Total Length: ${numberOfWeeks} weeks
+${isGeneratingSpecificWeek ? `Current Week: ${weekSpecificInfo}` : `Total Length: ${numberOfWeeks} weeks`}
 ${focus_area ? `Focus Area: ${focus_area}` : ''}
 ${formatEquipmentRestrictions(equipment)}
 
-IMPORTANT DURATION: The program MUST be exactly ${numberOfWeeks} week(s) long. Generate exactly ${totalWorkouts} workouts total.
+${isGeneratingSpecificWeek ? 
+`CRITICAL: You are generating ONLY Week ${context.weekNumber} of a ${context.totalWeeks}-week program. Generate exactly ${context.workoutsThisWeek || daysPerWeek} workouts for this week ONLY. Do NOT generate workouts for other weeks.` :
+`IMPORTANT DURATION: The program MUST be exactly ${numberOfWeeks} week(s) long. Generate exactly ${totalWorkouts} workouts total.`}
 
 REQUIRED WORKOUT STRUCTURE: Focus primarily on Squat, Bench Press, and Deadlift variations. Include appropriate accessory work targeting weaknesses and supporting the main lifts. Follow powerlifting principles (e.g., RPE, percentages of 1RM).
 
@@ -95,7 +102,17 @@ ${clientMetrics || ''}
 ${referenceWorkouts || ''}
 ${additionalNotes ? `\\nAdditional Notes: ${additionalNotes}` : ''}
 ${formattedPeriodizationGuidelines}
-${formatSchedulingRequirements(suggestedDates, daysPerWeek, selectedDayNames)}
+${context.formattedDates ? `
+WORKOUT SCHEDULING REQUIREMENTS:
+Selected Training Days: ${selectedDayNames || 'All available days'}
+
+⚠️ CRITICAL SCHEDULING REQUIREMENT ⚠️
+The workouts MUST be scheduled on the EXACT dates below. These dates follow the user's selected training days (${selectedDayNames}). DO NOT create workouts on any other dates.
+
+${context.formattedDates}
+
+IMPORTANT: Each workout you generate MUST be assigned to one of the above dates. The "date" field in each workout object MUST match one of these dates EXACTLY, and all dates must be used.
+` : formatSchedulingRequirements(suggestedDates, daysPerWeek, selectedDayNames)}
 
 For the program description, include:
 1. A concise overview reflecting the CRITICAL REQUIREMENTS, Goal (Powerlifting), ACTUAL duration (${numberOfWeeks} weeks), and focus on the three main lifts.
@@ -112,6 +129,8 @@ General Powerlifting Guidelines (Apply *only if* they DO NOT CONFLICT with CRITI
 
 The program MUST follow logical progression based on the selected program type (${programType}) AND the client's requirements, aiming for maximal strength increase in the three lifts.
 Ensure proper periodization, recovery, and exercise selection *within the constraints provided*.
+
+CRITICAL TITLE FORMATTING: For workout titles, use the ACTUAL week and day numbers based on the scheduling information provided above. For example, if generating workouts for Week 3, the titles should say "Week 3, Day 1", "Week 3, Day 2", etc. DO NOT use "Week 1" for all workouts - use the correct week number for each workout based on its position in the program schedule.
 
 Your response MUST be in this exact JSON format:
 {
@@ -179,6 +198,8 @@ ${
 - Common errors to avoid in the competition lifts
 \`\`\`
 
-The "workouts" array MUST contain exactly ${totalWorkouts} workouts, covering exactly ${numberOfWeeks} week(s).
+${isGeneratingSpecificWeek ? 
+`The "workouts" array MUST contain exactly ${context.workoutsThisWeek || daysPerWeek} workouts for Week ${context.weekNumber} ONLY.` :
+`The "workouts" array MUST contain exactly ${totalWorkouts} workouts, covering exactly ${numberOfWeeks} week(s).`}
 `;
 }

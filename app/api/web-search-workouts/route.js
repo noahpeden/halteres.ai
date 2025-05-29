@@ -137,7 +137,7 @@ ${exampleWorkout}`
               // Ask gpt-4o to classify the body content
               const classificationResponse =
                 await openAiClient.chat.completions.create({
-                  model: 'gpt-4o',
+                  model: 'gpt-4.1',
                   messages: [
                     {
                       role: 'user',
@@ -159,7 +159,7 @@ ${exampleWorkout}`
                 // If it's a description, generate a workout plan
                 const generationResponse =
                   await openAiClient.chat.completions.create({
-                    model: 'gpt-4o', // Or potentially a stronger model if generation quality is low
+                    model: 'gpt-4.1', // Or potentially a stronger model if generation quality is low
                     messages: [
                       {
                         role: 'system',
@@ -222,7 +222,7 @@ ${exampleWorkout}`
       } else {
         // If no JSON found, have OpenAI format the response
         const formattingResponse = await openAiClient.chat.completions.create({
-          model: 'gpt-4o',
+          model: 'gpt-4.1',
           messages: [
             {
               role: 'system',
@@ -292,7 +292,7 @@ ${exampleWorkout}`
                 // Ask gpt-4o to classify the body content
                 const classificationResponse =
                   await openAiClient.chat.completions.create({
-                    model: 'gpt-4o',
+                    model: 'gpt-4.1',
                     messages: [
                       {
                         role: 'user',
@@ -314,7 +314,7 @@ ${exampleWorkout}`
                   // If it's a description, generate a workout plan
                   const generationResponse =
                     await openAiClient.chat.completions.create({
-                      model: 'gpt-4o', // Or potentially a stronger model if generation quality is low
+                      model: 'gpt-4.1', // Or potentially a stronger model if generation quality is low
                       messages: [
                         {
                           role: 'system',

@@ -39,9 +39,12 @@ const initialState = {
   generationStage: null,
   loadingDuration: 0,
   serverStatus: null,
+  aiStreamingContent: '',
+  showAiStream: false,
   autoSaveState: 'idle', // idle, dirty, saving, done, error
   isDirty: false,
   initialFormData: null, // To track changes for auto-save
+  preventFetch: false, // Flag to prevent fetchProgramData after generation
   // Modal States
   isWorkoutModalOpen: false,
   selectedWorkout: null,
@@ -64,6 +67,7 @@ const initialState = {
   customSectionName: '',
   customSectionDuration: '',
   customSectionDescription: '',
+  triggerProgramRefresh: 0, // Counter to trigger program data refresh
 };
 
 function programWriterReducer(state, action) {
@@ -159,10 +163,18 @@ function programWriterReducer(state, action) {
       return { ...state, loadingDuration: action.payload };
     case 'SET_SERVER_STATUS':
       return { ...state, serverStatus: action.payload };
+    case 'SET_AI_STREAMING_CONTENT':
+      return { ...state, aiStreamingContent: action.payload };
+    case 'SHOW_AI_STREAM':
+      return { ...state, showAiStream: true, aiStreamingContent: '' };
+    case 'HIDE_AI_STREAM':
+      return { ...state, showAiStream: false, aiStreamingContent: '' };
     case 'SET_AUTO_SAVE_STATE':
       return { ...state, autoSaveState: action.payload };
     case 'SET_DIRTY':
       return { ...state, isDirty: action.payload };
+    case 'SET_PREVENT_FETCH':
+      return { ...state, preventFetch: action.payload };
     case 'SHOW_TOAST':
       return {
         ...state,
@@ -265,6 +277,11 @@ function programWriterReducer(state, action) {
       };
     case 'CLOSE_CONFIRMATION_MODAL':
       return { ...state, isConfirmationModalOpen: false };
+    case 'TRIGGER_PROGRAM_REFRESH':
+      return {
+        ...state,
+        triggerProgramRefresh: (state.triggerProgramRefresh || 0) + 1,
+      };
     default:
       throw new Error(`Unhandled action type: ${action.type}`);
   }

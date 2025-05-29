@@ -29,36 +29,27 @@ import { calculateEndDate } from './dateHandlers';
 import ProgramFormComponent from './ProgramForm';
 import EquipmentSelectorComponent from './EquipmentSelector';
 import ReferenceWorkoutsComponent from './ReferenceWorkouts';
-import WorkoutListComponent from './WorkoutList';
+import WorkoutList from './WorkoutList';
 import WorkoutModalComponent from './WorkoutModal';
 import DatePickerModalComponent from './DatePickerModal';
 import RescheduleModalComponent from './RescheduleModal';
 import EditWorkoutModalComponent from './EditWorkoutModal';
-import AutoSaveStatusIndicatorComponent from './AutoSaveStatusIndicator';
 import ConfirmationModalComponent from './ConfirmationModal'; // Assuming this exists now
 import ReferenceWorkoutSearchModal from './ReferenceWorkoutSearchModal';
 
 import { InfoIcon } from 'lucide-react';
+import AutoSaveStatusIndicator from './AutoSaveStatusIndicator';
 
 // Memoize imported components
 const ProgramForm = memo(ProgramFormComponent);
 const EquipmentSelector = memo(EquipmentSelectorComponent);
 const ReferenceWorkouts = memo(ReferenceWorkoutsComponent);
-const WorkoutList = memo(WorkoutListComponent);
+// Removed memo wrapper to allow streaming updates
 const WorkoutModal = memo(WorkoutModalComponent);
 const DatePickerModal = memo(DatePickerModalComponent);
 const RescheduleModal = memo(RescheduleModalComponent);
 const EditWorkoutModal = memo(EditWorkoutModalComponent);
-const AutoSaveStatusIndicator = memo(AutoSaveStatusIndicatorComponent);
 const ConfirmationModal = memo(ConfirmationModalComponent);
-
-const AUTO_SAVE_STATES = {
-  IDLE: 'idle',
-  DIRTY: 'dirty',
-  SAVING: 'saving',
-  DONE: 'done',
-  ERROR: 'error',
-};
 
 export default function AIProgramWriter({ programId }) {
   const router = useRouter();
@@ -79,8 +70,9 @@ export default function AIProgramWriter({ programId }) {
     isLoading,
     generationStage,
     loadingDuration,
-    autoSaveState,
-    isDirty,
+    serverStatus,
+    aiStreamingContent,
+    showAiStream,
     initialFormData,
     isWorkoutModalOpen,
     selectedWorkout,
@@ -106,10 +98,71 @@ export default function AIProgramWriter({ programId }) {
 
   const loadingTimer = useRef(null);
   const isAutoUpdating = useRef(false);
-  const debounceTimerRef = useRef(null);
+  const isGeneratingRef = useRef(false);
   const [isReferenceWorkoutModalOpen, setReferenceWorkoutModalOpen] =
     useState(false);
   const [dbReferenceWorkouts, setDbReferenceWorkouts] = useState([]);
+
+  // Auto-save functionality
+  const autoSaveTimerRef = useRef(null);
+  const lastSaveRef = useRef(null);
+
+  // --- Auto-save functionality ---
+
+  const performAutoSave = useCallback(async () => {
+    if (!programId || isLoading || isGeneratingRef.current) {
+      return;
+    }
+
+    try {
+      dispatch({ type: 'SET_AUTO_SAVE_STATE', payload: 'saving' });
+
+      // Use autoSaveProgramDetails for better performance (doesn't save workouts)
+      const success = await autoSaveProgramDetails({
+        programId,
+        formData,
+        supabase,
+        showToastMessage: () => {}, // Don't show toast for auto-save
+        generatedDescription,
+      });
+
+      if (success) {
+        dispatch({ type: 'SET_AUTO_SAVE_STATE', payload: 'idle' });
+        dispatch({ type: 'SET_DIRTY', payload: false });
+        lastSaveRef.current = Date.now();
+      } else {
+        dispatch({ type: 'SET_AUTO_SAVE_STATE', payload: 'error' });
+      }
+    } catch (error) {
+      console.error('Auto-save failed:', error);
+      dispatch({ type: 'SET_AUTO_SAVE_STATE', payload: 'error' });
+    }
+  }, [
+    programId,
+    formData,
+    supabase,
+    generatedDescription,
+    isLoading,
+    dispatch,
+  ]);
+
+  const triggerAutoSave = useCallback(() => {
+    if (!programId) return;
+
+    // Clear existing timer
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+    }
+
+    // Mark as dirty immediately
+    dispatch({ type: 'SET_DIRTY', payload: true });
+    dispatch({ type: 'SET_AUTO_SAVE_STATE', payload: 'dirty' });
+
+    // Set timer for auto-save (1 second delay)
+    autoSaveTimerRef.current = setTimeout(() => {
+      performAutoSave();
+    }, 1000);
+  }, [programId, performAutoSave, dispatch]);
 
   // --- Utility Functions ---
 
@@ -191,36 +244,49 @@ export default function AIProgramWriter({ programId }) {
       return;
     }
 
-    generateProgram({
-      programId,
-      formData,
-      setIsLoading: (loading) =>
-        dispatch({ type: 'SET_LOADING', payload: loading }),
-      setSuggestions: (newSuggestions) =>
-        dispatch({ type: 'SET_SUGGESTIONS', payload: newSuggestions }),
-      showToastMessage,
-      setGenerationStage: (stage) =>
-        dispatch({ type: 'SET_GENERATION_STAGE', payload: stage }),
-      setFormData: (data) =>
-        dispatch({ type: 'UPDATE_FORM_DATA', payload: data }),
-      setGeneratedDescription: (desc) =>
-        dispatch({ type: 'SET_GENERATED_DESCRIPTION', payload: desc }),
-      setLoadingTimer: (timer) => (loadingTimer.current = timer),
-      setServerStatus: (status) =>
-        dispatch({ type: 'SET_SERVER_STATUS', payload: status }),
-      setLoadingDuration: (duration) =>
-        dispatch({ type: 'SET_LOADING_DURATION', payload: duration }),
-      refetchProfile,
-    });
-  }, [programId, formData, dispatch, showToastMessage, refetchProfile]);
+    isGeneratingRef.current = true;
+
+    try {
+      await generateProgram({
+        programId,
+        formData,
+        setIsLoading: (loading) =>
+          dispatch({ type: 'SET_LOADING', payload: loading }),
+        setSuggestions: (newSuggestions) => {
+          dispatch({ type: 'SET_SUGGESTIONS', payload: newSuggestions });
+        },
+        showToastMessage,
+        setGenerationStage: (stage) =>
+          dispatch({ type: 'SET_GENERATION_STAGE', payload: stage }),
+        setFormData: (data) =>
+          dispatch({ type: 'UPDATE_FORM_DATA', payload: data }),
+        setGeneratedDescription: (desc) =>
+          dispatch({ type: 'SET_GENERATED_DESCRIPTION', payload: desc }),
+        setLoadingTimer: (timer) => (loadingTimer.current = timer),
+        setServerStatus: (status) =>
+          dispatch({ type: 'SET_SERVER_STATUS', payload: status }),
+        setLoadingDuration: (duration) =>
+          dispatch({ type: 'SET_LOADING_DURATION', payload: duration }),
+        setAiStreamingContent: (content) =>
+          dispatch({ type: 'SET_AI_STREAMING_CONTENT', payload: content }),
+        showAiStream: () => dispatch({ type: 'SHOW_AI_STREAM' }),
+        hideAiStream: () => dispatch({ type: 'HIDE_AI_STREAM' }),
+        dispatch,
+        refetchProfile,
+        suggestions, // Pass current suggestions to determine if this is a regeneration
+      });
+    } finally {
+      isGeneratingRef.current = false;
+    }
+  }, [programId, formData, dispatch, showToastMessage, refetchProfile, suggestions]);
 
   const handleSaveProgram = useCallback(() => {
     saveProgram({
       programId,
       programData: {
         ...formData,
-        name: initialFormData?.name || formData.name,
-        description: initialFormData?.description || formData.description,
+        name: formData.name,
+        description: formData.description,
       },
       suggestions,
       supabase,
@@ -232,7 +298,6 @@ export default function AIProgramWriter({ programId }) {
   }, [
     programId,
     formData,
-    initialFormData,
     suggestions,
     supabase,
     dispatch,
@@ -434,6 +499,15 @@ export default function AIProgramWriter({ programId }) {
 
   // --- Effects ---
 
+  // Cleanup auto-save timer on unmount
+  useEffect(() => {
+    return () => {
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+      }
+    };
+  }, []);
+
   useEffect(() => {
     async function fetchReferenceWorkouts() {
       try {
@@ -453,141 +527,39 @@ export default function AIProgramWriter({ programId }) {
   }, [supabase, dispatch, showToastMessage]);
 
   useEffect(() => {
-    async function autoSaveGeneratedWorkouts() {
-      if (!programId || suggestions.length === 0 || isLoading) {
-        return;
-      }
-
-      // Check if any workouts need to be saved (don't have IDs)
-      const hasNewWorkouts = suggestions.some((workout) => !workout.id);
-      if (!hasNewWorkouts) {
-        return;
-      }
-
-      dispatch({
-        type: 'SET_AUTO_SAVE_STATE',
-        payload: AUTO_SAVE_STATES.SAVING,
-      });
-      dispatch({ type: 'SET_LOADING', payload: true });
-
-      try {
-        const { error: deleteError } = await supabase
-          .from('program_workouts')
-          .delete()
-          .eq('program_id', programId)
-          .eq('is_reference', false);
-
-        if (deleteError) {
-          console.error('[AutoSave] Error deleting old workouts:', deleteError);
-          showToastMessage(
-            `Warning: Failed to clear old workouts: ${deleteError.message}`,
-            'warning'
-          );
-          dispatch({
-            type: 'SET_AUTO_SAVE_STATE',
-            payload: AUTO_SAVE_STATES.ERROR,
-          });
-        }
-
-        const workoutInserts = suggestions
-          .filter((workout) => !workout.id)
-          .map((workout) => {
-            const tagsWithoutDate = { ...(workout.tags || {}) };
-            delete tagsWithoutDate.suggestedDate;
-            delete tagsWithoutDate.scheduled_date;
-
-            const dateValue = workout.suggestedDate || workout.date || null;
-
-            return {
-              program_id: programId,
-              entity_id: formData.entityId,
-              title: workout.title,
-              body: workout.body || workout.description,
-              tags: tagsWithoutDate,
-              scheduled_date: dateValue
-                ? new Date(dateValue).toISOString()
-                : null,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-              is_reference: false,
-              completed: workout.completed || false,
-              completed_at: workout.completed_at || null,
-            };
-          });
-
-        if (workoutInserts.length === 0) {
-          if (autoSaveState !== AUTO_SAVE_STATES.ERROR) {
-            dispatch({
-              type: 'SET_AUTO_SAVE_STATE',
-              payload: AUTO_SAVE_STATES.DONE,
-            });
-          }
-          dispatch({ type: 'SET_LOADING', payload: false });
-          return;
-        }
-
-        const { data: newWorkouts, error: insertError } = await supabase
-          .from('program_workouts')
-          .insert(workoutInserts)
-          .select();
-
-        if (insertError) throw insertError;
-
-        if (newWorkouts && newWorkouts.length > 0) {
-          const updatedSuggestions = suggestions.map((suggestion) => {
-            const saved = newWorkouts.find(
-              (nw) => nw.title === suggestion.title && !suggestion.id
-            );
-            return saved
-              ? { ...suggestion, id: saved.id, savedWorkoutId: saved.id }
-              : suggestion;
-          });
-          dispatch({ type: 'SET_SUGGESTIONS', payload: updatedSuggestions });
-          showToastMessage('Auto-saved workouts to your program');
-          dispatch({
-            type: 'SET_AUTO_SAVE_STATE',
-            payload: AUTO_SAVE_STATES.DONE,
-          });
-        }
-      } catch (error) {
-        console.error('[AutoSave] Error auto-saving workouts:', error);
-        dispatch({
-          type: 'SET_AUTO_SAVE_STATE',
-          payload: AUTO_SAVE_STATES.ERROR,
-        });
-        showToastMessage(`Auto-save failed: ${error.message}`, 'error');
-      } finally {
-        dispatch({ type: 'SET_LOADING', payload: false });
-        setTimeout(() => {
-          if (
-            state.autoSaveState === AUTO_SAVE_STATES.DONE ||
-            state.autoSaveState === AUTO_SAVE_STATES.ERROR
-          ) {
-            dispatch({
-              type: 'SET_AUTO_SAVE_STATE',
-              payload: AUTO_SAVE_STATES.IDLE,
-            });
-          }
-        }, 2000);
-      }
-    }
-
-    autoSaveGeneratedWorkouts();
-  }, [
-    programId,
-    suggestions,
-    supabase,
-    isLoading,
-    formData.entityId,
-    dispatch,
-    showToastMessage,
-    state.autoSaveState,
-    autoSaveState,
-  ]);
-
-  useEffect(() => {
     async function fetchProgramData() {
       if (!programId) return;
+
+      // Don't fetch if we're currently loading or generating
+      if (isLoading || generationStage || isGeneratingRef.current) {
+        console.log(
+          '[fetchProgramData] Skipping fetch - currently loading or generating'
+        );
+        return;
+      }
+
+      // Don't fetch if preventFetch flag is set
+      if (state.preventFetch) {
+        console.log(
+          '[fetchProgramData] Skipping fetch - preventFetch flag is set'
+        );
+        return;
+      }
+
+      // Don't fetch if we just completed generation and have unsaved workouts
+      // This prevents clearing freshly generated workouts before they're saved
+      const hasRecentlyGeneratedWorkouts =
+        state.suggestions &&
+        state.suggestions.length > 0 &&
+        state.suggestions.some((workout) => !workout.id) &&
+        (generationStage === 'complete' || generationStage === 'finalizing');
+
+      if (hasRecentlyGeneratedWorkouts) {
+        console.log(
+          '[fetchProgramData] Skipping fetch - recently generated workouts present'
+        );
+        return;
+      }
 
       dispatch({ type: 'SET_LOADING', payload: true });
 
@@ -636,14 +608,19 @@ export default function AIProgramWriter({ programId }) {
 
         if (workoutsError) throw workoutsError;
 
+        console.log('[fetchProgramData] Fetched workouts from database:', {
+          count: savedWorkouts?.length || 0,
+          currentSuggestionsCount: state.suggestions?.length || 0,
+          preventFetch: state.preventFetch,
+          generationStage: generationStage,
+        });
+
         let processedWorkouts = [];
         if (savedWorkouts && savedWorkouts.length > 0) {
           processedWorkouts = savedWorkouts.map(processWorkoutForDisplay);
-          // Don't show toast here, let the UI reflect the loaded state
-          // showToastMessage(
-          //   `Loaded ${processedWorkouts.length} workouts successfully!`,
-          //    'info'
-          // );
+          console.log('[fetchProgramData] Processed workouts from database:', {
+            count: processedWorkouts.length,
+          });
         } else if (
           program?.generated_program?.length > 0 &&
           state.suggestions?.length === 0
@@ -654,21 +631,72 @@ export default function AIProgramWriter({ programId }) {
           processedWorkouts = program.generated_program.map(
             processWorkoutForDisplay
           );
-          // showToastMessage('Loaded program from previous generation.', 'info');
         }
 
-        dispatch({
-          type: 'SET_INITIAL_DATA',
-          payload: {
-            programId: programId,
-            formData: fetchedFormData, // Dispatch the potentially merged data
-            suggestions: processedWorkouts,
-            referenceWorkouts: programReferenceWorkouts || [],
-            generatedDescription: fetchedGeneratedDesc,
-            // Create the initial clone based on the *final* fetched/merged form data
-            initialFormData: JSON.parse(JSON.stringify(fetchedFormData)),
-          },
+        // Check if we have unsaved generated workouts in state
+        const hasUnsavedWorkouts =
+          state.suggestions &&
+          state.suggestions.length > 0 &&
+          state.suggestions.some((workout) => !workout.id);
+
+        // Check if we just completed generation (to avoid clearing fresh workouts)
+        const justCompletedGeneration =
+          generationStage === 'complete' ||
+          generationStage === 'finalizing' ||
+          state.preventFetch;
+
+        console.log('[fetchProgramData] Decision factors:', {
+          hasUnsavedWorkouts,
+          justCompletedGeneration,
+          processedWorkoutsCount: processedWorkouts.length,
+          currentSuggestionsCount: state.suggestions?.length || 0,
+          shouldPreserveWorkouts:
+            hasUnsavedWorkouts ||
+            (justCompletedGeneration && state.suggestions?.length > 0),
         });
+
+        // Only update suggestions if:
+        // 1. We don't have unsaved workouts AND
+        // 2. We didn't just complete generation (to avoid race conditions) AND
+        // 3. We have saved workouts to replace them with OR we have no current workouts
+        const shouldUpdateSuggestions =
+          !hasUnsavedWorkouts &&
+          !justCompletedGeneration &&
+          (processedWorkouts.length > 0 || state.suggestions?.length === 0);
+
+        if (shouldUpdateSuggestions) {
+          console.log(
+            '[fetchProgramData] Updating suggestions with database workouts'
+          );
+          dispatch({
+            type: 'SET_INITIAL_DATA',
+            payload: {
+              programId: programId,
+              formData: fetchedFormData,
+              suggestions: processedWorkouts,
+              referenceWorkouts: programReferenceWorkouts || [],
+              generatedDescription: fetchedGeneratedDesc,
+              initialFormData: JSON.parse(JSON.stringify(fetchedFormData)),
+            },
+          });
+        } else {
+          // Update everything except suggestions
+          console.log(
+            '[fetchProgramData] Preserving current workouts in state'
+          );
+          dispatch({
+            type: 'SET_INITIAL_DATA',
+            payload: {
+              programId: programId,
+              formData: fetchedFormData,
+              suggestions: state.suggestions, // Keep existing suggestions
+              referenceWorkouts: programReferenceWorkouts || [],
+              generatedDescription:
+                state.generatedDescription || fetchedGeneratedDesc,
+              initialFormData: JSON.parse(JSON.stringify(fetchedFormData)),
+            },
+          });
+        }
       } catch (error) {
         console.error('Error fetching program data:', error);
         showToastMessage(
@@ -683,147 +711,98 @@ export default function AIProgramWriter({ programId }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [programId, supabase, dispatch, showToastMessage]);
 
+  // Listen for triggerProgramRefresh and immediately fetch program data
+  useEffect(() => {
+    if (state.triggerProgramRefresh) {
+      // Call fetchProgramData immediately
+      (async () => {
+        if (!programId) return;
+        dispatch({ type: 'SET_LOADING', payload: true });
+        try {
+          const { data: program, error: programError } = await supabase
+            .from('programs')
+            .select('*')
+            .eq('id', programId)
+            .single();
 
-  const debouncedAutoSave = useCallback(async () => {
-    if (!isDirty || autoSaveState === AUTO_SAVE_STATES.SAVING) {
-      return;
-    }
-
-    if (!initialFormData || !programId) {
-      return;
-    }
-
-    if (isLoading && autoSaveState === AUTO_SAVE_STATES.IDLE) {
-      return;
-    }
-
-    dispatch({ type: 'SET_AUTO_SAVE_STATE', payload: AUTO_SAVE_STATES.SAVING });
-    let success = false;
-    try {
-      success = await autoSaveProgramDetails({
-        programId,
-        formData,
-        supabase,
-        showToastMessage,
-        generatedDescription,
-      });
-
-      if (success) {
-        dispatch({ type: 'SET_INITIAL_FORM_DATA_CLONE' });
-        dispatch({ type: 'SET_DIRTY', payload: false });
-        dispatch({
-          type: 'SET_AUTO_SAVE_STATE',
-          payload: AUTO_SAVE_STATES.DONE,
-        });
-        setTimeout(() => {
-          if (state.autoSaveState === AUTO_SAVE_STATES.DONE && !state.isDirty) {
-            dispatch({
-              type: 'SET_AUTO_SAVE_STATE',
-              payload: AUTO_SAVE_STATES.IDLE,
-            });
+          if (programError && programError.code !== 'PGRST116') {
+            throw programError;
           }
-        }, 2500);
-      } else {
-        dispatch({
-          type: 'SET_AUTO_SAVE_STATE',
-          payload: AUTO_SAVE_STATES.ERROR,
-        });
-      }
-    } catch (error) {
-      console.error('Error calling autoSaveProgramDetails:', error);
-      dispatch({
-        type: 'SET_AUTO_SAVE_STATE',
-        payload: AUTO_SAVE_STATES.ERROR,
-      });
-      showToastMessage(
-        'An unexpected error occurred during auto-save.',
-        'error'
-      );
-    }
-  }, [
-    programId,
-    formData,
-    initialFormData,
-    supabase,
-    showToastMessage,
-    generatedDescription,
-    isLoading,
-    autoSaveState,
-    isDirty,
-    dispatch,
-    state.autoSaveState,
-    state.isDirty,
-  ]);
 
-  useEffect(() => {
-    if (!initialFormData) {
-      return;
-    }
+          const { data: programReferenceWorkouts, error: referenceError } =
+            await supabase
+              .from('program_workouts')
+              .select('*')
+              .eq('program_id', programId)
+              .eq('is_reference', true)
+              .order('created_at', { ascending: false });
 
-    const currentFormDataString = JSON.stringify(formData);
-    const initialFormDataString = JSON.stringify(initialFormData);
+          if (referenceError) {
+            console.error('Error fetching reference workouts:', referenceError);
+          }
 
-    if (currentFormDataString !== initialFormDataString) {
-      if (!isDirty) {
-        dispatch({ type: 'SET_DIRTY', payload: true });
-        if (
-          [
-            AUTO_SAVE_STATES.IDLE,
-            AUTO_SAVE_STATES.DONE,
-            AUTO_SAVE_STATES.ERROR,
-          ].includes(autoSaveState)
-        ) {
+          let fetchedFormData = {};
+          let fetchedGeneratedDesc = '';
+          if (program) {
+            fetchedFormData = updateFormDataFromProgram(
+              program,
+              state.formData
+            );
+            if (program.program_overview?.generated_description) {
+              fetchedGeneratedDesc =
+                program.program_overview.generated_description;
+            }
+          }
+
+          const { data: savedWorkouts, error: workoutsError } = await supabase
+            .from('program_workouts')
+            .select(
+              'id, title, body, tags, created_at, scheduled_date, is_reference, completed, completed_at'
+            )
+            .eq('program_id', programId)
+            .eq('is_reference', false)
+            .order('scheduled_date', { ascending: true, nullsFirst: true });
+
+          if (workoutsError) throw workoutsError;
+
+          let processedWorkouts = [];
+          if (savedWorkouts && savedWorkouts.length > 0) {
+            processedWorkouts = savedWorkouts.map(processWorkoutForDisplay);
+          } else if (
+            program?.generated_program?.length > 0 &&
+            state.suggestions?.length === 0
+          ) {
+            processedWorkouts = program.generated_program.map(
+              processWorkoutForDisplay
+            );
+          }
+
           dispatch({
-            type: 'SET_AUTO_SAVE_STATE',
-            payload: AUTO_SAVE_STATES.DIRTY,
+            type: 'SET_INITIAL_DATA',
+            payload: {
+              programId: programId,
+              formData: fetchedFormData,
+              suggestions: processedWorkouts,
+              referenceWorkouts: programReferenceWorkouts || [],
+              generatedDescription: fetchedGeneratedDesc,
+              initialFormData: JSON.parse(JSON.stringify(fetchedFormData)),
+            },
           });
+          // Clear loading state after updating
+          dispatch({ type: 'SET_LOADING', payload: false });
+        } catch (error) {
+          console.error('Error fetching program data:', error);
+          showToastMessage(
+            'Failed to load program data: ' +
+              (error.message || 'Unknown error'),
+            'error'
+          );
+          dispatch({ type: 'SET_LOADING', payload: false });
         }
-      }
-
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current);
-      }
-
-      debounceTimerRef.current = setTimeout(() => {
-        debouncedAutoSave();
-      }, 1500);
-    } else {
-      if (isDirty) {
-        dispatch({ type: 'SET_DIRTY', payload: false });
-      }
+      })();
     }
-
-    return () => {
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current);
-      }
-    };
-  }, [
-    formData,
-    initialFormData,
-    isDirty,
-    autoSaveState,
-    dispatch,
-    debouncedAutoSave,
-  ]);
-
-  useEffect(() => {
-    const handleBeforeUnload = (event) => {
-      if (isDirty) {
-        const message =
-          'You have unsaved changes. Are you sure you want to leave?';
-        event.preventDefault();
-        event.returnValue = message;
-        return message;
-      }
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-    };
-  }, [isDirty]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.triggerProgramRefresh]);
 
   // --- Form Field Handlers (Wrapped) ---
 
@@ -1026,13 +1005,6 @@ export default function AIProgramWriter({ programId }) {
     dispatch({ type: 'TOGGLE_EQUIPMENT' });
   }, [dispatch]);
 
-  const handleRemoveReferenceWorkout = useCallback(
-    (workoutId) => {
-      dispatch({ type: 'REMOVE_REFERENCE_WORKOUT', payload: workoutId });
-    },
-    [dispatch]
-  );
-
   // --- Reference Workout Handlers ---
 
   const handleOpenReferenceWorkoutModal = useCallback(
@@ -1139,10 +1111,6 @@ export default function AIProgramWriter({ programId }) {
         />
       )}
 
-      <AutoSaveStatusIndicator
-        autoSaveState={autoSaveState}
-        isDirty={isDirty}
-      />
       {programId && (
         <div className="flex justify-end items-center mt-6 mb-6">
           <div
@@ -1154,9 +1122,9 @@ export default function AIProgramWriter({ programId }) {
           <button
             className="btn btn-sm btn-primary text-white"
             onClick={handleSaveProgram}
-            disabled={isLoading || autoSaveState === AUTO_SAVE_STATES.SAVING}
+            disabled={isLoading}
           >
-            {isLoading || autoSaveState === AUTO_SAVE_STATES.SAVING ? (
+            {isLoading ? (
               <>
                 <span className="loading loading-spinner loading-xs"></span>
                 Saving...
@@ -1184,6 +1152,7 @@ export default function AIProgramWriter({ programId }) {
           suggestions={suggestions}
           generationStage={generationStage}
           loadingDuration={loadingDuration}
+          serverStatus={serverStatus}
           hasCustomWorkoutFormat={hasCustomWorkoutFormat}
           setHasCustomWorkoutFormat={handleSetHasCustomFormat}
           customSectionName={customSectionName}
@@ -1212,6 +1181,7 @@ export default function AIProgramWriter({ programId }) {
           trialEndDate={trialEndDate}
           generationsRemaining={generationsRemaining}
           lastGenerationDate={lastGenerationDate}
+          triggerAutoSave={triggerAutoSave}
         />
       </div>
 
@@ -1246,7 +1216,9 @@ export default function AIProgramWriter({ programId }) {
             onMarkComplete={handleMarkComplete}
             isLoading={isLoading}
             generatedDescription={generatedDescription}
-            setFormData={(data) => dispatch({ type: 'UPDATE_FORM_DATA', payload: data })}
+            setFormData={(data) =>
+              dispatch({ type: 'UPDATE_FORM_DATA', payload: data })
+            }
             showToastMessage={showToastMessage}
           />
         </>
@@ -1314,6 +1286,12 @@ export default function AIProgramWriter({ programId }) {
         onSelect={handleReferenceWorkoutsSelected}
         selectedWorkouts={dbReferenceWorkouts}
         initialSearchText={formData.referenceInput || ''}
+      />
+
+      {/* Auto-save status indicator */}
+      <AutoSaveStatusIndicator
+        autoSaveState={state.autoSaveState}
+        isDirty={state.isDirty}
       />
     </div>
   );

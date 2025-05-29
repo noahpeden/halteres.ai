@@ -65,7 +65,12 @@ export function generalGymPrompt(context) {
   const hasInjuryHistory = context.hasInjuryHistory || false;
 
   // Build the General Gym Training prompt
-  return `Generate a ${numberOfWeeks}-week general gym training program with the following parameters:
+  const isGeneratingSpecificWeek = context.isWeekSpecific;
+  const weekSpecificInfo = isGeneratingSpecificWeek ? 
+    `Week ${context.weekNumber} of ${context.totalWeeks}` : 
+    `${numberOfWeeks}-week`;
+  
+  return `Generate a ${isGeneratingSpecificWeek ? 'single week' : numberOfWeeks + '-week'} general gym training program with the following parameters:
 
 ${
   description
@@ -78,11 +83,13 @@ Please prioritize these specific requirements above all else in program design.
 Difficulty: ${difficulty}
 Days Per Week: ${daysPerWeek} days
 Selected Training Days: ${selectedDayNames || 'All available days'}
-Total Length: ${numberOfWeeks} weeks
+${isGeneratingSpecificWeek ? `Current Week: ${weekSpecificInfo}` : `Total Length: ${numberOfWeeks} weeks`}
 ${focus_area ? `Focus Area: ${focus_area}` : ''}
 ${formatEquipmentRestrictions(equipment)}
 
-IMPORTANT DURATION: The program MUST be exactly ${numberOfWeeks} week(s) long. Generate exactly ${totalWorkouts} workouts total.
+${isGeneratingSpecificWeek ? 
+`CRITICAL: You are generating ONLY Week ${context.weekNumber} of a ${context.totalWeeks}-week program. Generate exactly ${context.workoutsThisWeek || daysPerWeek} workouts for this week ONLY. Do NOT generate workouts for other weeks.` :
+`IMPORTANT DURATION: The program MUST be exactly ${numberOfWeeks} week(s) long. Generate exactly ${totalWorkouts} workouts total.`}
 
 REQUIRED WORKOUT FORMATS: The generated workouts MUST utilize typical commercial gym equipment (machines, free weights, cardio) and follow the specified formats: [${formattedWorkoutFormats}]. If no formats are specified, create a standard general strength program (e.g., full body, upper/lower split). Prioritize effective use of common gym equipment, using ONLY the available equipment.
 
@@ -92,7 +99,17 @@ ${context.formattedRagMatchedWorkouts}
 ${context.clientMetrics ? `\n${context.clientMetrics}` : ''}
 ${context.referenceWorkouts ? `\n${context.referenceWorkouts}` : ''}
 ${formattedPeriodizationGuidelines}
-${formatSchedulingRequirements(suggestedDates, daysPerWeek, selectedDayNames)}
+${context.formattedDates ? `
+WORKOUT SCHEDULING REQUIREMENTS:
+Selected Training Days: ${selectedDayNames || 'All available days'}
+
+⚠️ CRITICAL SCHEDULING REQUIREMENT ⚠️
+The workouts MUST be scheduled on the EXACT dates below. These dates follow the user's selected training days (${selectedDayNames}). DO NOT create workouts on any other dates.
+
+${context.formattedDates}
+
+IMPORTANT: Each workout you generate MUST be assigned to one of the above dates. The "date" field in each workout object MUST match one of these dates EXACTLY, and all dates must be used.
+` : formatSchedulingRequirements(suggestedDates, daysPerWeek, selectedDayNames)}
 
 For the program description, include:
 1. A concise overview reflecting the CRITICAL REQUIREMENTS, Goal, ACTUAL duration (${numberOfWeeks} weeks), difficulty, and the general structure using standard gym equipment and formats (${formattedWorkoutFormats}).
@@ -109,6 +126,8 @@ General Gym Guidelines (Apply *only if* they DO NOT CONFLICT with CRITICAL REQUI
 
 The program MUST follow logical progression based on the selected program type (${programType}) AND the client's requirements, using standard gym equipment effectively.
 Ensure proper periodization, recovery, and exercise variation *within the constraints provided*.
+
+CRITICAL TITLE FORMATTING: For workout titles, use the ACTUAL week and day numbers based on the scheduling information provided above. For example, if generating workouts for Week 3, the titles should say "Week 3, Day 1", "Week 3, Day 2", etc. DO NOT use "Week 1" for all workouts - use the correct week number for each workout based on its position in the program schedule.
 
 Your response MUST be in this exact JSON format:
 {
@@ -186,6 +205,8 @@ ${
 - Breathing technique during lifts
 \`\`\`
 
-The "workouts" array MUST contain exactly ${totalWorkouts} workouts, covering exactly ${numberOfWeeks} week(s).
+${isGeneratingSpecificWeek ? 
+`The "workouts" array MUST contain exactly ${context.workoutsThisWeek || daysPerWeek} workouts for Week ${context.weekNumber} ONLY.` :
+`The "workouts" array MUST contain exactly ${totalWorkouts} workouts, covering exactly ${numberOfWeeks} week(s).`}
 `;
 }

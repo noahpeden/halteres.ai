@@ -1,18 +1,25 @@
 'use client';
 import { ChevronDown } from 'lucide-react';
+import { useState } from 'react';
 
 export default function ProgramScheduling({
   formData,
   handleChange,
   handleDayOfWeekChange,
+  triggerAutoSave,
 }) {
   const weekOptions = [1, 2, 3, 4, 5, 6];
   const selectedWeeks = weekOptions.find(
     (num) => num === parseInt(formData.numberOfWeeks)
   );
 
+  // Add state for dropdown open/close
+  const [weeksDropdownOpen, setWeeksDropdownOpen] = useState(false);
+
   const handleWeeksSelect = (value) => {
     handleChange({ target: { name: 'numberOfWeeks', value } });
+    if (triggerAutoSave) triggerAutoSave();
+    setWeeksDropdownOpen(false); // Close dropdown after selection
   };
 
   return (
@@ -42,7 +49,10 @@ export default function ProgramScheduling({
                 type="checkbox"
                 className="checkbox"
                 checked={formData.daysOfWeek.includes(day)}
-                onChange={() => handleDayOfWeekChange(day)}
+                onChange={() => {
+                  handleDayOfWeekChange(day);
+                  if (triggerAutoSave) triggerAutoSave();
+                }}
               />
               <span>{day}</span>
             </label>
@@ -56,10 +66,20 @@ export default function ProgramScheduling({
 
       {/* Program Duration (Weeks) */}
       <div className="mb-4">
-        <label className="w-full w-full">
+        <label className="w-full">
           <span className="text-sm font-medium">Weeks</span>
-          <details className="dropdown w-full">
-            <summary className="btn btn-outline w-full justify-between">
+          <details
+            className="dropdown w-full"
+            open={weeksDropdownOpen}
+            onToggle={(e) => setWeeksDropdownOpen(e.target.open)}
+          >
+            <summary
+              className="btn btn-outline w-full justify-between"
+              onClick={(e) => {
+                e.preventDefault();
+                setWeeksDropdownOpen((open) => !open);
+              }}
+            >
               <span>
                 {selectedWeeks
                   ? `${selectedWeeks} ${selectedWeeks === 1 ? 'week' : 'weeks'}`
@@ -87,7 +107,7 @@ export default function ProgramScheduling({
 
       {/* Start Date */}
       <div className="mb-4">
-        <label className="w-full w-full">
+        <label className="w-full">
           <span className="text-sm font-medium">Start Date</span>
           <input
             type="date"
@@ -95,6 +115,7 @@ export default function ProgramScheduling({
             className="input input-bordered w-full border-base-300 focus:border-primary"
             value={formData.startDate}
             onChange={handleChange}
+            onBlur={() => triggerAutoSave && triggerAutoSave()}
             min={(() => {
               const tomorrow = new Date();
               tomorrow.setDate(tomorrow.getDate() + 1);
@@ -106,7 +127,7 @@ export default function ProgramScheduling({
 
       {/* End Date */}
       <div className="mb-4">
-        <label className="w-full w-full">
+        <label className="w-full">
           <span className="text-sm font-medium">End Date (Calculated)</span>
           <input
             type="date"

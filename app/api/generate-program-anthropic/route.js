@@ -339,7 +339,7 @@ For the program description, include:
 4. Recommendations for nutrition, recovery, and supplementary training
 
 Format each workout with the following sections:
-1. A clear, descriptive title that includes the day/week and focus (e.g., "Week 1, Day 1: Lower Body Strength")
+1. A clear, descriptive title that includes the day/week and focus (e.g., Lower Body Strength")
 2. Warm-up section with specific movements (include duration, reps, and brief explanations)
 3. Strength Work - detailed with:
    - Clear exercise format (Sets x Reps, EMOM, etc.)

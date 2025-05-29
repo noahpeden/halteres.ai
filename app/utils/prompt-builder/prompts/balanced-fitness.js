@@ -84,7 +84,12 @@ export function balancedFitnessPrompt(context) {
       : '';
 
   // Build the balanced fitness prompt
-  return `Generate a ${numberOfWeeks}-week balanced fitness training program with the following parameters:
+  const isGeneratingSpecificWeek = context.isWeekSpecific;
+  const weekSpecificInfo = isGeneratingSpecificWeek ? 
+    `Week ${context.weekNumber} of ${context.totalWeeks}` : 
+    `${numberOfWeeks}-week`;
+  
+  return `Generate a ${isGeneratingSpecificWeek ? 'single week' : numberOfWeeks + '-week'} balanced fitness training program with the following parameters:
 
 ${
   description
@@ -97,11 +102,13 @@ Please prioritize these specific requirements above all else in program design.
 Difficulty: ${difficulty}
 Days Per Week: ${daysPerWeek} days
 Selected Training Days: ${selectedDayNames || 'All available days'}
-Total Length: ${numberOfWeeks} weeks
+${isGeneratingSpecificWeek ? `Current Week: ${weekSpecificInfo}` : `Total Length: ${numberOfWeeks} weeks`}
 ${focus_area ? `Focus Area: ${focus_area}` : ''}
 ${formatEquipmentRestrictions(equipment)}
 
-IMPORTANT DURATION: The program MUST be exactly ${numberOfWeeks} week(s) long. Generate exactly ${totalWorkouts} workouts total.
+${isGeneratingSpecificWeek ? 
+`CRITICAL: You are generating ONLY Week ${context.weekNumber} of a ${context.totalWeeks}-week program. Generate exactly ${context.workoutsThisWeek || daysPerWeek} workouts for this week ONLY. Do NOT generate workouts for other weeks.` :
+`IMPORTANT DURATION: The program MUST be exactly ${numberOfWeeks} week(s) long. Generate exactly ${totalWorkouts} workouts total.`}
 
 REQUIRED WORKOUT FORMATS: The generated workouts MUST exclusively use the following specified formats: [${formattedWorkoutFormats}]. If no formats are specified, create a balanced mix of strength training (using available equipment), cardiovascular exercise, and mobility/flexibility work. Prioritize exercises possible with *only* the listed equipment.
 
@@ -120,7 +127,17 @@ ${
     : ''
 }
 ${formattedPeriodizationGuidelines}
-${formatSchedulingRequirements(suggestedDates, daysPerWeek, selectedDayNames)}
+${context.formattedDates ? `
+WORKOUT SCHEDULING REQUIREMENTS:
+Selected Training Days: ${selectedDayNames || 'All available days'}
+
+⚠️ CRITICAL SCHEDULING REQUIREMENT ⚠️
+The workouts MUST be scheduled on the EXACT dates below. These dates follow the user's selected training days (${selectedDayNames}). DO NOT create workouts on any other dates.
+
+${context.formattedDates}
+
+IMPORTANT: Each workout you generate MUST be assigned to one of the above dates. The "date" field in each workout object MUST match one of these dates EXACTLY, and all dates must be used.
+` : formatSchedulingRequirements(suggestedDates, daysPerWeek, selectedDayNames)}
 
 For the program description, include:
 1. A concise overview reflecting the CRITICAL REQUIREMENTS, Goal (balanced fitness), ACTUAL duration (${numberOfWeeks} weeks), and the structure incorporating strength, cardio, and mobility using available equipment and formats (${
@@ -141,6 +158,8 @@ The program MUST follow logical progression based on the selected program type (
 Ensure proper periodization, recovery, and exercise variation *within the constraints provided*, promoting overall balance.
 
 IMPORTANT: The workouts must be scheduled on specific dates according to the user's selected training days. DO NOT create workouts on days other than the ones specified.
+
+CRITICAL TITLE FORMATTING: For workout titles, use the ACTUAL week and day numbers based on the scheduling information provided above. For example, if generating workouts for Week 3, the titles should say "Week 3, Day 1", "Week 3, Day 2", etc. DO NOT use "Week 1" for all workouts - use the correct week number for each workout based on its position in the program schedule.
 
 Your response MUST be in this exact JSON format:
 {
@@ -227,6 +246,8 @@ ${
 - Common errors to avoid
 \`\`\`
 
-The "workouts" array MUST contain exactly ${totalWorkouts} workouts, covering exactly ${numberOfWeeks} week(s).
+${isGeneratingSpecificWeek ? 
+`The "workouts" array MUST contain exactly ${context.workoutsThisWeek || daysPerWeek} workouts for Week ${context.weekNumber} ONLY.` :
+`The "workouts" array MUST contain exactly ${totalWorkouts} workouts, covering exactly ${numberOfWeeks} week(s).`}
 `;
 }

@@ -4,16 +4,19 @@ import ProgramTypeSelector from '@/components/selectors/ProgramTypeSelector';
 import { programTypes } from '@/components/utils';
 import { InfoIcon, ChevronDown } from 'lucide-react';
 
-export default function ProgramEssentials({ formData, handleChange }) {
+export default function ProgramEssentials({
+  formData,
+  handleChange,
+  triggerAutoSave,
+}) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  
+
   const selectedProgramType = programTypes.find(
     (type) => type.value === formData.programType
   );
 
   const handleProgramTypeSelect = (value) => {
     handleChange({ target: { name: 'programType', value } });
-    // Close the dropdown after selection
     setDropdownOpen(false);
   };
 
@@ -39,11 +42,12 @@ export default function ProgramEssentials({ formData, handleChange }) {
           </span>
           <ProgramTypeSelector
             selectedType={formData.trainingMethodology}
-            onChange={(typeId) =>
+            onChange={(typeId) => {
               handleChange({
                 target: { name: 'trainingMethodology', value: typeId },
-              })
-            }
+              });
+              if (triggerAutoSave) triggerAutoSave();
+            }}
           />
           <span className="text-xs text-gray-500 mb-2">
             Select the overall approach that will guide your program's structure
@@ -54,15 +58,19 @@ export default function ProgramEssentials({ formData, handleChange }) {
       {/* Periodization Type */}
       <div className="mb-4">
         <label className="w-full">
-          <span className="text-sm font-medium mb-1">
-            Periodization Type
-          </span>
-          <details 
-            open={dropdownOpen} 
-            onToggle={(e) => setDropdownOpen(e.target.open)}
+          <span className="text-sm font-medium mb-1">Periodization Type</span>
+          <details
             className="dropdown w-full"
+            open={dropdownOpen}
+            onToggle={(e) => setDropdownOpen(e.target.open)}
           >
-            <summary className="btn btn-outline w-full justify-between">
+            <summary
+              className="btn btn-outline w-full justify-between"
+              onClick={(e) => {
+                e.preventDefault();
+                setDropdownOpen((open) => !open);
+              }}
+            >
               <span>
                 {selectedProgramType
                   ? selectedProgramType.label
@@ -77,7 +85,10 @@ export default function ProgramEssentials({ formData, handleChange }) {
                     className={`w-full ${
                       formData.programType === type.value ? 'active' : ''
                     }`}
-                    onClick={() => handleProgramTypeSelect(type.value)}
+                    onClick={() => {
+                      handleProgramTypeSelect(type.value);
+                      if (triggerAutoSave) triggerAutoSave();
+                    }}
                   >
                     {type.label}
                   </button>
@@ -104,6 +115,7 @@ export default function ProgramEssentials({ formData, handleChange }) {
             className="textarea textarea-bordered w-full border-base-300 focus:border-primary"
             value={formData.description}
             onChange={handleChange}
+            onBlur={() => triggerAutoSave && triggerAutoSave()}
             name="description"
             rows="3"
           ></textarea>
@@ -130,6 +142,7 @@ export default function ProgramEssentials({ formData, handleChange }) {
             placeholder="Paste your own workout text here (e.g., a specific WOD, a previous program structure)"
             value={formData.referenceInput || ''}
             onChange={handleChange}
+            onBlur={() => triggerAutoSave && triggerAutoSave()}
             rows="3"
           ></textarea>
         </label>

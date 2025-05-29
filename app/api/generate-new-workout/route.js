@@ -77,7 +77,7 @@ Return only one workout structured with these sections. Format your response as 
   try {
     // Generate the workout
     const workoutResponse = await openAiClient.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: 'gpt-4.1',
       messages: [
         {
           role: 'system',

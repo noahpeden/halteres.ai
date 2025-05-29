@@ -9,7 +9,6 @@ import LoadingButton from './LoadingButton';
 import { handleFormChange as handleFormChangeUtil } from './formHandlers';
 import equipmentList from '@/utils/equipmentList';
 
-
 const ProgramForm = ({
   formData,
   dispatch,
@@ -19,6 +18,7 @@ const ProgramForm = ({
   generateProgram,
   generationStage,
   loadingDuration,
+  serverStatus,
   equipmentSelector,
   suggestions,
   handleProgramTypeChange,
@@ -26,6 +26,7 @@ const ProgramForm = ({
   trialEndDate,
   generationsRemaining,
   lastGenerationDate,
+  triggerAutoSave,
 }) => {
   const handleChange = useCallback(
     (e) => {
@@ -62,6 +63,8 @@ const ProgramForm = ({
             },
           },
         });
+        // Trigger auto-save after gym type change
+        if (triggerAutoSave) triggerAutoSave();
         return;
       }
 
@@ -69,8 +72,11 @@ const ProgramForm = ({
         type: 'SET_FIELD_VALUE',
         payload: { field: name, value: updateValue },
       });
+
+      // Don't trigger auto-save on every keystroke for text fields
+      // Auto-save will be triggered on blur instead
     },
-    [dispatch, formData.gymDetails]
+    [dispatch, formData.gymDetails, triggerAutoSave]
   );
 
   // --- Eligibility Logic ---
@@ -131,15 +137,10 @@ const ProgramForm = ({
     lastGenerationDate,
   ]);
 
-  const isButtonDisabled = isLoading || !isEligibleToGenerate;
+  const isButtonDisabled = isLoading || generationStage === 'complete' || !isEligibleToGenerate;
   const buttonText = () => {
-    if (isLoading) {
-      return (
-        <LoadingButton
-          generationStage={generationStage}
-          loadingDuration={loadingDuration}
-        />
-      );
+    if (isLoading || generationStage === 'complete') {
+      return 'Generating...'; // Simple text when loading
     }
     if (!isEligibleToGenerate) {
       return disabledReason || 'Generation Unavailable'; // Show reason if available
@@ -153,11 +154,16 @@ const ProgramForm = ({
   return (
     <div className="md:col-span-3 space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <ProgramEssentials formData={formData} handleChange={handleChange} />
+        <ProgramEssentials
+          formData={formData}
+          handleChange={handleChange}
+          triggerAutoSave={triggerAutoSave}
+        />
         <ProgramScheduling
           formData={formData}
           handleChange={handleChange}
           handleDayOfWeekChange={handleDayOfWeekChange}
+          triggerAutoSave={triggerAutoSave}
         />
       </div>
 
@@ -167,6 +173,7 @@ const ProgramForm = ({
         handleProgramTypeChange={handleProgramTypeChange}
         handleWorkoutFormatChange={handleWorkoutFormatChange}
         equipmentSelector={equipmentSelector}
+        triggerAutoSave={triggerAutoSave}
       />
 
       {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -198,6 +205,18 @@ const ProgramForm = ({
           {buttonText()}
         </button>
       </div>
+      
+      {/* Show LoadingButton when generating */}
+      {(isLoading || generationStage === 'complete') && (
+        <div className="mt-6">
+          <LoadingButton
+            generationStage={generationStage}
+            loadingDuration={loadingDuration}
+            serverStatus={serverStatus}
+          />
+        </div>
+      )}
+      
       {/* Optional: Display disabled reason clearly */}
       {/* {!isLoading && !isEligibleToGenerate && disabledReason && (
         <p className="text-center text-error mt-2">{disabledReason}</p>
