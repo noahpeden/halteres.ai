@@ -325,17 +325,14 @@ export async function generateProgram({
                       }, 5000); // Reduced to 5 seconds
                     }
 
-                    // Get current suggestions count for completion message
-                    setSuggestions((currentSuggestions) => {
-                      const workoutCount = currentSuggestions.length;
-                      showToastMessage(
-                        programId
-                          ? `Program complete! Generated ${workoutCount} workouts. You can now add them to your calendar.`
-                          : `Program complete! Generated ${workoutCount} workouts.`,
-                        'success'
-                      );
-                      return currentSuggestions; // Return unchanged
-                    });
+                    // Use server-provided workout count for completion message
+                    const workoutCount = data.totalWorkouts || 0;
+                    showToastMessage(
+                      programId
+                        ? `Program complete! Generated ${workoutCount} workouts. You can now add them to your calendar.`
+                        : `Program complete! Generated ${workoutCount} workouts.`,
+                      'success'
+                    );
 
                     // Clear the timer
                     if (timer) {

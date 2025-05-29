@@ -56,6 +56,10 @@ export default function LoadingButton({ generationStage, loadingDuration, server
   const isStreamingWorkouts = serverStatus && serverStatus.type === 'workout_generated';
   const workoutProgress = isStreamingWorkouts ? 
     `${serverStatus.index + 1}/${serverStatus.total}` : null;
+  
+  // Check for week progress
+  const weekProgress = serverStatus && serverStatus.weekProgress ? 
+    `${serverStatus.weekProgress.current}/${serverStatus.weekProgress.total}` : null;
 
   const message = getDisplayMessage();
   const isRetrying = generationStage === 'retrying';
@@ -72,11 +76,55 @@ export default function LoadingButton({ generationStage, loadingDuration, server
   // Progress calculation
   const getProgressPercentage = () => {
     if (isComplete) return 100;
+    
+    // Check for workout progress first (most accurate)
     if (workoutProgress) {
       const [current, total] = workoutProgress.split('/').map(Number);
       return Math.round((current / total) * 100);
     }
-    // Base progress on stage
+    
+    // Check for structured week progress data (most accurate for week-based progress)
+    if (serverStatus && serverStatus.weekProgress) {
+      const { current, total, completed } = serverStatus.weekProgress;
+      if (current && total) {
+        const baseProgress = Math.round((current / total) * 100);
+        // If this is a completion event, use full progress
+        // If it's a processing event, use slightly less to show we're working on it
+        return completed ? baseProgress : Math.max(baseProgress - 5, 10);
+      }
+    }
+    
+    // Check for week-based progress in server messages (fallback)
+    if (serverStatus && serverStatus.message) {
+      const message = serverStatus.message;
+      
+      // Parse "Completed X of Y weeks" pattern
+      const completedMatch = message.match(/Completed (\d+) of (\d+) weeks/);
+      if (completedMatch) {
+        const [, completed, total] = completedMatch;
+        return Math.round((parseInt(completed) / parseInt(total)) * 100);
+      }
+      
+      // Parse "Processing batch: weeks X-Y..." or "Generating weeks X-Y of Z..." pattern
+      const batchMatch = message.match(/weeks (\d+)-(\d+).*of (\d+)/);
+      if (batchMatch) {
+        const [, startWeek, , total] = batchMatch;
+        // Use the start of the current batch as progress indicator
+        const progress = Math.round(((parseInt(startWeek) - 1) / parseInt(total)) * 100);
+        return Math.max(progress, 10); // Ensure minimum 10% when generating
+      }
+      
+      // Parse "Processing batch: weeks X-Y..." without total
+      const simpleBatchMatch = message.match(/weeks (\d+)-(\d+)/);
+      if (simpleBatchMatch) {
+        const [, startWeek] = simpleBatchMatch;
+        // Estimate progress based on current week (assume reasonable program length)
+        const estimatedProgress = Math.round((parseInt(startWeek) / 6) * 80) + 10; // Cap at 90%
+        return Math.min(estimatedProgress, 90);
+      }
+    }
+    
+    // Base progress on stage as fallback
     switch (generationStage) {
       case 'preparing': return 10;
       case 'generating': return 30;
@@ -134,13 +182,20 @@ export default function LoadingButton({ generationStage, loadingDuration, server
         </div>
       </div>
 
-      {/* Workout progress and streaming indicators */}
-      {(isStreaming || workoutProgress) && !isComplete && (
+      {/* Progress indicators */}
+      {(isStreaming || workoutProgress || weekProgress) && !isComplete && (
         <div className="flex flex-col items-center gap-2">
           {workoutProgress && (
             <div className="flex items-center gap-2 px-3 py-1 bg-white/60 rounded-full border border-blue-200">
               <span className="text-sm font-medium text-blue-700">Workout Progress:</span>
               <span className="text-sm font-bold text-blue-800">{workoutProgress}</span>
+            </div>
+          )}
+          
+          {weekProgress && !workoutProgress && (
+            <div className="flex items-center gap-2 px-3 py-1 bg-white/60 rounded-full border border-purple-200">
+              <span className="text-sm font-medium text-purple-700">Week Progress:</span>
+              <span className="text-sm font-bold text-purple-800">{weekProgress}</span>
             </div>
           )}
           

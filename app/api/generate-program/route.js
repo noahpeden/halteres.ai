@@ -669,9 +669,15 @@ async function generateLargeProgram(
           message: `Generating weeks ${startWeek}-${endWeek} of ${chunksToGenerate}...`,
         });
 
-          // Send a keepalive event to prevent timeout
+          // Send a keepalive event to prevent timeout with progress info
           sendEvent('status', {
-            message: `Processing batch: weeks ${startWeek}-${endWeek}...`,
+            message: `Processing batch: weeks ${startWeek}-${endWeek} of ${chunksToGenerate}...`,
+            weekProgress: {
+              current: startWeek,
+              total: chunksToGenerate,
+              batchStart: startWeek,
+              batchEnd: endWeek
+            }
           });
 
           // Create promises only for this batch with retry logic
@@ -776,11 +782,18 @@ async function generateLargeProgram(
           });
 
           // Send another keepalive after processing the batch
+          const completedWeeksInBatch = Math.min(
+            startWeekNumber + i + concurrencyLimit - 1,
+            chunksToGenerate
+          );
+          
           sendEvent('status', {
-            message: `Completed ${Math.min(
-              startWeekNumber + i + concurrencyLimit - 1,
-              chunksToGenerate
-            )} of ${chunksToGenerate} weeks`,
+            message: `Completed ${completedWeeksInBatch} of ${chunksToGenerate} weeks`,
+            weekProgress: {
+              current: completedWeeksInBatch,
+              total: chunksToGenerate,
+              completed: true
+            }
           });
         }
       }
