@@ -143,10 +143,7 @@ export async function generateProgram({
         const controller = new AbortController();
         const signal = controller.signal;
 
-        // Calculate timeout based on program size
-        // For large programs (5+ weeks), use a longer timeout
-        const numberOfWeeks = parseInt(formData.numberOfWeeks, 10);
-        const timeoutDuration = numberOfWeeks >= 5 ? 300000 : 150000; // 5 minutes for large programs, 2.5 minutes for smaller ones
+        const timeoutDuration = 300000; // 5 minutes
 
         // Set a timeout
         const timeoutId = setTimeout(() => {
@@ -712,8 +709,13 @@ export async function autoSaveProgramDetails({
   showToastMessage,
   generatedDescription,
 }) {
+  console.log('programActions: autoSaveProgramDetails called', { 
+    programId, 
+    numberOfWeeks: formData.numberOfWeeks 
+  });
+  
   if (!programId) {
-    // No Program ID yet, nothing to save.
+    console.log('programActions: No Program ID yet, nothing to save.');
     return false; // Indicate failure: no ID
   }
 
@@ -743,6 +745,11 @@ export async function autoSaveProgramDetails({
       ...formData.periodization,
       program_type: formData.programType,
     };
+
+    console.log('programActions: Updating program with data:', {
+      duration_weeks: parseInt(formData.numberOfWeeks, 10),
+      programId
+    });
 
     // Update only the program details in the `programs` table
     const { error } = await supabase
@@ -775,12 +782,15 @@ export async function autoSaveProgramDetails({
       })
       .eq('id', programId);
 
-    if (error) throw error;
+    if (error) {
+      console.error('programActions: Database error during auto-save:', error);
+      throw error;
+    }
 
-    console.log('Program details auto-saved successfully');
+    console.log('programActions: Program details auto-saved successfully');
     return true; // Indicate success
   } catch (error) {
-    console.error('Error auto-saving program details:', error);
+    console.error('programActions: Error auto-saving program details:', error);
     showToastMessage(
       `Auto-save failed: ${error.message || 'Unknown error'}`,
       'error'

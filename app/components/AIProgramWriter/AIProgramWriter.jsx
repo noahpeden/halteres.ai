@@ -110,11 +110,20 @@ export default function AIProgramWriter({ programId }) {
   // --- Auto-save functionality ---
 
   const performAutoSave = useCallback(async () => {
+    console.log('AIProgramWriter: performAutoSave called', { 
+      programId, 
+      isLoading, 
+      isGeneratingRef: isGeneratingRef.current,
+      numberOfWeeks: formData.numberOfWeeks 
+    });
+    
     if (!programId || isLoading || isGeneratingRef.current) {
+      console.log('AIProgramWriter: Skipping auto-save due to conditions');
       return;
     }
 
     try {
+      console.log('AIProgramWriter: Starting auto-save...');
       dispatch({ type: 'SET_AUTO_SAVE_STATE', payload: 'saving' });
 
       // Use autoSaveProgramDetails for better performance (doesn't save workouts)
@@ -126,12 +135,16 @@ export default function AIProgramWriter({ programId }) {
         generatedDescription,
       });
 
+      console.log('AIProgramWriter: Auto-save result:', success);
+      
       if (success) {
         dispatch({ type: 'SET_AUTO_SAVE_STATE', payload: 'idle' });
         dispatch({ type: 'SET_DIRTY', payload: false });
         lastSaveRef.current = Date.now();
+        console.log('AIProgramWriter: Auto-save successful');
       } else {
         dispatch({ type: 'SET_AUTO_SAVE_STATE', payload: 'error' });
+        console.log('AIProgramWriter: Auto-save failed');
       }
     } catch (error) {
       console.error('Auto-save failed:', error);
@@ -147,7 +160,11 @@ export default function AIProgramWriter({ programId }) {
   ]);
 
   const triggerAutoSave = useCallback(() => {
-    if (!programId) return;
+    console.log('AIProgramWriter: triggerAutoSave called', { programId });
+    if (!programId) {
+      console.log('AIProgramWriter: No programId, skipping auto-save');
+      return;
+    }
 
     // Clear existing timer
     if (autoSaveTimerRef.current) {
@@ -158,8 +175,10 @@ export default function AIProgramWriter({ programId }) {
     dispatch({ type: 'SET_DIRTY', payload: true });
     dispatch({ type: 'SET_AUTO_SAVE_STATE', payload: 'dirty' });
 
+    console.log('AIProgramWriter: Setting auto-save timer');
     // Set timer for auto-save (1 second delay)
     autoSaveTimerRef.current = setTimeout(() => {
+      console.log('AIProgramWriter: Auto-save timer triggered, calling performAutoSave');
       performAutoSave();
     }, 1000);
   }, [programId, performAutoSave, dispatch]);

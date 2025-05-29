@@ -17,8 +17,13 @@ export default function ProgramScheduling({
   const [weeksDropdownOpen, setWeeksDropdownOpen] = useState(false);
 
   const handleWeeksSelect = (value) => {
+    console.log('ProgramScheduling: Weeks selected:', value);
     handleChange({ target: { name: 'numberOfWeeks', value } });
-    if (triggerAutoSave) triggerAutoSave();
+    console.log('ProgramScheduling: triggerAutoSave available:', !!triggerAutoSave);
+    if (triggerAutoSave) {
+      console.log('ProgramScheduling: Calling triggerAutoSave');
+      triggerAutoSave();
+    }
     setWeeksDropdownOpen(false); // Close dropdown after selection
   };
 

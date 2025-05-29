@@ -415,6 +415,15 @@ async function generateLargeProgram(
         totalWorkouts: existingProgress.existingWorkouts.length
       });
       
+      // Close the controller here for existing programs
+      try {
+        logWithTimestamp('Closing controller after loading existing program');
+        controller.close();
+      } catch (closeError) {
+        logWithTimestamp('Error closing controller after loading existing program', {
+          error: closeError.message,
+        });
+      }
       return;
     }
     
@@ -1008,6 +1017,17 @@ async function generateLargeProgram(
     logWithTimestamp('Large program generation complete', {
       totalWorkoutsGenerated: allWorkouts.length,
     });
+
+    // Close the controller here instead of in finally block
+    try {
+      logWithTimestamp('Closing controller after successful completion');
+      controller.close();
+    } catch (closeError) {
+      logWithTimestamp('Error closing controller after completion', {
+        error: closeError.message,
+      });
+    }
+    return;
   } catch (largeGenError) {
     logWithTimestamp('Error in large program generation', {
       error: largeGenError.message,
@@ -1018,11 +1038,16 @@ async function generateLargeProgram(
       error: `Large program generation failed: ${largeGenError.message}`,
     });
   } finally {
-    // Close the controller only once at the very end
+    // Only close the controller if it hasn't been closed already
     try {
-      controller.close();
+      if (!controller.signal.aborted) {
+        logWithTimestamp('Closing controller in finally block (error case)');
+        controller.close();
+      } else {
+        logWithTimestamp('Controller already closed, skipping finally block close');
+      }
     } catch (closeError) {
-      logWithTimestamp('Error closing controller', {
+      logWithTimestamp('Error closing controller in finally block', {
         error: closeError.message,
       });
     }
