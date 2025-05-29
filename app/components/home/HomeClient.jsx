@@ -17,7 +17,6 @@ import Image from 'next/image';
 import programWriter from '@/assets/program writer.gif';
 import dashboard from '@/assets/dashboard.gif';
 import referencer from '@/assets/referencer.gif';
-import clientMetrics from '@/assets/client metrics.gif';
 import logo from '@/assets/logo.png';
 import Link from 'next/link';
 
@@ -130,9 +129,17 @@ export default function HomeClient() {
                   onClick={() => push()}
                   className="bg-primary text-white px-8 py-4 rounded-xl font-semibold text-lg hover:bg-primary/90 transition duration-300 flex items-center justify-center shadow-lg"
                 >
-                  Start Free Trial
+                  {session ? 'Go to Dashboard' : 'Start Free Trial'}
                   <ArrowRight className="w-5 h-5 ml-2" />
                 </button>
+                {!session && (
+                  <button
+                    onClick={() => router.push('/login')}
+                    className="bg-white text-primary border-2 border-primary px-8 py-4 rounded-xl font-semibold text-lg hover:bg-primary/5 transition duration-300 flex items-center justify-center shadow-lg"
+                  >
+                    Login
+                  </button>
+                )}
                 <div className="flex items-center space-x-2 text-gray-600">
                   <CheckCircle className="w-5 h-5 text-green-500" />
                   <span>No credit card required</span>
@@ -182,25 +189,25 @@ export default function HomeClient() {
                     }}
                   >
                     <iframe
-                      src="https://www.loom.com/embed/3e1ef91a6ff24c4c97ef4d7916e60b73?sid=fd29ac4b-e6fd-4d99-8882-5fd92d938ede"
+                      src="https://www.loom.com/embed/a87c7c9a0ec944e4be869ba6f09cf8c0?sid=3d4c01c7-4ef2-43f8-a5b2-7f1cfe872ada"
+                      frameborder="0"
+                      webkitallowfullscreen
+                      mozallowfullscreen
+                      allowfullscreen
                       style={{
-                        border: 'none',
                         position: 'absolute',
                         top: 0,
                         left: 0,
                         width: '100%',
                         height: '100%',
                       }}
-                      webkitallowfullscreen="true"
-                      mozallowfullscreen="true"
-                      allowFullScreen
-                      className="rounded-2xl"
                     />
                   </div>
                 </div>
                 <div className="mt-4 text-center">
                   <p className="text-sm text-gray-600">
-                    See how quickly you can program 2 weeks of workouts
+                    Program 6 weeks of workouts for a branch new client in under
+                    5 minutes.
                   </p>
                 </div>
               </div>

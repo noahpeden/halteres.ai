@@ -165,6 +165,15 @@ export default function Navbar() {
             </div>
           )}
 
+          {/* Login Button for Desktop */}
+          {!session && (
+            <div className="hidden lg:flex mr-4">
+              <Link href="/login" className="btn btn-primary text-white">
+                Login
+              </Link>
+            </div>
+          )}
+
           {/* Mobile menu button */}
           <div className="dropdown dropdown-end ml-2">
             <label tabIndex={0} className="btn btn-ghost btn-circle">
