@@ -273,11 +273,12 @@ export default function AIProgramWriter({ programId }) {
         hideAiStream: () => dispatch({ type: 'HIDE_AI_STREAM' }),
         dispatch,
         refetchProfile,
+        suggestions, // Pass current suggestions to determine if this is a regeneration
       });
     } finally {
       isGeneratingRef.current = false;
     }
-  }, [programId, formData, dispatch, showToastMessage, refetchProfile]);
+  }, [programId, formData, dispatch, showToastMessage, refetchProfile, suggestions]);
 
   const handleSaveProgram = useCallback(() => {
     saveProgram({

@@ -245,6 +245,7 @@ export async function POST(request) {
         const personalization = requestData.personalization || '';
         const workoutFormats = requestData.workout_format || [];
         const referenceInput = requestData.referenceInput || '';
+        const forceRegenerate = requestData.forceRegenerate || false;
 
         // Critical parameters - ensure they have fallback values
         const numberOfWeeks = parseInt(
@@ -279,6 +280,22 @@ export async function POST(request) {
         // Calculate total number of workouts
         const totalWorkouts = parseInt(numberOfWeeks) * parseInt(daysPerWeek);
 
+        // Check for existing program progress before starting generation (unless forcing regeneration)
+        let existingProgress;
+        if (forceRegenerate) {
+          logWithTimestamp('Force regeneration requested, skipping progress check');
+          sendEvent('status', { message: 'Force regeneration requested. Starting fresh...' });
+          existingProgress = { hasExisting: false, existingWorkouts: [], completedWeeks: 0, isComplete: false };
+        } else {
+          sendEvent('status', { message: 'Checking for existing program progress...' });
+          existingProgress = await checkExistingProgramProgress(
+            supabase,
+            programId,
+            totalWorkouts,
+            sendEvent
+          );
+        }
+
         // Unify: Always use generateLargeProgram for all program sizes
         await generateLargeProgram(
           requestData,
@@ -298,6 +315,8 @@ export async function POST(request) {
             startDate,
             totalWorkouts,
             referenceInput,
+            existingProgress,
+            forceRegenerate,
           },
           supabase,
           openai,
@@ -353,10 +372,52 @@ async function generateLargeProgram(
     startDate,
     totalWorkouts,
     referenceInput,
+    existingProgress,
+    forceRegenerate,
   } = params;
 
   try {
-    logWithTimestamp('Starting large program generation', { totalWorkouts });
+    logWithTimestamp('Starting large program generation', { totalWorkouts, existingProgress });
+    
+    // Handle existing complete program
+    if (existingProgress.isComplete) {
+      logWithTimestamp('Program already complete, streaming existing workouts');
+      sendEvent('status', { message: 'Program already complete! Streaming existing workouts...' });
+      
+      // Stream existing workouts as if they were just generated
+      for (let i = 0; i < existingProgress.existingWorkouts.length; i++) {
+        const workout = existingProgress.existingWorkouts[i];
+        sendEvent('workout_generated', {
+          workout: {
+            title: workout.title,
+            body: workout.body,
+            date: workout.scheduled_date
+          },
+          index: i,
+          total: existingProgress.existingWorkouts.length,
+          message: `Loaded existing workout ${i + 1} of ${existingProgress.existingWorkouts.length}`
+        });
+        
+        // Small delay to make streaming visible
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      }
+      
+      // Send completion events
+      sendEvent('program_metadata', {
+        title: `Training Program`,
+        description: `Existing ${numberOfWeeks}-week program`,
+        overview: 'Previously generated program loaded successfully'
+      });
+      
+      sendEvent('complete', {
+        success: true,
+        message: 'Existing program loaded successfully',
+        totalWorkouts: existingProgress.existingWorkouts.length
+      });
+      
+      return;
+    }
+    
     sendEvent('status', {
       message: `Generating large program with ${totalWorkouts} workouts...`,
     });
@@ -446,6 +507,41 @@ async function generateLargeProgram(
     let programDescription = `A comprehensive ${numberOfWeeks}-week ${difficulty} training program focused on ${
       focusArea || goal
     }`;
+    
+    // If we have existing progress, start with existing workouts
+    if (existingProgress.hasExisting && existingProgress.existingWorkouts.length > 0) {
+      logWithTimestamp('Adding existing workouts to allWorkouts', { 
+        existingCount: existingProgress.existingWorkouts.length 
+      });
+      
+      // Convert existing workouts to the expected format and add them
+      for (const existingWorkout of existingProgress.existingWorkouts) {
+        allWorkouts.push({
+          title: existingWorkout.title,
+          body: existingWorkout.body,
+          date: existingWorkout.scheduled_date
+        });
+        
+        // Stream existing workouts as they're loaded
+        sendEvent('workout_generated', {
+          workout: {
+            title: existingWorkout.title,
+            body: existingWorkout.body,
+            date: existingWorkout.scheduled_date
+          },
+          index: allWorkouts.length - 1,
+          total: totalWorkouts,
+          message: `Loaded existing workout ${allWorkouts.length} of ${totalWorkouts} (resuming generation)`
+        });
+        
+        // Small delay to make streaming visible
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      }
+      
+      sendEvent('status', { 
+        message: `Loaded ${allWorkouts.length} existing workouts. Continuing generation...` 
+      });
+    }
 
     // Generate overview and basic program structure first
     try {
@@ -538,50 +634,71 @@ async function generateLargeProgram(
 
     // Now generate each week with sequential processing in batches
     try {
-      // Process weeks in batches with a limit of 2 concurrent generations
-      const results = [];
-      const concurrencyLimit = 2;
+      // Calculate which weeks need to be generated (skip already completed ones)
+      const completedWeeks = existingProgress.hasExisting ? 
+        Math.floor(existingProgress.existingWorkouts.length / daysPerWeek) : 0;
+      const startWeekNumber = completedWeeks + 1;
+      
+      logWithTimestamp('Week generation plan', { 
+        totalWeeks: chunksToGenerate,
+        completedWeeks,
+        startWeekNumber,
+        remainingWeeks: chunksToGenerate - completedWeeks
+      });
+      
+      if (startWeekNumber > chunksToGenerate) {
+        logWithTimestamp('All weeks already completed, skipping generation');
+        // All weeks are already completed, skip to saving
+      } else {
+        sendEvent('status', { 
+          message: `Generating remaining weeks ${startWeekNumber}-${chunksToGenerate}...` 
+        });
+        
+        // Process weeks in batches with a limit of 2 concurrent generations
+        const results = [];
+        const concurrencyLimit = 2;
+        const weeksToGenerate = chunksToGenerate - completedWeeks;
 
-      for (let i = 0; i < chunksToGenerate; i += concurrencyLimit) {
-        // Create promises only for the current batch
-        const batchPromises = [];
-        const startWeek = i + 1;
-        const endWeek = Math.min(i + concurrencyLimit, chunksToGenerate);
+        for (let i = 0; i < weeksToGenerate; i += concurrencyLimit) {
+          // Create promises only for the current batch
+          const batchPromises = [];
+          const startWeek = startWeekNumber + i;
+          const endWeek = Math.min(startWeekNumber + i + concurrencyLimit - 1, chunksToGenerate);
 
         sendEvent('ai_request', {
           message: `Generating weeks ${startWeek}-${endWeek} of ${chunksToGenerate}...`,
         });
 
-        // Send a keepalive event to prevent timeout
-        sendEvent('status', {
-          message: `Processing batch: weeks ${startWeek}-${endWeek}...`,
-        });
+          // Send a keepalive event to prevent timeout
+          sendEvent('status', {
+            message: `Processing batch: weeks ${startWeek}-${endWeek}...`,
+          });
 
-        // Create promises only for this batch with retry logic
-        for (let weekNumber = startWeek; weekNumber <= endWeek; weekNumber++) {
-          const weekPromise = generateWeekWithRetry(
-            weekNumber,
-            numberOfWeeks,
-            daysPerWeek,
-            suggestedDates,
-            commonPromptElements,
-            programType,
-            trainingType,
-            allWorkouts,
-            openai,
-            referenceInput,
-            3 // max retries
-          );
-          batchPromises.push(weekPromise);
-        }
+          // Create promises only for this batch with retry logic
+          for (let weekNumber = startWeek; weekNumber <= endWeek; weekNumber++) {
+            const weekPromise = generateWeekWithRetry(
+              weekNumber,
+              numberOfWeeks,
+              daysPerWeek,
+              suggestedDates,
+              commonPromptElements,
+              programType,
+              trainingType,
+              allWorkouts,
+              openai,
+              referenceInput,
+              3 // max retries
+            );
+            batchPromises.push(weekPromise);
+          }
 
-        // Process this batch
-        const chunkResults = await Promise.allSettled(batchPromises);
+          // Process this batch
+          const chunkResults = await Promise.allSettled(batchPromises);
 
-        // Process results for this batch
-        for (let j = 0; j < chunkResults.length; j++) {
-          const result = chunkResults[j];
-          const weekNumber = startWeek + j;
+          // Process results for this batch
+          for (let j = 0; j < chunkResults.length; j++) {
+            const result = chunkResults[j];
+            const weekNumber = startWeek + j;
 
           if (
             result.status === 'fulfilled' &&
@@ -654,17 +771,18 @@ async function generateLargeProgram(
           }
         }
 
-        sendEvent('ai_response_received', {
-          message: `Completed weeks ${startWeek}-${endWeek}`,
-        });
+          sendEvent('ai_response_received', {
+            message: `Completed weeks ${startWeek}-${endWeek}`,
+          });
 
-        // Send another keepalive after processing the batch
-        sendEvent('status', {
-          message: `Completed ${Math.min(
-            i + concurrencyLimit,
-            chunksToGenerate
-          )} of ${chunksToGenerate} weeks`,
-        });
+          // Send another keepalive after processing the batch
+          sendEvent('status', {
+            message: `Completed ${Math.min(
+              startWeekNumber + i + concurrencyLimit - 1,
+              chunksToGenerate
+            )} of ${chunksToGenerate} weeks`,
+          });
+        }
       }
     } catch (parallelError) {
       logWithTimestamp('Error in parallel week generation', {
@@ -718,37 +836,73 @@ async function generateLargeProgram(
     sendEvent('saving', { message: 'Saving workouts to database...' });
     try {
       if (programId && allWorkouts.length > 0) {
-        // Delete existing program workouts (except reference workouts) before saving new ones
-        const { error: deleteWorkoutsError } = await supabase
-          .from('program_workouts')
-          .delete()
-          .eq('program_id', programId)
-          .eq('is_reference', false);
+        // Delete existing workouts if we're starting fresh or forcing regeneration
+        if (!existingProgress.hasExisting || forceRegenerate) {
+          logWithTimestamp('Deleting existing workouts for fresh generation', { forceRegenerate });
+          
+          // Delete existing program workouts (except reference workouts) before saving new ones
+          const { error: deleteWorkoutsError } = await supabase
+            .from('program_workouts')
+            .delete()
+            .eq('program_id', programId)
+            .eq('is_reference', false);
 
-        if (deleteWorkoutsError) {
-          logWithTimestamp('Error deleting existing workouts', {
-            error: deleteWorkoutsError,
-          });
-          // Continue anyway - this is not critical
+          if (deleteWorkoutsError) {
+            logWithTimestamp('Error deleting existing workouts', {
+              error: deleteWorkoutsError,
+            });
+            // Continue anyway - this is not critical
+          }
         }
 
-        // Prepare workouts for database insertion
-        const workoutsToInsert = allWorkouts.map((workout, index) => ({
-          program_id: programId,
-          title: workout.title,
-          body: workout.body,
-          scheduled_date: workout.date
-            ? new Date(workout.date).toISOString()
-            : null,
-          tags: {
-            type: 'generated',
-            ai_generated: true,
-            generated: true,
-          },
-          is_reference: false,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        }));
+        // Prepare workouts for database insertion - only new workouts if we have existing progress and not forcing regeneration
+        let workoutsToInsert;
+        if (existingProgress.hasExisting && !forceRegenerate) {
+          // Only insert the newly generated workouts (skip existing ones)
+          const existingCount = existingProgress.existingWorkouts.length;
+          const newWorkouts = allWorkouts.slice(existingCount);
+          
+          logWithTimestamp('Preparing new workouts for insertion', {
+            totalWorkouts: allWorkouts.length,
+            existingCount,
+            newWorkoutsCount: newWorkouts.length
+          });
+          
+          workoutsToInsert = newWorkouts.map((workout, index) => ({
+            program_id: programId,
+            title: workout.title,
+            body: workout.body,
+            scheduled_date: workout.date
+              ? new Date(workout.date).toISOString()
+              : null,
+            tags: {
+              type: 'generated',
+              ai_generated: true,
+              generated: true,
+            },
+            is_reference: false,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          }));
+        } else {
+          // Insert all workouts (fresh generation)
+          workoutsToInsert = allWorkouts.map((workout, index) => ({
+            program_id: programId,
+            title: workout.title,
+            body: workout.body,
+            scheduled_date: workout.date
+              ? new Date(workout.date).toISOString()
+              : null,
+            tags: {
+              type: 'generated',
+              ai_generated: true,
+              generated: true,
+            },
+            is_reference: false,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          }));
+        }
 
         // Insert workouts in batches to avoid hitting database limits
         const batchSize = 50;
@@ -1348,6 +1502,65 @@ async function preparePromptElements(programId, supabase, params, openai) {
     referenceInput,
     ragMatchedWorkouts,
   };
+}
+
+// Helper function to check existing program progress
+async function checkExistingProgramProgress(supabase, programId, expectedTotalWorkouts, sendEvent) {
+  try {
+    logWithTimestamp('Checking existing program progress', { programId, expectedTotalWorkouts });
+
+    // Query existing workouts for this program (non-reference workouts only)
+    const { data: existingWorkouts, error } = await supabase
+      .from('program_workouts')
+      .select('title, body, scheduled_date, created_at')
+      .eq('program_id', programId)
+      .eq('is_reference', false)
+      .order('scheduled_date', { ascending: true });
+
+    if (error) {
+      logWithTimestamp('Error fetching existing workouts', { error });
+      return { hasExisting: false, existingWorkouts: [], completedWeeks: 0 };
+    }
+
+    const existingCount = existingWorkouts?.length || 0;
+    logWithTimestamp('Found existing workouts', { existingCount, expectedTotalWorkouts });
+
+    if (existingCount === 0) {
+      sendEvent('status', { message: 'No existing workouts found. Starting fresh generation...' });
+      return { hasExisting: false, existingWorkouts: [], completedWeeks: 0 };
+    }
+
+    if (existingCount >= expectedTotalWorkouts) {
+      sendEvent('status', { message: 'Program already complete! Using existing workouts...' });
+      logWithTimestamp('Program already fully generated', { existingCount, expectedTotalWorkouts });
+      return { 
+        hasExisting: true, 
+        existingWorkouts: existingWorkouts || [], 
+        completedWeeks: 'complete',
+        isComplete: true 
+      };
+    }
+
+    sendEvent('status', { 
+      message: `Found ${existingCount} existing workouts. Resuming generation...` 
+    });
+    
+    logWithTimestamp('Partial program found, will resume', { 
+      existingCount, 
+      expectedTotalWorkouts 
+    });
+
+    return { 
+      hasExisting: true, 
+      existingWorkouts: existingWorkouts || [], 
+      completedWeeks: 0, // Will be calculated properly in the main function
+      isComplete: false 
+    };
+
+  } catch (error) {
+    logWithTimestamp('Error checking existing progress', { error: error.message });
+    return { hasExisting: false, existingWorkouts: [], completedWeeks: 0 };
+  }
 }
 
 // Helper function to check if user is a paid subscriber

@@ -30,6 +30,7 @@ export async function generateProgram({
   hideAiStream,
   dispatch,
   refetchProfile,
+  suggestions, // Add suggestions to determine if this is a regeneration
 }) {
   return new Promise(async (resolve, reject) => {
     setIsLoading(true);
@@ -97,6 +98,9 @@ export async function generateProgram({
 
         setGenerationStage('generating');
 
+        // Determine if this is a regeneration based on existing suggestions
+        const isReGenerating = suggestions && suggestions.length > 0;
+
         // Create request body
         const requestBody = JSON.stringify({
           ...(programId ? { programId } : {}),
@@ -120,6 +124,7 @@ export async function generateProgram({
           },
           session_details: formData.sessionDetails,
           program_overview: formData.programOverview,
+          forceRegenerate: isReGenerating, // Add the force regenerate flag
         });
 
         // Adjust workout_format based on custom sections (logic from source component)
