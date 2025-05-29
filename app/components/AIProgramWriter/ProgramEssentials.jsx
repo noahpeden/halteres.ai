@@ -4,16 +4,19 @@ import ProgramTypeSelector from '@/components/selectors/ProgramTypeSelector';
 import { programTypes } from '@/components/utils';
 import { InfoIcon, ChevronDown } from 'lucide-react';
 
-export default function ProgramEssentials({ formData, handleChange, triggerAutoSave }) {
+export default function ProgramEssentials({
+  formData,
+  handleChange,
+  triggerAutoSave,
+}) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  
+
   const selectedProgramType = programTypes.find(
     (type) => type.value === formData.programType
   );
 
   const handleProgramTypeSelect = (value) => {
     handleChange({ target: { name: 'programType', value } });
-    // Close the dropdown after selection
     setDropdownOpen(false);
   };
 
@@ -55,15 +58,19 @@ export default function ProgramEssentials({ formData, handleChange, triggerAutoS
       {/* Periodization Type */}
       <div className="mb-4">
         <label className="w-full">
-          <span className="text-sm font-medium mb-1">
-            Periodization Type
-          </span>
-          <details 
-            open={dropdownOpen} 
-            onToggle={(e) => setDropdownOpen(e.target.open)}
+          <span className="text-sm font-medium mb-1">Periodization Type</span>
+          <details
             className="dropdown w-full"
+            open={dropdownOpen}
+            onToggle={(e) => setDropdownOpen(e.target.open)}
           >
-            <summary className="btn btn-outline w-full justify-between">
+            <summary
+              className="btn btn-outline w-full justify-between"
+              onClick={(e) => {
+                e.preventDefault();
+                setDropdownOpen((open) => !open);
+              }}
+            >
               <span>
                 {selectedProgramType
                   ? selectedProgramType.label

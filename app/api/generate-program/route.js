@@ -883,6 +883,7 @@ Program Parameters:
 - Frequency: ${daysPerWeek} days per week
 - Program Type: ${programType}
 - Training Style: ${trainingType || 'General Fitness'}
+- Reference Input: ${referenceInput}
 ${
   commonPromptElements.focusArea
     ? `- Focus Area: ${commonPromptElements.focusArea}`
@@ -924,11 +925,13 @@ async function generateWeekWithRetry(
   maxRetries = 3
 ) {
   let lastError;
-  
+
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      logWithTimestamp(`Generating week ${weekNumber}, attempt ${attempt}/${maxRetries}`);
-      
+      logWithTimestamp(
+        `Generating week ${weekNumber}, attempt ${attempt}/${maxRetries}`
+      );
+
       const result = await generateWeek(
         weekNumber,
         totalWeeks,
@@ -941,22 +944,27 @@ async function generateWeekWithRetry(
         openai,
         referenceInput
       );
-      
+
       // If successful, return the result
       return result;
     } catch (error) {
       lastError = error;
-      logWithTimestamp(`Week ${weekNumber} generation failed on attempt ${attempt}`, {
-        error: error.message
-      });
-      
+      logWithTimestamp(
+        `Week ${weekNumber} generation failed on attempt ${attempt}`,
+        {
+          error: error.message,
+        }
+      );
+
       // If this is the last attempt, throw the error
       if (attempt === maxRetries) {
         throw lastError;
       }
-      
+
       // Wait a bit before retrying (exponential backoff)
-      await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, attempt - 1)));
+      await new Promise((resolve) =>
+        setTimeout(resolve, 1000 * Math.pow(2, attempt - 1))
+      );
     }
   }
 }
@@ -997,21 +1005,22 @@ async function generateWeek(
     focus_area: commonPromptElements.focusArea,
     workout_format: commonPromptElements.workoutFormats,
     gym_details: {
-      equipment: commonPromptElements.equipment
+      equipment: commonPromptElements.equipment,
     },
     calendar_data: {
       days_of_week: [],
-      start_date: ''
+      start_date: '',
     },
     periodization: {
-      program_type: programType
+      program_type: programType,
     },
     // Week-specific properties
     programType,
     weekNumber,
     totalWeeks,
     daysPerWeek,
-    numberOfWeeks: totalWeeks,
+    numberOfWeeks: 1, // We're only generating ONE week at a time
+    workoutsThisWeek: chunkDates.length, // Explicit count for this week
     previousWorkouts: existingWorkouts,
     suggestedDates: chunkDates,
     referenceInput,
@@ -1091,6 +1100,13 @@ async function generateWeek(
       } else {
         throw new Error(`Unable to find workouts for week ${weekNumber}`);
       }
+    }
+
+    // Validate and normalize the workout format - ensure we don't get more workouts than expected
+    const expectedWorkoutsForWeek = chunkDates.length;
+    if (chunkWorkouts.length > expectedWorkoutsForWeek) {
+      logWithTimestamp(`Warning: AI generated ${chunkWorkouts.length} workouts for week ${weekNumber}, but only ${expectedWorkoutsForWeek} were expected. Trimming excess workouts.`);
+      chunkWorkouts = chunkWorkouts.slice(0, expectedWorkoutsForWeek);
     }
 
     // Normalize the workout format

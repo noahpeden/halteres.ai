@@ -39,18 +39,8 @@ export async function POST(req) {
     }
 
     const userId = session.user.id;
-    console.log('Authenticated user ID:', userId);
-    console.log('Creating program:', {
-      name,
-      duration_weeks,
-      start_date,
-      end_date,
-      days_of_week,
-      entity_id,
-    });
 
     // Create program using the provided entity_id
-    console.log('Creating program...');
     const { data, error } = await supabase
       .from('programs')
       .insert({

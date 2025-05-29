@@ -66,6 +66,11 @@ export async function POST(req) {
     - Difficulty level: ${preferences.difficulty || 'Intermediate'}
     - Quirks: ${preferences.quirks || 'None'}
     - Gym name: ${office?.gymName || 'Your Gym'}
+    ${
+      preferences.trainingMethodology
+        ? `- Methodology: ${preferences.trainingMethodology}`
+        : ''
+    }
 
     Please use the following as primary references for workout structure and style:
     1. Example workout: ${preferences.exampleWorkout || 'Not provided'}
@@ -87,6 +92,11 @@ export async function POST(req) {
       preferences.personalization || 'general athlete'
     } with a focus on ${preferences.focusArea || 'general fitness'} 
     and a goal of ${preferences.goal || 'overall fitness'}.
+    ${
+      preferences.trainingMethodology
+        ? `\n    The user has selected the following overall training methodology: ${preferences.trainingMethodology}. Use this as the main guiding principle for the program structure and style.\n`
+        : ''
+    }
 
     Follow this structure for each day's workout:
 

@@ -83,7 +83,12 @@ export function minimalEquipmentPrompt(context) {
       : '';
 
   // Build the Minimal Equipment-specific prompt
-  return `Generate a ${numberOfWeeks}-week minimal equipment training program with the following parameters:
+  const isGeneratingSpecificWeek = context.isWeekSpecific;
+  const weekSpecificInfo = isGeneratingSpecificWeek ? 
+    `Week ${context.weekNumber} of ${context.totalWeeks}` : 
+    `${numberOfWeeks}-week`;
+  
+  return `Generate a ${isGeneratingSpecificWeek ? 'single week' : numberOfWeeks + '-week'} minimal equipment training program with the following parameters:
 
 ${
   description
@@ -96,7 +101,7 @@ Please prioritize these specific requirements above all else in program design.
 Difficulty: ${difficulty}
 Days Per Week: ${daysPerWeek} days
 Selected Training Days: ${selectedDayNames || 'All available days'}
-Total Length: ${numberOfWeeks} weeks
+${isGeneratingSpecificWeek ? `Current Week: ${weekSpecificInfo}` : `Total Length: ${numberOfWeeks} weeks`}
 ${focus_area ? `Focus Area: ${focus_area}` : ''}
 ${formatEquipmentRestrictions(equipment)}
 
@@ -109,7 +114,17 @@ ${personalization ? `Personalization: ${personalization}` : ''}
 ${formattedPeriodizationGuidelines}
 ${clientMetrics || ''}
 ${referenceWorkouts || ''}
-${formatSchedulingRequirements(suggestedDates, daysPerWeek, selectedDayNames)}
+${context.formattedDates ? `
+WORKOUT SCHEDULING REQUIREMENTS:
+Selected Training Days: ${selectedDayNames || 'All available days'}
+
+⚠️ CRITICAL SCHEDULING REQUIREMENT ⚠️
+The workouts MUST be scheduled on the EXACT dates below. These dates follow the user's selected training days (${selectedDayNames}). DO NOT create workouts on any other dates.
+
+${context.formattedDates}
+
+IMPORTANT: Each workout you generate MUST be assigned to one of the above dates. The "date" field in each workout object MUST match one of these dates EXACTLY, and all dates must be used.
+` : formatSchedulingRequirements(suggestedDates, daysPerWeek, selectedDayNames)}
 
 For the program description, include:
 1. A concise overview reflecting the CRITICAL REQUIREMENTS, Goal, ACTUAL duration (${numberOfWeeks} weeks), and the structure utilizing ONLY the specified minimal equipment and formats (${
@@ -132,7 +147,11 @@ Ensure proper periodization, recovery, and exercise variation *within the constr
 
 IMPORTANT: The workouts must be scheduled on specific dates according to the user's selected training days. DO NOT create workouts on days other than the ones specified.
 
-IMPORTANT: The program MUST strictly adhere to the requested ${numberOfWeeks} weeks duration. Generate exactly ${totalWorkouts} workouts for this duration.
+CRITICAL TITLE FORMATTING: For workout titles, use the ACTUAL week and day numbers based on the scheduling information provided above. For example, if generating workouts for Week 3, the titles should say "Week 3, Day 1", "Week 3, Day 2", etc. DO NOT use "Week 1" for all workouts - use the correct week number for each workout based on its position in the program schedule.
+
+${isGeneratingSpecificWeek ? 
+`CRITICAL: You are generating ONLY Week ${context.weekNumber} of a ${context.totalWeeks}-week program. Generate exactly ${context.workoutsThisWeek || daysPerWeek} workouts for this week ONLY. Do NOT generate workouts for other weeks.` :
+`IMPORTANT: The program MUST strictly adhere to the requested ${numberOfWeeks} weeks duration. Generate exactly ${totalWorkouts} workouts for this duration.`}
 
 Your response MUST be in this exact JSON format:
 {
@@ -212,6 +231,8 @@ ${
 - Common errors to avoid
 \`\`\`
 
-IMPORTANT: The "workouts" array MUST contain exactly ${totalWorkouts} workouts, organized in a progressive sequence over ${numberOfWeeks} weeks.
+${isGeneratingSpecificWeek ? 
+`The "workouts" array MUST contain exactly ${context.workoutsThisWeek || daysPerWeek} workouts for Week ${context.weekNumber} ONLY.` :
+`IMPORTANT: The "workouts" array MUST contain exactly ${totalWorkouts} workouts, organized in a progressive sequence over ${numberOfWeeks} weeks.`}
 `;
 }

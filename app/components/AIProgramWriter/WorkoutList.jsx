@@ -15,8 +15,12 @@ export default function WorkoutList({
   showToastMessage,
 }) {
   // Debug: Log when WorkoutList re-renders
-  console.log('[WorkoutList] Rendering with', workouts ? workouts.length : 0, 'workouts');
-  
+  console.log(
+    '[WorkoutList] Rendering with',
+    workouts ? workouts.length : 0,
+    'workouts'
+  );
+
   if (!workouts || workouts.length === 0) {
     console.log('[WorkoutList] No workouts to display');
     return null;
@@ -65,18 +69,6 @@ export default function WorkoutList({
             <div className="collapse-content">
               <div className="p-2 bg-white rounded-md">
                 <p className="whitespace-pre-line">{generatedDescription}</p>
-                <button
-                  className="btn btn-xs btn-outline mt-2"
-                  onClick={() => {
-                    setFormData((prev) => ({
-                      ...prev,
-                      description: generatedDescription,
-                    }));
-                    showToastMessage('Description copied to form field');
-                  }}
-                >
-                  Use This Description
-                </button>
               </div>
             </div>
           </div>
@@ -91,7 +83,10 @@ export default function WorkoutList({
           <div className="grid grid-cols-1 gap-4">
             {weekGroup.workouts.map((workout, index) => (
               <div
-                key={workout.streamingId || `${weekGroup.week}-${index}-${workout.title}`}
+                key={
+                  workout.streamingId ||
+                  `${weekGroup.week}-${index}-${workout.title}`
+                }
                 className={`border rounded-md p-3 sm:p-4 flex flex-col w-full ${
                   workout.completed ? 'bg-green-50 border-green-200' : ''
                 }`}

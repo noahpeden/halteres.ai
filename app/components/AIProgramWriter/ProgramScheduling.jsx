@@ -1,5 +1,6 @@
 'use client';
 import { ChevronDown } from 'lucide-react';
+import { useState } from 'react';
 
 export default function ProgramScheduling({
   formData,
@@ -12,9 +13,13 @@ export default function ProgramScheduling({
     (num) => num === parseInt(formData.numberOfWeeks)
   );
 
+  // Add state for dropdown open/close
+  const [weeksDropdownOpen, setWeeksDropdownOpen] = useState(false);
+
   const handleWeeksSelect = (value) => {
     handleChange({ target: { name: 'numberOfWeeks', value } });
     if (triggerAutoSave) triggerAutoSave();
+    setWeeksDropdownOpen(false); // Close dropdown after selection
   };
 
   return (
@@ -63,8 +68,18 @@ export default function ProgramScheduling({
       <div className="mb-4">
         <label className="w-full">
           <span className="text-sm font-medium">Weeks</span>
-          <details className="dropdown w-full">
-            <summary className="btn btn-outline w-full justify-between">
+          <details
+            className="dropdown w-full"
+            open={weeksDropdownOpen}
+            onToggle={(e) => setWeeksDropdownOpen(e.target.open)}
+          >
+            <summary
+              className="btn btn-outline w-full justify-between"
+              onClick={(e) => {
+                e.preventDefault();
+                setWeeksDropdownOpen((open) => !open);
+              }}
+            >
               <span>
                 {selectedWeeks
                   ? `${selectedWeeks} ${selectedWeeks === 1 ? 'week' : 'weeks'}`

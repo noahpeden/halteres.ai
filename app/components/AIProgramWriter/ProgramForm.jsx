@@ -137,16 +137,10 @@ const ProgramForm = ({
     lastGenerationDate,
   ]);
 
-  const isButtonDisabled = isLoading || !isEligibleToGenerate;
+  const isButtonDisabled = isLoading || generationStage === 'complete' || !isEligibleToGenerate;
   const buttonText = () => {
-    if (isLoading) {
-      return (
-        <LoadingButton
-          generationStage={generationStage}
-          loadingDuration={loadingDuration}
-          serverStatus={serverStatus}
-        />
-      );
+    if (isLoading || generationStage === 'complete') {
+      return 'Generating...'; // Simple text when loading
     }
     if (!isEligibleToGenerate) {
       return disabledReason || 'Generation Unavailable'; // Show reason if available
@@ -211,6 +205,18 @@ const ProgramForm = ({
           {buttonText()}
         </button>
       </div>
+      
+      {/* Show LoadingButton when generating */}
+      {(isLoading || generationStage === 'complete') && (
+        <div className="mt-6">
+          <LoadingButton
+            generationStage={generationStage}
+            loadingDuration={loadingDuration}
+            serverStatus={serverStatus}
+          />
+        </div>
+      )}
+      
       {/* Optional: Display disabled reason clearly */}
       {/* {!isLoading && !isEligibleToGenerate && disabledReason && (
         <p className="text-center text-error mt-2">{disabledReason}</p>

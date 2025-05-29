@@ -21,16 +21,35 @@ export default function ProgramTypeSelector({
   selectedType = '',
   onChange,
   options = defaultTypeOptions,
+  open: controlledOpen,
+  setOpen: setControlledOpen,
 }) {
   const selectedOption = options.find((option) => option.id === selectedType);
 
+  // Controlled/uncontrolled open state
+  const [open, setOpen] = useState(false);
+  const isOpen = controlledOpen !== undefined ? controlledOpen : open;
+  const setDropdownOpen = setControlledOpen || setOpen;
+
   const handleOptionSelect = (value) => {
     onChange(value);
+    setDropdownOpen(false); // Close dropdown after selection
   };
 
   return (
-    <details className="dropdown w-full" data-testid="program-type-selector">
-      <summary className="btn btn-outline w-full justify-between">
+    <details
+      className="dropdown w-full"
+      data-testid="program-type-selector"
+      open={isOpen}
+      onToggle={(e) => setDropdownOpen(e.target.open)}
+    >
+      <summary
+        className="btn btn-outline w-full justify-between"
+        onClick={(e) => {
+          e.preventDefault();
+          setDropdownOpen((prev) => !prev);
+        }}
+      >
         <span className="flex items-center gap-2">
           {selectedOption ? (
             <>

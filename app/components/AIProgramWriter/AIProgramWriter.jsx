@@ -1194,32 +1194,6 @@ export default function AIProgramWriter({ programId }) {
         showToastMessage={showToastMessage}
       />
 
-      {/* AI Streaming Content Display */}
-      {showAiStream && (
-        <div className="mt-6">
-          <div className="card bg-base-100 border border-blue-200">
-            <div className="card-body">
-              <div className="flex items-center gap-2 mb-3">
-                <span className="loading loading-dots loading-sm text-blue-500"></span>
-                <h3 className="card-title text-blue-600">
-                  AI Generating Program...
-                </h3>
-              </div>
-              <div className="bg-gray-50 p-4 rounded-lg max-h-96 overflow-y-auto">
-                <pre className="whitespace-pre-wrap text-sm font-mono text-gray-800">
-                  {aiStreamingContent}
-                  <span className="inline-block w-2 h-4 bg-blue-500 animate-pulse ml-1"></span>
-                </pre>
-              </div>
-              <div className="text-xs text-gray-500 mt-2">
-                Streaming live from AI... ({aiStreamingContent.length}{' '}
-                characters)
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
       {suggestions.length > 0 && (
         <div className="flex justify-between items-center mt-6">
           <div className="flex-1" />
