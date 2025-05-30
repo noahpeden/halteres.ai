@@ -1,5 +1,6 @@
 'use client';
-import { Trash2, Pencil, MoreVertical, CheckCircle } from 'lucide-react';
+import { useState } from 'react';
+import { Trash2, Pencil, MoreVertical, CheckCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 export default function WorkoutList({
   workouts,
   daysPerWeek,
@@ -14,6 +15,7 @@ export default function WorkoutList({
   setFormData,
   showToastMessage,
 }) {
+  const [currentWeek, setCurrentWeek] = useState(1);
   // Debug: Log when WorkoutList re-renders
   console.log(
     '[WorkoutList] Rendering with',
@@ -46,6 +48,20 @@ export default function WorkoutList({
   };
 
   const weekGroups = groupWorkoutsByWeek();
+  const totalWeeks = weekGroups.length;
+  const currentWeekData = weekGroups.find(group => group.week === currentWeek);
+
+  const goToPreviousWeek = () => {
+    if (currentWeek > 1) {
+      setCurrentWeek(currentWeek - 1);
+    }
+  };
+
+  const goToNextWeek = () => {
+    if (currentWeek < totalWeeks) {
+      setCurrentWeek(currentWeek + 1);
+    }
+  };
 
   return (
     <div className="mt-6">
@@ -75,17 +91,58 @@ export default function WorkoutList({
         </div>
       )}
 
-      {weekGroups.map((weekGroup) => (
-        <div key={weekGroup.week} className="mb-6">
+      {totalWeeks > 1 && (
+        <div className="flex justify-between items-center mb-4">
+          <button 
+            className="btn btn-sm btn-outline"
+            onClick={goToPreviousWeek}
+            disabled={currentWeek === 1}
+          >
+            <ChevronLeft className="h-4 w-4" />
+            Previous Week
+          </button>
+          
+          <div className="join">
+            {weekGroups.map((weekGroup) => (
+              <button
+                key={weekGroup.week}
+                className={`join-item btn btn-sm ${
+                  currentWeek === weekGroup.week ? 'btn-active' : 'btn-outline'
+                }`}
+                onClick={() => setCurrentWeek(weekGroup.week)}
+              >
+                {weekGroup.week}
+              </button>
+            ))}
+          </div>
+          
+          <button 
+            className="btn btn-sm btn-outline"
+            onClick={goToNextWeek}
+            disabled={currentWeek === totalWeeks}
+          >
+            Next Week
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+
+      {currentWeekData && (
+        <div className="mb-6">
           <h4 className="text-md font-medium mb-2 p-2 bg-base-200 rounded-md">
-            Week {weekGroup.week}
+            Week {currentWeekData.week}
+            {totalWeeks > 1 && (
+              <span className="text-sm font-normal ml-2 text-gray-600">
+                ({currentWeek} of {totalWeeks})
+              </span>
+            )}
           </h4>
           <div className="grid grid-cols-1 gap-4">
-            {weekGroup.workouts.map((workout, index) => (
+            {currentWeekData.workouts.map((workout, index) => (
               <div
                 key={
                   workout.streamingId ||
-                  `${weekGroup.week}-${index}-${workout.title}`
+                  `${currentWeekData.week}-${index}-${workout.title}`
                 }
                 className={`border rounded-md p-3 sm:p-4 flex flex-col w-full ${
                   workout.completed ? 'bg-green-50 border-green-200' : ''
@@ -99,7 +156,7 @@ export default function WorkoutList({
                 <div className="flex justify-between items-center mb-1 w-full">
                   <h4 className="font-semibold flex-1 break-words mr-2">
                     {workout.title ||
-                      `Week ${weekGroup.week}, Day ${index + 1}`}
+                      `Week ${currentWeekData.week}, Day ${index + 1}`}
                     {workout.completed && (
                       <span className="ml-2 text-green-600 text-sm font-normal">
                         (Completed)
@@ -190,7 +247,13 @@ export default function WorkoutList({
             ))}
           </div>
         </div>
-      ))}
+      )}
+      
+      {!currentWeekData && totalWeeks > 0 && (
+        <div className="text-center py-8">
+          <p className="text-gray-500">No workouts found for Week {currentWeek}</p>
+        </div>
+      )}
     </div>
   );
 }
