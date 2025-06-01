@@ -8,7 +8,18 @@ export default function ProgramScheduling({
   handleDayOfWeekChange,
   triggerAutoSave,
 }) {
-  const weekOptions = [1, 2, 3, 4, 5, 6];
+  // Get base week options and extended options for triathlon/ironman
+  const baseWeekOptions = [1, 2, 3, 4, 5, 6];
+  const extendedWeekOptions = [20, 24];
+  
+  // Check if current methodology allows extended weeks
+  const isTriathlonMethodology = ['triathlete', 'ironman'].includes(formData.trainingMethodology);
+  
+  // Combine options based on methodology
+  const weekOptions = isTriathlonMethodology 
+    ? [...baseWeekOptions, ...extendedWeekOptions]
+    : baseWeekOptions;
+    
   const selectedWeeks = weekOptions.find(
     (num) => num === parseInt(formData.numberOfWeeks)
   );
@@ -29,6 +40,11 @@ export default function ProgramScheduling({
         Choose the length of your program and the days of the week you'll have
         sessions on. We use this to determine the number of workouts in the
         program.
+        {isTriathlonMethodology && (
+          <span className="block mt-1 text-blue-600 font-medium">
+            Extended 20-24 week options available for triathlon training!
+          </span>
+        )}
       </span>
 
       {/* Days of Week Selector */}

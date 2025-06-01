@@ -16,6 +16,8 @@ import { functionalFitnessPrompt } from './prompts/functional-fitness.js';
 import { hiitMetabolicPrompt } from './prompts/hiit-metabolic.js';
 import { calisthenicsPrompt } from './prompts/calisthenics.js';
 import { sportSpecificPrompt } from './prompts/sport-specific.js';
+import { triathlonPrompt } from './prompts/triathlon.js';
+import { ironmanPrompt } from './prompts/ironman.js';
 import { formatPeriodizationGuidelines } from './periodizationUtils.js';
 
 /**
@@ -127,6 +129,7 @@ export default function promptBuilder(context, trainingType) {
     case 'powerlifting':
       return powerliftingPrompt(enhancedContext);
     case 'functional fitness':
+    case 'functional':
       return functionalFitnessPrompt(enhancedContext);
     case 'hiit':
     case 'metabolic':
@@ -137,14 +140,24 @@ export default function promptBuilder(context, trainingType) {
       return calisthenicsPrompt(enhancedContext);
     case 'sport specific':
     case 'sport-specific':
+    case 'sport':
     case 'athletic':
       return sportSpecificPrompt(enhancedContext);
+    case 'triathlete':
+    case 'triathlon':
+      return triathlonPrompt(enhancedContext);
+    case 'ironman':
+    case 'iron man':
+      return ironmanPrompt(enhancedContext);
     case 'commercial gym':
+    case 'commercial':
     case 'general strength':
       return generalGymPrompt(enhancedContext);
     case 'minimal equipment':
+    case 'minimal':
       return minimalEquipmentPrompt(enhancedContext);
     case 'balanced fitness':
+    case 'balanced':
     case 'general fitness':
     default:
       // If no specific type or unknown type, use balanced fitness as default

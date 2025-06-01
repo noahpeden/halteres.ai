@@ -30,7 +30,7 @@ export default function Navbar() {
   useEffect(() => {
     // Fetch user profile when user is available
     const fetchUserProfile = async () => {
-      if (!user) return;
+      if (!user || !user.id) return;
 
       try {
         const { data, error } = await supabase
@@ -40,13 +40,36 @@ export default function Navbar() {
           .single();
 
         if (error) {
-          console.error('Error fetching user profile:', error);
+          // Only log error if it's not a "No rows found" error (which is expected for new users)
+          if (error.code !== 'PGRST116') {
+            console.error('Error fetching user profile:', {
+              code: error.code,
+              message: error.message,
+              details: error.details,
+              hint: error.hint,
+              userId: user.id
+            });
+          }
+          // Set default profile for new users or when profile doesn't exist
+          setUserProfile({
+            subscription_status: null,
+            subscription_plan: null
+          });
           return;
         }
 
         setUserProfile(data);
       } catch (err) {
-        console.error('Failed to fetch user profile:', err);
+        console.error('Failed to fetch user profile:', {
+          error: err.message || err,
+          userId: user?.id,
+          userEmail: user?.email
+        });
+        // Set default profile on error
+        setUserProfile({
+          subscription_status: null,
+          subscription_plan: null
+        });
       }
     };
 

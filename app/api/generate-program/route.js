@@ -264,9 +264,16 @@ export async function POST(request) {
           requestData.gym_details?.equipment || requestData.equipment || [];
         const gymType =
           requestData.gym_details?.gym_type || requestData.gymType || '';
-        const trainingType = gymType; // Use gymType as trainingType for now
+        const trainingType = requestData.trainingMethodology || ''; // Use trainingMethodology only, not gymType
         const startDate =
           requestData.calendar_data?.start_date || requestData.startDate || '';
+
+        // Debug training methodology vs gym type
+        logWithTimestamp('Training methodology debug', {
+          'requestData.trainingMethodology': requestData.trainingMethodology,
+          'gymType': gymType,
+          'final trainingType': trainingType,
+        });
 
         logWithTimestamp('Parsed parameters', {
           numberOfWeeks,
