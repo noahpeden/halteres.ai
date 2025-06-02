@@ -38,6 +38,15 @@ export async function generateProgram({
     showToastMessage('Generating program...');
     setGenerationStage('preparing');
     setServerStatus(null);
+    
+    // Track the current retry attempt and workout indices
+    const currentRetryAttempt = { count: 0 };
+    const workoutTracker = { 
+      currentIndex: 0,
+      processedWorkouts: new Set(),
+      expectedTotal: parseInt(formData.numberOfWeeks) * parseInt(formData.daysPerWeek),
+      sessionId: null
+    };
 
     // Start a timer to track loading duration
     const startTime = Date.now();
@@ -59,13 +68,23 @@ export async function generateProgram({
 
     while (retryCount <= MAX_RETRIES) {
       try {
-        // If this is a retry, show message to user
+        // Update the current retry attempt
+        currentRetryAttempt.count = retryCount;
+        
+        // If this is a retry, show message to user and clear previous partial results
         if (retryCount > 0) {
           showToastMessage(
             `Retry attempt ${retryCount} of ${MAX_RETRIES}...`,
             'warning'
           );
           setGenerationStage('retrying');
+          // Clear any partial workouts from previous attempt
+          setSuggestions([]);
+          // Reset workout tracker for retry
+          workoutTracker.currentIndex = 0;
+          workoutTracker.processedWorkouts.clear();
+          workoutTracker.sessionId = null;
+          console.log('[Retry] Reset workout tracker for retry attempt', retryCount);
           // Add a small delay before retrying
           await delay(RETRY_DELAY);
         }
@@ -189,7 +208,8 @@ export async function generateProgram({
         const contentType = response.headers.get('content-type');
         if (contentType && contentType.includes('text/event-stream')) {
           // Process the stream
-          const sessionId = `session_${Date.now()}`;
+          const sessionId = `session_${Date.now()}_retry${retryCount}`;
+          workoutTracker.sessionId = sessionId;
           console.log(`[Streaming] Starting SSE session: ${sessionId}`);
 
           const reader = response.body.getReader();
@@ -231,8 +251,17 @@ export async function generateProgram({
                     // Handle program metadata and clear existing suggestions
                     console.log(
                       '[Streaming] Program metadata received:',
-                      data.title
+                      data.title,
+                      'Retry attempt:',
+                      currentRetryAttempt.count,
+                      'Session:',
+                      workoutTracker.sessionId
                     );
+                    // Reset workout tracker for new generation
+                    workoutTracker.currentIndex = 0;
+                    workoutTracker.processedWorkouts.clear();
+                    console.log('[Streaming] Reset workout tracker for new generation');
+                    // Only clear suggestions at the start of a new generation
                     setSuggestions([]); // Clear previous workouts for streaming
                     showToastMessage(
                       `Program created: ${data.title}`,
@@ -251,13 +280,43 @@ export async function generateProgram({
                     }
                   } else if (data.type === 'workout_generated') {
                     // Handle individual workout streaming
+                    setGenerationStage('finalizing');
+                    const workout = data.workout;
+                    const workoutKey = `${data.index}_${workout.title}_${workoutTracker.sessionId}`;
                     console.log(
                       '[Streaming] Adding workout:',
                       data.index,
-                      data.workout.title
+                      workout.title,
+                      'Total expected:',
+                      data.total,
+                      'Tracker index:',
+                      workoutTracker.currentIndex,
+                      'Key:',
+                      workoutKey
                     );
-                    setGenerationStage('finalizing');
-                    const workout = data.workout;
+                    
+                    // Check if we've already processed this specific workout in this session
+                    if (workoutTracker.processedWorkouts.has(workoutKey)) {
+                      console.warn(
+                        '[Streaming] Duplicate workout detected for session, skipping:',
+                        workoutKey
+                      );
+                      return;
+                    }
+                    
+                    // Validate against expected total to prevent overflow
+                    if (workoutTracker.currentIndex >= workoutTracker.expectedTotal) {
+                      console.warn(
+                        '[Streaming] WARNING: Exceeded expected workout count',
+                        'Current index:',
+                        workoutTracker.currentIndex,
+                        'Expected total:',
+                        workoutTracker.expectedTotal,
+                        'Skipping workout:',
+                        workout.title
+                      );
+                      return;
+                    }
 
                     // Add workout to suggestions incrementally - force immediate render
                     const newWorkout = {
@@ -266,30 +325,58 @@ export async function generateProgram({
                       description: workout.body,
                       suggestedDate: workout.date,
                       date: workout.date,
-                      // Add unique timestamp to force re-render
-                      streamingId: `workout_${data.index}_${Date.now()}`,
+                      // Add unique identifier including session to prevent duplicates
+                      streamingId: `workout_${data.index}_${workoutTracker.currentIndex}_${workoutTracker.sessionId}`,
+                      originalIndex: data.index, // Track original server index
+                      trackerIndex: workoutTracker.currentIndex, // Track our local index
                     };
 
+                    // Mark this workout as processed BEFORE the state update
+                    workoutTracker.processedWorkouts.add(workoutKey);
+                    workoutTracker.currentIndex++;
+                    
                     // Use flushSync to force synchronous update
                     flushSync(() => {
                       setSuggestions((prev) => {
                         console.log(
                           '[Streaming] Previous suggestions count:',
-                          prev.length
+                          prev.length,
+                          'Expected total:',
+                          workoutTracker.expectedTotal,
+                          'Tracker index:',
+                          workoutTracker.currentIndex
                         );
+                        
+                        // Double-check we're not exceeding expected workouts in state
+                        if (prev.length >= workoutTracker.expectedTotal) {
+                          console.warn(
+                            '[Streaming] WARNING: State already has',
+                            prev.length,
+                            'workouts, expected only',
+                            workoutTracker.expectedTotal,
+                            '- reverting tracker and skipping'
+                          );
+                          // Revert tracker changes since we're not adding this workout
+                          workoutTracker.currentIndex--;
+                          workoutTracker.processedWorkouts.delete(workoutKey);
+                          return prev; // Don't add more workouts
+                        }
+                        
                         // Simple append approach to avoid index issues
                         const newSuggestions = [...prev, newWorkout];
                         console.log(
                           '[Streaming] Updated suggestions, total count:',
-                          newSuggestions.length
+                          newSuggestions.length,
+                          'Tracker index:',
+                          workoutTracker.currentIndex
                         );
                         return newSuggestions;
                       });
                     });
 
-                    // Show a toast for each workout added
+                    // Show a toast for each workout added with corrected numbering
                     showToastMessage(
-                      `Workout ${data.index + 1}/${data.total}: ${
+                      `Workout ${workoutTracker.currentIndex}/${workoutTracker.expectedTotal}: ${
                         workout.title
                       }`,
                       'success'
@@ -300,7 +387,14 @@ export async function generateProgram({
                   ) {
                     setGenerationStage('finalizing');
                   } else if (data.type === 'complete') {
-                    console.log('[Streaming] Generation complete');
+                    console.log(
+                      '[Streaming] Generation complete for session:',
+                      workoutTracker.sessionId,
+                      'Final workout count:',
+                      workoutTracker.currentIndex,
+                      'Expected:',
+                      workoutTracker.expectedTotal
+                    );
                     setIsLoading(false);
                     setGenerationStage('complete');
 
@@ -325,8 +419,8 @@ export async function generateProgram({
                       }, 5000); // Reduced to 5 seconds
                     }
 
-                    // Use server-provided workout count for completion message
-                    const workoutCount = data.totalWorkouts || 0;
+                    // Use tracker workout count for completion message
+                    const workoutCount = data.totalWorkouts || workoutTracker.currentIndex;
                     showToastMessage(
                       programId
                         ? `Program complete! Generated ${workoutCount} workouts. You can now add them to your calendar.`

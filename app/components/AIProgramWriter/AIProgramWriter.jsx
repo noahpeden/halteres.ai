@@ -37,7 +37,7 @@ import EditWorkoutModalComponent from './EditWorkoutModal';
 import ConfirmationModalComponent from './ConfirmationModal'; // Assuming this exists now
 import ReferenceWorkoutSearchModal from './ReferenceWorkoutSearchModal';
 
-import { InfoIcon } from 'lucide-react';
+import { InfoIcon, Sparkles } from 'lucide-react';
 import AutoSaveStatusIndicator from './AutoSaveStatusIndicator';
 
 // Memoize imported components
@@ -98,6 +98,13 @@ export default function AIProgramWriter({ programId }) {
 
   const loadingTimer = useRef(null);
   const isAutoUpdating = useRef(false);
+  
+  // Enhance Program state
+  const [isEnhancingProgram, setIsEnhancingProgram] = useState(false);
+  const [showEnhanceProgramInput, setShowEnhanceProgramInput] = useState(false);
+  const [enhanceProgramText, setEnhanceProgramText] = useState('');
+  const [pendingProgramEnhancement, setPendingProgramEnhancement] = useState(null);
+  const [showProgramSavePrompt, setShowProgramSavePrompt] = useState(false);
   const isGeneratingRef = useRef(false);
   const [isReferenceWorkoutModalOpen, setReferenceWorkoutModalOpen] =
     useState(false);
@@ -496,6 +503,107 @@ export default function AIProgramWriter({ programId }) {
     },
     [supabase, dispatch, suggestions, showToastMessage]
   );
+
+  // Enhance Program Handler
+  const handleEnhanceProgram = useCallback(() => {
+    setShowEnhanceProgramInput(true);
+  }, []);
+
+  const handleEnhanceProgramSubmit = useCallback(async () => {
+    if (!enhanceProgramText.trim()) {
+      showToastMessage('Please provide enhancement instructions', 'error');
+      return;
+    }
+
+    setIsEnhancingProgram(true);
+    setShowEnhanceProgramInput(false);
+
+    try {
+      const payload = {
+        workouts: suggestions.filter(w => !w.is_reference),
+        instructions: enhanceProgramText,
+        programName: formData.name,
+        methodology: formData.trainingMethodology || 'General fitness',
+        gymEquipment: formData.equipment || [],
+        injuries: formData.injuries || '',
+        focusArea: formData.focusArea || '',
+        workoutFormats: formData.workoutFormats || [],
+      };
+
+      const res = await fetch('/api/enhance-program', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to enhance program');
+      }
+
+      const { enhancedProgram } = await res.json();
+
+      // Store the enhanced program for preview
+      setPendingProgramEnhancement(enhancedProgram);
+      setShowProgramSavePrompt(true);
+      setEnhanceProgramText('');
+    } catch (err) {
+      console.error('Error enhancing program:', err);
+      showToastMessage(`Failed to enhance program: ${err.message}`, 'error');
+    } finally {
+      setIsEnhancingProgram(false);
+    }
+  }, [enhanceProgramText, suggestions, formData, showToastMessage]);
+
+  const handleSaveProgramEnhancement = useCallback(async () => {
+    if (!pendingProgramEnhancement) return;
+
+    try {
+      dispatch({ type: 'SET_LOADING', payload: true });
+
+      // Update all workouts in the database
+      const updatePromises = pendingProgramEnhancement.enhancedWorkouts.map(async (enhancedWorkout) => {
+        if (enhancedWorkout.id) {
+          const { error } = await supabase
+            .from('program_workouts')
+            .update({
+              title: enhancedWorkout.title,
+              body: enhancedWorkout.body,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', enhancedWorkout.id);
+
+          if (error) throw error;
+        }
+        return enhancedWorkout;
+      });
+
+      await Promise.all(updatePromises);
+
+      // Update local state with enhanced workouts
+      dispatch({
+        type: 'SET_SUGGESTIONS',
+        payload: suggestions.map(workout => {
+          const enhanced = pendingProgramEnhancement.enhancedWorkouts.find(w => w.id === workout.id);
+          return enhanced ? { ...workout, title: enhanced.title, body: enhanced.body } : workout;
+        }),
+      });
+
+      showToastMessage('Program successfully enhanced!');
+      setPendingProgramEnhancement(null);
+      setShowProgramSavePrompt(false);
+    } catch (err) {
+      console.error('Error saving enhanced program:', err);
+      showToastMessage(`Failed to save enhanced program: ${err.message}`, 'error');
+    } finally {
+      dispatch({ type: 'SET_LOADING', payload: false });
+    }
+  }, [pendingProgramEnhancement, suggestions, supabase, dispatch, showToastMessage]);
+
+  const handleDiscardProgramEnhancement = useCallback(() => {
+    setPendingProgramEnhancement(null);
+    setShowProgramSavePrompt(false);
+  }, []);
 
   // --- Effects ---
 
@@ -1198,7 +1306,25 @@ export default function AIProgramWriter({ programId }) {
       {suggestions.length > 0 && (
         <div className="flex justify-between items-center mt-6">
           <div className="flex-1" />
-          <div className="flex gap-2"></div>
+          <div className="flex gap-2">
+            <button
+              onClick={handleEnhanceProgram}
+              className="btn btn-outline btn-primary"
+              disabled={isEnhancingProgram}
+            >
+              {isEnhancingProgram ? (
+                <>
+                  <span className="loading loading-spinner loading-sm"></span>
+                  Enhancing...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  Enhance Program
+                </>
+              )}
+            </button>
+          </div>
         </div>
       )}
 
@@ -1287,6 +1413,106 @@ export default function AIProgramWriter({ programId }) {
         selectedWorkouts={dbReferenceWorkouts}
         initialSearchText={formData.referenceInput || ''}
       />
+
+      {/* Enhance Program Input Dialog */}
+      {showEnhanceProgramInput && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-2xl border border-gray-200 p-6 w-full max-w-lg mx-4">
+            <div className="mb-4">
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                Enhance Entire Program
+              </h3>
+              <p className="text-sm text-gray-600 mb-4">
+                Describe how you'd like to improve or modify all workouts in this program
+              </p>
+            </div>
+            <textarea
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none mb-4"
+              rows="4"
+              placeholder='e.g., "Add more CrossFit metcons", "Include more mobility work", "Make it more strength-focused", "Replace cardio with HIIT sessions"'
+              value={enhanceProgramText}
+              onChange={(e) => setEnhanceProgramText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && e.ctrlKey) {
+                  e.preventDefault();
+                  handleEnhanceProgramSubmit();
+                }
+              }}
+            />
+            <div className="flex gap-3 justify-end">
+              <button
+                className="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium transition-colors"
+                onClick={() => {
+                  setShowEnhanceProgramInput(false);
+                  setEnhanceProgramText('');
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn btn-primary"
+                onClick={handleEnhanceProgramSubmit}
+                disabled={!enhanceProgramText.trim()}
+              >
+                <Sparkles className="w-4 h-4 mr-2" />
+                Enhance Program
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Save Enhanced Program Prompt */}
+      {showProgramSavePrompt && pendingProgramEnhancement && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-2xl border border-gray-200 p-6 w-full max-w-2xl mx-4 max-h-[80vh] overflow-y-auto">
+            <div className="mb-4">
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                ✨ Enhanced Program Ready!
+              </h3>
+              <p className="text-sm text-gray-600 mb-4">
+                Your program has been enhanced. Review the changes below:
+              </p>
+              {pendingProgramEnhancement.notes && (
+                <div className="p-4 bg-primary/10 border border-primary/20 rounded-lg mb-4">
+                  <div className="flex items-start gap-3">
+                    <Sparkles className="w-5 h-5 mt-0.5 flex-shrink-0 text-primary" />
+                    <div>
+                      <div className="font-semibold text-gray-900 mb-1">Enhancement Notes</div>
+                      <div className="text-gray-700">{pendingProgramEnhancement.notes}</div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="mb-6">
+              <h4 className="font-medium text-gray-900 mb-2">Enhanced Workouts Preview:</h4>
+              <div className="space-y-2 max-h-64 overflow-y-auto">
+                {pendingProgramEnhancement.enhancedWorkouts.map((workout, index) => (
+                  <div key={workout.id || index} className="p-3 bg-gray-50 rounded-lg">
+                    <h5 className="font-medium text-gray-900">{workout.title}</h5>
+                    <p className="text-sm text-gray-600 line-clamp-2 mt-1">{workout.body}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="flex gap-3 justify-end">
+              <button
+                className="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium transition-colors"
+                onClick={handleDiscardProgramEnhancement}
+              >
+                Discard Changes
+              </button>
+              <button
+                className="btn btn-primary"
+                onClick={handleSaveProgramEnhancement}
+              >
+                Save Enhanced Program
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Auto-save status indicator */}
       <AutoSaveStatusIndicator
