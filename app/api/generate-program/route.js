@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import promptBuilder from '@/utils/prompt-builder/promptBuilder';
 
-export const maxDuration = 300;
+export const maxDuration = 600; // 10 minutes for large programs
 export const dynamic = 'force-dynamic';
 
 // Helper function to log with timestamps

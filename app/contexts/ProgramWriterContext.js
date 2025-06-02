@@ -18,8 +18,8 @@ const initialState = {
     personalization: '',
     workoutFormats: [],
     numberOfWeeks: '4',
-    daysPerWeek: '4',
-    daysOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+    daysPerWeek: '3',
+    daysOfWeek: ['Monday', 'Wednesday', 'Friday'],
     programType: 'linear',
     gymType: 'Crossfit Box',
     startDate: '', // Will be set client-side

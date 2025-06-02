@@ -41,10 +41,23 @@ export async function generateProgram({
     
     // Track the current retry attempt and workout indices
     const currentRetryAttempt = { count: 0 };
+    // Calculate expected total using the same logic as the API
+    const calculatedWeeks = parseInt(formData.numberOfWeeks || formData.duration_weeks || 4);
+    const calculatedDaysPerWeek = parseInt(formData.daysPerWeek || formData.days_per_week || formData.daysOfWeek?.length || 3);
+    const expectedTotal = calculatedWeeks * calculatedDaysPerWeek;
+    
+    console.log('[Client] Workout calculation:', {
+      weeks: calculatedWeeks,
+      daysPerWeek: calculatedDaysPerWeek,
+      expectedTotal: expectedTotal,
+      formDataDaysOfWeekLength: formData.daysOfWeek?.length,
+      formDataDaysPerWeek: formData.daysPerWeek
+    });
+    
     const workoutTracker = { 
       currentIndex: 0,
       processedWorkouts: new Set(),
-      expectedTotal: parseInt(formData.numberOfWeeks) * parseInt(formData.daysPerWeek),
+      expectedTotal: expectedTotal,
       sessionId: null
     };
 
@@ -165,7 +178,22 @@ export async function generateProgram({
         // Calculate timeout based on program size
         // For large programs (5+ weeks), use a longer timeout
         const numberOfWeeks = parseInt(formData.numberOfWeeks, 10);
-        const timeoutDuration = numberOfWeeks >= 5 ? 300000 : 150000; // 5 minutes for large programs, 2.5 minutes for smaller ones
+        const totalWorkouts = calculatedWeeks * calculatedDaysPerWeek;
+        let timeoutDuration;
+        
+        if (totalWorkouts >= 40) {
+          timeoutDuration = 600000; // 10 minutes for very large programs (8+ weeks, 6+ days)
+        } else if (numberOfWeeks >= 5 || totalWorkouts >= 20) {
+          timeoutDuration = 450000; // 7.5 minutes for large programs
+        } else {
+          timeoutDuration = 300000; // 5 minutes for smaller programs
+        }
+        
+        console.log('[Client] Timeout calculation:', {
+          numberOfWeeks,
+          totalWorkouts,
+          timeoutDuration: timeoutDuration / 1000 + 's'
+        });
 
         // Set a timeout
         const timeoutId = setTimeout(() => {
