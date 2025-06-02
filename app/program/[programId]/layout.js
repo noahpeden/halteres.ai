@@ -21,8 +21,10 @@ export default function ProgramLayout({ children, params }) {
   const { session } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
-  // Check if this is a public workout page
+  // Check if this is a public page (workout or program share)
   const isPublicWorkoutPage = pathname.includes('/workouts/') && pathname.split('/').length === 5;
+  const isPublicProgramPage = pathname.endsWith('/share');
+  const isPublicPage = isPublicWorkoutPage || isPublicProgramPage;
 
   const handleLogout = async () => {
     // Reuse logout logic or import from Navbar/AuthContext
@@ -72,7 +74,7 @@ export default function ProgramLayout({ children, params }) {
   return (
     <div className="flex min-h-screen bg-base-200/30">
       {/* Desktop Sidebar - Square Tiles */}
-      {!isPublicWorkoutPage && (
+      {!isPublicPage && (
         <div className="hidden lg:flex lg:flex-col lg:w-20 bg-white border-r border-gray-200">
         {/* Logo/Brand Area */}
         <div className="flex items-center justify-center h-16 border-b border-gray-200">
@@ -130,7 +132,7 @@ export default function ProgramLayout({ children, params }) {
       )}
 
       {/* Mobile Menu Button */}
-      {!isPublicWorkoutPage && (
+      {!isPublicPage && (
         <button
         onClick={() => setIsMobileMenuOpen(true)}
         className="lg:hidden fixed top-4 left-4 z-40 btn btn-primary btn-circle shadow-lg"
@@ -140,7 +142,7 @@ export default function ProgramLayout({ children, params }) {
       )}
 
       {/* Mobile Menu Overlay */}
-      {!isPublicWorkoutPage && isMobileMenuOpen && (
+      {!isPublicPage && isMobileMenuOpen && (
         <div className="lg:hidden fixed inset-0 z-50 flex">
           {/* Backdrop */}
           <div 
@@ -209,7 +211,7 @@ export default function ProgramLayout({ children, params }) {
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col">
-        <main className={isPublicWorkoutPage ? "flex-1" : "flex-1 p-4 lg:p-6"}>
+        <main className={isPublicPage ? "flex-1" : "flex-1 p-4 lg:p-6"}>
           {children}
         </main>
       </div>

@@ -1,8 +1,21 @@
 'use client';
 import Link from 'next/link';
-import { Calendar, User, Users, ExternalLink, Trash2 } from 'lucide-react';
+import { Calendar, User, Users, ExternalLink, Trash2, Share2 } from 'lucide-react';
 
 export default function ProgramCard({ program, entityDisplayName, onDelete }) {
+  const handleShareProgram = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    try {
+      const shareUrl = `${window.location.origin}/program/${program.id}/share`;
+      await navigator.clipboard.writeText(shareUrl);
+      alert('Program link copied to clipboard! Share this with your clients.');
+    } catch (err) {
+      console.error('Failed to copy link:', err);
+      alert('Failed to copy link');
+    }
+  };
   // Parse entity info
   const entityParts = entityDisplayName.split(' (');
   const entityName = entityParts[0];
@@ -64,6 +77,14 @@ export default function ProgramCard({ program, entityDisplayName, onDelete }) {
             <span>Open</span>
             <ExternalLink className="w-3 h-3 ml-1.5 group-hover:translate-x-0.5 transition-transform duration-200" />
           </Link>
+
+          <button
+            onClick={handleShareProgram}
+            className="inline-flex items-center p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors duration-200 group"
+            title="Share program"
+          >
+            <Share2 className="w-3.5 h-3.5 group-hover:scale-110 transition-transform duration-200" />
+          </button>
 
           <button
             onClick={() => onDelete(program.id)}

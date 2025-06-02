@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useRouter, useParams } from 'next/navigation';
 import AIProgramWriter from '@/components/AIProgramWriter/AIProgramWriter';
 import ClientMetricsTab from '@/components/ClientMetricsTab';
-import { Edit2, Check, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Edit2, Check, X, ChevronLeft, ChevronRight, Share2 } from 'lucide-react';
 import { ProgramWriterProvider } from '@/contexts/ProgramWriterContext';
 
 export default function ProgramWriterPage() {
@@ -114,6 +114,17 @@ export default function ProgramWriterPage() {
     setIsEditingName(false);
   };
 
+  const handleShareProgram = async () => {
+    try {
+      const shareUrl = `${window.location.origin}/program/${programId}/share`;
+      await navigator.clipboard.writeText(shareUrl);
+      alert('Program link copied to clipboard! Share this with your clients.');
+    } catch (err) {
+      console.error('Failed to copy link:', err);
+      alert('Failed to copy link');
+    }
+  };
+
   return (
     <ProgramWriterProvider initialProgramId={programId}>
       <div className="w-full max-w-full overflow-hidden relative">
@@ -149,6 +160,14 @@ export default function ProgramWriterPage() {
                   className="h-5 w-5 cursor-pointer text-primary"
                   onClick={() => setIsEditingName(true)}
                 />
+                <button
+                  onClick={handleShareProgram}
+                  className="btn btn-outline btn-sm"
+                  title="Share this program"
+                >
+                  <Share2 className="h-4 w-4" />
+                  <span className="hidden sm:inline ml-2">Share</span>
+                </button>
               </div>
               {clientName && (
                 <p className="text-xl text-gray-500">

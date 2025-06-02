@@ -13,6 +13,7 @@ import {
   User,
   Dumbbell,
 } from 'lucide-react';
+import { MarkdownContent } from '@/utils/markdownParser';
 
 export default function PublicWorkoutPage(props) {
   const params = use(props.params);
@@ -268,9 +269,10 @@ export default function PublicWorkoutPage(props) {
           {/* Workout Content */}
           <div className="p-6">
             <div className="prose prose-sm max-w-none">
-              <div className="whitespace-pre-line text-base leading-relaxed">
-                {workout.body || 'No workout content available.'}
-              </div>
+              <MarkdownContent 
+                content={workout.body || 'No workout content available.'}
+                className="text-base leading-relaxed"
+              />
             </div>
           </div>
 

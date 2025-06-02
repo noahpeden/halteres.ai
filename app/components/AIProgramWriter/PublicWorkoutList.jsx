@@ -1,20 +1,10 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { Trash2, Pencil, MoreVertical, CheckCircle, ChevronLeft, ChevronRight } from 'lucide-react';
-export default function WorkoutList({
-  workouts,
-  daysPerWeek,
-  formatDate,
-  onViewDetails,
-  onDatePick,
-  onSelectWorkout,
-  onDeleteWorkout,
-  onEditWorkout,
-  onMarkComplete,
-  generatedDescription,
-  setFormData,
-  showToastMessage,
-}) {
+import { ChevronLeft, ChevronRight, Calendar, ExternalLink } from 'lucide-react';
+import { MarkdownContent } from '@/utils/markdownParser';
+import Link from 'next/link';
+
+export default function PublicWorkoutList({ workouts, daysPerWeek, programName, programId }) {
   const [currentWeek, setCurrentWeek] = useState(1);
   
   if (!workouts || workouts.length === 0) {
@@ -71,34 +61,24 @@ export default function WorkoutList({
     }
   };
 
-  return (
-    <div className="mt-6">
-      <div className="flex justify-between items-center mb-3">
-        <div>
-          <h3 className="text-lg font-semibold">Generated Program</h3>
-          <p className="text-sm text-gray-600">
-            {workouts.length} workout{workouts.length !== 1 ? 's' : ''}{' '}
-            generated
-            {daysPerWeek ? ` (${daysPerWeek} days/week)` : ''}
-          </p>
-        </div>
-      </div>
-      {generatedDescription && (
-        <div className="mb-4">
-          <div className="collapse collapse-arrow bg-base-200">
-            <input type="checkbox" defaultChecked={true} />
-            <div className="collapse-title font-medium">
-              Generated Program Description
-            </div>
-            <div className="collapse-content">
-              <div className="p-2 bg-white rounded-md">
-                <p className="whitespace-pre-line">{generatedDescription}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+  const formatDate = (dateString) => {
+    if (!dateString) return 'Not scheduled';
+    return new Date(dateString).toLocaleDateString();
+  };
 
+  return (
+    <div className="w-full">
+      {/* Program Header */}
+      <div className="mb-8">
+        <h2 className="text-3xl font-bold text-gray-900 mb-2">{programName || 'Training Program'}</h2>
+        <p className="text-gray-600">
+          {workouts.length} workout{workouts.length !== 1 ? 's' : ''} •{' '}
+          {totalWeeks} week{totalWeeks !== 1 ? 's' : ''} •{' '}
+          {daysPerWeek} days per week
+        </p>
+      </div>
+
+      {/* Week Navigation */}
       {totalWeeks > 1 && (
         <div className="mb-6">
           {/* Mobile Week Navigation */}
@@ -227,121 +207,66 @@ export default function WorkoutList({
         </div>
       )}
 
+      {/* Current Week Workouts */}
       {currentWeekData && (
-        <div className="mb-6">
-          <h4 className="text-md font-medium mb-2 p-2 bg-base-200 rounded-md">
-            Week {currentWeekData.week}
-            {totalWeeks > 1 && (
-              <span className="text-sm font-normal ml-2 text-gray-600">
-                ({currentWeek} of {totalWeeks})
-              </span>
-            )}
-          </h4>
-          <div className="grid grid-cols-1 gap-4">
+        <div>
+          <div className="bg-gray-50 rounded-lg p-4 mb-4">
+            <h3 className="text-xl font-semibold text-gray-900">
+              Week {currentWeekData.week}
+              {totalWeeks > 1 && (
+                <span className="text-sm font-normal ml-2 text-gray-600">
+                  ({currentWeek} of {totalWeeks})
+                </span>
+              )}
+            </h3>
+          </div>
+          
+          <div className="space-y-4">
             {currentWeekData.workouts.map((workout, index) => (
               <div
-                key={
-                  workout.streamingId ||
-                  `${currentWeekData.week}-${index}-${workout.title}`
-                }
-                className={`border rounded-md p-3 sm:p-4 flex flex-col w-full ${
-                  workout.completed ? 'bg-green-50 border-green-200' : ''
-                }`}
-                draggable
-                onDragStart={(e) => {
-                  e.dataTransfer.setData('workout', JSON.stringify(workout));
-                  onSelectWorkout(workout);
-                }}
+                key={`${currentWeekData.week}-${index}-${workout.title}`}
+                className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden"
               >
-                <div className="flex justify-between items-center mb-1 w-full">
-                  <h4 className="font-semibold flex-1 break-words mr-2">
-                    {workout.title ||
-                      `Week ${currentWeekData.week}, Day ${index + 1}`}
-                    {workout.completed && (
-                      <span className="ml-2 text-green-600 text-sm font-normal">
-                        (Completed)
-                      </span>
+                {/* Workout Header */}
+                <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1">
+                      <h4 className="text-lg font-semibold text-gray-900">
+                        {workout.title || `Day ${index + 1}`}
+                      </h4>
+                      <div className="flex items-center gap-2 mt-1 text-sm text-gray-600">
+                        <Calendar className="h-4 w-4" />
+                        <span>
+                          {workout.scheduled_date
+                            ? formatDate(workout.scheduled_date)
+                            : workout.tags?.suggestedDate
+                            ? formatDate(workout.tags.suggestedDate)
+                            : 'Flexible scheduling'}
+                        </span>
+                      </div>
+                    </div>
+                    {programId && workout.id && (
+                      <Link
+                        href={`/program/${programId}/workouts/${workout.id}`}
+                        className="btn btn-sm btn-outline"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <ExternalLink className="h-4 w-4 mr-1" />
+                        View Full
+                      </Link>
                     )}
-                  </h4>
-                  {workout.id && (
-                    <details className="dropdown dropdown-end flex-shrink-0">
-                      <summary className="btn btn-sm btn-ghost btn-square">
-                        <MoreVertical className="h-5 w-5" />
-                      </summary>
-                      <ul className="menu dropdown-content bg-base-100 rounded-box z-1 w-40 p-2 shadow-sm">
-                        <li>
-                          <button
-                            className="flex items-center gap-2 w-full text-neutral"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onEditWorkout(workout);
-                            }}
-                            title="Edit workout"
-                          >
-                            <Pencil className="h-4 w-4" /> Edit
-                          </button>
-                        </li>
-                        <li>
-                          <button
-                            className="flex items-center gap-2 w-full text-success"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onMarkComplete(workout);
-                            }}
-                            title={
-                              workout.completed
-                                ? 'Mark as incomplete'
-                                : 'Mark as complete'
-                            }
-                          >
-                            <CheckCircle className="h-4 w-4" />
-                            {workout.completed ? 'Incomplete' : 'Complete'}
-                          </button>
-                        </li>
-                        <li>
-                          <button
-                            className="flex items-center gap-2 w-full text-error"
-                            onClick={(e) => onDeleteWorkout(workout.id, e)}
-                            title="Delete workout"
-                          >
-                            <Trash2 className="h-4 w-4" /> Delete
-                          </button>
-                        </li>
-                      </ul>
-                    </details>
-                  )}
+                  </div>
                 </div>
-                <div className="mb-2">
-                  <button
-                    className="btn btn-xs btn-ghost text-primary cursor-pointer pl-0"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDatePick(workout);
-                    }}
-                    title="Adjust date"
-                  >
-                    {workout.tags?.suggestedDate
-                      ? formatDate(workout.tags.suggestedDate)
-                      : workout.suggestedDate
-                      ? formatDate(workout.suggestedDate)
-                      : 'Not scheduled'}
-                  </button>
-                </div>
-                <div className="whitespace-pre-line overflow-auto max-h-60 sm:max-h-80 text-sm mb-3 flex-grow">
-                  {workout.body ||
-                    workout.description ||
-                    'No description available'}
-                </div>
-                <div className="flex justify-end items-center mt-auto">
-                  <button
-                    className="btn sm:btn-sm text-white btn-primary"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onViewDetails(workout);
-                    }}
-                  >
-                    View Details
-                  </button>
+                
+                {/* Workout Content */}
+                <div className="px-6 py-4">
+                  <div className="prose prose-sm max-w-none">
+                    <MarkdownContent 
+                      content={workout.body || workout.description || 'No description available'}
+                      className="text-gray-700"
+                    />
+                  </div>
                 </div>
               </div>
             ))}
@@ -350,7 +275,7 @@ export default function WorkoutList({
       )}
       
       {!currentWeekData && totalWeeks > 0 && (
-        <div className="text-center py-8">
+        <div className="text-center py-12">
           <p className="text-gray-500">No workouts found for Week {currentWeek}</p>
         </div>
       )}

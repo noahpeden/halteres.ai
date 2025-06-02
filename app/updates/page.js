@@ -13,6 +13,12 @@ export const generateMetadata = () => {
 export default function UpdatesPage() {
   const updates = [
     {
+      title: 'Public Program Sharing & Enhanced Navigation',
+      date: 'June 2, 2025',
+      description:
+        "Share your fitness programs with the world! We've introduced public program and workout sharing, allowing coaches to easily share their programs with clients through simple links - no login required. Recipients can view full programs with beautifully formatted workouts featuring markdown support for headers, lists, and emphasis. We've also dramatically improved program navigation with smart pagination that adapts to program length, includes keyboard shortcuts (arrow keys), progress indicators, and mobile-friendly controls. The AI Program Writer now features the same enhanced week navigation, making it easier than ever to browse through longer training programs. Perfect for personal trainers, coaches, and fitness professionals who want to showcase their work or share programs with clients seamlessly.",
+    },
+    {
       title: 'Triathlon and Ironman Training Support',
       date: 'June 1, 2025',
       description:

@@ -57,13 +57,15 @@ export async function middleware(req) {
     '/api/generate-program-deepseek',
   ];
 
-  // Check if this is a public workout sharing route
-  // Pattern: /program/{programId}/workouts/{workoutId}
+  // Check if this is a public sharing route
+  // Pattern: /program/{programId}/workouts/{workoutId} or /program/{programId}/share
   const isPublicWorkoutRoute = /^\/program\/[^\/]+\/workouts\/[^\/]+$/.test(pathname);
+  const isPublicProgramRoute = /^\/program\/[^\/]+\/share$/.test(pathname);
+  const isPublicRoute = isPublicWorkoutRoute || isPublicProgramRoute;
   
   const isProtectedRoute = protectedRoutes.some((route) =>
     pathname.startsWith(route)
-  ) && !isPublicWorkoutRoute; // Exclude public workout routes from protection
+  ) && !isPublicRoute; // Exclude public routes from protection
   
   const isGenerationRoute = generationActionRoutes.some((route) =>
     pathname.startsWith(route)
