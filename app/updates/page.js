@@ -13,6 +13,12 @@ export const generateMetadata = () => {
 export default function UpdatesPage() {
   const updates = [
     {
+      title: 'Triathlon and Ironman Training Support',
+      date: 'June 1, 2025',
+      description:
+        "Major expansion for endurance athletes! We've added comprehensive support for triathlon and ironman training with specialized program types, triathlon-specific equipment tracking, and advanced client metrics including age, training experience, and discipline background. New features include swim-bike-run periodization, brick workout integration, multi-sport facility equipment presets, and enhanced client profiling for endurance sports. Premium users now get access to longer program durations (up to 8 weeks) while free users can create 1-2 week programs.",
+    },
+    {
       title: 'Enhanced Program Calendar and Workout Management',
       date: 'April 13, 2025',
       description:

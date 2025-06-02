@@ -7,8 +7,18 @@ export default function ProgramScheduling({
   handleChange,
   handleDayOfWeekChange,
   triggerAutoSave,
+  subscriptionStatus, // Add subscription status prop
 }) {
-  const weekOptions = [1, 2, 3, 4, 5, 6];
+  // Base week options for all users
+  const freeWeekOptions = [1, 2];
+  const premiumWeekOptions = [1, 2, 3, 4, 5, 6, 7, 8];
+
+  // Check if user has premium access
+  const isPremium = subscriptionStatus === 'active';
+
+  // Use appropriate options based on subscription
+  const weekOptions = isPremium ? premiumWeekOptions : freeWeekOptions;
+
   const selectedWeeks = weekOptions.find(
     (num) => num === parseInt(formData.numberOfWeeks)
   );
@@ -29,6 +39,12 @@ export default function ProgramScheduling({
         Choose the length of your program and the days of the week you'll have
         sessions on. We use this to determine the number of workouts in the
         program.
+        {!isPremium && (
+          <span className="block mt-1 text-amber-600 font-medium">
+            Free users can create 1-2 week programs. Upgrade to Premium for
+            longer programs!
+          </span>
+        )}
       </span>
 
       {/* Days of Week Selector */}

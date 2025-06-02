@@ -54,6 +54,8 @@ const gymTypes = [
   { value: 'Hotel Gym', label: 'Hotel Gym' },
   { value: 'Apartment Gym', label: 'Apartment Gym' },
   { value: 'Boxing/MMA Gym', label: 'Boxing/MMA Gym' },
+  { value: 'Triathlon Training Facility', label: 'Triathlon Training Facility' },
+  { value: 'Multi-Sport Complex', label: 'Multi-Sport Complex' },
 ];
 
 // Equipment presets based on gym type
@@ -74,6 +76,8 @@ const gymEquipmentPresets = {
   'Hotel Gym': [5, 16, 27, 39, 44, 45, 47],
   'Apartment Gym': [5, 16, 27, 44, 45],
   'Boxing/MMA Gym': [5, 6, 7, 16, 17, 18, 22, 27, 35],
+  'Triathlon Training Facility': [50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 6, 16, 27, 47],
+  'Multi-Sport Complex': [50, 52, 54, 55, 56, 58, 60, 61, 1, 2, 3, 4, 5, 6, 16, 27, 44, 45, 46, 47],
   Other: [],
 };
 

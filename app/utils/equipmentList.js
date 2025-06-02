@@ -37,6 +37,20 @@ const equipmentList = [
   { value: 44, label: 'Stationary Bike' },
   { value: 45, label: 'Elliptical' },
   { value: 49, label: 'Climbing Wall' },
+  // Triathlon-specific equipment
+  { value: 50, label: 'Swimming Pool' },
+  { value: 51, label: 'Open Water Access' },
+  { value: 52, label: 'Road Bike' },
+  { value: 53, label: 'Time Trial/Tri Bike' },
+  { value: 54, label: 'Bike Trainer/Turbo' },
+  { value: 55, label: 'Power Meter' },
+  { value: 56, label: 'Heart Rate Monitor' },
+  { value: 57, label: 'Wetsuit' },
+  { value: 58, label: 'Running Track' },
+  { value: 59, label: 'Trail Access' },
+  { value: 60, label: 'Bike Computer/GPS' },
+  { value: 61, label: 'Nutrition/Hydration System' },
+  { value: 62, label: 'Recovery Tools (Ice Bath/Compression)' },
 ];
 
 export default equipmentList;

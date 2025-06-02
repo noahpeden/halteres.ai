@@ -12,6 +12,8 @@ const defaultTypeOptions = [
   { id: 'hiit', name: 'HIIT/Metabolic', icon: '⏱️' },
   { id: 'calisthenics', name: 'Calisthenics', icon: '🤸‍♂️' },
   { id: 'sport', name: 'Sport-Specific', icon: '🏈' },
+  { id: 'triathlete', name: 'Triathlete', icon: '🏊‍♀️' },
+  { id: 'ironman', name: 'Ironman', icon: '🏃‍♂️' },
   { id: 'commercial', name: 'Commercial Gym', icon: '🏢' },
   { id: 'minimal', name: 'Minimal Equipment', icon: '🏠' },
   { id: 'balanced', name: 'Balanced Fitness', icon: '⚖️' },
