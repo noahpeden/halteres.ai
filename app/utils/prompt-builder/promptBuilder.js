@@ -202,11 +202,22 @@ function formatClientMetrics(clientMetricsData) {
   return `
 Client Metrics:
 ${clientMetricsData.gender ? `Gender: ${clientMetricsData.gender}` : ''}
+${clientMetricsData.age ? `Age: ${clientMetricsData.age} years` : ''}
 ${
   clientMetricsData.height_cm ? `Height: ${clientMetricsData.height_cm} cm` : ''
 }
 ${
   clientMetricsData.weight_kg ? `Weight: ${clientMetricsData.weight_kg} kg` : ''
+}
+${
+  clientMetricsData.years_of_experience 
+    ? `Years of Training Experience: ${clientMetricsData.years_of_experience}` 
+    : ''
+}
+${
+  clientMetricsData.workout_experience_type 
+    ? `Primary Workout Experience: ${clientMetricsData.workout_experience_type}` 
+    : ''
 }
 ${
   clientMetricsData.bench_1rm
@@ -242,7 +253,8 @@ ${
 }
 
 When calculating RX weights, scale them appropriately based on the client's strength metrics (bench, squat, deadlift) if available.
-For other movements, estimate appropriate weights based on the client's metrics, gender, and strength levels.
+For other movements, estimate appropriate weights based on the client's metrics, gender, age, and strength levels.
+Consider the client's training experience level (${clientMetricsData.years_of_experience || 'unspecified'} years, ${clientMetricsData.workout_experience_type || 'general'}) when programming intensity and complexity.
 If client metrics indicate specific limitations, provide appropriate scaling options.`;
 }
 

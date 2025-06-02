@@ -164,6 +164,7 @@ const ProgramForm = ({
           handleChange={handleChange}
           handleDayOfWeekChange={handleDayOfWeekChange}
           triggerAutoSave={triggerAutoSave}
+          subscriptionStatus={subscriptionStatus}
         />
       </div>
 

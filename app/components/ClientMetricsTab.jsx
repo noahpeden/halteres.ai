@@ -64,6 +64,9 @@ export default function ClientMetricsTab({
             : metrics.squat_1rm || 0,
         mile_time: metrics.mile_time || '',
         gender: metrics.gender || '',
+        age: metrics.age || 0,
+        years_of_experience: metrics.years_of_experience || 0,
+        workout_experience_type: metrics.workout_experience_type || '',
         height_cm: metrics.height_cm || 0,
         weight_kg:
           convertToImperial && metrics.weight_kg
@@ -141,6 +144,9 @@ export default function ClientMetricsTab({
             squat_1rm: 0,
             mile_time: '',
             gender: '',
+            age: 0,
+            years_of_experience: 0,
+            workout_experience_type: '',
             height_cm: 0,
             weight_kg: 0,
             recovery_score: 0,
@@ -200,6 +206,9 @@ export default function ClientMetricsTab({
           : editedData.metrics.squat_1rm,
         mile_time: editedData.metrics.mile_time,
         gender: editedData.metrics.gender,
+        age: parseInt(editedData.metrics.age) || 0,
+        years_of_experience: parseInt(editedData.metrics.years_of_experience) || 0,
+        workout_experience_type: editedData.metrics.workout_experience_type,
         height_cm: Math.round(
           useImperial
             ? feetInchesToCm(heightFeet, heightInches)
@@ -594,6 +603,39 @@ export default function ClientMetricsTab({
                 <div className="space-y-2">
                   <div className="w-full">
                     <label className="label">
+                      <span className="text-sm">Gender</span>
+                    </label>
+                    <select
+                      className="select select-bordered w-full"
+                      value={editedData.metrics.gender || ''}
+                      onChange={(e) =>
+                        handleMetricsChange('gender', e.target.value)
+                      }
+                    >
+                      <option value="">Select Gender</option>
+                      <option value="Male">Male</option>
+                      <option value="Female">Female</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+                  <div className="w-full">
+                    <label className="label">
+                      <span className="text-sm">Age</span>
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="120"
+                      className="input input-bordered w-full"
+                      value={editedData.metrics.age || ''}
+                      onChange={(e) =>
+                        handleMetricsChange('age', parseInt(e.target.value) || 0)
+                      }
+                      placeholder="Age in years"
+                    />
+                  </div>
+                  <div className="w-full">
+                    <label className="label">
                       <span className="text-sm">
                         Height {useImperial ? '(ft-in)' : '(cm)'}
                       </span>
@@ -696,6 +738,18 @@ export default function ClientMetricsTab({
               ) : (
                 <div className="stats stats-vertical shadow w-full">
                   <div className="stat">
+                    <div className="stat-title">Gender</div>
+                    <div className="stat-value text-lg">
+                      {clientData?.metrics?.gender || 'N/A'}
+                    </div>
+                  </div>
+                  <div className="stat">
+                    <div className="stat-title">Age</div>
+                    <div className="stat-value text-lg">
+                      {clientData?.metrics?.age || 'N/A'}
+                    </div>
+                  </div>
+                  <div className="stat">
                     <div className="stat-title">Height</div>
                     <div className="stat-value text-lg">
                       {clientData?.metrics?.height_cm
@@ -715,6 +769,72 @@ export default function ClientMetricsTab({
                     <div className="stat-title">Mile Time</div>
                     <div className="stat-value text-lg">
                       {clientData?.metrics?.mile_time || 'N/A'}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div>
+              <h3 className="text-lg font-medium mb-2">Training Experience</h3>
+              {isEditing || showEditByDefault ? (
+                <div className="space-y-2">
+                  <div className="w-full">
+                    <label className="label">
+                      <span className="text-sm">Years of Experience</span>
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="50"
+                      step="0.5"
+                      className="input input-bordered w-full"
+                      value={editedData.metrics.years_of_experience || ''}
+                      onChange={(e) =>
+                        handleMetricsChange('years_of_experience', parseFloat(e.target.value) || 0)
+                      }
+                      placeholder="Years of training experience"
+                    />
+                  </div>
+                  <div className="w-full">
+                    <label className="label">
+                      <span className="text-sm">Primary Workout Experience</span>
+                    </label>
+                    <select
+                      className="select select-bordered w-full"
+                      value={editedData.metrics.workout_experience_type || ''}
+                      onChange={(e) =>
+                        handleMetricsChange('workout_experience_type', e.target.value)
+                      }
+                    >
+                      <option value="">Select Experience Type</option>
+                      <option value="Weightlifting/Powerlifting">Weightlifting/Powerlifting</option>
+                      <option value="Bodybuilding">Bodybuilding</option>
+                      <option value="CrossFit">CrossFit</option>
+                      <option value="Running">Running</option>
+                      <option value="Cycling">Cycling</option>
+                      <option value="Swimming">Swimming</option>
+                      <option value="Triathlon">Triathlon</option>
+                      <option value="Yoga/Pilates">Yoga/Pilates</option>
+                      <option value="Martial Arts">Martial Arts</option>
+                      <option value="Team Sports">Team Sports</option>
+                      <option value="General Fitness">General Fitness</option>
+                      <option value="Beginner/No Experience">Beginner/No Experience</option>
+                    </select>
+                  </div>
+                </div>
+              ) : (
+                <div className="stats stats-vertical shadow w-full">
+                  <div className="stat">
+                    <div className="stat-title">Years of Experience</div>
+                    <div className="stat-value text-lg">
+                      {clientData?.metrics?.years_of_experience || 'N/A'}
+                    </div>
+                  </div>
+                  <div className="stat">
+                    <div className="stat-title">Primary Experience</div>
+                    <div className="stat-value text-base">
+                      {clientData?.metrics?.workout_experience_type || 'N/A'}
                     </div>
                   </div>
                 </div>
