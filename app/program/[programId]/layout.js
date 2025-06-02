@@ -20,6 +20,9 @@ export default function ProgramLayout({ children, params }) {
   const pathname = usePathname();
   const { session } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  
+  // Check if this is a public workout page
+  const isPublicWorkoutPage = pathname.includes('/workouts/') && pathname.split('/').length === 5;
 
   const handleLogout = async () => {
     // Reuse logout logic or import from Navbar/AuthContext
@@ -69,7 +72,8 @@ export default function ProgramLayout({ children, params }) {
   return (
     <div className="flex min-h-screen bg-base-200/30">
       {/* Desktop Sidebar - Square Tiles */}
-      <div className="hidden lg:flex lg:flex-col lg:w-20 bg-white border-r border-gray-200">
+      {!isPublicWorkoutPage && (
+        <div className="hidden lg:flex lg:flex-col lg:w-20 bg-white border-r border-gray-200">
         {/* Logo/Brand Area */}
         <div className="flex items-center justify-center h-16 border-b border-gray-200">
           <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
@@ -123,17 +127,20 @@ export default function ProgramLayout({ children, params }) {
           </button>
         </div>
       </div>
+      )}
 
       {/* Mobile Menu Button */}
-      <button
+      {!isPublicWorkoutPage && (
+        <button
         onClick={() => setIsMobileMenuOpen(true)}
         className="lg:hidden fixed top-4 left-4 z-40 btn btn-primary btn-circle shadow-lg"
       >
         <Menu className="w-5 h-5" />
       </button>
+      )}
 
       {/* Mobile Menu Overlay */}
-      {isMobileMenuOpen && (
+      {!isPublicWorkoutPage && isMobileMenuOpen && (
         <div className="lg:hidden fixed inset-0 z-50 flex">
           {/* Backdrop */}
           <div 
@@ -202,7 +209,7 @@ export default function ProgramLayout({ children, params }) {
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col">
-        <main className="flex-1 p-4 lg:p-6">
+        <main className={isPublicWorkoutPage ? "flex-1" : "flex-1 p-4 lg:p-6"}>
           {children}
         </main>
       </div>

@@ -11,6 +11,7 @@ import {
   Sparkles,
   Save,
   X,
+  Share2,
 } from 'lucide-react';
 
 export default function WorkoutDetailsPage(props) {
@@ -260,6 +261,17 @@ export default function WorkoutDetailsPage(props) {
     return new Date(dateString).toLocaleDateString();
   };
 
+  const handleShareWorkout = async () => {
+    try {
+      const shareUrl = `${window.location.origin}/program/${programId}/workouts/${workoutId}`;
+      await navigator.clipboard.writeText(shareUrl);
+      alert('Workout link copied to clipboard! Share this with your clients.');
+    } catch (err) {
+      console.error('Failed to copy link:', err);
+      alert('Failed to copy link');
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-96">
@@ -289,220 +301,224 @@ export default function WorkoutDetailsPage(props) {
   }
 
   return (
-    <div className="max-w-5xl mx-auto">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50/30">
       {/* Header */}
-      <div className="bg-white rounded-lg shadow-sm border mb-6">
-        {/* Top Navigation Bar */}
-        <div className="px-6 py-4 border-b bg-gray-50/50">
-          <button
-            onClick={() => router.push(`/program/${programId}/writer`)}
-            className="btn btn-ghost btn-sm hover:bg-white"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Program
-          </button>
-        </div>
-
-        {/* Title and Metadata Section */}
-        <div className="px-6 py-6">
-          <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
-            {/* Title and Info */}
-            <div className="flex-1 min-w-0">
-              {isEditing ? (
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">
-                    Workout Title
-                  </label>
-                  <input
-                    type="text"
-                    value={editedTitle}
-                    onChange={(e) => setEditedTitle(e.target.value)}
-                    className="input input-bordered text-2xl font-bold text-primary w-full"
-                    placeholder="Workout title"
-                  />
-                </div>
-              ) : (
-                <>
-                  <div className="flex flex-wrap items-center gap-3 mb-3">
-                    <h1 className="text-3xl font-bold text-primary">
-                      {pendingEnhancement?.title ||
-                        workout.title ||
-                        'Workout Details'}
-                    </h1>
-                    <div className="flex gap-2">
-                      {workout.completed && (
-                        <span className="badge badge-success badge-lg">
-                          <CheckCircle className="w-4 h-4 mr-1" />
-                          Completed
-                        </span>
-                      )}
-                      {pendingEnhancement && (
-                        <span className="badge badge-secondary badge-lg">
-                          <Sparkles className="w-4 h-4 mr-1" />
-                          Enhanced Preview
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  
-                  <div className="flex flex-wrap items-center gap-6 text-sm text-gray-600">
-                    <div className="flex items-center gap-2">
-                      <Calendar className="w-4 h-4" />
-                      <span className="font-medium">Scheduled:</span>
-                      <span>{formatDate(workout.scheduled_date)}</span>
-                    </div>
-                    {workout.completed_at && (
-                      <div className="flex items-center gap-2">
-                        <CheckCircle className="w-4 h-4" />
-                        <span className="font-medium">Completed:</span>
-                        <span>{formatDate(workout.completed_at)}</span>
-                      </div>
-                    )}
-                  </div>
-                </>
-              )}
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex-shrink-0">
-              <div className="flex flex-wrap gap-3">
-                {isEditing ? (
-                  <>
-                    <button
-                      onClick={handleSaveEdit}
-                      className="btn btn-success text-white"
-                    >
-                      <Save className="w-4 h-4 mr-2" />
-                      Save Changes
-                    </button>
-                    <button
-                      onClick={handleCancelEdit}
-                      className="btn btn-outline"
-                    >
-                      <X className="w-4 h-4 mr-2" />
-                      Cancel
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <button
-                      onClick={handleMarkComplete}
-                      className={`btn ${
-                        workout.completed 
-                          ? 'btn-outline btn-success' 
-                          : 'btn-success text-white'
-                      }`}
-                    >
-                      <CheckCircle className="w-4 h-4 mr-2" />
-                      {workout.completed ? 'Mark Incomplete' : 'Mark Complete'}
-                    </button>
-                    
-                    <div className="relative">
-                      <button
-                        onClick={() => setShowEnhanceInput(true)}
-                        className="btn btn-secondary text-white"
-                        disabled={isEnhancing}
-                      >
-                        {isEnhancing ? (
-                          <span className="loading loading-spinner loading-xs mr-2"></span>
-                        ) : (
-                          <Sparkles className="w-4 h-4 mr-2" />
-                        )}
-                        Enhance
-                      </button>
-                      {showEnhanceInput && (
-                        <div className="absolute top-full right-0 mt-3 z-50 bg-white border border-gray-200 rounded-xl shadow-xl p-5 w-96">
-                          <div className="mb-4">
-                            <h3 className="font-semibold text-gray-900 mb-2">
-                              Enhance Workout with AI
-                            </h3>
-                            <p className="text-sm text-gray-600 mb-3">
-                              Describe how you'd like to improve this workout
-                            </p>
-                          </div>
-                          <input
-                            ref={enhanceInputRef}
-                            className="input input-bordered w-full mb-4"
-                            type="text"
-                            placeholder="e.g., Add more cardio, increase intensity, focus on upper body..."
-                            value={enhanceText}
-                            onChange={(e) => setEnhanceText(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') {
-                                e.preventDefault();
-                                handleEnhanceWorkout();
-                              } else if (e.key === 'Escape') {
-                                setShowEnhanceInput(false);
-                              }
-                            }}
-                          />
-                          <div className="flex gap-3 justify-end">
-                            <button
-                              className="btn btn-outline"
-                              onClick={() => setShowEnhanceInput(false)}
-                            >
-                              Cancel
-                            </button>
-                            <button
-                              className="btn btn-primary text-white"
-                              onClick={handleEnhanceWorkout}
-                              disabled={isEnhancing || !enhanceText.trim()}
-                            >
-                              <Sparkles className="w-4 h-4 mr-2" />
-                              Enhance
-                            </button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                    
-                    <button
-                      onClick={handleStartEdit}
-                      className="btn btn-outline"
-                    >
-                      <Edit2 className="w-4 h-4 mr-2" />
-                      Edit
-                    </button>
-                    
-                    <button
-                      onClick={handleDelete}
-                      className="btn btn-error btn-outline"
-                    >
-                      <Trash2 className="w-4 h-4 mr-2" />
-                      Delete
-                    </button>
-                  </>
-                )}
-              </div>
-            </div>
+      <div className="bg-white/80 backdrop-blur-sm border-b border-gray-200/50 sticky top-0 z-40">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <button
+              onClick={() => router.push(`/program/${programId}/writer`)}
+              className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors group"
+            >
+              <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+              <span className="font-medium">Back to Program</span>
+            </button>
           </div>
         </div>
       </div>
 
-      {/* Workout Content */}
-      <div className="bg-white rounded-lg shadow-md">
-        <div className="p-6">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Title and Metadata Section */}
+        <div className="mb-8">
           {isEditing ? (
-            <div className="w-full">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+            <div className="space-y-4">
+              <label className="block text-sm font-medium text-gray-700">
+                Workout Title
+              </label>
+              <input
+                type="text"
+                value={editedTitle}
+                onChange={(e) => setEditedTitle(e.target.value)}
+                className="w-full text-4xl font-bold bg-transparent border-none outline-none focus:ring-0 text-slate-800 placeholder-gray-400"
+                placeholder="Workout title"
+              />
+            </div>
+          ) : (
+            <>
+              <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6 mb-6">
+                <div className="flex-1">
+                  <h1 className="text-4xl lg:text-5xl font-bold text-slate-800 leading-tight mb-4">
+                    {pendingEnhancement?.title ||
+                      workout.title ||
+                      'Workout Details'}
+                  </h1>
+                  
+                  <div className="flex flex-wrap items-center gap-4">
+                    {workout.completed && (
+                      <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-emerald-100 text-emerald-700 rounded-full text-sm font-medium">
+                        <CheckCircle className="w-4 h-4" />
+                        Completed
+                      </div>
+                    )}
+                    {pendingEnhancement && (
+                      <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-purple-100 text-purple-700 rounded-full text-sm font-medium">
+                        <Sparkles className="w-4 h-4" />
+                        Enhanced Preview
+                      </div>
+                    )}
+                    <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-50 text-blue-700 rounded-full text-sm font-medium">
+                      <Calendar className="w-4 h-4" />
+                      {formatDate(workout.scheduled_date)}
+                    </div>
+                    {workout.completed_at && (
+                      <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-100 text-gray-700 rounded-full text-sm font-medium">
+                        <CheckCircle className="w-4 h-4" />
+                        Completed {formatDate(workout.completed_at)}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex-shrink-0">
+                  <div className="flex flex-wrap gap-2">
+                    {isEditing ? (
+                      <>
+                        <button
+                          onClick={handleSaveEdit}
+                          className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium transition-colors shadow-sm"
+                        >
+                          <Save className="w-4 h-4" />
+                          Save Changes
+                        </button>
+                        <button
+                          onClick={handleCancelEdit}
+                          className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-colors"
+                        >
+                          <X className="w-4 h-4" />
+                          Cancel
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          onClick={handleMarkComplete}
+                          className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all shadow-sm ${
+                            workout.completed 
+                              ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200' 
+                              : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                          }`}
+                        >
+                          <CheckCircle className="w-4 h-4" />
+                          {workout.completed ? 'Mark Incomplete' : 'Mark Complete'}
+                        </button>
+                        
+                        <div className="relative">
+                          <button
+                            onClick={() => setShowEnhanceInput(true)}
+                            className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors shadow-sm disabled:opacity-50"
+                            disabled={isEnhancing}
+                          >
+                            {isEnhancing ? (
+                              <span className="w-4 h-4 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
+                            ) : (
+                              <Sparkles className="w-4 h-4" />
+                            )}
+                            Enhance
+                          </button>
+                          {showEnhanceInput && (
+                            <div className="absolute top-full right-0 mt-3 z-50 bg-white rounded-xl shadow-2xl border border-gray-200 p-6 w-96">
+                              <div className="mb-4">
+                                <h3 className="font-semibold text-gray-900 mb-2">
+                                  Enhance Workout with AI
+                                </h3>
+                                <p className="text-sm text-gray-600 mb-3">
+                                  Describe how you'd like to improve this workout
+                                </p>
+                              </div>
+                              <input
+                                ref={enhanceInputRef}
+                                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none mb-4"
+                                type="text"
+                                placeholder="e.g., Add more cardio, increase intensity, focus on upper body..."
+                                value={enhanceText}
+                                onChange={(e) => setEnhanceText(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    handleEnhanceWorkout();
+                                  } else if (e.key === 'Escape') {
+                                    setShowEnhanceInput(false);
+                                  }
+                                }}
+                              />
+                              <div className="flex gap-3 justify-end">
+                                <button
+                                  className="px-3 py-2 text-gray-600 hover:text-gray-800 font-medium transition-colors"
+                                  onClick={() => setShowEnhanceInput(false)}
+                                >
+                                  Cancel
+                                </button>
+                                <button
+                                  className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
+                                  onClick={handleEnhanceWorkout}
+                                  disabled={isEnhancing || !enhanceText.trim()}
+                                >
+                                  <Sparkles className="w-4 h-4" />
+                                  Enhance
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                        
+                        <button
+                          onClick={handleStartEdit}
+                          className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-colors"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                          Edit
+                        </button>
+                        
+                        <button
+                          onClick={handleShareWorkout}
+                          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg font-medium transition-colors border border-blue-200"
+                          title="Share this workout with clients"
+                        >
+                          <Share2 className="w-4 h-4" />
+                          Share
+                        </button>
+                        
+                        <button
+                          onClick={handleDelete}
+                          className="inline-flex items-center gap-2 px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg font-medium transition-colors border border-red-200"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                          Delete
+                        </button>
+                      </>
+                    )}
+              </div>
+            </div>
+          </div>
+            </>
+          )}
+        </div>
+
+        {/* Workout Content */}
+        <div className="bg-white/60 backdrop-blur-sm rounded-2xl border border-gray-200/50 shadow-sm overflow-hidden">
+          {isEditing ? (
+            <div className="p-8">
+              <label className="block text-sm font-medium text-gray-700 mb-4">
                 Workout Content
               </label>
               <textarea
                 value={editedBody}
                 onChange={(e) => setEditedBody(e.target.value)}
-                className="textarea textarea-bordered w-full h-96 text-base leading-relaxed font-mono"
+                className="w-full h-96 p-4 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-base leading-relaxed font-mono resize-none"
                 placeholder="Enter workout content..."
               />
             </div>
           ) : (
-            <>
+            <div className="p-8">
               {/* Show AI Notes if pending enhancement */}
               {pendingEnhancement?.notes && (
-                <div className="alert alert-info mb-4">
-                  <div className="flex items-start gap-2">
-                    <Sparkles className="w-5 h-5 mt-0.5 flex-shrink-0" />
+                <div className="mb-6 p-4 bg-purple-50 border border-purple-200 rounded-xl">
+                  <div className="flex items-start gap-3">
+                    <Sparkles className="w-5 h-5 mt-0.5 flex-shrink-0 text-purple-600" />
                     <div>
-                      <strong>AI Notes:</strong> {pendingEnhancement.notes}
+                      <div className="font-semibold text-purple-900 mb-1">AI Enhancement Notes</div>
+                      <div className="text-purple-700">{pendingEnhancement.notes}</div>
                     </div>
                   </div>
                 </div>
@@ -510,70 +526,69 @@ export default function WorkoutDetailsPage(props) {
 
               {/* Show Save/Discard prompt if pending enhancement */}
               {showSavePrompt && pendingEnhancement && (
-                <div className="mb-6 p-4 border-2 border-secondary rounded-lg bg-secondary/5">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="font-medium text-secondary">
-                      ✨ Enhanced workout is ready! Would you like to save these
-                      changes?
+                <div className="mb-6 p-4 bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-xl">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="font-semibold text-purple-900">
+                      ✨ Enhanced workout is ready! Would you like to save these changes?
                     </div>
                   </div>
                   <div className="flex gap-3">
                     <button
-                      className="btn btn-sm btn-outline"
+                      className="inline-flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-gray-800 font-medium transition-colors"
                       onClick={handleDiscardEnhancement}
                     >
-                      <X className="w-4 h-4 mr-1" />
+                      <X className="w-4 h-4" />
                       Discard
                     </button>
                     <button
-                      className="btn btn-sm btn-secondary text-white"
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors"
                       onClick={handleSaveEnhancement}
                     >
-                      <Save className="w-4 h-4 mr-1" />
+                      <Save className="w-4 h-4" />
                       Save Enhanced Workout
                     </button>
                   </div>
                 </div>
               )}
 
-              <div className="prose prose-sm max-w-none">
-                <div className="whitespace-pre-line text-base leading-relaxed">
+              <div className="prose prose-lg max-w-none prose-slate">
+                <div className="whitespace-pre-line text-gray-800 leading-relaxed">
                   {pendingEnhancement?.body ||
                     workout.body ||
                     workout.description ||
                     'No workout content available.'}
                 </div>
               </div>
-            </>
+            </div>
           )}
-        </div>
 
-        {/* Tags and Metadata */}
-        {workout.tags && Object.keys(workout.tags).length > 0 && (
-          <div className="border-t px-6 py-4 bg-gray-50">
-            <h3 className="font-semibold text-sm text-gray-700 mb-2">
-              Workout Tags
-            </h3>
-            <div className="flex flex-wrap gap-2">
-              {Object.entries(workout.tags).map(([key, value]) => (
-                <span key={key} className="badge badge-outline">
-                  {key}: {String(value)}
-                </span>
-              ))}
+          {/* Tags and Metadata */}
+          {workout.tags && Object.keys(workout.tags).length > 0 && (
+            <div className="border-t border-gray-200/50 px-8 py-4 bg-gray-50/50">
+              <h3 className="font-semibold text-gray-700 mb-3">
+                Workout Tags
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                {Object.entries(workout.tags).map(([key, value]) => (
+                  <span key={key} className="inline-flex items-center px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
+                    {key}: {String(value)}
+                  </span>
+                ))}
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Metadata Footer */}
-        <div className="border-t px-6 py-4 bg-gray-50 text-sm text-gray-600">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <span className="font-medium">Created:</span>{' '}
-              {workout.created_at ? formatDate(workout.created_at) : 'Unknown'}
-            </div>
-            <div>
-              <span className="font-medium">Last Updated:</span>{' '}
-              {workout.updated_at ? formatDate(workout.updated_at) : 'Unknown'}
+          {/* Metadata Footer */}
+          <div className="border-t border-gray-200/50 px-8 py-4 bg-gray-50/30 text-sm text-gray-600">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="flex items-center gap-2">
+                <span className="font-medium">Created:</span>
+                <span>{workout.created_at ? formatDate(workout.created_at) : 'Unknown'}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="font-medium">Last Updated:</span>
+                <span>{workout.updated_at ? formatDate(workout.updated_at) : 'Unknown'}</span>
+              </div>
             </div>
           </div>
         </div>
