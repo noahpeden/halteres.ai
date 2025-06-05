@@ -59,24 +59,32 @@ export default function ProgramScheduling({
             'Thursday',
             'Friday',
             'Saturday',
-          ].map((day) => (
-            <label key={day} className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                className="checkbox"
-                checked={formData.daysOfWeek.includes(day)}
-                onChange={() => {
-                  handleDayOfWeekChange(day);
-                  if (triggerAutoSave) triggerAutoSave();
-                }}
-              />
-              <span>{day}</span>
-            </label>
-          ))}
+          ].map((day) => {
+            // Ensure formData.daysOfWeek is an array and handle case-insensitive comparison
+            const daysArray = Array.isArray(formData.daysOfWeek) ? formData.daysOfWeek : [];
+            const isChecked = daysArray.some(d => 
+              typeof d === 'string' && d.toLowerCase() === day.toLowerCase()
+            );
+            
+            return (
+              <label key={day} className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  className="checkbox"
+                  checked={isChecked}
+                  onChange={() => {
+                    handleDayOfWeekChange(day);
+                    if (triggerAutoSave) triggerAutoSave();
+                  }}
+                />
+                <span>{day}</span>
+              </label>
+            );
+          })}
         </div>
         <p className="text-xs text-gray-500 mt-1">
-          {formData.daysOfWeek.length} day
-          {formData.daysOfWeek.length !== 1 ? 's' : ''} selected
+          {Array.isArray(formData.daysOfWeek) ? formData.daysOfWeek.length : 0} day
+          {(Array.isArray(formData.daysOfWeek) ? formData.daysOfWeek.length : 0) !== 1 ? 's' : ''} selected
         </p>
       </div>
 

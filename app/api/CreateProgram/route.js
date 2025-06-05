@@ -11,6 +11,16 @@ export async function POST(req) {
       end_date,
       days_of_week,
       entity_id,
+      description,
+      training_methodology,
+      difficulty,
+      focus_area,
+      gym_type,
+      equipment,
+      workout_formats,
+      reference_input,
+      program_type,
+      workout_duration,
     } = body;
 
     if (
@@ -40,18 +50,40 @@ export async function POST(req) {
 
     const userId = session.user.id;
 
-    // Create program using the provided entity_id
+    // Create program using the provided entity_id and all wizard data
     const { data, error } = await supabase
       .from('programs')
       .insert({
         name,
         entity_id: entity_id,
         duration_weeks: duration_weeks,
+        description: description || null,
+        training_methodology: training_methodology || null,
+        difficulty: difficulty || 'intermediate',
+        focus_area: focus_area || null,
+        reference_input: reference_input || null,
         // Save calendar data as JSON
         calendar_data: {
           start_date: start_date,
           end_date: end_date,
           days_of_week: days_of_week,
+        },
+        // Save periodization type
+        periodization: {
+          type: program_type || 'linear',
+        },
+        // Save gym and equipment details
+        gym_details: {
+          gym_type: gym_type || null,
+          equipment: equipment || [],
+        },
+        // Save workout format preferences
+        workout_format: {
+          formats: workout_formats || [],
+        },
+        // Save session details
+        session_details: {
+          duration_minutes: workout_duration || 60,
         },
       })
       .select()

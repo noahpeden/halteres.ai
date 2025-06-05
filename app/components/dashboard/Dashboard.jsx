@@ -97,7 +97,7 @@ export default function Dashboard() {
   };
 
   const handleSubmitProgram = (event) => {
-    createProgram(event);
+    createProgram(event, entities);
   };
 
   const handleDeleteProgram = (programId) => {

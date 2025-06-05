@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useRouter, useParams } from 'next/navigation';
+import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import AIProgramWriter from '@/components/AIProgramWriter/AIProgramWriter';
 import ClientMetricsTab from '@/components/ClientMetricsTab';
 import { Edit2, Check, X, ChevronLeft, ChevronRight, Share2 } from 'lucide-react';
@@ -11,6 +11,9 @@ export default function ProgramWriterPage() {
   const { programId } = useParams();
   const { supabase } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const wizardComplete = searchParams.get('wizardComplete') === 'true';
+  
   const [isEditingName, setIsEditingName] = useState(false);
   const [programName, setProgramName] = useState('AI Program Writer');
   const [editedName, setEditedName] = useState('');
@@ -199,7 +202,7 @@ export default function ProgramWriterPage() {
             } transition-all duration-300 ease-in-out`}
           >
             <div className="bg-white rounded-lg shadow h-full w-full">
-              <AIProgramWriter programId={programId} />
+              <AIProgramWriter programId={programId} wizardComplete={wizardComplete} />
             </div>
           </div>
 

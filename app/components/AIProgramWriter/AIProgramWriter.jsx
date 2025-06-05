@@ -51,7 +51,7 @@ const RescheduleModal = memo(RescheduleModalComponent);
 const EditWorkoutModal = memo(EditWorkoutModalComponent);
 const ConfirmationModal = memo(ConfirmationModalComponent);
 
-export default function AIProgramWriter({ programId }) {
+export default function AIProgramWriter({ programId, wizardComplete }) {
   const router = useRouter();
   const {
     supabase,
@@ -98,6 +98,8 @@ export default function AIProgramWriter({ programId }) {
 
   const loadingTimer = useRef(null);
   const isAutoUpdating = useRef(false);
+  const generationAreaRef = useRef(null);
+  const hasScrolledToGeneration = useRef(false);
   
   // Enhance Program state
   const [isEnhancingProgram, setIsEnhancingProgram] = useState(false);
@@ -165,10 +167,10 @@ export default function AIProgramWriter({ programId }) {
     dispatch({ type: 'SET_DIRTY', payload: true });
     dispatch({ type: 'SET_AUTO_SAVE_STATE', payload: 'dirty' });
 
-    // Set timer for auto-save (1 second delay)
+    // Set timer for auto-save (500ms delay for faster response)
     autoSaveTimerRef.current = setTimeout(() => {
       performAutoSave();
-    }, 1000);
+    }, 500);
   }, [programId, performAutoSave, dispatch]);
 
   // --- Utility Functions ---
@@ -182,6 +184,44 @@ export default function AIProgramWriter({ programId }) {
     },
     [dispatch]
   );
+
+  // Smart scrolling function for wizard users
+  const scrollToGeneration = useCallback(() => {
+    if (!wizardComplete || hasScrolledToGeneration.current || !generationAreaRef.current) {
+      return;
+    }
+
+    // Add a small delay to ensure the content is rendered
+    setTimeout(() => {
+      if (generationAreaRef.current) {
+        const element = generationAreaRef.current;
+        const elementTop = element.offsetTop;
+        const offset = 100; // Scroll a bit above the element for better visibility
+
+        window.scrollTo({
+          top: elementTop - offset,
+          behavior: 'smooth'
+        });
+
+        hasScrolledToGeneration.current = true;
+        console.log('Smart scrolling: Scrolled to generation area');
+      }
+    }, 500);
+  }, [wizardComplete]);
+
+  // Reset scroll flag when component unmounts or wizard complete changes
+  useEffect(() => {
+    if (!wizardComplete) {
+      hasScrolledToGeneration.current = false;
+    }
+  }, [wizardComplete]);
+
+  // Trigger scrolling when generation starts (for better timing)
+  useEffect(() => {
+    if (wizardComplete && generationStage && !hasScrolledToGeneration.current) {
+      scrollToGeneration();
+    }
+  }, [wizardComplete, generationStage, scrollToGeneration]);
 
   // --- Event Handlers ---
 
@@ -607,6 +647,102 @@ export default function AIProgramWriter({ programId }) {
 
   // --- Effects ---
 
+  // Inject wizard data if coming from wizard
+  useEffect(() => {
+    if (!wizardComplete) return;
+    
+    const wizardData = sessionStorage.getItem('programWizardData');
+    if (!wizardData) return;
+
+    try {
+      const data = JSON.parse(wizardData);
+      
+      // Convert days of week from wizard format to form format
+      const daysOfWeekMapping = {
+        'sunday': 'Sunday',
+        'monday': 'Monday', 
+        'tuesday': 'Tuesday',
+        'wednesday': 'Wednesday',
+        'thursday': 'Thursday',
+        'friday': 'Friday',
+        'saturday': 'Saturday'
+      };
+      
+      const mappedDaysOfWeek = (data.daysOfWeek || []).map(day => daysOfWeekMapping[day]).filter(Boolean);
+
+      // Convert gym type from wizard snake_case to title case
+      const gymTypeMapping = {
+        'crossfit_box': 'Crossfit Box',
+        'commercial_gym': 'Commercial Gym',
+        'home_gym': 'Home Gym',
+        'minimal_equipment': 'Minimal Equipment',
+        'outdoor_space': 'Outdoor Space',
+        'powerlifting_gym': 'Powerlifting Gym',
+        'olympic_weightlifting_gym': 'Olympic Weightlifting Gym',
+        'bodyweight_only': 'Bodyweight Only',
+        'studio_gym': 'Studio Gym',
+        'university_gym': 'University Gym',
+        'hotel_gym': 'Hotel Gym',
+        'apartment_gym': 'Apartment Gym',
+        'boxing_mma_gym': 'Boxing/MMA Gym',
+        'triathlon_training_facility': 'Triathlon Training Facility',
+        'multi_sport_complex': 'Multi-Sport Complex'
+      };
+      
+      const mappedGymType = gymTypeMapping[data.gymType] || data.gymType || '';
+
+      // Map wizard data to form data structure
+      const formDataUpdates = {
+        trainingMethodology: data.trainingMethodology || '',
+        programType: data.programType || '',
+        description: data.programDescription || '',
+        referenceInput: data.referenceInput || data.previousWorkout || '',
+        gymType: mappedGymType,
+        equipment: data.equipment || [],
+        difficulty: data.difficulty || 'intermediate',
+        focusArea: data.focusArea || 'full_body',
+        sessionDetails: {
+          duration_minutes: data.workoutDuration || 60,
+        },
+        workoutFormats: data.workoutFormats || [],
+        // Add scheduling fields
+        numberOfWeeks: data.numberOfWeeks || 4,
+        startDate: data.startDate || '',
+        daysOfWeek: mappedDaysOfWeek,
+        // Add previous workout from wizard
+        personalization: data.previousWorkout || '',
+      };
+
+      console.log('Wizard data being injected:', {
+        numberOfWeeks: data.numberOfWeeks,
+        daysOfWeek: data.daysOfWeek,
+        mappedDaysOfWeek,
+        previousWorkout: data.previousWorkout,
+        gymType: data.gymType,
+        mappedGymType: mappedGymType,
+        startDate: data.startDate
+      });
+
+      // Update the form data in the context
+      dispatch({ 
+        type: 'UPDATE_FORM_DATA', 
+        payload: formDataUpdates 
+      });
+
+      // Clear wizard data after injection
+      sessionStorage.removeItem('programWizardData');
+
+      // Automatically trigger program generation after a delay
+      setTimeout(() => {
+        handleConfirmGenerate();
+        // Trigger smart scrolling when generation starts (for wizard users)
+        scrollToGeneration();
+      }, 1500);
+    } catch (error) {
+      console.error('Error injecting wizard data:', error);
+    }
+  }, [wizardComplete, dispatch, handleConfirmGenerate, scrollToGeneration]);
+
   // Cleanup auto-save timer on unmount
   useEffect(() => {
     return () => {
@@ -1021,16 +1157,29 @@ export default function AIProgramWriter({ programId }) {
   }, [formData.daysOfWeek, formData.daysPerWeek, dispatch]);
 
   useEffect(() => {
-    const endDate = calculateEndDate(
-      formData.startDate,
-      formData.numberOfWeeks,
-      formData.daysOfWeek
-    );
-    if (endDate && endDate !== formData.endDate) {
-      dispatch({
-        type: 'SET_FIELD_VALUE',
-        payload: { field: 'endDate', value: endDate },
-      });
+    // Only calculate end date if we have valid inputs
+    if (formData.startDate && formData.numberOfWeeks && formData.daysOfWeek?.length > 0) {
+      // Additional validation for date format
+      const testDate = new Date(formData.startDate);
+      if (!isNaN(testDate.getTime()) && parseInt(formData.numberOfWeeks) > 0) {
+        const endDate = calculateEndDate(
+          formData.startDate,
+          formData.numberOfWeeks,
+          formData.daysOfWeek
+        );
+        if (endDate && endDate !== formData.endDate) {
+          dispatch({
+            type: 'SET_FIELD_VALUE',
+            payload: { field: 'endDate', value: endDate },
+          });
+        }
+      } else {
+        console.warn('Invalid date or weeks data:', {
+          startDate: formData.startDate,
+          numberOfWeeks: formData.numberOfWeeks,
+          testDate: testDate.toString()
+        });
+      }
     }
   }, [
     formData.startDate,
@@ -1329,7 +1478,7 @@ export default function AIProgramWriter({ programId }) {
       )}
 
       {suggestions.length > 0 && (
-        <>
+        <div ref={generationAreaRef}>
           <WorkoutList
             workouts={suggestions.filter((w) => !w.is_reference)}
             daysPerWeek={formData.daysPerWeek}
@@ -1347,7 +1496,7 @@ export default function AIProgramWriter({ programId }) {
             }
             showToastMessage={showToastMessage}
           />
-        </>
+        </div>
       )}
 
       {isWorkoutModalOpen && (

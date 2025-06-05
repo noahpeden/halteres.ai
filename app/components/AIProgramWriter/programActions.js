@@ -853,11 +853,11 @@ export async function autoSaveProgramDetails({
       })
       .filter(Boolean);
 
-    // Prepare gym_details
+    // Prepare gym_details - ensure gym_type is stored consistently
     const gymDetails = {
       ...formData.gymDetails,
       equipment: selectedEquipmentNames,
-      gym_type: formData.gymType,
+      gym_type: formData.gymType, // This should already be in title case format
     };
 
     // Prepare periodization
@@ -899,7 +899,11 @@ export async function autoSaveProgramDetails({
 
     if (error) throw error;
 
-    console.log('Program details auto-saved successfully');
+    console.log('Program details auto-saved successfully', {
+      gymType: formData.gymType,
+      gymDetails: gymDetails,
+      programId: programId
+    });
     return true; // Indicate success
   } catch (error) {
     console.error('Error auto-saving program details:', error);

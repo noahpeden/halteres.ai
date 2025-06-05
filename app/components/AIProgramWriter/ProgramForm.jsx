@@ -202,6 +202,7 @@ const ProgramForm = ({
           }`}
           onClick={generateProgram}
           disabled={isButtonDisabled}
+          data-generate-button
         >
           {buttonText()}
         </button>

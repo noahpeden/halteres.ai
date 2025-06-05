@@ -21,8 +21,63 @@ export default function WorkoutList({
     return null;
   }
   
-  const daysPerWeekNum = parseInt(daysPerWeek) || 7;
-  const totalWeeks = Math.ceil(workouts.length / daysPerWeekNum);
+  // Group workouts by week for display - calculate actual weeks from workouts
+  const groupWorkoutsByWeek = () => {
+    if (!workouts.length) return [];
+
+    // Sort workouts by date to ensure proper grouping
+    const sortedWorkouts = [...workouts].sort((a, b) => {
+      const dateA = new Date(a.suggestedDate || a.scheduled_date || '');
+      const dateB = new Date(b.suggestedDate || b.scheduled_date || '');
+      return dateA - dateB;
+    });
+
+    const weeks = {};
+    let currentWeekNum = 1;
+    let lastWeekStart = null;
+
+    sortedWorkouts.forEach((workout) => {
+      const workoutDate = new Date(workout.suggestedDate || workout.scheduled_date || '');
+      
+      if (isNaN(workoutDate.getTime())) {
+        // If no valid date, use simple index-based grouping as fallback
+        const daysPerWeekNum = parseInt(daysPerWeek) || 3;
+        const weekNumber = Math.floor(weeks.length / daysPerWeekNum) + 1;
+        if (!weeks[weekNumber]) {
+          weeks[weekNumber] = [];
+        }
+        weeks[weekNumber].push(workout);
+        return;
+      }
+
+      // Calculate the start of the week (Monday)
+      const dayOfWeek = workoutDate.getDay();
+      const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Sunday = 6, Monday = 0
+      const weekStart = new Date(workoutDate);
+      weekStart.setDate(workoutDate.getDate() - daysFromMonday);
+      weekStart.setHours(0, 0, 0, 0);
+
+      // Check if this is a new week
+      if (lastWeekStart === null || weekStart.getTime() !== lastWeekStart.getTime()) {
+        currentWeekNum = Object.keys(weeks).length + 1;
+        lastWeekStart = weekStart;
+      }
+
+      if (!weeks[currentWeekNum]) {
+        weeks[currentWeekNum] = [];
+      }
+      weeks[currentWeekNum].push(workout);
+    });
+
+    return Object.entries(weeks).map(([week, workouts]) => ({
+      week: parseInt(week),
+      workouts,
+    }));
+  };
+
+  const weekGroups = groupWorkoutsByWeek();
+  const totalWeeks = weekGroups.length;
+  const currentWeekData = weekGroups.find(group => group.week === currentWeek);
   
   // Keyboard navigation
   useEffect(() => {
@@ -37,27 +92,6 @@ export default function WorkoutList({
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
   }, [currentWeek, totalWeeks]);
-
-  // Group workouts by week for display
-  const groupWorkoutsByWeek = () => {
-    const weeks = {};
-
-    workouts.forEach((workout, index) => {
-      const weekNumber = Math.floor(index / daysPerWeekNum) + 1;
-      if (!weeks[weekNumber]) {
-        weeks[weekNumber] = [];
-      }
-      weeks[weekNumber].push(workout);
-    });
-
-    return Object.entries(weeks).map(([week, workouts]) => ({
-      week: parseInt(week),
-      workouts,
-    }));
-  };
-
-  const weekGroups = groupWorkoutsByWeek();
-  const currentWeekData = weekGroups.find(group => group.week === currentWeek);
 
   const goToPreviousWeek = () => {
     if (currentWeek > 1) {
@@ -78,8 +112,7 @@ export default function WorkoutList({
           <h3 className="text-lg font-semibold">Generated Program</h3>
           <p className="text-sm text-gray-600">
             {workouts.length} workout{workouts.length !== 1 ? 's' : ''}{' '}
-            generated
-            {daysPerWeek ? ` (${daysPerWeek} days/week)` : ''}
+            generated ({totalWeeks} week{totalWeeks !== 1 ? 's' : ''})
           </p>
         </div>
       </div>

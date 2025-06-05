@@ -284,8 +284,8 @@ export async function POST(request) {
           trainingType,
         });
 
-        // Calculate total number of workouts
-        const totalWorkouts = parseInt(numberOfWeeks) * parseInt(daysPerWeek);
+        // Calculate total number of workouts (this will be adjusted if dates don't fit)
+        let totalWorkouts = parseInt(numberOfWeeks) * parseInt(daysPerWeek);
 
         // Check for existing program progress before starting generation (unless forcing regeneration)
         let existingProgress;

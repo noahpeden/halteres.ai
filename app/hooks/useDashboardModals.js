@@ -57,7 +57,10 @@ export function useDashboardModals() {
     setShowCreateProgramModal(false);
     setProgramName('');
     setProgramDuration(4);
-    setStartDate(new Date().toISOString().split('T')[0]);
+    // Set start date to tomorrow by default
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    setStartDate(tomorrow.toISOString().split('T')[0]);
     setDaysOfWeek([1, 3, 5]);
     setSelectedEntityId('');
   };
@@ -131,7 +134,7 @@ export function useDashboardModals() {
     }
   };
 
-  const createProgram = async (event) => {
+  const createProgram = async (event, entities) => {
     event.preventDefault();
     if (!programName.trim() || daysOfWeek.length === 0 || !selectedEntityId)
       return;
@@ -142,32 +145,31 @@ export function useDashboardModals() {
     }
 
     try {
-      const response = await fetch('/api/CreateProgram', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: programName,
-          duration_weeks: programDuration,
-          start_date: startDate,
-          end_date: calculateEndDate(),
-          days_of_week: daysOfWeek,
-          entity_id: selectedEntityId,
-          user_id: user.id,
-        }),
-      });
-
-      const result = await response.json();
-
-      if (response.ok) {
-        // Close the modal
-        closeCreateProgramModal();
-        // Navigate to the program
-        router.push(`/program/${result?.data[0].id}/writer`);
-      } else {
-        throw new Error(result.error);
-      }
+      // Store program creation data in sessionStorage for the wizard
+      // Convert numeric day indices to string day names
+      const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+      const daysOfWeekStrings = daysOfWeek.map(dayIndex => dayNames[dayIndex]);
+      
+      // Get the selected entity to include its name and type
+      const selectedEntity = entities.find(e => e.id === selectedEntityId);
+      
+      const wizardData = {
+        programName,
+        entityId: selectedEntityId,
+        entityName: selectedEntity?.name || '',
+        entityType: selectedEntity?.type || 'CLIENT',
+        startDate,
+        numberOfWeeks: programDuration,
+        daysOfWeek: daysOfWeekStrings,
+      };
+      
+      sessionStorage.setItem('programWizardData', JSON.stringify(wizardData));
+      
+      // Close the modal
+      closeCreateProgramModal();
+      
+      // Navigate directly to step 1 of the programming wizard
+      router.push('/program-wizard/step-1');
     } catch (error) {
       console.error('Error:', error);
     }

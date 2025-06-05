@@ -70,6 +70,21 @@ const initialState = {
   triggerProgramRefresh: 0, // Counter to trigger program data refresh
 };
 
+// Helper function to clean up days of week array
+function cleanDaysOfWeek(daysArray) {
+  if (!Array.isArray(daysArray)) return [];
+  
+  // Remove duplicates while preserving case consistency
+  const seen = new Set();
+  return daysArray.filter(day => {
+    if (typeof day !== 'string') return false;
+    const lowerDay = day.toLowerCase();
+    if (seen.has(lowerDay)) return false;
+    seen.add(lowerDay);
+    return true;
+  });
+}
+
 function programWriterReducer(state, action) {
   switch (action.type) {
     case 'SET_INITIAL_DATA':
@@ -80,13 +95,17 @@ function programWriterReducer(state, action) {
         state.formData.startDate || tomorrow.toISOString().split('T')[0];
       const initialNewStartDate =
         state.newStartDate || tomorrow.toISOString().split('T')[0];
+      const cleanedFormData = { ...action.payload.formData };
+      if (cleanedFormData.daysOfWeek) {
+        cleanedFormData.daysOfWeek = cleanDaysOfWeek(cleanedFormData.daysOfWeek);
+      }
       return {
         ...state,
         programId: action.payload.programId,
         formData: {
           ...state.formData,
-          ...action.payload.formData,
-          startDate: action.payload.formData?.startDate || initialStartDate, // Prioritize fetched data
+          ...cleanedFormData,
+          startDate: cleanedFormData?.startDate || initialStartDate, // Prioritize fetched data
         },
         suggestions: action.payload.suggestions || state.suggestions,
         referenceWorkouts:
@@ -104,13 +123,20 @@ function programWriterReducer(state, action) {
         initialFormData: JSON.parse(JSON.stringify(state.formData)),
       };
     case 'UPDATE_FORM_DATA':
-      return { ...state, formData: { ...state.formData, ...action.payload } };
+      const updatedData = { ...action.payload };
+      if (updatedData.daysOfWeek) {
+        updatedData.daysOfWeek = cleanDaysOfWeek(updatedData.daysOfWeek);
+      }
+      return { ...state, formData: { ...state.formData, ...updatedData } };
     case 'SET_FIELD_VALUE':
+      const fieldValue = action.payload.field === 'daysOfWeek' 
+        ? cleanDaysOfWeek(action.payload.value)
+        : action.payload.value;
       return {
         ...state,
         formData: {
           ...state.formData,
-          [action.payload.field]: action.payload.value,
+          [action.payload.field]: fieldValue,
         },
       };
     case 'SET_SUGGESTIONS':
