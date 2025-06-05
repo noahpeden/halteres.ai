@@ -18,12 +18,10 @@ export default function AIWorkoutReferencer({ programId }) {
     focusArea: '',
     workoutFormats: [],
     gymType: 'Crossfit Box',
-    isWebSearch: false,
   });
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [searchText, setSearchText] = useState('');
-  const [searchWorkoutResults, setSearchWorkoutResults] = useState([]);
   const [webSearchWorkoutResults, setWebSearchWorkoutResults] = useState([]);
   const [allEquipmentSelected, setAllEquipmentSelected] = useState(false);
   const [showEquipmentSelection, setShowEquipmentSelection] = useState(false);
@@ -112,121 +110,79 @@ export default function AIWorkoutReferencer({ programId }) {
 
   const searchWorkouts = async () => {
     setSearchLoading(true);
-    setSearchWorkoutResults([]);
     setWebSearchWorkoutResults([]);
     setErrorMessage('');
 
     try {
-      if (formInput.isWebSearch) {
-        setWebSearchLoading(true);
-        try {
-          const abortController = new AbortController();
-          const timeoutId = setTimeout(() => abortController.abort(), 60000); // 60 second timeout
+      setWebSearchLoading(true);
+      const abortController = new AbortController();
+      const timeoutId = setTimeout(() => abortController.abort(), 60000); // 60 second timeout
 
-          const webResponse = await fetch('/api/web-search-workouts', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              searchQuery: searchText,
-              goal: formInput.goal,
-              difficulty: formInput.difficulty,
-              focusArea: formInput.focusArea,
-              duration: formInput.duration,
-              equipment: formInput.equipment,
-              workoutFormats: formInput.workoutFormats,
-              gymType: formInput.gymType,
-            }),
-            signal: abortController.signal,
-          });
+      const webResponse = await fetch('/api/web-search-workouts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          searchQuery: searchText,
+          goal: formInput.goal,
+          difficulty: formInput.difficulty,
+          focusArea: formInput.focusArea,
+          duration: formInput.duration,
+          equipment: formInput.equipment,
+          workoutFormats: formInput.workoutFormats,
+          gymType: formInput.gymType,
+        }),
+        signal: abortController.signal,
+      });
 
-          clearTimeout(timeoutId);
+      clearTimeout(timeoutId);
 
-          if (!webResponse.ok) {
-            const statusCode = webResponse.status;
-            if (statusCode === 504) {
-              throw new Error(
-                'Web search timed out. Please try again or use library search instead.'
-              );
-            }
-
-            let errorMessage;
-            try {
-              const errorData = await webResponse.json();
-              errorMessage =
-                errorData.error ||
-                `Error searching workouts (Status: ${statusCode})`;
-            } catch (jsonError) {
-              const textError = await webResponse.text().catch(() => null);
-              errorMessage =
-                textError || `Error searching workouts (Status: ${statusCode})`;
-            }
-
-            throw new Error(errorMessage);
-          }
-
-          let webData;
-          try {
-            webData = await webResponse.json();
-          } catch (jsonError) {
-            console.error('JSON parsing error:', jsonError);
-            throw new Error(
-              'Failed to parse workout results. The server might be overloaded.'
-            );
-          }
-
-          setWebSearchWorkoutResults(webData.workouts || []);
-        } catch (webError) {
-          console.error('Web search error:', webError);
-          if (webError.name === 'AbortError') {
-            throw new Error(
-              'Web search timed out. Please try a more specific search or use the Library search instead.'
-            );
-          }
-          throw webError;
-        } finally {
-          setWebSearchLoading(false);
-        }
-      } else {
-        const localResponse = await fetch('/api/search-workouts', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            searchQuery: searchText,
-            goal: formInput.goal,
-            difficulty: formInput.difficulty,
-            focusArea: formInput.focusArea,
-            duration: formInput.duration,
-            equipment: formInput.equipment,
-            workoutFormats: formInput.workoutFormats,
-            gymType: formInput.gymType,
-          }),
-        });
-
-        if (!localResponse.ok) {
-          let errorMessage;
-          try {
-            const errorData = await localResponse.json();
-            errorMessage = errorData.error || 'Failed to search local workouts';
-          } catch (jsonError) {
-            errorMessage = `Failed to search local workouts (Status: ${localResponse.status})`;
-          }
-          throw new Error(errorMessage);
+      if (!webResponse.ok) {
+        const statusCode = webResponse.status;
+        if (statusCode === 504) {
+          throw new Error(
+            'Web search timed out. Please try again with more specific search terms.'
+          );
         }
 
+        let errorMessage;
         try {
-          const localData = await localResponse.json();
-          setSearchWorkoutResults(localData.workouts || []);
+          const errorData = await webResponse.json();
+          errorMessage =
+            errorData.error ||
+            `Error searching workouts (Status: ${statusCode})`;
         } catch (jsonError) {
-          console.error('JSON parsing error:', jsonError);
-          throw new Error('Failed to parse local workout results');
+          const textError = await webResponse.text().catch(() => null);
+          errorMessage =
+            textError || `Error searching workouts (Status: ${statusCode})`;
         }
+
+        throw new Error(errorMessage);
       }
+
+      let webData;
+      try {
+        webData = await webResponse.json();
+      } catch (jsonError) {
+        console.error('JSON parsing error:', jsonError);
+        throw new Error(
+          'Failed to parse workout results. The server might be overloaded.'
+        );
+      }
+
+      setWebSearchWorkoutResults(webData.workouts || []);
     } catch (error) {
-      console.error('Error searching workouts:', error);
-      setErrorMessage(
-        error.message || 'An unexpected error occurred while searching workouts'
-      );
+      console.error('Web search error:', error);
+      if (error.name === 'AbortError') {
+        setErrorMessage(
+          'Web search timed out. Please try a more specific search.'
+        );
+      } else {
+        setErrorMessage(
+          error.message || 'An unexpected error occurred while searching workouts'
+        );
+      }
     } finally {
+      setWebSearchLoading(false);
       setSearchLoading(false);
     }
   };
@@ -309,26 +265,6 @@ export default function AIWorkoutReferencer({ programId }) {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="md:col-span-3 space-y-4">
-          <div className="flex items-center gap-3 py-2">
-            <label className="cursor-pointer label">
-              <input
-                type="checkbox"
-                className="toggle toggle-primary"
-                checked={formInput.isWebSearch}
-                onChange={() =>
-                  setFormInput((prev) => ({
-                    ...prev,
-                    isWebSearch: !prev.isWebSearch,
-                  }))
-                }
-              />
-            </label>
-            <span
-              className={!formInput.isWebSearch ? 'opacity-50' : 'font-medium'}
-            >
-              Web Search
-            </span>
-          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="w-full w-full">
@@ -523,19 +459,16 @@ export default function AIWorkoutReferencer({ programId }) {
               {searchLoading || webSearchLoading ? (
                 <>
                   <span className="loading loading-spinner loading-sm"></span>
-                  Searching...
+                  Searching Web...
                 </>
               ) : (
-                `Search ${formInput.isWebSearch ? 'Web' : 'Library'}`
+                'Search Web for Workouts'
               )}
             </button>
-            {formInput.isWebSearch && (
-              <div className="text-xs text-gray-500 mt-1">
-                Web search uses AI to find workouts online and may take up to 60
-                seconds. If you experience timeouts, try using more specific
-                search terms or switch to Library search.
-              </div>
-            )}
+            <div className="text-xs text-gray-500 mt-1">
+              Uses AI agents to find workouts online. May take up to 60
+              seconds. Try specific search terms for better results.
+            </div>
           </div>
 
           {errorMessage && (
@@ -550,7 +483,7 @@ export default function AIWorkoutReferencer({ programId }) {
       {(webSearchLoading || webSearchWorkoutResults.length > 0) && (
         <div className="mt-6">
           <h3 className="text-lg font-medium mb-3 flex items-center">
-            Web Search Results
+            AI-Powered Workout Search Results
             {webSearchLoading && (
               <span className="loading loading-spinner loading-sm ml-2"></span>
             )}
@@ -628,84 +561,6 @@ export default function AIWorkoutReferencer({ programId }) {
         </div>
       )}
 
-      {(searchLoading || searchWorkoutResults.length > 0) && (
-        <div className="mt-6">
-          <h3 className="text-lg font-medium mb-3 flex items-center">
-            Library Results
-            {searchLoading && !webSearchLoading && (
-              <span className="loading loading-spinner loading-sm ml-2"></span>
-            )}
-          </h3>
-          {searchWorkoutResults.length > 0 && (
-            <div className="grid grid-cols-1 gap-4">
-              {searchWorkoutResults.map((workoutItem, index) => {
-                const workoutKey = workoutItem.id || `local-${index}`;
-                const isAdding = addingWorkoutStates[`ref-${workoutKey}`];
-                return (
-                  <div
-                    key={workoutKey}
-                    className="border rounded-md p-4 border-green-200"
-                  >
-                    <div className="flex justify-between items-start">
-                      <h4 className="font-semibold">
-                        {workoutItem.title || `Local Workout ${index + 1}`}
-                      </h4>
-                      <span className="badge badge-success">Library</span>
-                    </div>
-                    <div className="whitespace-pre-line mt-2">
-                      {workoutItem.body || workoutItem.description}
-                    </div>
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      {workoutItem.tags &&
-                        workoutItem.tags.map((tag, tagIndex) => (
-                          <span key={tagIndex} className="badge badge-outline">
-                            {tag}
-                          </span>
-                        ))}
-                    </div>
-                    <div className="flex flex-wrap gap-2 mt-3">
-                      <button
-                        className="btn btn-sm btn-outline btn-accent"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          handleAddWorkoutToProgram(workoutItem, true);
-                        }}
-                        disabled={isAdding}
-                      >
-                        {isAdding ? (
-                          <>
-                            <span className="loading loading-spinner loading-xs"></span>
-                            Adding Ref...
-                          </>
-                        ) : (
-                          'Add as Reference'
-                        )}
-                      </button>
-                      <button
-                        className="btn btn-sm btn-primary"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          handleAddWorkoutToProgram(workoutItem);
-                        }}
-                        disabled={addingWorkoutStates[`prog-${workoutKey}`]}
-                      >
-                        {addingWorkoutStates[`prog-${workoutKey}`] ? (
-                          <>
-                            <span className="loading loading-spinner loading-xs"></span>
-                            Adding...
-                          </>
-                        ) : (
-                          'Add to Program'
-                        )}
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
     </div>
   );
 }

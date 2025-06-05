@@ -21,63 +21,55 @@ export default function WorkoutList({
     return null;
   }
   
-  // Group workouts by week for display - calculate actual weeks from workouts
+  // Group workouts by week for display - simple index-based grouping
   const groupWorkoutsByWeek = () => {
     if (!workouts.length) return [];
 
-    // Sort workouts by date to ensure proper grouping
+    // Sort workouts by date first, then by index to maintain proper order
     const sortedWorkouts = [...workouts].sort((a, b) => {
       const dateA = new Date(a.suggestedDate || a.scheduled_date || '');
       const dateB = new Date(b.suggestedDate || b.scheduled_date || '');
-      return dateA - dateB;
-    });
-
-    const weeks = {};
-    let currentWeekNum = 1;
-    let lastWeekStart = null;
-
-    sortedWorkouts.forEach((workout) => {
-      const workoutDate = new Date(workout.suggestedDate || workout.scheduled_date || '');
       
-      if (isNaN(workoutDate.getTime())) {
-        // If no valid date, use simple index-based grouping as fallback
-        const daysPerWeekNum = parseInt(daysPerWeek) || 3;
-        const weekNumber = Math.floor(weeks.length / daysPerWeekNum) + 1;
-        if (!weeks[weekNumber]) {
-          weeks[weekNumber] = [];
-        }
-        weeks[weekNumber].push(workout);
-        return;
+      // If both dates are valid, sort by date
+      if (!isNaN(dateA.getTime()) && !isNaN(dateB.getTime())) {
+        return dateA - dateB;
       }
-
-      // Calculate the start of the week (Monday)
-      const dayOfWeek = workoutDate.getDay();
-      const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Sunday = 6, Monday = 0
-      const weekStart = new Date(workoutDate);
-      weekStart.setDate(workoutDate.getDate() - daysFromMonday);
-      weekStart.setHours(0, 0, 0, 0);
-
-      // Check if this is a new week
-      if (lastWeekStart === null || weekStart.getTime() !== lastWeekStart.getTime()) {
-        currentWeekNum = Object.keys(weeks).length + 1;
-        lastWeekStart = weekStart;
-      }
-
-      if (!weeks[currentWeekNum]) {
-        weeks[currentWeekNum] = [];
-      }
-      weeks[currentWeekNum].push(workout);
+      
+      // If only one date is valid, put the valid date first
+      if (!isNaN(dateA.getTime())) return -1;
+      if (!isNaN(dateB.getTime())) return 1;
+      
+      // If neither date is valid, maintain original order (use array index if available)
+      return 0;
     });
 
-    return Object.entries(weeks).map(([week, workouts]) => ({
-      week: parseInt(week),
-      workouts,
-    }));
+    const daysPerWeekNum = parseInt(daysPerWeek) || 3;
+    const weeks = [];
+    
+    // Simple chunking: create weeks based on daysPerWeek
+    for (let i = 0; i < sortedWorkouts.length; i += daysPerWeekNum) {
+      const weekWorkouts = sortedWorkouts.slice(i, i + daysPerWeekNum);
+      const weekNumber = Math.floor(i / daysPerWeekNum) + 1;
+      
+      weeks.push({
+        week: weekNumber,
+        workouts: weekWorkouts
+      });
+    }
+
+    return weeks;
   };
 
   const weekGroups = groupWorkoutsByWeek();
   const totalWeeks = weekGroups.length;
   const currentWeekData = weekGroups.find(group => group.week === currentWeek);
+  
+  // Reset to week 1 when workouts change or current week becomes invalid
+  useEffect(() => {
+    if (totalWeeks > 0 && (currentWeek > totalWeeks || currentWeek < 1)) {
+      setCurrentWeek(1);
+    }
+  }, [workouts.length, totalWeeks, currentWeek]);
   
   // Keyboard navigation
   useEffect(() => {
@@ -287,15 +279,21 @@ export default function WorkoutList({
                 }}
               >
                 <div className="flex justify-between items-center mb-1 w-full">
-                  <h4 className="font-semibold flex-1 break-words mr-2">
-                    {workout.title ||
-                      `Week ${currentWeekData.week}, Day ${index + 1}`}
-                    {workout.completed && (
-                      <span className="ml-2 text-green-600 text-sm font-normal">
-                        (Completed)
+                  <div className="flex-1 mr-2">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-xs font-medium px-2 py-1 bg-primary/10 text-primary rounded">
+                        Day {index + 1}
                       </span>
-                    )}
-                  </h4>
+                      {workout.completed && (
+                        <span className="text-xs font-medium px-2 py-1 bg-green-100 text-green-700 rounded">
+                          Completed
+                        </span>
+                      )}
+                    </div>
+                    <h4 className="font-semibold break-words">
+                      {workout.title || `Week ${currentWeekData.week}, Day ${index + 1}`}
+                    </h4>
+                  </div>
                   {workout.id && (
                     <details className="dropdown dropdown-end flex-shrink-0">
                       <summary className="btn btn-sm btn-ghost btn-square">

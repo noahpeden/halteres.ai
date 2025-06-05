@@ -50,6 +50,24 @@ export async function POST(req) {
 
     const userId = session.user.id;
 
+    // Check for recent duplicate programs to prevent double creation
+    const { data: existingPrograms } = await supabase
+      .from('programs')
+      .select('id, name, created_at')
+      .eq('entity_id', entity_id)
+      .eq('name', name)
+      .gte('created_at', new Date(Date.now() - 30000).toISOString()) // Last 30 seconds
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    if (existingPrograms && existingPrograms.length > 0) {
+      console.log('Duplicate program creation prevented:', existingPrograms[0]);
+      return NextResponse.json({ 
+        data: [existingPrograms[0]],
+        message: 'Program already exists (duplicate prevented)' 
+      }, { status: 200 });
+    }
+
     // Create program using the provided entity_id and all wizard data
     const { data, error } = await supabase
       .from('programs')

@@ -448,7 +448,11 @@ async function generateLargeProgram(
         const dayOfWeek = currentDate.getDay(); // 0 = Sunday, 1 = Monday, etc.
 
         if (selectedDaysOfWeek.includes(dayOfWeek)) {
-          suggestedDates.push(currentDate.toISOString().split('T')[0]);
+          // Use local date string to avoid timezone issues
+          const year = currentDate.getFullYear();
+          const month = String(currentDate.getMonth() + 1).padStart(2, '0');
+          const day = String(currentDate.getDate()).padStart(2, '0');
+          suggestedDates.push(`${year}-${month}-${day}`);
           workoutsAdded++;
         }
 
@@ -460,7 +464,11 @@ async function generateLargeProgram(
       for (let i = 0; i < totalWorkouts; i++) {
         const workoutDate = new Date(startingDate);
         workoutDate.setDate(startingDate.getDate() + i);
-        suggestedDates.push(workoutDate.toISOString().split('T')[0]);
+        // Use local date string to avoid timezone issues
+        const year = workoutDate.getFullYear();
+        const month = String(workoutDate.getMonth() + 1).padStart(2, '0');
+        const day = String(workoutDate.getDate()).padStart(2, '0');
+        suggestedDates.push(`${year}-${month}-${day}`);
       }
     }
 
@@ -1015,6 +1023,18 @@ async function generateLargeProgram(
     logWithTimestamp('Large program generation complete', {
       totalWorkoutsGenerated: allWorkouts.length,
     });
+
+    // Wait a moment for the complete event to be sent before closing
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    // Close the controller only once at the very end
+    try {
+      controller.close();
+    } catch (closeError) {
+      logWithTimestamp('Error closing controller', {
+        error: closeError.message,
+      });
+    }
   } catch (largeGenError) {
     logWithTimestamp('Error in large program generation', {
       error: largeGenError.message,
@@ -1024,7 +1044,10 @@ async function generateLargeProgram(
     sendEvent('error', {
       error: `Large program generation failed: ${largeGenError.message}`,
     });
-  } finally {
+
+    // Wait a moment for the error event to be sent before closing
+    await new Promise(resolve => setTimeout(resolve, 100));
+
     // Close the controller only once at the very end
     try {
       controller.close();
@@ -1220,6 +1243,20 @@ async function generateWeek(
 
   // Create a week-specific prompt
   const chunkPrompt = promptBuilder(weekPromptContext, trainingType);
+  
+  // LOG: Check if reference workouts are in the prompt
+  if (weekNumber === 1) { // Only log for first week to avoid spam
+    console.log('=== PROMPT DEBUG FOR WEEK 1 ===');
+    console.log('Reference workouts data:', commonPromptElements.referenceWorkoutsData);
+    console.log('Reference input:', commonPromptElements.referenceInput);
+    console.log('Prompt contains "Reference Workouts":', chunkPrompt.includes('Reference Workouts'));
+    if (chunkPrompt.includes('Reference Workouts')) {
+      const startIndex = chunkPrompt.indexOf('Reference Workouts');
+      const endIndex = chunkPrompt.indexOf('\n\n', startIndex + 200); // Show next ~200 chars
+      console.log('Reference section preview:', chunkPrompt.substring(startIndex, endIndex > -1 ? endIndex : startIndex + 500));
+    }
+    console.log('=== END PROMPT DEBUG ===');
+  }
 
   try {
     // Call OpenAI for this chunk with a reduced timeout
@@ -1435,6 +1472,7 @@ async function preparePromptElements(programId, supabase, params, openai) {
       } else if (referenceWorkouts && referenceWorkouts.length > 0) {
         logWithTimestamp('Found reference workouts', {
           count: referenceWorkouts.length,
+          workouts: referenceWorkouts.map(w => ({ title: w.title, bodyPreview: (w.body || '').substring(0, 100) + '...' }))
         });
         referenceWorkoutsData = referenceWorkouts;
       } else {

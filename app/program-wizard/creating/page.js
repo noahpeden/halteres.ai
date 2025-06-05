@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -9,15 +9,24 @@ export default function CreatingProgramPage() {
   const { supabase } = useAuth();
   const [status, setStatus] = useState('Creating your program...');
   const [error, setError] = useState(null);
+  const hasCreated = useRef(false);
 
   useEffect(() => {
+    // Prevent multiple executions
+    if (hasCreated.current) return;
+    
     async function createAndRedirect() {
+      hasCreated.current = true; // Mark as started immediately
+      
       const wizardData = sessionStorage.getItem('programWizardData');
       if (!wizardData) {
         setError('No wizard data found');
         router.push('/dashboard');
         return;
       }
+      
+      // Clear session data immediately to prevent reuse
+      sessionStorage.removeItem('programWizardData');
 
       try {
         const data = JSON.parse(wizardData);

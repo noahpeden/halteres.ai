@@ -36,6 +36,7 @@ import RescheduleModalComponent from './RescheduleModal';
 import EditWorkoutModalComponent from './EditWorkoutModal';
 import ConfirmationModalComponent from './ConfirmationModal'; // Assuming this exists now
 import ReferenceWorkoutSearchModal from './ReferenceWorkoutSearchModal';
+import EnhancedReferenceWorkoutSearchModal from './EnhancedReferenceWorkoutSearchModal';
 
 import { InfoIcon, Sparkles } from 'lucide-react';
 import AutoSaveStatusIndicator from './AutoSaveStatusIndicator';
@@ -109,6 +110,8 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
   const [showProgramSavePrompt, setShowProgramSavePrompt] = useState(false);
   const isGeneratingRef = useRef(false);
   const [isReferenceWorkoutModalOpen, setReferenceWorkoutModalOpen] =
+    useState(false);
+  const [isEnhancedReferenceModalOpen, setIsEnhancedReferenceModalOpen] =
     useState(false);
   const [dbReferenceWorkouts, setDbReferenceWorkouts] = useState([]);
 
@@ -187,7 +190,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
 
   // Smart scrolling function for wizard users
   const scrollToGeneration = useCallback(() => {
-    if (!wizardComplete || hasScrolledToGeneration.current || !generationAreaRef.current) {
+    if (!wizardComplete || hasScrolledToGeneration.current) {
       return;
     }
 
@@ -197,6 +200,12 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
         const element = generationAreaRef.current;
         const elementTop = element.offsetTop;
         const offset = 100; // Scroll a bit above the element for better visibility
+        
+        console.log('Smart scrolling: Attempting to scroll to generation area', {
+          elementTop,
+          offset,
+          finalPosition: elementTop - offset
+        });
 
         window.scrollTo({
           top: elementTop - offset,
@@ -204,7 +213,23 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
         });
 
         hasScrolledToGeneration.current = true;
-        console.log('Smart scrolling: Scrolled to generation area');
+        console.log('Smart scrolling: Successfully scrolled to generation area');
+      } else {
+        console.log('Smart scrolling: Generation area ref not found, will retry');
+        // If element not found, try again in a bit
+        setTimeout(() => {
+          if (generationAreaRef.current && !hasScrolledToGeneration.current) {
+            const element = generationAreaRef.current;
+            const elementTop = element.offsetTop;
+            const offset = 100;
+            window.scrollTo({
+              top: elementTop - offset,
+              behavior: 'smooth'
+            });
+            hasScrolledToGeneration.current = true;
+            console.log('Smart scrolling: Retry successful');
+          }
+        }, 1000);
       }
     }, 500);
   }, [wizardComplete]);
@@ -216,12 +241,30 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
     }
   }, [wizardComplete]);
 
-  // Trigger scrolling when generation starts (for better timing)
+  // Trigger scrolling when generation starts or workouts appear
   useEffect(() => {
-    if (wizardComplete && generationStage && !hasScrolledToGeneration.current) {
-      scrollToGeneration();
+    if (wizardComplete && !hasScrolledToGeneration.current) {
+      // Scroll when generation starts OR when workouts appear
+      if (generationStage || (suggestions && suggestions.length > 0)) {
+        console.log('Smart scrolling: Triggering scroll due to:', {
+          generationStage,
+          suggestionsCount: suggestions?.length || 0
+        });
+        scrollToGeneration();
+      }
     }
-  }, [wizardComplete, generationStage, scrollToGeneration]);
+  }, [wizardComplete, generationStage, suggestions, scrollToGeneration]);
+
+  // Additional effect to handle when workouts finish loading
+  useEffect(() => {
+    if (wizardComplete && !hasScrolledToGeneration.current && suggestions && suggestions.length > 0 && !isLoading) {
+      console.log('Smart scrolling: Triggering scroll after workouts loaded');
+      // Delay a bit more to ensure the WorkoutList is fully rendered
+      setTimeout(() => {
+        scrollToGeneration();
+      }, 800);
+    }
+  }, [wizardComplete, suggestions, isLoading, scrollToGeneration]);
 
   // --- Event Handlers ---
 
@@ -720,7 +763,9 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
         previousWorkout: data.previousWorkout,
         gymType: data.gymType,
         mappedGymType: mappedGymType,
-        startDate: data.startDate
+        startDate: data.startDate,
+        workoutFormats: data.workoutFormats,
+        selectedWorkouts: data.selectedWorkouts
       });
 
       // Update the form data in the context
@@ -728,6 +773,55 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
         type: 'UPDATE_FORM_DATA', 
         payload: formDataUpdates 
       });
+
+      // Transfer selected workouts from wizard to reference workouts
+      if (data.selectedWorkouts && data.selectedWorkouts.length > 0 && programId) {
+        try {
+          console.log('Transferring wizard selected workouts as reference workouts:', data.selectedWorkouts);
+          
+          // Save selected workouts as reference workouts in the database
+          const workoutsToSave = data.selectedWorkouts.map(workout => ({
+            program_id: programId,
+            entity_id: formData.entityId,
+            title: workout.title,
+            body: workout.body || workout.description || '',
+            tags: {
+              source: workout.source || 'wizard-selection',
+              wizard_transferred: true
+            },
+            is_reference: true,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          }));
+
+          // Save to database
+          supabase
+            .from('program_workouts')
+            .insert(workoutsToSave)
+            .then(({ error }) => {
+              if (error) {
+                console.error('Error saving wizard reference workouts:', error);
+                showToastMessage('Failed to transfer reference workouts from wizard', 'warning');
+              } else {
+                console.log('Successfully transferred reference workouts from wizard');
+                showToastMessage(`Transferred ${data.selectedWorkouts.length} reference workouts from wizard`, 'success');
+                // Refresh reference workouts display
+                supabase
+                  .from('program_workouts')
+                  .select('*')
+                  .eq('program_id', programId)
+                  .eq('is_reference', true)
+                  .then(({ data: refreshedData, error: refreshError }) => {
+                    if (!refreshError) {
+                      setDbReferenceWorkouts(refreshedData || []);
+                    }
+                  });
+              }
+            });
+        } catch (error) {
+          console.error('Error transferring wizard selected workouts:', error);
+        }
+      }
 
       // Clear wizard data after injection
       sessionStorage.removeItem('programWizardData');
@@ -1265,11 +1359,21 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
   // --- Reference Workout Handlers ---
 
   const handleOpenReferenceWorkoutModal = useCallback(
+    () => setIsEnhancedReferenceModalOpen(true),
+    []
+  );
+  
+  const handleOpenLegacyReferenceWorkoutModal = useCallback(
     () => setReferenceWorkoutModalOpen(true),
     []
   );
   const handleCloseReferenceWorkoutModal = useCallback(
     () => setReferenceWorkoutModalOpen(false),
+    []
+  );
+  
+  const handleCloseEnhancedReferenceModal = useCallback(
+    () => setIsEnhancedReferenceModalOpen(false),
     []
   );
 
@@ -1315,6 +1419,8 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
         .eq('is_reference', true);
       if (!error) setDbReferenceWorkouts(dbReferenceWorkouts || []);
       setReferenceWorkoutModalOpen(false);
+      setIsEnhancedReferenceModalOpen(false);
+      showToastMessage('Reference workouts added successfully!', 'success');
     },
     [programId, supabase]
   );
@@ -1478,7 +1584,16 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
       )}
 
       {suggestions.length > 0 && (
-        <div ref={generationAreaRef}>
+        <div ref={generationAreaRef} className="scroll-mt-20">
+          <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 mb-6">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
+              <h3 className="text-lg font-semibold text-primary">Your Generated Program</h3>
+            </div>
+            <p className="text-sm text-base-content/70">
+              {suggestions.length} workout{suggestions.length !== 1 ? 's' : ''} generated and ready for your program
+            </p>
+          </div>
           <WorkoutList
             workouts={suggestions.filter((w) => !w.is_reference)}
             daysPerWeek={formData.daysPerWeek}
@@ -1561,6 +1676,14 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
         onSelect={handleReferenceWorkoutsSelected}
         selectedWorkouts={dbReferenceWorkouts}
         initialSearchText={formData.referenceInput || ''}
+      />
+
+      <EnhancedReferenceWorkoutSearchModal
+        isOpen={isEnhancedReferenceModalOpen}
+        onClose={handleCloseEnhancedReferenceModal}
+        onSelect={handleReferenceWorkoutsSelected}
+        selectedWorkouts={dbReferenceWorkouts}
+        programId={programId}
       />
 
       {/* Enhance Program Input Dialog */}
