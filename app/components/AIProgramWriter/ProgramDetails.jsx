@@ -60,15 +60,15 @@ export default function ProgramDetails({
   };
 
   return (
-    <section className="bg-base-100 p-4 md:p-5 rounded-lg border border-base-300 shadow-sm w-full">
+    <section className="bg-base-100 p-3 sm:p-4 md:p-5 rounded-lg border border-base-300 shadow-sm w-full">
       <h2 className="text-xl font-semibold mb-4 text-primary">
         Program Details
       </h2>
 
       {/* Equipment Selector - Full width */}
-      <div className="flex flex-col md:flex-row gap-4 md:gap-6 mb-6">
+      <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 md:gap-6 mb-4 sm:mb-6">
         {/* Gym Type */}
-        <div className="w-full md:w-1/2">
+        <div className="w-full sm:w-1/2">
           <label className="w-full">
             <span className="text-sm font-medium">Gym Type</span>
             <details className="dropdown w-full" open={openDropdowns.gymType}>
@@ -109,7 +109,7 @@ export default function ProgramDetails({
         </div>
 
         {/* Difficulty */}
-        <div className="w-full md:w-1/2">
+        <div className="w-full sm:w-1/2">
           <label className="w-full">
             <span className="text-sm font-medium">Difficulty Level</span>
             <details
@@ -150,14 +150,14 @@ export default function ProgramDetails({
       </div>
 
       {equipmentSelector && (
-        <div className="mt-2 mb-6 p-4 border border-base-300 rounded-md">
+        <div className="mt-2 mb-4 sm:mb-6 p-3 sm:p-4 border border-base-300 rounded-md">
           {equipmentSelector}
         </div>
       )}
 
       <div className="flex flex-col md:flex-row gap-4 md:gap-6 mb-6">
         {/* Focus Area */}
-        <div className="w-full md:w-1/2">
+        <div className="w-full sm:w-1/2">
           <label className="w-full">
             <span className="text-sm font-medium">Focus Area</span>
             <details className="dropdown w-full" open={openDropdowns.focusArea}>
@@ -203,7 +203,7 @@ export default function ProgramDetails({
           </label>
         </div>
         {/* Workout Duration */}
-        <div className="w-full md:w-1/2">
+        <div className="w-full sm:w-1/2">
           <label className="w-full">
             <span className="text-sm font-medium">
               Workout Duration (minutes)
@@ -237,7 +237,7 @@ export default function ProgramDetails({
         </div>
       </div>
 
-      <div className="mb-6 w-full">
+      <div className="mb-4 sm:mb-6 w-full">
         <label className="w-full">
           <span className="text-sm font-medium flex items-center">
             Workout Types to Include

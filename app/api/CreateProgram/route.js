@@ -90,7 +90,7 @@ export async function POST(req) {
         periodization: {
           type: program_type || 'linear',
         },
-        // Save gym and equipment details
+        // Save gym and equipment details in JSON column
         gym_details: {
           gym_type: gym_type || null,
           equipment: equipment || [],

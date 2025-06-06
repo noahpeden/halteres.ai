@@ -34,35 +34,44 @@ const ProgramForm = ({
       const updateValue = type === 'checkbox' ? checked : value;
 
       if (name === 'gymType') {
-        // Get the preset for the new gym type
-        const preset = gymEquipmentPresets[value] || [];
-        // Map preset IDs to equipment labels
-        const equipmentNames = preset
-          .map((id) => {
-            const equipment = equipmentList.find((item) => item.value === id);
-            return equipment ? equipment.label : null;
-          })
-          .filter(Boolean);
-        // Update gymType, equipment, and gymDetails.equipment
-        dispatch({
-          type: 'SET_FIELD_VALUE',
-          payload: { field: 'gymType', value },
-        });
-        dispatch({
-          type: 'SET_FIELD_VALUE',
-          payload: { field: 'equipment', value: preset },
-        });
-        dispatch({
-          type: 'SET_FIELD_VALUE',
-          payload: {
-            field: 'gymDetails',
-            value: {
-              ...formData.gymDetails,
-              gym_type: value,
-              equipment: equipmentNames,
+        // Only reset equipment if the gym type actually changed
+        if (value !== formData.gymType) {
+          // Get the preset for the new gym type
+          const preset = gymEquipmentPresets[value] || [];
+          // Map preset IDs to equipment labels
+          const equipmentNames = preset
+            .map((id) => {
+              const equipment = equipmentList.find((item) => item.value === id);
+              return equipment ? equipment.label : null;
+            })
+            .filter(Boolean);
+          // Update gymType, equipment, and gymDetails.equipment
+          dispatch({
+            type: 'SET_FIELD_VALUE',
+            payload: { field: 'gymType', value },
+          });
+          dispatch({
+            type: 'SET_FIELD_VALUE',
+            payload: { field: 'equipment', value: preset },
+          });
+          dispatch({
+            type: 'SET_FIELD_VALUE',
+            payload: {
+              field: 'gymDetails',
+              value: {
+                ...formData.gymDetails,
+                gym_type: value,
+                equipment: equipmentNames,
+              },
             },
-          },
-        });
+          });
+        } else {
+          // Just update the gym type without resetting equipment
+          dispatch({
+            type: 'SET_FIELD_VALUE',
+            payload: { field: 'gymType', value },
+          });
+        }
         // Trigger auto-save after gym type change
         if (triggerAutoSave) triggerAutoSave();
         return;
@@ -76,7 +85,7 @@ const ProgramForm = ({
       // Don't trigger auto-save on every keystroke for text fields
       // Auto-save will be triggered on blur instead
     },
-    [dispatch, formData.gymDetails, triggerAutoSave]
+    [dispatch, formData.gymDetails, formData.gymType, triggerAutoSave]
   );
 
   // --- Eligibility Logic ---

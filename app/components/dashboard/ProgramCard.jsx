@@ -29,22 +29,22 @@ export default function ProgramCard({ program, entityDisplayName, onDelete }) {
   });
 
   return (
-    <div className="bg-white border border-slate-200 rounded-lg p-4 hover:shadow-md hover:border-blue-300 transition-all duration-200 group">
+    <div className="bg-white border border-slate-200 rounded-lg p-3 sm:p-4 hover:shadow-md hover:border-blue-300 transition-all duration-200 group">
       <div className="flex items-center justify-between">
         {/* Left side - Program info */}
-        <div className="flex-1 min-w-0 mr-4">
+        <div className="flex-1 min-w-0 mr-2 sm:mr-4">
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-base font-semibold text-slate-900 group-hover:text-blue-600 transition-colors duration-200 truncate">
+            <h3 className="text-sm sm:text-base font-semibold text-slate-900 group-hover:text-blue-600 transition-colors duration-200 truncate">
               {program.name}
             </h3>
-            <span className="ml-2 px-2 py-0.5 bg-slate-100 text-slate-600 rounded-full text-xs font-medium flex-shrink-0">
+            <span className="ml-1 sm:ml-2 px-1.5 sm:px-2 py-0.5 bg-slate-100 text-slate-600 rounded-full text-xs font-medium flex-shrink-0">
               {entityType}
             </span>
           </div>
 
-          <div className="flex items-center justify-between text-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between text-xs sm:text-sm gap-1 sm:gap-0">
             {/* Entity info */}
-            <div className="flex items-center text-slate-600 min-w-0">
+            <div className="flex items-center text-slate-600 min-w-0 order-1">
               {entityType === 'CLIENT' ? (
                 <User className="w-3.5 h-3.5 mr-1.5 text-slate-400 flex-shrink-0" />
               ) : (
@@ -54,7 +54,7 @@ export default function ProgramCard({ program, entityDisplayName, onDelete }) {
             </div>
 
             {/* Creation date */}
-            <div className="flex items-center text-slate-500 ml-4 flex-shrink-0">
+            <div className="flex items-center text-slate-500 sm:ml-4 flex-shrink-0 order-2">
               <Calendar className="w-3.5 h-3.5 mr-1.5" />
               <span className="text-xs">{createdDate}</span>
             </div>
@@ -69,10 +69,10 @@ export default function ProgramCard({ program, entityDisplayName, onDelete }) {
         </div>
 
         {/* Right side - Action buttons */}
-        <div className="flex items-center space-x-2 flex-shrink-0">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-1 sm:gap-2 flex-shrink-0">
           <Link
             href={`/program/${program.id}/writer`}
-            className="inline-flex items-center px-3 py-1.5 bg-blue-600 text-white rounded-md text-xs font-medium hover:bg-blue-700 transition-colors duration-200 group"
+            className="inline-flex items-center justify-center px-2 sm:px-3 py-1 sm:py-1.5 bg-blue-600 text-white rounded-md text-xs font-medium hover:bg-blue-700 transition-colors duration-200 group"
           >
             <span>Open</span>
             <ExternalLink className="w-3 h-3 ml-1.5 group-hover:translate-x-0.5 transition-transform duration-200" />
@@ -80,7 +80,7 @@ export default function ProgramCard({ program, entityDisplayName, onDelete }) {
 
           <button
             onClick={handleShareProgram}
-            className="inline-flex items-center p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors duration-200 group"
+            className="inline-flex items-center justify-center p-1 sm:p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors duration-200 group"
             title="Share program"
           >
             <Share2 className="w-3.5 h-3.5 group-hover:scale-110 transition-transform duration-200" />
@@ -88,7 +88,7 @@ export default function ProgramCard({ program, entityDisplayName, onDelete }) {
 
           <button
             onClick={() => onDelete(program.id)}
-            className="inline-flex items-center p-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors duration-200 group"
+            className="inline-flex items-center justify-center p-1 sm:p-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors duration-200 group"
             title="Delete program"
           >
             <Trash2 className="w-3.5 h-3.5 group-hover:scale-110 transition-transform duration-200" />

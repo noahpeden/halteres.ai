@@ -14,6 +14,8 @@ import {
 export default function ProgramLayout({ children, params }) {
   const { programId } = use(params);
   const pathname = usePathname();
+  const [hoveredTooltip, setHoveredTooltip] = useState(null);
+  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
 
   const isPublicWorkoutPage =
     pathname.includes('/workouts/') && pathname.split('/').length === 5;
@@ -27,6 +29,19 @@ export default function ProgramLayout({ children, params }) {
     const supabase = createClientComponentClient();
     await supabase.auth.signOut();
     window.location.href = '/';
+  };
+
+  const handleMouseEnter = (event, label) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    setTooltipPosition({
+      x: rect.right + 12,
+      y: rect.top + rect.height / 2,
+    });
+    setHoveredTooltip(label);
+  };
+
+  const handleMouseLeave = () => {
+    setHoveredTooltip(null);
   };
 
   const sidebarLinks = [
@@ -91,14 +106,10 @@ export default function ProgramLayout({ children, params }) {
                     }
                   `}
                   title={link.label}
+                  onMouseEnter={(e) => handleMouseEnter(e, link.label)}
+                  onMouseLeave={handleMouseLeave}
                 >
                   <link.icon className="w-7 h-7" />
-
-                  {/* Tooltip */}
-                  <div className="absolute left-full ml-3 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap z-50">
-                    {link.label}
-                    <div className="absolute top-1/2 left-0 transform -translate-y-1/2 -translate-x-1 w-2 h-2 bg-gray-900 rotate-45"></div>
-                  </div>
                 </Link>
               );
             })}
@@ -110,14 +121,10 @@ export default function ProgramLayout({ children, params }) {
               onClick={handleLogout}
               className="group relative flex items-center justify-center w-16 h-16 rounded-xl bg-gray-50 text-gray-600 hover:bg-red-500 hover:text-white transition-all duration-200"
               title="Log out"
+              onMouseEnter={(e) => handleMouseEnter(e, 'Log out')}
+              onMouseLeave={handleMouseLeave}
             >
               <LogOut className="w-7 h-7" />
-
-              {/* Tooltip */}
-              <div className="absolute left-full ml-3 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap z-50">
-                Log out
-                <div className="absolute top-1/2 left-0 transform -translate-y-1/2 -translate-x-1 w-2 h-2 bg-gray-900 rotate-45"></div>
-              </div>
             </button>
           </div>
         </div>
@@ -163,6 +170,21 @@ export default function ProgramLayout({ children, params }) {
           </nav>
         )}
       </div>
+
+      {/* Global Tooltip */}
+      {hoveredTooltip && (
+        <div
+          className="fixed bg-gray-900 text-white text-sm rounded-lg px-3 py-2 whitespace-nowrap pointer-events-none z-[99999] transition-opacity duration-200"
+          style={{
+            left: `${tooltipPosition.x}px`,
+            top: `${tooltipPosition.y}px`,
+            transform: 'translateY(-50%)',
+          }}
+        >
+          {hoveredTooltip}
+          <div className="absolute top-1/2 left-0 transform -translate-y-1/2 -translate-x-1 w-2 h-2 bg-gray-900 rotate-45"></div>
+        </div>
+      )}
     </div>
   );
 }

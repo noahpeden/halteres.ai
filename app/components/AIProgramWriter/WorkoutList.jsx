@@ -320,7 +320,7 @@ export default function WorkoutList({
                       <summary className="btn btn-sm btn-ghost btn-square">
                         <MoreVertical className="h-5 w-5" />
                       </summary>
-                      <ul className="menu dropdown-content bg-base-100 rounded-box z-1 w-40 p-2 shadow-sm">
+                      <ul className="menu dropdown-content bg-base-100 rounded-box z-10 w-40 p-2 shadow-sm">
                         <li>
                           <button
                             className="flex items-center gap-2 w-full text-neutral"
@@ -386,7 +386,7 @@ export default function WorkoutList({
                 </div>
                 <div className="flex justify-end items-center mt-auto">
                   <button
-                    className="btn sm:btn-sm text-white btn-primary"
+                    className="btn btn-sm text-white btn-primary w-full sm:w-auto"
                     onClick={(e) => {
                       e.stopPropagation();
                       onViewDetails(workout);

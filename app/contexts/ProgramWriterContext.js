@@ -1,5 +1,6 @@
 import { createContext, useReducer, useContext } from 'react';
 import { gymEquipmentPresets } from '@/components/utils'; // Assuming utils is in components
+import equipmentList from '@/utils/equipmentList';
 
 const ProgramWriterContext = createContext();
 
@@ -99,6 +100,26 @@ function programWriterReducer(state, action) {
       if (cleanedFormData.daysOfWeek) {
         cleanedFormData.daysOfWeek = cleanDaysOfWeek(cleanedFormData.daysOfWeek);
       }
+      
+      // Check if all equipment is selected when loading equipment data
+      let allEquipmentSelected = state.allEquipmentSelected;
+      let showEquipment = state.showEquipment;
+      if (cleanedFormData.equipment && Array.isArray(cleanedFormData.equipment)) {
+        // Check if the equipment array has all possible equipment IDs
+        const allEquipmentIds = equipmentList.map(item => item.value);
+        allEquipmentSelected = cleanedFormData.equipment.length === allEquipmentIds.length &&
+          allEquipmentIds.every(id => cleanedFormData.equipment.includes(id));
+        
+        // If equipment is different from default (Crossfit Box preset), show the equipment selector
+        const defaultEquipment = gymEquipmentPresets['Crossfit Box'] || [];
+        const hasCustomEquipment = cleanedFormData.equipment.length !== defaultEquipment.length ||
+          !cleanedFormData.equipment.every(id => defaultEquipment.includes(id));
+        
+        if (hasCustomEquipment) {
+          showEquipment = true;
+        }
+      }
+      
       return {
         ...state,
         programId: action.payload.programId,
@@ -116,6 +137,8 @@ function programWriterReducer(state, action) {
           action.payload.initialFormData || state.initialFormData,
         newStartDate: state.newStartDate || initialNewStartDate, // Initialize newStartDate too
         isLoading: false, // Reset loading after initial fetch
+        allEquipmentSelected: allEquipmentSelected,
+        showEquipment: showEquipment,
       };
     case 'SET_INITIAL_FORM_DATA_CLONE':
       return {
@@ -127,7 +150,28 @@ function programWriterReducer(state, action) {
       if (updatedData.daysOfWeek) {
         updatedData.daysOfWeek = cleanDaysOfWeek(updatedData.daysOfWeek);
       }
-      return { ...state, formData: { ...state.formData, ...updatedData } };
+      
+      // Check if equipment is being updated and set allEquipmentSelected accordingly
+      let newAllEquipmentSelected = state.allEquipmentSelected;
+      let newShowEquipment = state.showEquipment;
+      
+      if (updatedData.equipment && Array.isArray(updatedData.equipment)) {
+        const allEquipmentIds = equipmentList.map(item => item.value);
+        newAllEquipmentSelected = updatedData.equipment.length === allEquipmentIds.length &&
+          allEquipmentIds.every(id => updatedData.equipment.includes(id));
+          
+        // Show equipment selector if equipment exists
+        if (updatedData.equipment.length > 0) {
+          newShowEquipment = true;
+        }
+      }
+      
+      return { 
+        ...state, 
+        formData: { ...state.formData, ...updatedData },
+        allEquipmentSelected: newAllEquipmentSelected,
+        showEquipment: newShowEquipment
+      };
     case 'SET_FIELD_VALUE':
       const fieldValue = action.payload.field === 'daysOfWeek' 
         ? cleanDaysOfWeek(action.payload.value)
@@ -212,6 +256,8 @@ function programWriterReducer(state, action) {
       return { ...state, showToast: false };
     case 'TOGGLE_EQUIPMENT':
       return { ...state, showEquipment: !state.showEquipment };
+    case 'SET_SHOW_EQUIPMENT':
+      return { ...state, showEquipment: action.payload };
     case 'SET_ALL_EQUIPMENT_SELECTED':
       return { ...state, allEquipmentSelected: action.payload };
     case 'SET_HAS_CUSTOM_WORKOUT_FORMAT':

@@ -135,30 +135,30 @@ export default function Dashboard() {
       {/* Modern Header */}
       <div className="bg-white border-b border-slate-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center py-6 gap-4">
             <div>
-              <h1 className="text-3xl font-bold text-slate-900">
+              <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">
                 Coach Dashboard
               </h1>
-              <p className="text-slate-600 mt-1">
+              <p className="text-slate-600 mt-1 text-sm sm:text-base">
                 Manage your programs and track client progress
               </p>
             </div>
 
             {/* Action Buttons */}
-            <div className="flex items-center space-x-3">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 w-full sm:w-auto">
               <button
                 onClick={() =>
                   (window.location.href = '/dashboard/manage/entities')
                 }
-                className="inline-flex items-center px-4 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 transition-colors duration-200"
+                className="inline-flex items-center justify-center px-4 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 transition-colors duration-200"
               >
                 <Users className="w-4 h-4 mr-2" />
                 Manage Clients
               </button>
               <button
                 onClick={handleCreateProgram}
-                className="inline-flex items-center px-6 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors duration-200 shadow-sm"
+                className="inline-flex items-center justify-center px-6 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors duration-200 shadow-sm"
               >
                 <Plus className="w-4 h-4 mr-2" />
                 Create Program
@@ -170,83 +170,83 @@ export default function Dashboard() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Enhanced Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-slate-600">
                   Total Programs
                 </p>
-                <p className="text-3xl font-bold text-slate-900 mt-1">
+                <p className="text-2xl sm:text-3xl font-bold text-slate-900 mt-1">
                   {stats.totalPrograms}
                 </p>
               </div>
-              <div className="p-3 bg-blue-100 rounded-lg">
-                <Dumbbell className="w-6 h-6 text-blue-600" />
+              <div className="p-2 sm:p-3 bg-blue-100 rounded-lg">
+                <Dumbbell className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-slate-600">
                   Today's Workouts
                 </p>
-                <p className="text-3xl font-bold text-slate-900 mt-1">
+                <p className="text-2xl sm:text-3xl font-bold text-slate-900 mt-1">
                   {stats.activeWorkouts}
                 </p>
               </div>
-              <div className="p-3 bg-green-100 rounded-lg">
-                <Calendar className="w-6 h-6 text-green-600" />
+              <div className="p-2 sm:p-3 bg-green-100 rounded-lg">
+                <Calendar className="w-5 h-5 sm:w-6 sm:h-6 text-green-600" />
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-slate-600">This Week</p>
-                <p className="text-3xl font-bold text-slate-900 mt-1">
+                <p className="text-2xl sm:text-3xl font-bold text-slate-900 mt-1">
                   {stats.upcomingWorkouts}
                 </p>
               </div>
-              <div className="p-3 bg-purple-100 rounded-lg">
-                <TrendingUp className="w-6 h-6 text-purple-600" />
+              <div className="p-2 sm:p-3 bg-purple-100 rounded-lg">
+                <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 text-purple-600" />
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-slate-600">
                   Active Clients
                 </p>
-                <p className="text-3xl font-bold text-slate-900 mt-1">
+                <p className="text-2xl sm:text-3xl font-bold text-slate-900 mt-1">
                   {entities.filter((e) => e.type === 'CLIENT').length}
                 </p>
               </div>
-              <div className="p-3 bg-orange-100 rounded-lg">
-                <Users className="w-6 h-6 text-orange-600" />
+              <div className="p-2 sm:p-3 bg-orange-100 rounded-lg">
+                <Users className="w-5 h-5 sm:w-6 sm:h-6 text-orange-600" />
               </div>
             </div>
           </div>
         </div>
 
         {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
           {/* Programs Section - Takes up 2/3 of the space */}
           <div className="lg:col-span-2">
             <div className="bg-white rounded-xl shadow-sm border border-slate-200">
-              <div className="p-6 border-b border-slate-200">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-semibold text-slate-900">
+              <div className="p-4 sm:p-6 border-b border-slate-200">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-3">
+                  <h2 className="text-lg sm:text-xl font-semibold text-slate-900">
                     Your Programs
                   </h2>
                   <button
                     onClick={handleCreateProgram}
-                    className="inline-flex items-center px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-100 transition-colors duration-200"
+                    className="inline-flex items-center px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-100 transition-colors duration-200 w-full sm:w-auto justify-center"
                   >
                     <Plus className="w-4 h-4 mr-1" />
                     New Program
@@ -296,7 +296,7 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              <div className="p-6">
+              <div className="p-4 sm:p-6">
                 <ProgramsList
                   programs={programs}
                   entities={entities}
@@ -317,14 +317,14 @@ export default function Dashboard() {
         </div>
 
         {/* Quick Actions Section */}
-        <div className="mt-8 bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+        <div className="mt-8 bg-white rounded-xl shadow-sm border border-slate-200 p-4 sm:p-6">
           <h3 className="text-lg font-semibold text-slate-900 mb-4">
             Quick Actions
           </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <button
               onClick={handleCreateProgram}
-              className="flex items-center p-4 border border-slate-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-colors duration-200 group"
+              className="flex items-center p-3 sm:p-4 border border-slate-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-colors duration-200 group"
             >
               <div className="p-2 bg-blue-100 rounded-lg group-hover:bg-blue-200 transition-colors duration-200">
                 <Plus className="w-5 h-5 text-blue-600" />
@@ -343,7 +343,7 @@ export default function Dashboard() {
               onClick={() =>
                 (window.location.href = '/dashboard/manage/entities')
               }
-              className="flex items-center p-4 border border-slate-200 rounded-lg hover:border-green-300 hover:bg-green-50 transition-colors duration-200 group"
+              className="flex items-center p-3 sm:p-4 border border-slate-200 rounded-lg hover:border-green-300 hover:bg-green-50 transition-colors duration-200 group"
             >
               <div className="p-2 bg-green-100 rounded-lg group-hover:bg-green-200 transition-colors duration-200">
                 <Users className="w-5 h-5 text-green-600" />
@@ -358,7 +358,7 @@ export default function Dashboard() {
 
             <button
               onClick={() => (window.location.href = '/dashboard')}
-              className="flex items-center p-4 border border-slate-200 rounded-lg hover:border-purple-300 hover:bg-purple-50 transition-colors duration-200 group relative opacity-50 cursor-not-allowed"
+              className="flex items-center p-3 sm:p-4 border border-slate-200 rounded-lg hover:border-purple-300 hover:bg-purple-50 transition-colors duration-200 group relative opacity-50 cursor-not-allowed"
               disabled
             >
               <div className="p-2 bg-purple-100 rounded-lg group-hover:bg-purple-200 transition-colors duration-200">
@@ -377,7 +377,7 @@ export default function Dashboard() {
 
             <button
               onClick={() => (window.location.href = '/dashboard')}
-              className="flex items-center p-4 border border-slate-200 rounded-lg hover:border-orange-300 hover:bg-orange-50 transition-colors duration-200 group relative opacity-50 cursor-not-allowed"
+              className="flex items-center p-3 sm:p-4 border border-slate-200 rounded-lg hover:border-orange-300 hover:bg-orange-50 transition-colors duration-200 group relative opacity-50 cursor-not-allowed"
               disabled
             >
               <div className="p-2 bg-orange-100 rounded-lg group-hover:bg-orange-200 transition-colors duration-200">

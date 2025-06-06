@@ -15,7 +15,14 @@ export default function EquipmentSelector({
         className="flex w-full justify-between items-center py-2 font-medium"
         onClick={onToggleVisibility}
       >
-        <span>Equipment Selection</span>
+        <span>
+          Equipment Selection
+          {!isVisible && equipment.length > 0 && (
+            <span className="text-sm text-base-content/70 ml-2">
+              ({equipment.length} items selected)
+            </span>
+          )}
+        </span>
         <span>{isVisible ? '−' : '+'}</span>
       </button>
 

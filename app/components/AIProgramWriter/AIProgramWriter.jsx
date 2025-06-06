@@ -771,6 +771,13 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
       };
 
       const mappedGymType = gymTypeMapping[data.gymType] || data.gymType || '';
+      
+      // Log the gym type and equipment being transferred
+      console.log('Wizard gym type mapping:', {
+        originalGymType: data.gymType,
+        mappedGymType: mappedGymType,
+        equipment: data.equipment,
+      });
 
       // Map wizard data to form data structure
       const formDataUpdates = {
@@ -801,6 +808,8 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
         previousWorkout: data.previousWorkout,
         gymType: data.gymType,
         mappedGymType: mappedGymType,
+        equipment: data.equipment,
+        equipmentCount: data.equipment ? data.equipment.length : 0,
         startDate: data.startDate,
         workoutFormats: data.workoutFormats,
         selectedWorkouts: data.selectedWorkouts,
@@ -811,6 +820,19 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
         type: 'UPDATE_FORM_DATA',
         payload: formDataUpdates,
       });
+      
+      // If equipment was selected in the wizard, show the equipment selector
+      if (data.equipment && data.equipment.length > 0) {
+        // Force show equipment selector
+        dispatch({ type: 'SET_SHOW_EQUIPMENT', payload: true });
+        
+        // Check if all equipment is selected
+        const allEquipmentIds = equipmentList.map(item => item.value);
+        const isAllEquipmentSelected = data.equipment.length === allEquipmentIds.length &&
+          allEquipmentIds.every(id => data.equipment.includes(id));
+        
+        dispatch({ type: 'SET_ALL_EQUIPMENT_SELECTED', payload: isAllEquipmentSelected });
+      }
 
       // Transfer selected workouts from wizard to reference workouts
       if (
@@ -1522,7 +1544,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
   // --- Render ---
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-4">
+    <div className="bg-white rounded-lg shadow-md p-3 sm:p-4">
       {showToast && (
         <Toast
           message={toastMessage}
@@ -1532,7 +1554,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
       )}
 
       {programId && (
-        <div className="flex justify-end items-center mt-6 mb-6">
+        <div className="flex flex-col sm:flex-row justify-end items-stretch sm:items-center mt-4 mb-4 sm:mt-6 sm:mb-6 gap-2">
           <div
             className="tooltip tooltip-top tooltip-info mr-2"
             data-tip="Your changes are automatically saved, but you can use this to manually save."
@@ -1540,7 +1562,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
             <InfoIcon className="w-4 h-4 text-primary bg-white rounded-full" />
           </div>
           <button
-            className="btn btn-sm btn-primary text-white"
+            className="btn btn-sm btn-primary text-white w-full sm:w-auto"
             onClick={handleSaveProgram}
             disabled={isLoading}
           >
@@ -1555,7 +1577,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
           </button>
         </div>
       )}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="space-y-4 lg:space-y-0 lg:grid lg:grid-cols-1 xl:grid-cols-3 lg:gap-6">
         <ProgramForm
           dispatch={dispatch}
           handleWorkoutFormatChange={handleWorkoutFormatChange}
@@ -1616,12 +1638,12 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
       />
 
       {suggestions.length > 0 && (
-        <div className="flex justify-between items-center mt-6">
+        <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center mt-4 sm:mt-6 gap-3">
           <div className="flex-1" />
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2">
             <button
               onClick={handleEnhanceProgram}
-              className="btn btn-outline btn-primary"
+              className="btn btn-outline btn-primary w-full sm:w-auto"
               disabled={isEnhancingProgram}
             >
               {isEnhancingProgram ? (
@@ -1641,7 +1663,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
       )}
 
       {suggestions.length > 0 && (
-        <div ref={generationAreaRef} className="scroll-mt-20">
+        <div ref={generationAreaRef} className="scroll-mt-20 mt-4 sm:mt-6">
           <WorkoutList
             workouts={suggestions.filter((w) => !w.is_reference)}
             daysPerWeek={formData.daysPerWeek}
@@ -1736,8 +1758,8 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
 
       {/* Enhance Program Input Dialog */}
       {showEnhanceProgramInput && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-2xl border border-gray-200 p-6 w-full max-w-lg mx-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl border border-gray-200 p-4 sm:p-6 w-full max-w-lg">
             <div className="mb-4">
               <h3 className="text-xl font-semibold text-gray-900 mb-2">
                 Enhance Entire Program
@@ -1785,8 +1807,8 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
 
       {/* Save Enhanced Program Prompt */}
       {showProgramSavePrompt && pendingProgramEnhancement && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-2xl border border-gray-200 p-6 w-full max-w-2xl mx-4 max-h-[80vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl border border-gray-200 p-4 sm:p-6 w-full max-w-2xl max-h-[80vh] overflow-y-auto">
             <div className="mb-4">
               <h3 className="text-xl font-semibold text-gray-900 mb-2">
                 ✨ Enhanced Program Ready!
