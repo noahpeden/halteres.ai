@@ -495,7 +495,7 @@ IMPORTANT: Each workout MUST be assigned to one of the above dates. These dates 
         workouts = parsedContent.workouts;
         programTitle = parsedContent.title || `Training Program for ${goal}`;
         programDescription =
-          parsedContent.description || `${numberOfWeeks}-week program`;
+          parsedContent.description || `${numberOfWeeks}-week program, ${daysPerWeek} days per week`;
       } else if (Array.isArray(parsedContent)) {
         // Legacy format - just an array
         logWithTimestamp('Found legacy array format');

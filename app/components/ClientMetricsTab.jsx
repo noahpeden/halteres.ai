@@ -406,6 +406,16 @@ export default function ClientMetricsTab({
           </h2>
         </div>
 
+        {viewMode === 'sidebar' && (
+          <button
+            onClick={onToggleCollapse}
+            className="btn btn-ghost btn-sm btn-circle hidden lg:flex"
+            aria-label="Collapse sidebar"
+          >
+            <ChevronRight className={`h-5 w-5 transition-transform ${!isCollapsed ? 'rotate-180' : ''}`} />
+          </button>
+        )}
+
         {!(isCollapsed && viewMode === 'sidebar') && (
           <div className="flex space-x-2 items-center flex-shrink-0">
             <div className="w-full">

@@ -1,19 +1,19 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useRouter, useParams, useSearchParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import AIProgramWriter from '@/components/AIProgramWriter/AIProgramWriter';
 import ClientMetricsTab from '@/components/ClientMetricsTab';
-import { Edit2, Check, X, ChevronLeft, ChevronRight, Share2 } from 'lucide-react';
+import { Edit2, Check, X, ChevronRight, Share2 } from 'lucide-react';
 import { ProgramWriterProvider } from '@/contexts/ProgramWriterContext';
 
 export default function ProgramWriterPage() {
   const { programId } = useParams();
   const { supabase } = useAuth();
-  const router = useRouter();
+
   const searchParams = useSearchParams();
   const wizardComplete = searchParams.get('wizardComplete') === 'true';
-  
+
   const [isEditingName, setIsEditingName] = useState(false);
   const [programName, setProgramName] = useState('AI Program Writer');
   const [editedName, setEditedName] = useState('');
@@ -22,13 +22,21 @@ export default function ProgramWriterPage() {
   );
   const [clientName, setClientName] = useState('');
   const [clientType, setClientType] = useState('');
-
-  // State for sidebar collapse
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
-  // Handler to toggle sidebar collapse
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 1024);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   const toggleSidebarCollapse = () => {
-    console.log('toggleSidebarCollapse', isSidebarCollapsed);
     setIsSidebarCollapsed(!isSidebarCollapsed);
   };
 
@@ -182,11 +190,11 @@ export default function ProgramWriterPage() {
           <p className="text-practical-gray">{programDescription}</p>
         </div>
 
-        {/* Open Sidebar Button - Visible only when collapsed */}
-        {isSidebarCollapsed && (
+        {/* Open Sidebar Button - Visible only when collapsed on desktop */}
+        {isSidebarCollapsed && !isMobile && (
           <button
             onClick={toggleSidebarCollapse}
-            className="fixed top-1/2 right-0 transform -translate-y-1/2 z-20 btn btn-primary btn-circle shadow-lg lg:flex hidden"
+            className="fixed top-1/2 right-0 transform -translate-y-1/2 z-20 btn btn-primary btn-circle shadow-lg flex"
             aria-label="Expand Sidebar"
           >
             <ChevronRight size={20} />
@@ -194,33 +202,30 @@ export default function ProgramWriterPage() {
         )}
 
         {/* Main Content Area with Sidebar Layout */}
-        <div className="flex flex-col lg:flex-row gap-6 w-full max-w-full overflow-hidden">
-          {/* AI Program Writer (Main Content) - Dynamically sized */}
-          <div
-            className={`flex-grow w-full ${
-              isSidebarCollapsed ? 'lg:w-full' : 'lg:w-2/3'
-            } transition-all duration-300 ease-in-out`}
-          >
+        <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 w-full max-w-full overflow-hidden">
+          {/* AI Program Writer (Main Content) */}
+          <div className={`flex-grow w-full ${isSidebarCollapsed ? 'lg:w-full' : 'lg:w-2/3'} transition-all duration-300 ease-in-out`}>
             <div className="bg-white rounded-lg shadow h-full w-full">
-              <AIProgramWriter programId={programId} wizardComplete={wizardComplete} />
+              <AIProgramWriter
+                programId={programId}
+                wizardComplete={wizardComplete}
+              />
             </div>
           </div>
 
-          {/* Client Metrics Sidebar - Dynamically sized/hidden */}
+          {/* Client Metrics - Sidebar on desktop, below content on mobile */}
           <div
-            className={`flex-shrink-0 transition-all duration-300 ease-in-out 
-                        hidden lg:block /* Hide on small screens, block on large */ 
-                        ${
-                          isSidebarCollapsed
-                            ? 'lg:w-0 opacity-0 pointer-events-none'
-                            : 'lg:w-1/3 opacity-100 pointer-events-auto'
-                        }`}
+            className={`
+              w-full lg:w-1/3
+              transition-all duration-300 ease-in-out
+              ${isSidebarCollapsed ? 'lg:w-0 lg:opacity-0 lg:pointer-events-none' : 'lg:opacity-100 lg:pointer-events-auto'}
+            `}
           >
             <ClientMetricsTab
               programId={programId}
-              viewMode="sidebar"
+              viewMode={isMobile ? "fullPage" : "sidebar"}
               isCollapsed={isSidebarCollapsed}
-              onToggleCollapse={toggleSidebarCollapse} // Pass the handler down
+              onToggleCollapse={toggleSidebarCollapse}
             />
           </div>
         </div>

@@ -519,7 +519,7 @@ async function generateLargeProgram(
     const allWorkouts = [];
     let programOverview = '';
     let programTitle = `Training Program for ${goal}`;
-    let programDescription = `A comprehensive ${numberOfWeeks}-week ${difficulty} training program focused on ${
+    let programDescription = `This ${numberOfWeeks}-week, ${daysPerWeek}-day-per-week ${difficulty} training program focuses on ${
       focusArea || goal
     }`;
     
@@ -629,8 +629,35 @@ async function generateLargeProgram(
           overviewResponse.choices[0].message.content
         );
         if (overviewContent.title) programTitle = overviewContent.title;
-        if (overviewContent.description)
+        if (overviewContent.description) {
           programDescription = overviewContent.description;
+          
+          // Validate and correct the description if it doesn't contain the correct values
+          const expectedWeekText = `${numberOfWeeks}-week`;
+          const expectedDayText = `${daysPerWeek}-day`;
+          
+          if (!programDescription.includes(expectedWeekText) || !programDescription.includes(expectedDayText)) {
+            logWithTimestamp('Description validation failed, correcting values', {
+              original: programDescription,
+              expectedWeeks: numberOfWeeks,
+              expectedDays: daysPerWeek
+            });
+            
+            // Replace any incorrect week/day values with the correct ones
+            programDescription = programDescription
+              .replace(/\d+-week/g, expectedWeekText)
+              .replace(/\d+-day-per-week/g, `${daysPerWeek}-day-per-week`)
+              .replace(/\d+ weeks?/g, `${numberOfWeeks} weeks`)
+              .replace(/\d+ days? per week/g, `${daysPerWeek} days per week`);
+            
+            // If it still doesn't contain the correct format, prepend it
+            if (!programDescription.includes(expectedWeekText) || !programDescription.includes(expectedDayText)) {
+              programDescription = `This ${numberOfWeeks}-week, ${daysPerWeek}-day-per-week program ${programDescription.charAt(0).toLowerCase()}${programDescription.slice(1)}`;
+            }
+            
+            logWithTimestamp('Description corrected', { corrected: programDescription });
+          }
+        }
         if (overviewContent.overview)
           programOverview = overviewContent.overview;
         logWithTimestamp('Successfully generated program overview');
@@ -1092,15 +1119,20 @@ ${
     : ''
 }
 
+CRITICAL INSTRUCTIONS:
+- The description MUST state this is a "${numberOfWeeks}-week, ${daysPerWeek}-day-per-week program"
+- Do NOT use any other duration or frequency values
+- The description MUST accurately reflect these exact parameters: ${numberOfWeeks} weeks, ${daysPerWeek} days per week
+
 Please provide a JSON response with:
 1. A title for the program
-2. A brief description (2-3 sentences)
+2. A brief description (2-3 sentences) that MUST include "${numberOfWeeks}-week, ${daysPerWeek}-day-per-week program"
 3. An overview explaining the methodology and expected outcomes
 
 Response format:
 {
   "title": "Program title here",
-  "description": "Brief 2-3 sentence description",
+  "description": "This ${numberOfWeeks}-week, ${daysPerWeek}-day-per-week program... [continue with 2-3 sentences total]",
   "overview": "Detailed overview of methodology and expected outcomes"
 }`;
 

@@ -101,12 +101,13 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
   const isAutoUpdating = useRef(false);
   const generationAreaRef = useRef(null);
   const hasScrolledToGeneration = useRef(false);
-  
+
   // Enhance Program state
   const [isEnhancingProgram, setIsEnhancingProgram] = useState(false);
   const [showEnhanceProgramInput, setShowEnhanceProgramInput] = useState(false);
   const [enhanceProgramText, setEnhanceProgramText] = useState('');
-  const [pendingProgramEnhancement, setPendingProgramEnhancement] = useState(null);
+  const [pendingProgramEnhancement, setPendingProgramEnhancement] =
+    useState(null);
   const [showProgramSavePrompt, setShowProgramSavePrompt] = useState(false);
   const isGeneratingRef = useRef(false);
   const [isReferenceWorkoutModalOpen, setReferenceWorkoutModalOpen] =
@@ -200,22 +201,29 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
         const element = generationAreaRef.current;
         const elementTop = element.offsetTop;
         const offset = 100; // Scroll a bit above the element for better visibility
-        
-        console.log('Smart scrolling: Attempting to scroll to generation area', {
-          elementTop,
-          offset,
-          finalPosition: elementTop - offset
-        });
+
+        console.log(
+          'Smart scrolling: Attempting to scroll to generation area',
+          {
+            elementTop,
+            offset,
+            finalPosition: elementTop - offset,
+          }
+        );
 
         window.scrollTo({
           top: elementTop - offset,
-          behavior: 'smooth'
+          behavior: 'smooth',
         });
 
         hasScrolledToGeneration.current = true;
-        console.log('Smart scrolling: Successfully scrolled to generation area');
+        console.log(
+          'Smart scrolling: Successfully scrolled to generation area'
+        );
       } else {
-        console.log('Smart scrolling: Generation area ref not found, will retry');
+        console.log(
+          'Smart scrolling: Generation area ref not found, will retry'
+        );
         // If element not found, try again in a bit
         setTimeout(() => {
           if (generationAreaRef.current && !hasScrolledToGeneration.current) {
@@ -224,7 +232,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
             const offset = 100;
             window.scrollTo({
               top: elementTop - offset,
-              behavior: 'smooth'
+              behavior: 'smooth',
             });
             hasScrolledToGeneration.current = true;
             console.log('Smart scrolling: Retry successful');
@@ -248,7 +256,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
       if (generationStage || (suggestions && suggestions.length > 0)) {
         console.log('Smart scrolling: Triggering scroll due to:', {
           generationStage,
-          suggestionsCount: suggestions?.length || 0
+          suggestionsCount: suggestions?.length || 0,
         });
         scrollToGeneration();
       }
@@ -257,7 +265,13 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
 
   // Additional effect to handle when workouts finish loading
   useEffect(() => {
-    if (wizardComplete && !hasScrolledToGeneration.current && suggestions && suggestions.length > 0 && !isLoading) {
+    if (
+      wizardComplete &&
+      !hasScrolledToGeneration.current &&
+      suggestions &&
+      suggestions.length > 0 &&
+      !isLoading
+    ) {
       console.log('Smart scrolling: Triggering scroll after workouts loaded');
       // Delay a bit more to ensure the WorkoutList is fully rendered
       setTimeout(() => {
@@ -368,7 +382,14 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
     } finally {
       isGeneratingRef.current = false;
     }
-  }, [programId, formData, dispatch, showToastMessage, refetchProfile, suggestions]);
+  }, [
+    programId,
+    formData,
+    dispatch,
+    showToastMessage,
+    refetchProfile,
+    suggestions,
+  ]);
 
   const handleSaveProgram = useCallback(() => {
     saveProgram({
@@ -603,7 +624,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
 
     try {
       const payload = {
-        workouts: suggestions.filter(w => !w.is_reference),
+        workouts: suggestions.filter((w) => !w.is_reference),
         instructions: enhanceProgramText,
         programName: formData.name,
         methodology: formData.trainingMethodology || 'General fitness',
@@ -645,30 +666,36 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
       dispatch({ type: 'SET_LOADING', payload: true });
 
       // Update all workouts in the database
-      const updatePromises = pendingProgramEnhancement.enhancedWorkouts.map(async (enhancedWorkout) => {
-        if (enhancedWorkout.id) {
-          const { error } = await supabase
-            .from('program_workouts')
-            .update({
-              title: enhancedWorkout.title,
-              body: enhancedWorkout.body,
-              updated_at: new Date().toISOString(),
-            })
-            .eq('id', enhancedWorkout.id);
+      const updatePromises = pendingProgramEnhancement.enhancedWorkouts.map(
+        async (enhancedWorkout) => {
+          if (enhancedWorkout.id) {
+            const { error } = await supabase
+              .from('program_workouts')
+              .update({
+                title: enhancedWorkout.title,
+                body: enhancedWorkout.body,
+                updated_at: new Date().toISOString(),
+              })
+              .eq('id', enhancedWorkout.id);
 
-          if (error) throw error;
+            if (error) throw error;
+          }
+          return enhancedWorkout;
         }
-        return enhancedWorkout;
-      });
+      );
 
       await Promise.all(updatePromises);
 
       // Update local state with enhanced workouts
       dispatch({
         type: 'SET_SUGGESTIONS',
-        payload: suggestions.map(workout => {
-          const enhanced = pendingProgramEnhancement.enhancedWorkouts.find(w => w.id === workout.id);
-          return enhanced ? { ...workout, title: enhanced.title, body: enhanced.body } : workout;
+        payload: suggestions.map((workout) => {
+          const enhanced = pendingProgramEnhancement.enhancedWorkouts.find(
+            (w) => w.id === workout.id
+          );
+          return enhanced
+            ? { ...workout, title: enhanced.title, body: enhanced.body }
+            : workout;
         }),
       });
 
@@ -677,11 +704,20 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
       setShowProgramSavePrompt(false);
     } catch (err) {
       console.error('Error saving enhanced program:', err);
-      showToastMessage(`Failed to save enhanced program: ${err.message}`, 'error');
+      showToastMessage(
+        `Failed to save enhanced program: ${err.message}`,
+        'error'
+      );
     } finally {
       dispatch({ type: 'SET_LOADING', payload: false });
     }
-  }, [pendingProgramEnhancement, suggestions, supabase, dispatch, showToastMessage]);
+  }, [
+    pendingProgramEnhancement,
+    suggestions,
+    supabase,
+    dispatch,
+    showToastMessage,
+  ]);
 
   const handleDiscardProgramEnhancement = useCallback(() => {
     setPendingProgramEnhancement(null);
@@ -693,45 +729,47 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
   // Inject wizard data if coming from wizard
   useEffect(() => {
     if (!wizardComplete) return;
-    
+
     const wizardData = sessionStorage.getItem('programWizardData');
     if (!wizardData) return;
 
     try {
       const data = JSON.parse(wizardData);
-      
+
       // Convert days of week from wizard format to form format
       const daysOfWeekMapping = {
-        'sunday': 'Sunday',
-        'monday': 'Monday', 
-        'tuesday': 'Tuesday',
-        'wednesday': 'Wednesday',
-        'thursday': 'Thursday',
-        'friday': 'Friday',
-        'saturday': 'Saturday'
+        sunday: 'Sunday',
+        monday: 'Monday',
+        tuesday: 'Tuesday',
+        wednesday: 'Wednesday',
+        thursday: 'Thursday',
+        friday: 'Friday',
+        saturday: 'Saturday',
       };
-      
-      const mappedDaysOfWeek = (data.daysOfWeek || []).map(day => daysOfWeekMapping[day]).filter(Boolean);
+
+      const mappedDaysOfWeek = (data.daysOfWeek || [])
+        .map((day) => daysOfWeekMapping[day])
+        .filter(Boolean);
 
       // Convert gym type from wizard snake_case to title case
       const gymTypeMapping = {
-        'crossfit_box': 'Crossfit Box',
-        'commercial_gym': 'Commercial Gym',
-        'home_gym': 'Home Gym',
-        'minimal_equipment': 'Minimal Equipment',
-        'outdoor_space': 'Outdoor Space',
-        'powerlifting_gym': 'Powerlifting Gym',
-        'olympic_weightlifting_gym': 'Olympic Weightlifting Gym',
-        'bodyweight_only': 'Bodyweight Only',
-        'studio_gym': 'Studio Gym',
-        'university_gym': 'University Gym',
-        'hotel_gym': 'Hotel Gym',
-        'apartment_gym': 'Apartment Gym',
-        'boxing_mma_gym': 'Boxing/MMA Gym',
-        'triathlon_training_facility': 'Triathlon Training Facility',
-        'multi_sport_complex': 'Multi-Sport Complex'
+        crossfit_box: 'Crossfit Box',
+        commercial_gym: 'Commercial Gym',
+        home_gym: 'Home Gym',
+        minimal_equipment: 'Minimal Equipment',
+        outdoor_space: 'Outdoor Space',
+        powerlifting_gym: 'Powerlifting Gym',
+        olympic_weightlifting_gym: 'Olympic Weightlifting Gym',
+        bodyweight_only: 'Bodyweight Only',
+        studio_gym: 'Studio Gym',
+        university_gym: 'University Gym',
+        hotel_gym: 'Hotel Gym',
+        apartment_gym: 'Apartment Gym',
+        boxing_mma_gym: 'Boxing/MMA Gym',
+        triathlon_training_facility: 'Triathlon Training Facility',
+        multi_sport_complex: 'Multi-Sport Complex',
       };
-      
+
       const mappedGymType = gymTypeMapping[data.gymType] || data.gymType || '';
 
       // Map wizard data to form data structure
@@ -765,29 +803,36 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
         mappedGymType: mappedGymType,
         startDate: data.startDate,
         workoutFormats: data.workoutFormats,
-        selectedWorkouts: data.selectedWorkouts
+        selectedWorkouts: data.selectedWorkouts,
       });
 
       // Update the form data in the context
-      dispatch({ 
-        type: 'UPDATE_FORM_DATA', 
-        payload: formDataUpdates 
+      dispatch({
+        type: 'UPDATE_FORM_DATA',
+        payload: formDataUpdates,
       });
 
       // Transfer selected workouts from wizard to reference workouts
-      if (data.selectedWorkouts && data.selectedWorkouts.length > 0 && programId) {
+      if (
+        data.selectedWorkouts &&
+        data.selectedWorkouts.length > 0 &&
+        programId
+      ) {
         try {
-          console.log('Transferring wizard selected workouts as reference workouts:', data.selectedWorkouts);
-          
+          console.log(
+            'Transferring wizard selected workouts as reference workouts:',
+            data.selectedWorkouts
+          );
+
           // Save selected workouts as reference workouts in the database
-          const workoutsToSave = data.selectedWorkouts.map(workout => ({
+          const workoutsToSave = data.selectedWorkouts.map((workout) => ({
             program_id: programId,
             entity_id: formData.entityId,
             title: workout.title,
             body: workout.body || workout.description || '',
             tags: {
               source: workout.source || 'wizard-selection',
-              wizard_transferred: true
+              wizard_transferred: true,
             },
             is_reference: true,
             created_at: new Date().toISOString(),
@@ -801,10 +846,18 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
             .then(({ error }) => {
               if (error) {
                 console.error('Error saving wizard reference workouts:', error);
-                showToastMessage('Failed to transfer reference workouts from wizard', 'warning');
+                showToastMessage(
+                  'Failed to transfer reference workouts from wizard',
+                  'warning'
+                );
               } else {
-                console.log('Successfully transferred reference workouts from wizard');
-                showToastMessage(`Transferred ${data.selectedWorkouts.length} reference workouts from wizard`, 'success');
+                console.log(
+                  'Successfully transferred reference workouts from wizard'
+                );
+                showToastMessage(
+                  `Transferred ${data.selectedWorkouts.length} reference workouts from wizard`,
+                  'success'
+                );
                 // Refresh reference workouts display
                 supabase
                   .from('program_workouts')
@@ -1252,7 +1305,11 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
 
   useEffect(() => {
     // Only calculate end date if we have valid inputs
-    if (formData.startDate && formData.numberOfWeeks && formData.daysOfWeek?.length > 0) {
+    if (
+      formData.startDate &&
+      formData.numberOfWeeks &&
+      formData.daysOfWeek?.length > 0
+    ) {
       // Additional validation for date format
       const testDate = new Date(formData.startDate);
       if (!isNaN(testDate.getTime()) && parseInt(formData.numberOfWeeks) > 0) {
@@ -1271,7 +1328,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
         console.warn('Invalid date or weeks data:', {
           startDate: formData.startDate,
           numberOfWeeks: formData.numberOfWeeks,
-          testDate: testDate.toString()
+          testDate: testDate.toString(),
         });
       }
     }
@@ -1362,7 +1419,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
     () => setIsEnhancedReferenceModalOpen(true),
     []
   );
-  
+
   const handleOpenLegacyReferenceWorkoutModal = useCallback(
     () => setReferenceWorkoutModalOpen(true),
     []
@@ -1371,7 +1428,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
     () => setReferenceWorkoutModalOpen(false),
     []
   );
-  
+
   const handleCloseEnhancedReferenceModal = useCallback(
     () => setIsEnhancedReferenceModalOpen(false),
     []
@@ -1585,15 +1642,6 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
 
       {suggestions.length > 0 && (
         <div ref={generationAreaRef} className="scroll-mt-20">
-          <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 mb-6">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
-              <h3 className="text-lg font-semibold text-primary">Your Generated Program</h3>
-            </div>
-            <p className="text-sm text-base-content/70">
-              {suggestions.length} workout{suggestions.length !== 1 ? 's' : ''} generated and ready for your program
-            </p>
-          </div>
           <WorkoutList
             workouts={suggestions.filter((w) => !w.is_reference)}
             daysPerWeek={formData.daysPerWeek}
@@ -1695,7 +1743,8 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
                 Enhance Entire Program
               </h3>
               <p className="text-sm text-gray-600 mb-4">
-                Describe how you'd like to improve or modify all workouts in this program
+                Describe how you'd like to improve or modify all workouts in
+                this program
               </p>
             </div>
             <textarea
@@ -1750,22 +1799,37 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
                   <div className="flex items-start gap-3">
                     <Sparkles className="w-5 h-5 mt-0.5 flex-shrink-0 text-primary" />
                     <div>
-                      <div className="font-semibold text-gray-900 mb-1">Enhancement Notes</div>
-                      <div className="text-gray-700">{pendingProgramEnhancement.notes}</div>
+                      <div className="font-semibold text-gray-900 mb-1">
+                        Enhancement Notes
+                      </div>
+                      <div className="text-gray-700">
+                        {pendingProgramEnhancement.notes}
+                      </div>
                     </div>
                   </div>
                 </div>
               )}
             </div>
             <div className="mb-6">
-              <h4 className="font-medium text-gray-900 mb-2">Enhanced Workouts Preview:</h4>
+              <h4 className="font-medium text-gray-900 mb-2">
+                Enhanced Workouts Preview:
+              </h4>
               <div className="space-y-2 max-h-64 overflow-y-auto">
-                {pendingProgramEnhancement.enhancedWorkouts.map((workout, index) => (
-                  <div key={workout.id || index} className="p-3 bg-gray-50 rounded-lg">
-                    <h5 className="font-medium text-gray-900">{workout.title}</h5>
-                    <p className="text-sm text-gray-600 line-clamp-2 mt-1">{workout.body}</p>
-                  </div>
-                ))}
+                {pendingProgramEnhancement.enhancedWorkouts.map(
+                  (workout, index) => (
+                    <div
+                      key={workout.id || index}
+                      className="p-3 bg-gray-50 rounded-lg"
+                    >
+                      <h5 className="font-medium text-gray-900">
+                        {workout.title}
+                      </h5>
+                      <p className="text-sm text-gray-600 line-clamp-2 mt-1">
+                        {workout.body}
+                      </p>
+                    </div>
+                  )
+                )}
               </div>
             </div>
             <div className="flex gap-3 justify-end">
