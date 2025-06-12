@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useRef, useCallback, memo, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useEquipment } from '@/contexts/EquipmentContext';
 import { useRouter } from 'next/navigation';
 import equipmentList from '@/utils/equipmentList';
 import { gymEquipmentPresets } from '../utils';
@@ -20,7 +21,6 @@ import {
 import {
   processWorkoutForDisplay,
   updateFormDataFromProgram,
-  handleEquipmentChange as handleEquipmentChangeUtil,
   handleDayOfWeekChangeUtil,
 } from './formHandlers';
 import { calculateEndDate } from './dateHandlers';
@@ -54,6 +54,13 @@ const ConfirmationModal = memo(ConfirmationModalComponent);
 
 export default function AIProgramWriter({ programId, wizardComplete }) {
   const router = useRouter();
+  const {
+    selectedEquipment: contextEquipment,
+    selectedGymType: contextGymType,
+    updateEquipment,
+    updateGymType,
+    setEquipmentChangeCallback,
+  } = useEquipment();
   const {
     supabase,
     subscriptionStatus,
@@ -115,6 +122,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
   const [isEnhancedReferenceModalOpen, setIsEnhancedReferenceModalOpen] =
     useState(false);
   const [dbReferenceWorkouts, setDbReferenceWorkouts] = useState([]);
+  const [highlightGenerateButton, setHighlightGenerateButton] = useState(false);
 
   // Auto-save functionality
   const autoSaveTimerRef = useRef(null);
@@ -176,6 +184,21 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
       performAutoSave();
     }, 500);
   }, [programId, performAutoSave, dispatch]);
+
+  // Set up equipment change callback to trigger auto-save
+  useEffect(() => {
+    const handleEquipmentChangeAutoSave = (newEquipment) => {
+      console.log('Equipment changed, triggering auto-save:', newEquipment);
+      triggerAutoSave();
+    };
+
+    setEquipmentChangeCallback(handleEquipmentChangeAutoSave);
+    
+    // Cleanup
+    return () => {
+      setEquipmentChangeCallback(null);
+    };
+  }, [setEquipmentChangeCallback, triggerAutoSave]);
 
   // --- Utility Functions ---
 
@@ -772,11 +795,24 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
 
       const mappedGymType = gymTypeMapping[data.gymType] || data.gymType || '';
       
+      // Convert workout formats from wizard kebab-case to AI writer format
+      const workoutFormatMapping = {
+        'for-time': 'for_time',
+        'giant-set': 'giant_set',
+        // Add other mappings as needed
+      };
+      
+      const mappedWorkoutFormats = (data.workoutFormats || []).map(format => 
+        workoutFormatMapping[format] || format
+      );
+      
       // Log the gym type and equipment being transferred
       console.log('Wizard gym type mapping:', {
         originalGymType: data.gymType,
         mappedGymType: mappedGymType,
         equipment: data.equipment,
+        originalWorkoutFormats: data.workoutFormats,
+        mappedWorkoutFormats: mappedWorkoutFormats,
       });
 
       // Map wizard data to form data structure
@@ -792,13 +828,15 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
         sessionDetails: {
           duration_minutes: data.workoutDuration || 60,
         },
-        workoutFormats: data.workoutFormats || [],
+        workoutFormats: mappedWorkoutFormats,
         // Add scheduling fields
-        numberOfWeeks: data.numberOfWeeks || 4,
+        numberOfWeeks: String(data.numberOfWeeks || 4), // Ensure it's a string for consistency
         startDate: data.startDate || '',
         daysOfWeek: mappedDaysOfWeek,
         // Add previous workout from wizard
         personalization: data.previousWorkout || '',
+        // Force show equipment if coming from wizard with equipment
+        showEquipment: data.equipment && data.equipment.length > 0,
       };
 
       console.log('Wizard data being injected:', {
@@ -812,27 +850,15 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
         equipmentCount: data.equipment ? data.equipment.length : 0,
         startDate: data.startDate,
         workoutFormats: data.workoutFormats,
+        mappedWorkoutFormats: mappedWorkoutFormats,
         selectedWorkouts: data.selectedWorkouts,
       });
 
-      // Update the form data in the context
+      // Update the form data in the context (this will also handle equipment visibility)
       dispatch({
         type: 'UPDATE_FORM_DATA',
         payload: formDataUpdates,
       });
-      
-      // If equipment was selected in the wizard, show the equipment selector
-      if (data.equipment && data.equipment.length > 0) {
-        // Force show equipment selector
-        dispatch({ type: 'SET_SHOW_EQUIPMENT', payload: true });
-        
-        // Check if all equipment is selected
-        const allEquipmentIds = equipmentList.map(item => item.value);
-        const isAllEquipmentSelected = data.equipment.length === allEquipmentIds.length &&
-          allEquipmentIds.every(id => data.equipment.includes(id));
-        
-        dispatch({ type: 'SET_ALL_EQUIPMENT_SELECTED', payload: isAllEquipmentSelected });
-      }
 
       // Transfer selected workouts from wizard to reference workouts
       if (
@@ -901,12 +927,30 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
       // Clear wizard data after injection
       sessionStorage.removeItem('programWizardData');
 
-      // Automatically trigger program generation after a delay
+      // Show a success message to guide user to generate button
+      showToastMessage(
+        'Program setup complete! Review your settings and click "Generate Program Workouts" when ready.',
+        'success'
+      );
+      
+      // Highlight the generate button for wizard users
+      setHighlightGenerateButton(true);
+      
+      // Scroll to the form area where the generate button is
       setTimeout(() => {
-        handleConfirmGenerate();
-        // Trigger smart scrolling when generation starts (for wizard users)
-        scrollToGeneration();
-      }, 1500);
+        const generateButton = document.querySelector('[data-generate-button]');
+        if (generateButton) {
+          generateButton.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          // Add a pulsing animation to draw attention
+          generateButton.classList.add('animate-pulse', 'ring-4', 'ring-primary', 'ring-offset-4');
+          
+          // Remove the highlight after a few seconds
+          setTimeout(() => {
+            generateButton.classList.remove('animate-pulse', 'ring-4', 'ring-primary', 'ring-offset-4');
+            setHighlightGenerateButton(false);
+          }, 5000);
+        }
+      }, 500);
     } catch (error) {
       console.error('Error injecting wizard data:', error);
     }
@@ -1221,9 +1265,11 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
 
   useEffect(() => {
     // Only apply preset if equipment is empty (prevents overwriting custom selections)
+    // AND if we're not coming from the wizard (which already has equipment set)
     if (
       formData.gymType &&
-      (!formData.equipment || formData.equipment.length === 0)
+      (!formData.equipment || formData.equipment.length === 0) &&
+      !wizardComplete // Don't override wizard equipment
     ) {
       const newEquipment = gymEquipmentPresets[formData.gymType] || [];
       dispatch({
@@ -1234,8 +1280,39 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
         equipmentList.length > 0 &&
         newEquipment.length === equipmentList.length;
       dispatch({ type: 'SET_ALL_EQUIPMENT_SELECTED', payload: allSelected });
+      
+      // Sync with EquipmentContext
+      updateGymType(formData.gymType);
+      updateEquipment(newEquipment);
     }
-  }, [formData.gymType, formData.equipment, dispatch]);
+  }, [formData.gymType, formData.equipment, dispatch, wizardComplete, updateGymType, updateEquipment]);
+
+  // One-way sync: form data to context (for wizard data initialization)
+  useEffect(() => {
+    if (formData.gymType && formData.gymType !== contextGymType) {
+      console.log('AIProgramWriter: Syncing gym type to context:', formData.gymType);
+      updateGymType(formData.gymType);
+    }
+  }, [formData.gymType, contextGymType, updateGymType]);
+
+  // One-way sync: equipment from context to form (when context changes via gym type)
+  useEffect(() => {
+    if (contextEquipment && contextEquipment.length > 0 && 
+        JSON.stringify(contextEquipment) !== JSON.stringify(formData.equipment)) {
+      console.log('AIProgramWriter: Syncing equipment from context to form:', contextEquipment);
+      dispatch({
+        type: 'SET_FIELD_VALUE',
+        payload: { field: 'equipment', value: contextEquipment },
+      });
+      const allSelected =
+        equipmentList.length > 0 &&
+        contextEquipment.length === equipmentList.length;
+      dispatch({ type: 'SET_ALL_EQUIPMENT_SELECTED', payload: allSelected });
+      
+      // Trigger auto-save when equipment changes
+      triggerAutoSave();
+    }
+  }, [contextEquipment, dispatch, triggerAutoSave]);
 
   useEffect(() => {
     const equipmentNames = formData.equipment
@@ -1269,25 +1346,6 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
     state.formData.gymDetails,
   ]);
 
-  const handleEquipmentChangeWrapper = useCallback(
-    (e) => {
-      const result = handleEquipmentChangeUtil(e, formData);
-
-      if (result) {
-        const { equipment, gymDetails, allSelected } = result;
-        dispatch({
-          type: 'SET_FIELD_VALUE',
-          payload: { field: 'equipment', value: equipment },
-        });
-        dispatch({
-          type: 'SET_FIELD_VALUE',
-          payload: { field: 'gymDetails', value: gymDetails },
-        });
-        dispatch({ type: 'SET_ALL_EQUIPMENT_SELECTED', payload: allSelected });
-      }
-    },
-    [dispatch, formData]
-  );
 
   const handleWorkoutFormatChange = useCallback(
     (selectedFormats) => {
@@ -1552,6 +1610,28 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
           onClose={() => dispatch({ type: 'HIDE_TOAST' })}
         />
       )}
+      
+      {/* Wizard Review Banner */}
+      {wizardComplete && !suggestions.length && (
+        <div className="mb-6 p-4 bg-primary/10 border border-primary/20 rounded-lg">
+          <div className="flex items-start gap-3">
+            <Sparkles className="w-5 h-5 mt-0.5 flex-shrink-0 text-primary" />
+            <div>
+              <h3 className="font-semibold text-gray-900 mb-1">
+                Program Setup Complete!
+              </h3>
+              <p className="text-sm text-gray-700 mb-2">
+                Review your program settings below. When you're ready, click the 
+                <span className="font-semibold text-primary"> Generate Program Workouts </span>
+                button to create your personalized workout plan.
+              </p>
+              <p className="text-xs text-gray-600">
+                Tip: You can modify any settings before generating if needed.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {programId && (
         <div className="flex flex-col sm:flex-row justify-end items-stretch sm:items-center mt-4 mb-4 sm:mt-6 sm:mb-6 gap-2">
@@ -1611,10 +1691,6 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
           }
           equipmentSelector={
             <EquipmentSelector
-              equipment={formData.equipment}
-              onEquipmentChange={handleEquipmentChangeWrapper}
-              equipmentList={equipmentList}
-              allEquipmentSelected={allEquipmentSelected}
               isVisible={showEquipment}
               onToggleVisibility={handleToggleEquipment}
             />

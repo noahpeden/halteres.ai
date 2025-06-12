@@ -4,18 +4,19 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProgramWizard } from '../../contexts/ProgramWizardContext';
 import WizardProgress from '../../components/ProgramWizard/WizardProgress';
-import { 
-  kgToLbs, 
-  lbsToKg, 
-  cmToFeet, 
+import {
+  kgToLbs,
+  lbsToKg,
+  cmToFeet,
   feetInchesToCm,
   formatHeight,
   formatWeight,
-  format1RM 
+  format1RM,
 } from '@/utils/unitConversions';
 
 export default function Step5Page() {
-  const { wizardData, goToPrevious, completeWizard, updateWizardData } = useProgramWizard();
+  const { wizardData, goToPrevious, completeWizard, updateWizardData } =
+    useProgramWizard();
   const { supabase } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [entityData, setEntityData] = useState(null);
@@ -28,33 +29,43 @@ export default function Step5Page() {
   const [selectedEntityId, setSelectedEntityId] = useState(wizardData.entityId);
   const [schedulingData, setSchedulingData] = useState(() => {
     // Convert day names to indices for display
-    const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const dayNames = [
+      'sunday',
+      'monday',
+      'tuesday',
+      'wednesday',
+      'thursday',
+      'friday',
+      'saturday',
+    ];
     let daysOfWeekIndices = [];
-    
+
     if (wizardData.daysOfWeek && Array.isArray(wizardData.daysOfWeek)) {
       if (wizardData.daysOfWeek.length > 0) {
         // Check if first element is a string (day name) or number (index)
         if (typeof wizardData.daysOfWeek[0] === 'string') {
           // Convert day names to indices
           daysOfWeekIndices = wizardData.daysOfWeek
-            .map(dayName => dayNames.indexOf(dayName.toLowerCase()))
-            .filter(index => index !== -1);
+            .map((dayName) => dayNames.indexOf(dayName.toLowerCase()))
+            .filter((index) => index !== -1);
         } else {
           // Already indices
           daysOfWeekIndices = wizardData.daysOfWeek;
         }
       }
     }
-    
+
     return {
       programName: wizardData.programName || '',
-      startDate: wizardData.startDate || (() => {
-        const tomorrow = new Date();
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        return tomorrow.toISOString().split('T')[0];
-      })(),
+      startDate:
+        wizardData.startDate ||
+        (() => {
+          const tomorrow = new Date();
+          tomorrow.setDate(tomorrow.getDate() + 1);
+          return tomorrow.toISOString().split('T')[0];
+        })(),
       numberOfWeeks: wizardData.numberOfWeeks || 4,
-      daysOfWeek: daysOfWeekIndices
+      daysOfWeek: daysOfWeekIndices,
     };
   });
 
@@ -152,12 +163,12 @@ export default function Step5Page() {
     setSelectedEntityId(entityId);
     setShowEntitySelection(false);
     // Update wizard data with new entity selection
-    const selectedEntity = entities.find(e => e.id === entityId);
+    const selectedEntity = entities.find((e) => e.id === entityId);
     if (selectedEntity) {
       updateWizardData({
         entityId: entityId,
         entityName: selectedEntity.name,
-        entityType: selectedEntity.type
+        entityType: selectedEntity.type,
       });
     }
   };
@@ -172,23 +183,36 @@ export default function Step5Page() {
   };
 
   const handleSchedulingChange = (field, value) => {
-    setSchedulingData(prev => ({ ...prev, [field]: value }));
+    setSchedulingData((prev) => ({ ...prev, [field]: value }));
     // Also update wizard data
     updateWizardData({ [field]: value });
   };
 
   const handleToggleDay = (dayIndex) => {
-    const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-    
+    const dayNames = [
+      'sunday',
+      'monday',
+      'tuesday',
+      'wednesday',
+      'thursday',
+      'friday',
+      'saturday',
+    ];
+
     // For display purposes, keep track of day indices
     const newDaysOfWeekIndices = schedulingData.daysOfWeek.includes(dayIndex)
-      ? schedulingData.daysOfWeek.filter(d => d !== dayIndex)
+      ? schedulingData.daysOfWeek.filter((d) => d !== dayIndex)
       : [...schedulingData.daysOfWeek, dayIndex];
-    
+
     // Convert indices to day names for wizard data
-    const newDaysOfWeekNames = newDaysOfWeekIndices.map(index => dayNames[index]);
-    
-    setSchedulingData(prev => ({ ...prev, daysOfWeek: newDaysOfWeekIndices }));
+    const newDaysOfWeekNames = newDaysOfWeekIndices.map(
+      (index) => dayNames[index]
+    );
+
+    setSchedulingData((prev) => ({
+      ...prev,
+      daysOfWeek: newDaysOfWeekIndices,
+    }));
     updateWizardData({ daysOfWeek: newDaysOfWeekNames });
   };
 
@@ -205,35 +229,35 @@ export default function Step5Page() {
       alert('Please select a client or class before creating the program.');
       return;
     }
-    
+
     if (!schedulingData.programName.trim()) {
       alert('Please enter a program name.');
       return;
     }
-    
+
     if (!schedulingData.startDate) {
       alert('Please select a start date.');
       return;
     }
-    
+
     if (schedulingData.daysOfWeek.length === 0) {
       alert('Please select at least one workout day.');
       return;
     }
-    
+
     setIsSubmitting(true);
     try {
       // Update wizard data with final entity selection and scheduling before completing
-      const selectedEntity = entities.find(e => e.id === selectedEntityId);
+      const selectedEntity = entities.find((e) => e.id === selectedEntityId);
       const finalWizardData = {
         ...schedulingData,
         entityId: selectedEntityId,
         entityName: selectedEntity?.name,
-        entityType: selectedEntity?.type
+        entityType: selectedEntity?.type,
       };
-      
+
       updateWizardData(finalWizardData);
-      
+
       // This will create the program and redirect to the writer
       await completeWizard();
     } catch (error) {
@@ -244,10 +268,12 @@ export default function Step5Page() {
   };
 
   // Get current entity data for display
-  const currentEntity = entities.find(e => e.id === selectedEntityId);
+  const currentEntity = entities.find((e) => e.id === selectedEntityId);
   const entityTypeText = currentEntity?.type === 'CLASS' ? 'class' : 'client';
-  const entityTypeTextCap = currentEntity?.type === 'CLASS' ? 'Class' : 'Client';
-  const entityName = currentEntity?.name || wizardData.entityName || 'Selected entity';
+  const entityTypeTextCap =
+    currentEntity?.type === 'CLASS' ? 'Class' : 'Client';
+  const entityName =
+    currentEntity?.name || wizardData.entityName || 'Selected entity';
 
   return (
     <div>
@@ -259,17 +285,18 @@ export default function Step5Page() {
             Program Setup - Final Step
           </h2>
           <p className="text-base-content/70">
-            {selectedEntityId 
+            {selectedEntityId
               ? `Review and update ${entityName}'s metrics before creating the program`
-              : 'Select a client or class to create the program for'
-            }
+              : 'Select a client or class to create the program for'}
           </p>
         </div>
 
         {/* Entity Selection Section */}
         {!selectedEntityId || showEntitySelection ? (
           <div className="bg-base-100 rounded-lg p-4 mb-6">
-            <h3 className="text-lg font-semibold mb-4">Select Client or Class</h3>
+            <h3 className="text-lg font-semibold mb-4">
+              Select Client or Class
+            </h3>
             {entities.length > 0 ? (
               <div className="w-full mb-4">
                 <label className="label">
@@ -308,23 +335,23 @@ export default function Step5Page() {
                 No clients or classes yet. Create your first one below.
               </p>
             )}
-            
+
             <div className="flex justify-between items-center">
               <span className="text-sm font-medium">
                 Or create a new client/class:
               </span>
-              <button 
-                onClick={handleCreateNewEntity} 
+              <button
+                onClick={handleCreateNewEntity}
                 className="btn btn-sm btn-outline"
               >
                 Create New
               </button>
             </div>
-            
+
             {showEntitySelection && selectedEntityId && (
               <div className="mt-4 flex justify-end">
-                <button 
-                  onClick={() => setShowEntitySelection(false)} 
+                <button
+                  onClick={() => setShowEntitySelection(false)}
                   className="btn btn-sm btn-primary"
                 >
                   Continue with Selected
@@ -337,10 +364,14 @@ export default function Step5Page() {
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-lg font-semibold">
-                  Selected {entities.find(e => e.id === selectedEntityId)?.type === 'CLASS' ? 'Class' : 'Client'}
+                  Selected{' '}
+                  {entities.find((e) => e.id === selectedEntityId)?.type ===
+                  'CLASS'
+                    ? 'Class'
+                    : 'Client'}
                 </h3>
                 <p className="text-base-content/70">
-                  {entities.find(e => e.id === selectedEntityId)?.name}
+                  {entities.find((e) => e.id === selectedEntityId)?.name}
                 </p>
               </div>
               <button
@@ -357,7 +388,7 @@ export default function Step5Page() {
         {/* Scheduling Section */}
         <div className="bg-base-100 rounded-lg p-4 mb-6">
           <h3 className="text-lg font-semibold mb-4">Program Scheduling</h3>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Program Name */}
             <div className="md:col-span-2">
@@ -369,7 +400,9 @@ export default function Step5Page() {
                 placeholder="Enter program name"
                 className="input input-bordered w-full"
                 value={schedulingData.programName}
-                onChange={(e) => handleSchedulingChange('programName', e.target.value)}
+                onChange={(e) =>
+                  handleSchedulingChange('programName', e.target.value)
+                }
                 required
               />
             </div>
@@ -383,7 +416,9 @@ export default function Step5Page() {
                 type="date"
                 className="input input-bordered w-full"
                 value={schedulingData.startDate}
-                onChange={(e) => handleSchedulingChange('startDate', e.target.value)}
+                onChange={(e) =>
+                  handleSchedulingChange('startDate', e.target.value)
+                }
                 required
               />
             </div>
@@ -391,15 +426,22 @@ export default function Step5Page() {
             {/* Program Duration */}
             <div>
               <label className="label">
-                <span className="text-sm font-medium">Program Duration (weeks)</span>
+                <span className="text-sm font-medium">
+                  Program Duration (weeks)
+                </span>
               </label>
               <select
                 className="select select-bordered w-full"
                 value={schedulingData.numberOfWeeks}
-                onChange={(e) => handleSchedulingChange('numberOfWeeks', parseInt(e.target.value))}
+                onChange={(e) =>
+                  handleSchedulingChange(
+                    'numberOfWeeks',
+                    parseInt(e.target.value)
+                  )
+                }
                 required
               >
-                {Array.from({ length: 12 }, (_, i) => i + 1).map((num) => (
+                {Array.from({ length: 8 }, (_, i) => i + 1).map((num) => (
                   <option key={num} value={num}>
                     {num} {num === 1 ? 'week' : 'weeks'}
                   </option>
@@ -410,7 +452,9 @@ export default function Step5Page() {
             {/* End Date (calculated) */}
             <div>
               <label className="label">
-                <span className="text-sm font-medium">End Date (calculated)</span>
+                <span className="text-sm font-medium">
+                  End Date (calculated)
+                </span>
               </label>
               <input
                 type="date"
@@ -481,7 +525,11 @@ export default function Step5Page() {
             </div>
             <div>
               <span className="font-medium">Gym Type:</span>{' '}
-              {wizardData.gymType ? wizardData.gymType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : 'Not set'}
+              {wizardData.gymType
+                ? wizardData.gymType
+                    .replace(/_/g, ' ')
+                    .replace(/\b\w/g, (l) => l.toUpperCase())
+                : 'Not set'}
             </div>
           </div>
         </div>
@@ -491,400 +539,478 @@ export default function Step5Page() {
           <>
             {/* Note: ClientMetricsTab will show a message if no program exists yet */}
             <div className="alert alert-info mb-6">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            className="stroke-current shrink-0 w-6 h-6"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-            ></path>
-          </svg>
-          <div>
-            <div className="font-semibold">About {entityTypeText} metrics</div>
-            <div className="text-sm">
-              {wizardData.entityType === 'CLASS'
-                ? 'Class metrics represent general information about the group. Individual variations may apply during training.'
-                : 'These metrics help create a more personalized program. You can update them now or after program creation.'}
-            </div>
-          </div>
-        </div>
-
-        <div className="mb-6">
-          <div className="bg-base-100 rounded-lg p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-semibold">
-                {entityTypeTextCap} Metrics
-              </h3>
-              <div className="flex items-center gap-4">
-                {/* Unit Toggle */}
-                <label className="flex items-center gap-2 text-sm">
-                  <span className={!useImperial ? 'font-semibold' : ''}>Metric</span>
-                  <input
-                    type="checkbox"
-                    className="toggle toggle-sm"
-                    checked={useImperial}
-                    onChange={(e) => setUseImperial(e.target.checked)}
-                  />
-                  <span className={useImperial ? 'font-semibold' : ''}>Imperial</span>
-                </label>
-                {!isEditing && entityData && (
-                  <button onClick={handleEdit} className="btn btn-outline btn-sm">
-                    Edit Metrics
-                  </button>
-                )}
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                className="stroke-current shrink-0 w-6 h-6"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                ></path>
+              </svg>
+              <div>
+                <div className="font-semibold">
+                  About {entityTypeText} metrics
+                </div>
+                <div className="text-sm">
+                  {wizardData.entityType === 'CLASS'
+                    ? 'Class metrics represent general information about the group. Individual variations may apply during training.'
+                    : 'These metrics help create a more personalized program. You can update them now or after program creation.'}
+                </div>
               </div>
             </div>
 
-            {isLoading ? (
-              <div className="flex justify-center py-8">
-                <span className="loading loading-spinner loading-lg"></span>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {/* Physical Stats */}
-                <div>
-                  <h4 className="font-medium mb-3 text-base-content/80">
-                    Physical Stats
-                  </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                      <label className="label">
-                        <span className="label-text">Gender</span>
-                      </label>
-                      {isEditing ? (
-                        <select
-                          value={editedData.gender || ''}
-                          onChange={(e) =>
-                            handleInputChange('gender', e.target.value)
-                          }
-                          className="select select-bordered w-full"
-                        >
-                          <option value="">Select gender</option>
-                          <option value="male">Male</option>
-                          <option value="female">Female</option>
-                          <option value="other">Other</option>
-                        </select>
-                      ) : (
-                        <div className="input input-bordered w-full bg-base-200 flex items-center">
-                          {entityData?.gender || 'Not set'}
-                        </div>
-                      )}
-                    </div>
-                    <div>
-                      <label className="label">
-                        <span className="label-text">Height {useImperial ? '(ft/in)' : '(cm)'}</span>
-                      </label>
-                      {isEditing ? (
-                        useImperial ? (
-                          <div className="flex gap-2">
-                            <input
-                              type="number"
-                              value={editedData.height_cm ? cmToFeet(editedData.height_cm).feet : ''}
-                              onChange={(e) => {
-                                const feet = e.target.value;
-                                const currentInches = editedData.height_cm ? cmToFeet(editedData.height_cm).inches : 0;
-                                const cm = feetInchesToCm(feet, currentInches);
-                                handleInputChange('height_cm', cm);
-                              }}
-                              className="input input-bordered w-16"
-                              placeholder="5"
-                              min="0"
-                              max="8"
-                            />
-                            <span className="flex items-center">ft</span>
-                            <input
-                              type="number"
-                              value={editedData.height_cm ? cmToFeet(editedData.height_cm).inches : ''}
-                              onChange={(e) => {
-                                const currentFeet = editedData.height_cm ? cmToFeet(editedData.height_cm).feet : 0;
-                                const inches = e.target.value;
-                                const cm = feetInchesToCm(currentFeet, inches);
-                                handleInputChange('height_cm', cm);
-                              }}
-                              className="input input-bordered w-16"
-                              placeholder="10"
-                              min="0"
-                              max="11"
-                            />
-                            <span className="flex items-center">in</span>
-                          </div>
-                        ) : (
-                          <input
-                            type="number"
-                            value={editedData.height_cm || ''}
-                            onChange={(e) =>
-                              handleInputChange('height_cm', e.target.value)
-                            }
-                            className="input input-bordered w-full"
-                            placeholder="Height in cm"
-                          />
-                        )
-                      ) : (
-                        <div className="input input-bordered w-full bg-base-200 flex items-center">
-                          {formatHeight(entityData?.height_cm, useImperial)}
-                        </div>
-                      )}
-                    </div>
-                    <div>
-                      <label className="label">
-                        <span className="label-text">Weight {useImperial ? '(lbs)' : '(kg)'}</span>
-                      </label>
-                      {isEditing ? (
-                        <input
-                          type="number"
-                          step="0.1"
-                          value={useImperial 
-                            ? (editedData.weight_kg ? kgToLbs(editedData.weight_kg).toFixed(1) : '')
-                            : (editedData.weight_kg || '')}
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            if (useImperial) {
-                              handleInputChange('weight_kg', lbsToKg(value));
-                            } else {
-                              handleInputChange('weight_kg', value);
-                            }
-                          }}
-                          className="input input-bordered w-full"
-                          placeholder={useImperial ? "Weight in lbs" : "Weight in kg"}
-                        />
-                      ) : (
-                        <div className="input input-bordered w-full bg-base-200 flex items-center">
-                          {formatWeight(entityData?.weight_kg, useImperial)}
-                        </div>
-                      )}
-                    </div>
+            <div className="mb-6">
+              <div className="bg-base-100 rounded-lg p-6">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-xl font-semibold">
+                    {entityTypeTextCap} Metrics
+                  </h3>
+                  <div className="flex items-center gap-4">
+                    {/* Unit Toggle */}
+                    <label className="flex items-center gap-2 text-sm">
+                      <span className={!useImperial ? 'font-semibold' : ''}>
+                        Metric
+                      </span>
+                      <input
+                        type="checkbox"
+                        className="toggle toggle-sm"
+                        checked={useImperial}
+                        onChange={(e) => setUseImperial(e.target.checked)}
+                      />
+                      <span className={useImperial ? 'font-semibold' : ''}>
+                        Imperial
+                      </span>
+                    </label>
+                    {!isEditing && entityData && (
+                      <button
+                        onClick={handleEdit}
+                        className="btn btn-outline btn-sm"
+                      >
+                        Edit Metrics
+                      </button>
+                    )}
                   </div>
                 </div>
 
-                {/* Performance Metrics */}
-                <div>
-                  <h4 className="font-medium mb-3 text-base-content/80">
-                    Performance Metrics
-                  </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                      <label className="label">
-                        <span className="label-text">Bench Press 1RM {useImperial ? '(lbs)' : '(kg)'}</span>
-                      </label>
-                      {isEditing ? (
-                        <input
-                          type="number"
-                          step="0.5"
-                          value={useImperial 
-                            ? (editedData.bench_1rm ? kgToLbs(editedData.bench_1rm).toFixed(1) : '')
-                            : (editedData.bench_1rm || '')}
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            if (useImperial) {
-                              handleInputChange('bench_1rm', lbsToKg(value));
-                            } else {
-                              handleInputChange('bench_1rm', value);
-                            }
-                          }}
-                          className="input input-bordered w-full"
-                          placeholder={useImperial ? "Bench Press 1RM in lbs" : "Bench Press 1RM in kg"}
-                        />
-                      ) : (
-                        <div className="input input-bordered w-full bg-base-200 flex items-center">
-                          {format1RM(entityData?.bench_1rm, useImperial)}
-                        </div>
-                      )}
-                    </div>
-                    <div>
-                      <label className="label">
-                        <span className="label-text">Squat 1RM {useImperial ? '(lbs)' : '(kg)'}</span>
-                      </label>
-                      {isEditing ? (
-                        <input
-                          type="number"
-                          step="0.5"
-                          value={useImperial 
-                            ? (editedData.squat_1rm ? kgToLbs(editedData.squat_1rm).toFixed(1) : '')
-                            : (editedData.squat_1rm || '')}
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            if (useImperial) {
-                              handleInputChange('squat_1rm', lbsToKg(value));
-                            } else {
-                              handleInputChange('squat_1rm', value);
-                            }
-                          }}
-                          className="input input-bordered w-full"
-                          placeholder={useImperial ? "Squat 1RM in lbs" : "Squat 1RM in kg"}
-                        />
-                      ) : (
-                        <div className="input input-bordered w-full bg-base-200 flex items-center">
-                          {format1RM(entityData?.squat_1rm, useImperial)}
-                        </div>
-                      )}
-                    </div>
-                    <div>
-                      <label className="label">
-                        <span className="label-text">Deadlift 1RM {useImperial ? '(lbs)' : '(kg)'}</span>
-                      </label>
-                      {isEditing ? (
-                        <input
-                          type="number"
-                          step="0.5"
-                          value={useImperial 
-                            ? (editedData.deadlift_1rm ? kgToLbs(editedData.deadlift_1rm).toFixed(1) : '')
-                            : (editedData.deadlift_1rm || '')}
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            if (useImperial) {
-                              handleInputChange('deadlift_1rm', lbsToKg(value));
-                            } else {
-                              handleInputChange('deadlift_1rm', value);
-                            }
-                          }}
-                          className="input input-bordered w-full"
-                          placeholder={useImperial ? "Deadlift 1RM in lbs" : "Deadlift 1RM in kg"}
-                        />
-                      ) : (
-                        <div className="input input-bordered w-full bg-base-200 flex items-center">
-                          {format1RM(entityData?.deadlift_1rm, useImperial)}
-                        </div>
-                      )}
-                    </div>
+                {isLoading ? (
+                  <div className="flex justify-center py-8">
+                    <span className="loading loading-spinner loading-lg"></span>
                   </div>
-                </div>
+                ) : (
+                  <div className="space-y-4">
+                    {/* Physical Stats */}
+                    <div>
+                      <h4 className="font-medium mb-3 text-base-content/80">
+                        Physical Stats
+                      </h4>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                          <label className="label">
+                            <span className="label-text">Gender</span>
+                          </label>
+                          {isEditing ? (
+                            <select
+                              value={editedData.gender || ''}
+                              onChange={(e) =>
+                                handleInputChange('gender', e.target.value)
+                              }
+                              className="select select-bordered w-full"
+                            >
+                              <option value="">Select gender</option>
+                              <option value="male">Male</option>
+                              <option value="female">Female</option>
+                              <option value="other">Other</option>
+                            </select>
+                          ) : (
+                            <div className="input input-bordered w-full bg-base-200 flex items-center">
+                              {entityData?.gender || 'Not set'}
+                            </div>
+                          )}
+                        </div>
+                        <div>
+                          <label className="label">
+                            <span className="label-text">
+                              Height {useImperial ? '(ft/in)' : '(cm)'}
+                            </span>
+                          </label>
+                          {isEditing ? (
+                            useImperial ? (
+                              <div className="flex gap-2">
+                                <input
+                                  type="number"
+                                  value={
+                                    editedData.height_cm
+                                      ? cmToFeet(editedData.height_cm).feet
+                                      : ''
+                                  }
+                                  onChange={(e) => {
+                                    const feet = e.target.value;
+                                    const currentInches = editedData.height_cm
+                                      ? cmToFeet(editedData.height_cm).inches
+                                      : 0;
+                                    const cm = feetInchesToCm(
+                                      feet,
+                                      currentInches
+                                    );
+                                    handleInputChange('height_cm', cm);
+                                  }}
+                                  className="input input-bordered w-16"
+                                  placeholder="5"
+                                  min="0"
+                                  max="8"
+                                />
+                                <span className="flex items-center">ft</span>
+                                <input
+                                  type="number"
+                                  value={
+                                    editedData.height_cm
+                                      ? cmToFeet(editedData.height_cm).inches
+                                      : ''
+                                  }
+                                  onChange={(e) => {
+                                    const currentFeet = editedData.height_cm
+                                      ? cmToFeet(editedData.height_cm).feet
+                                      : 0;
+                                    const inches = e.target.value;
+                                    const cm = feetInchesToCm(
+                                      currentFeet,
+                                      inches
+                                    );
+                                    handleInputChange('height_cm', cm);
+                                  }}
+                                  className="input input-bordered w-16"
+                                  placeholder="10"
+                                  min="0"
+                                  max="11"
+                                />
+                                <span className="flex items-center">in</span>
+                              </div>
+                            ) : (
+                              <input
+                                type="number"
+                                value={editedData.height_cm || ''}
+                                onChange={(e) =>
+                                  handleInputChange('height_cm', e.target.value)
+                                }
+                                className="input input-bordered w-full"
+                                placeholder="Height in cm"
+                              />
+                            )
+                          ) : (
+                            <div className="input input-bordered w-full bg-base-200 flex items-center">
+                              {formatHeight(entityData?.height_cm, useImperial)}
+                            </div>
+                          )}
+                        </div>
+                        <div>
+                          <label className="label">
+                            <span className="label-text">
+                              Weight {useImperial ? '(lbs)' : '(kg)'}
+                            </span>
+                          </label>
+                          {isEditing ? (
+                            <input
+                              type="number"
+                              step="0.1"
+                              value={
+                                useImperial
+                                  ? editedData.weight_kg
+                                    ? kgToLbs(editedData.weight_kg).toFixed(1)
+                                    : ''
+                                  : editedData.weight_kg || ''
+                              }
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                if (useImperial) {
+                                  handleInputChange(
+                                    'weight_kg',
+                                    lbsToKg(value)
+                                  );
+                                } else {
+                                  handleInputChange('weight_kg', value);
+                                }
+                              }}
+                              className="input input-bordered w-full"
+                              placeholder={
+                                useImperial ? 'Weight in lbs' : 'Weight in kg'
+                              }
+                            />
+                          ) : (
+                            <div className="input input-bordered w-full bg-base-200 flex items-center">
+                              {formatWeight(entityData?.weight_kg, useImperial)}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
 
-                {/* Cardio & Recovery Metrics */}
-                <div>
-                  <h4 className="font-medium mb-3 text-base-content/80">
-                    Cardio & Recovery
-                  </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {/* Performance Metrics */}
                     <div>
-                      <label className="label">
-                        <span className="label-text">Mile Time</span>
-                      </label>
-                      {isEditing ? (
-                        <input
-                          type="text"
-                          value={editedData.mile_time || ''}
-                          onChange={(e) =>
-                            handleInputChange('mile_time', e.target.value)
-                          }
-                          className="input input-bordered w-full"
-                          placeholder="MM:SS (e.g., 07:30)"
-                        />
-                      ) : (
-                        <div className="input input-bordered w-full bg-base-200 flex items-center">
-                          {entityData?.mile_time || 'Not set'}
+                      <h4 className="font-medium mb-3 text-base-content/80">
+                        Performance Metrics
+                      </h4>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                          <label className="label">
+                            <span className="label-text">
+                              Bench Press 1RM {useImperial ? '(lbs)' : '(kg)'}
+                            </span>
+                          </label>
+                          {isEditing ? (
+                            <input
+                              type="number"
+                              step="0.5"
+                              value={
+                                useImperial
+                                  ? editedData.bench_1rm
+                                    ? kgToLbs(editedData.bench_1rm).toFixed(1)
+                                    : ''
+                                  : editedData.bench_1rm || ''
+                              }
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                if (useImperial) {
+                                  handleInputChange(
+                                    'bench_1rm',
+                                    lbsToKg(value)
+                                  );
+                                } else {
+                                  handleInputChange('bench_1rm', value);
+                                }
+                              }}
+                              className="input input-bordered w-full"
+                              placeholder={
+                                useImperial
+                                  ? 'Bench Press 1RM in lbs'
+                                  : 'Bench Press 1RM in kg'
+                              }
+                            />
+                          ) : (
+                            <div className="input input-bordered w-full bg-base-200 flex items-center">
+                              {format1RM(entityData?.bench_1rm, useImperial)}
+                            </div>
+                          )}
                         </div>
-                      )}
+                        <div>
+                          <label className="label">
+                            <span className="label-text">
+                              Squat 1RM {useImperial ? '(lbs)' : '(kg)'}
+                            </span>
+                          </label>
+                          {isEditing ? (
+                            <input
+                              type="number"
+                              step="0.5"
+                              value={
+                                useImperial
+                                  ? editedData.squat_1rm
+                                    ? kgToLbs(editedData.squat_1rm).toFixed(1)
+                                    : ''
+                                  : editedData.squat_1rm || ''
+                              }
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                if (useImperial) {
+                                  handleInputChange(
+                                    'squat_1rm',
+                                    lbsToKg(value)
+                                  );
+                                } else {
+                                  handleInputChange('squat_1rm', value);
+                                }
+                              }}
+                              className="input input-bordered w-full"
+                              placeholder={
+                                useImperial
+                                  ? 'Squat 1RM in lbs'
+                                  : 'Squat 1RM in kg'
+                              }
+                            />
+                          ) : (
+                            <div className="input input-bordered w-full bg-base-200 flex items-center">
+                              {format1RM(entityData?.squat_1rm, useImperial)}
+                            </div>
+                          )}
+                        </div>
+                        <div>
+                          <label className="label">
+                            <span className="label-text">
+                              Deadlift 1RM {useImperial ? '(lbs)' : '(kg)'}
+                            </span>
+                          </label>
+                          {isEditing ? (
+                            <input
+                              type="number"
+                              step="0.5"
+                              value={
+                                useImperial
+                                  ? editedData.deadlift_1rm
+                                    ? kgToLbs(editedData.deadlift_1rm).toFixed(
+                                        1
+                                      )
+                                    : ''
+                                  : editedData.deadlift_1rm || ''
+                              }
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                if (useImperial) {
+                                  handleInputChange(
+                                    'deadlift_1rm',
+                                    lbsToKg(value)
+                                  );
+                                } else {
+                                  handleInputChange('deadlift_1rm', value);
+                                }
+                              }}
+                              className="input input-bordered w-full"
+                              placeholder={
+                                useImperial
+                                  ? 'Deadlift 1RM in lbs'
+                                  : 'Deadlift 1RM in kg'
+                              }
+                            />
+                          ) : (
+                            <div className="input input-bordered w-full bg-base-200 flex items-center">
+                              {format1RM(entityData?.deadlift_1rm, useImperial)}
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
+
+                    {/* Cardio & Recovery Metrics */}
                     <div>
-                      <label className="label">
-                        <span className="label-text">Recovery Score (0-100)</span>
-                      </label>
-                      {isEditing ? (
-                        <input
-                          type="number"
-                          min="0"
-                          max="100"
-                          value={editedData.recovery_score || ''}
-                          onChange={(e) =>
-                            handleInputChange('recovery_score', e.target.value)
-                          }
-                          className="input input-bordered w-full"
-                          placeholder="0-100"
-                        />
-                      ) : (
-                        <div className="input input-bordered w-full bg-base-200 flex items-center">
-                          {entityData?.recovery_score !== undefined
-                            ? entityData.recovery_score
-                            : 'Not set'}
+                      <h4 className="font-medium mb-3 text-base-content/80">
+                        Cardio & Recovery
+                      </h4>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                          <label className="label">
+                            <span className="label-text">Mile Time</span>
+                          </label>
+                          {isEditing ? (
+                            <input
+                              type="text"
+                              value={editedData.mile_time || ''}
+                              onChange={(e) =>
+                                handleInputChange('mile_time', e.target.value)
+                              }
+                              className="input input-bordered w-full"
+                              placeholder="MM:SS (e.g., 07:30)"
+                            />
+                          ) : (
+                            <div className="input input-bordered w-full bg-base-200 flex items-center">
+                              {entityData?.mile_time || 'Not set'}
+                            </div>
+                          )}
                         </div>
-                      )}
+                        <div>
+                          <label className="label">
+                            <span className="label-text">
+                              Recovery Score (0-100)
+                            </span>
+                          </label>
+                          {isEditing ? (
+                            <input
+                              type="number"
+                              min="0"
+                              max="100"
+                              value={editedData.recovery_score || ''}
+                              onChange={(e) =>
+                                handleInputChange(
+                                  'recovery_score',
+                                  e.target.value
+                                )
+                              }
+                              className="input input-bordered w-full"
+                              placeholder="0-100"
+                            />
+                          ) : (
+                            <div className="input input-bordered w-full bg-base-200 flex items-center">
+                              {entityData?.recovery_score !== undefined
+                                ? entityData.recovery_score
+                                : 'Not set'}
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
+
+                    {/* Injury History */}
                     <div>
                       <label className="label">
                         <span className="label-text">
-                          Preferred Training Days
+                          Injury History / Limitations
                         </span>
                       </label>
                       {isEditing ? (
-                        <input
-                          type="text"
-                          value={editedData.preferred_training_days ? JSON.stringify(editedData.preferred_training_days) : ''}
-                          onChange={(e) =>
-                            handleInputChange(
-                              'preferred_training_days',
-                              e.target.value
-                            )
+                        <textarea
+                          value={
+                            typeof editedData.injury_history === 'object'
+                              ? JSON.stringify(
+                                  editedData.injury_history,
+                                  null,
+                                  2
+                                )
+                              : editedData.injury_history || ''
                           }
-                          className="input input-bordered w-full"
-                          placeholder='["Monday", "Wednesday", "Friday"]'
+                          onChange={(e) => {
+                            try {
+                              // Try to parse as JSON first
+                              const parsed = JSON.parse(e.target.value);
+                              handleInputChange('injury_history', parsed);
+                            } catch {
+                              // If not valid JSON, store as string
+                              handleInputChange(
+                                'injury_history',
+                                e.target.value
+                              );
+                            }
+                          }}
+                          className="textarea textarea-bordered w-full h-24"
+                          placeholder="Any injuries, limitations, or special considerations..."
                         />
                       ) : (
-                        <div className="input input-bordered w-full bg-base-200 flex items-center">
-                          {entityData?.preferred_training_days
-                            ? JSON.stringify(entityData.preferred_training_days)
-                            : 'Not set'}
+                        <div className="textarea textarea-bordered w-full bg-base-200 min-h-24 flex items-start">
+                          {entityData?.injury_history
+                            ? typeof entityData.injury_history === 'object'
+                              ? JSON.stringify(
+                                  entityData.injury_history,
+                                  null,
+                                  2
+                                )
+                              : entityData.injury_history
+                            : 'No injury history recorded'}
                         </div>
                       )}
                     </div>
-                  </div>
-                </div>
 
-                {/* Injury History */}
-                <div>
-                  <label className="label">
-                    <span className="label-text">
-                      Injury History / Limitations
-                    </span>
-                  </label>
-                  {isEditing ? (
-                    <textarea
-                      value={typeof editedData.injury_history === 'object' 
-                        ? JSON.stringify(editedData.injury_history, null, 2) 
-                        : editedData.injury_history || ''}
-                      onChange={(e) => {
-                        try {
-                          // Try to parse as JSON first
-                          const parsed = JSON.parse(e.target.value);
-                          handleInputChange('injury_history', parsed);
-                        } catch {
-                          // If not valid JSON, store as string
-                          handleInputChange('injury_history', e.target.value);
-                        }
-                      }}
-                      className="textarea textarea-bordered w-full h-24"
-                      placeholder="Any injuries, limitations, or special considerations..."
-                    />
-                  ) : (
-                    <div className="textarea textarea-bordered w-full bg-base-200 min-h-24 flex items-start">
-                      {entityData?.injury_history 
-                        ? (typeof entityData.injury_history === 'object' 
-                          ? JSON.stringify(entityData.injury_history, null, 2)
-                          : entityData.injury_history)
-                        : 'No injury history recorded'}
-                    </div>
-                  )}
-                </div>
-
-                {/* Edit buttons */}
-                {isEditing && (
-                  <div className="flex gap-2 justify-end pt-4">
-                    <button onClick={handleCancel} className="btn btn-outline">
-                      Cancel
-                    </button>
-                    <button onClick={handleSave} className="btn btn-primary">
-                      Save Changes
-                    </button>
+                    {/* Edit buttons */}
+                    {isEditing && (
+                      <div className="flex gap-2 justify-end pt-4">
+                        <button
+                          onClick={handleCancel}
+                          className="btn btn-outline"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={handleSave}
+                          className="btn btn-primary"
+                        >
+                          Save Changes
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
-            )}
-          </div>
-        </div>
+            </div>
           </>
         )}
 
@@ -911,7 +1037,8 @@ export default function Step5Page() {
           </button>
 
           <div className="text-sm text-base-content/60">
-            Step 5 of 5 • {selectedEntityId ? `${entityTypeTextCap} Metrics` : 'Setup'}
+            Step 5 of 5 •{' '}
+            {selectedEntityId ? `${entityTypeTextCap} Metrics` : 'Setup'}
           </div>
 
           <button

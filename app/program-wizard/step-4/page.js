@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useProgramWizard } from '../../contexts/ProgramWizardContext';
+import { useEquipment } from '../../contexts/EquipmentContext';
 import WizardProgress from '../../components/ProgramWizard/WizardProgress';
-import equipmentList from '../../utils/equipmentList';
 
 const gymTypes = [
   { value: 'crossfit_box', label: 'CrossFit Box', icon: '🏋️' },
@@ -23,64 +23,59 @@ const gymTypes = [
   { value: 'multi_sport_complex', label: 'Multi-Sport Complex', icon: '🏟️' },
 ];
 
-const gymEquipmentPresets = {
-  crossfit_box: [1, 2, 3, 4, 46, 5, 10, 6, 7, 8, 11, 12, 14, 15, 16, 17, 18],
-  commercial_gym: [1, 2, 3, 5, 39, 40, 41, 44, 45, 46, 47, 16, 27],
-  home_gym: [5, 4, 16, 6, 27, 24, 25],
-  minimal_equipment: [16, 6, 27],
-  outdoor_space: [16, 6, 17, 23, 27],
-  powerlifting_gym: [1, 2, 3, 21, 36, 37, 16],
-  olympic_weightlifting_gym: [1, 2, 3, 26, 27],
-  bodyweight_only: [27],
-  studio_gym: [5, 4, 27, 35, 16, 7, 8],
-  university_gym: [1, 2, 3, 5, 39, 40, 41, 44, 45, 46, 47],
-  hotel_gym: [5, 44, 45, 47, 27],
-  apartment_gym: [5, 16, 27, 35],
-  boxing_mma_gym: [1, 5, 6, 7, 16, 17, 18, 27],
-  triathlon_training_facility: [50, 52, 54, 46, 47, 58, 56],
-  multi_sport_complex: [1, 2, 3, 5, 46, 47, 50, 52, 58],
-};
 
 const workoutFormats = [
-  { value: 'standard', label: 'Standard Format' },
-  { value: 'emom', label: 'EMOM' },
-  { value: 'amrap', label: 'AMRAP' },
-  { value: 'for_time', label: 'For Time' },
-  { value: 'tabata', label: 'Tabata' },
-  { value: 'circuit', label: 'Circuit Training' },
+  { value: 'strength', label: 'Strength', icon: '🏋️‍♀️' },
+  { value: 'hypertrophy', label: 'Hypertrophy', icon: '💪' },
+  { value: 'endurance', label: 'Muscular Endurance', icon: '⏱️' },
+  { value: 'power', label: 'Power', icon: '⚡' },
+  { value: 'metcon', label: 'Metabolic Conditioning', icon: '🔥' },
+  { value: 'emom', label: 'EMOM', icon: '🕐' },
+  { value: 'amrap', label: 'AMRAP', icon: '🔄' },
+  { value: 'for-time', label: 'For Time', icon: '⏳' },
+  { value: 'circuit', label: 'Circuit Training', icon: '⭕' },
+  { value: 'superset', label: 'Supersets', icon: '🔄' },
+  { value: 'giant-set', label: 'Giant Sets', icon: '🦍' },
+  { value: 'tabata', label: 'Tabata', icon: '⏲️' },
+  { value: 'complex', label: 'Barbell/Dumbbell Complex', icon: '🏆' },
+  { value: 'pyramid', label: 'Pyramid Scheme', icon: '🔺' },
+  { value: 'hiit', label: 'HIIT', icon: '📊' },
 ];
 
 export default function Step4Page() {
   const { wizardData, updateWizardData, goToPrevious, goToNext } = useProgramWizard();
-  const [selectedGymType, setSelectedGymType] = useState(wizardData.gymType || '');
-  const [selectedEquipment, setSelectedEquipment] = useState(wizardData.equipment || []);
+  const {
+    selectedEquipment,
+    selectedGymType,
+    updateGymType,
+    updateEquipment,
+    setSelectedGymType,
+    setSelectedEquipment,
+  } = useEquipment();
+  
   const [difficultyLevel, setDifficultyLevel] = useState(wizardData.difficulty || 'intermediate');
   const [focusArea, setFocusArea] = useState(wizardData.focusArea || 'full_body');
   const [workoutDuration, setWorkoutDuration] = useState(wizardData.workoutDuration || 60);
   const [selectedFormats, setSelectedFormats] = useState(wizardData.workoutFormats || []);
 
   useEffect(() => {
-    setSelectedGymType(wizardData.gymType || '');
-    setSelectedEquipment(wizardData.equipment || []);
+    if (wizardData.gymType) {
+      setSelectedGymType(wizardData.gymType);
+      updateGymType(wizardData.gymType);
+    }
+    if (wizardData.equipment) {
+      setSelectedEquipment(wizardData.equipment);
+      updateEquipment(wizardData.equipment);
+    }
     setDifficultyLevel(wizardData.difficulty || 'intermediate');
     setFocusArea(wizardData.focusArea || 'full_body');
     setWorkoutDuration(wizardData.workoutDuration || 60);
     setSelectedFormats(wizardData.workoutFormats || []);
-  }, [wizardData]);
+  }, [wizardData, setSelectedGymType, setSelectedEquipment, updateGymType, updateEquipment]);
 
   const handleGymTypeChange = (gymType) => {
-    setSelectedGymType(gymType);
-    // Auto-select equipment based on gym type
-    const presetEquipment = gymEquipmentPresets[gymType] || [];
-    setSelectedEquipment(presetEquipment);
-  };
-
-  const handleEquipmentToggle = (equipmentId) => {
-    setSelectedEquipment(prev => 
-      prev.includes(equipmentId)
-        ? prev.filter(id => id !== equipmentId)
-        : [...prev, equipmentId]
-    );
+    // Update gym type in context - this will automatically trigger equipment update
+    updateGymType(gymType);
   };
 
   const handleFormatToggle = (format) => {
@@ -164,12 +159,24 @@ export default function Step4Page() {
 
           <div className="divider"></div>
 
-          {/* Equipment Selection */}
-          <div>
+          {/* Equipment Selection - Commented out for now */}
+          {/* <div>
             <h3 className="text-lg font-medium mb-2">Available Equipment</h3>
             <p className="text-sm text-base-content/70 mb-4">
               Equipment has been pre-selected based on your gym type. Add or remove as needed.
             </p>
+            <div className="mb-2">
+              <label className="flex items-center space-x-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={isAllEquipmentSelected}
+                  onChange={(e) => handleEquipmentToggle(e.target.value)}
+                  value="-1"
+                  className="checkbox checkbox-sm"
+                />
+                <span className="font-medium">Select All Equipment</span>
+              </label>
+            </div>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 max-h-64 overflow-y-auto p-2 bg-base-100 rounded-lg">
               {equipmentList.map((equipment) => (
                 <label
@@ -179,14 +186,15 @@ export default function Step4Page() {
                   <input
                     type="checkbox"
                     checked={selectedEquipment.includes(equipment.value)}
-                    onChange={() => handleEquipmentToggle(equipment.value)}
+                    onChange={(e) => handleEquipmentToggle(e.target.value)}
+                    value={equipment.value}
                     className="checkbox checkbox-sm"
                   />
                   <span className="text-sm">{equipment.label}</span>
                 </label>
               ))}
             </div>
-          </div>
+          </div> */}
 
           <div className="divider"></div>
 
@@ -233,7 +241,7 @@ export default function Step4Page() {
               <input
                 type="number"
                 value={workoutDuration}
-                onChange={(e) => setWorkoutDuration(parseInt(e.target.value) || 60)}
+                onChange={(e) => setWorkoutDuration(e.target.value === '' ? '' : parseInt(e.target.value))}
                 min="15"
                 max="120"
                 step="5"
@@ -245,21 +253,29 @@ export default function Step4Page() {
               <label className="label">
                 <span className="label-text font-medium">Workout Formats</span>
               </label>
-              <div className="space-y-2">
-                {workoutFormats.map((format) => (
-                  <label
-                    key={format.value}
-                    className="flex items-center space-x-2 cursor-pointer"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selectedFormats.includes(format.value)}
-                      onChange={() => handleFormatToggle(format.value)}
-                      className="checkbox checkbox-sm"
-                    />
-                    <span className="text-sm">{format.label}</span>
-                  </label>
-                ))}
+              <div className="flex flex-wrap gap-2 py-2">
+                {workoutFormats.map((format) => {
+                  const selected = selectedFormats.includes(format.value);
+                  return (
+                    <button
+                      key={format.value}
+                      type="button"
+                      className={`flex items-center gap-2 px-3 py-1 rounded-full border transition-colors focus:outline-none focus:ring-2 focus:ring-primary/60 text-sm
+                        ${
+                          selected
+                            ? 'bg-primary text-white border-primary shadow'
+                            : 'bg-base-200 text-base-content border-base-300 hover:bg-base-300'
+                        }
+                      `}
+                      aria-pressed={selected}
+                      aria-label={format.label + (selected ? ' selected' : '')}
+                      onClick={() => handleFormatToggle(format.value)}
+                    >
+                      <span>{format.icon}</span>
+                      <span className="whitespace-nowrap">{format.label}</span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </div>

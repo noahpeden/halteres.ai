@@ -8,12 +8,24 @@ export default function ProgramEssentials({
   formData,
   handleChange,
   triggerAutoSave,
+  wizardData,
 }) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
   const selectedProgramType = programTypes.find(
     (type) => type.value === formData.programType
   );
+
+  // Pre-populate reference input with wizard data if available
+  const getReferenceInputValue = () => {
+    if (formData.referenceInput) {
+      return formData.referenceInput;
+    }
+    if (wizardData?.previousWorkout) {
+      return wizardData.previousWorkout;
+    }
+    return '';
+  };
 
   const handleProgramTypeSelect = (value) => {
     handleChange({ target: { name: 'programType', value } });
@@ -140,7 +152,7 @@ export default function ProgramEssentials({
             name="referenceInput"
             className="textarea textarea-bordered w-full border-base-300 focus:border-primary"
             placeholder="Paste your own workout text here (e.g., a specific WOD, a previous program structure)"
-            value={formData.referenceInput || ''}
+            value={getReferenceInputValue()}
             onChange={handleChange}
             onBlur={() => triggerAutoSave && triggerAutoSave()}
             rows="3"

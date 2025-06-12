@@ -3,6 +3,7 @@ import { Nunito_Sans, Poppins } from 'next/font/google';
 import { metadata } from './simple-metadata';
 import { Inter } from 'next/font/google';
 import { AuthProvider } from '@/contexts/AuthContext';
+import { EquipmentProvider } from '@/contexts/EquipmentContext';
 import Navbar from './components/Navbar';
 import TrialStatusBanner from './components/TrialStatusBanner';
 import { StripeProvider } from './contexts/StripeContext';
@@ -53,11 +54,13 @@ export default async function RootLayout({ children }) {
         <StripeProvider>
           {/* Pass the fetched session to AuthProvider */}
           <AuthProvider initialSession={session}>
-            <div className="fixed top-0 left-0 right-0 z-50">
-              <Navbar />
-              <TrialStatusBanner />
-            </div>
-            <main className="pt-24">{children}</main>
+            <EquipmentProvider>
+              <div className="fixed top-0 left-0 right-0 z-50">
+                <Navbar />
+                <TrialStatusBanner />
+              </div>
+              <main className="pt-24">{children}</main>
+            </EquipmentProvider>
           </AuthProvider>
         </StripeProvider>
       </body>

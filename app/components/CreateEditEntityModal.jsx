@@ -279,7 +279,7 @@ const CreateEditEntityModal = ({
                       onChange={(e) =>
                         handleMetricsChange(
                           'bench_1rm',
-                          parseInt(e.target.value) || 0
+                          e.target.value === '' ? '' : parseInt(e.target.value) || 0
                         )
                       }
                       disabled={isSubmitting}
@@ -298,7 +298,7 @@ const CreateEditEntityModal = ({
                       onChange={(e) =>
                         handleMetricsChange(
                           'squat_1rm',
-                          parseInt(e.target.value) || 0
+                          e.target.value === '' ? '' : parseInt(e.target.value) || 0
                         )
                       }
                       disabled={isSubmitting}
@@ -317,7 +317,7 @@ const CreateEditEntityModal = ({
                       onChange={(e) =>
                         handleMetricsChange(
                           'deadlift_1rm',
-                          parseInt(e.target.value) || 0
+                          e.target.value === '' ? '' : parseInt(e.target.value) || 0
                         )
                       }
                       disabled={isSubmitting}
@@ -344,7 +344,7 @@ const CreateEditEntityModal = ({
                             className="input input-bordered input-sm w-full pr-8"
                             value={heightFeet}
                             onChange={(e) => {
-                              const newFeet = parseInt(e.target.value) || 0;
+                              const newFeet = e.target.value === '' ? '' : parseInt(e.target.value) || 0;
                               setHeightFeet(newFeet);
                             }}
                             disabled={isSubmitting}
@@ -360,7 +360,7 @@ const CreateEditEntityModal = ({
                             className="input input-bordered input-sm w-full pr-8"
                             value={heightInches}
                             onChange={(e) => {
-                              const newInches = parseInt(e.target.value) || 0;
+                              const newInches = e.target.value === '' ? '' : parseInt(e.target.value) || 0;
                               setHeightInches(newInches);
                             }}
                             disabled={isSubmitting}
@@ -377,7 +377,7 @@ const CreateEditEntityModal = ({
                         onChange={(e) =>
                           handleMetricsChange(
                             'height_cm',
-                            parseInt(e.target.value) || 0
+                            e.target.value === '' ? '' : parseInt(e.target.value) || 0
                           )
                         }
                         disabled={isSubmitting}
@@ -398,7 +398,7 @@ const CreateEditEntityModal = ({
                       onChange={(e) =>
                         handleMetricsChange(
                           'weight_kg',
-                          parseFloat(e.target.value) || 0
+                          e.target.value === '' ? '' : parseFloat(e.target.value) || 0
                         )
                       }
                       disabled={isSubmitting}
@@ -441,7 +441,7 @@ const CreateEditEntityModal = ({
                       onChange={(e) =>
                         handleMetricsChange(
                           'recovery_score',
-                          parseInt(e.target.value) || 0
+                          e.target.value === '' ? '' : parseInt(e.target.value) || 0
                         )
                       }
                       disabled={isSubmitting}

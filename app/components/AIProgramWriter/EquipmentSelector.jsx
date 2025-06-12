@@ -1,13 +1,17 @@
 'use client';
 
+import { useEquipment } from '../../contexts/EquipmentContext';
+
 export default function EquipmentSelector({
-  equipment,
-  onEquipmentChange,
-  equipmentList,
-  allEquipmentSelected,
   isVisible,
   onToggleVisibility,
 }) {
+  const {
+    selectedEquipment,
+    equipmentList,
+    isAllEquipmentSelected,
+    handleEquipmentToggle,
+  } = useEquipment();
   return (
     <div>
       <button
@@ -17,9 +21,9 @@ export default function EquipmentSelector({
       >
         <span>
           Equipment Selection
-          {!isVisible && equipment.length > 0 && (
+          {!isVisible && selectedEquipment.length > 0 && (
             <span className="text-sm text-base-content/70 ml-2">
-              ({equipment.length} items selected)
+              ({selectedEquipment.length} items selected)
             </span>
           )}
         </span>
@@ -34,8 +38,8 @@ export default function EquipmentSelector({
                 type="checkbox"
                 className="checkbox checkbox-sm"
                 value="-1"
-                checked={allEquipmentSelected}
-                onChange={onEquipmentChange}
+                checked={isAllEquipmentSelected}
+                onChange={(e) => handleEquipmentToggle(e.target.value)}
               />
               <span className="font-medium">Select All Equipment</span>
             </label>
@@ -47,8 +51,8 @@ export default function EquipmentSelector({
                   type="checkbox"
                   className="checkbox checkbox-xs"
                   value={item.value}
-                  checked={equipment.includes(item.value)}
-                  onChange={onEquipmentChange}
+                  checked={selectedEquipment.includes(item.value)}
+                  onChange={(e) => handleEquipmentToggle(e.target.value)}
                 />
                 <span className="text-sm">{item.label}</span>
               </label>

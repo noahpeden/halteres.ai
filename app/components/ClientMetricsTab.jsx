@@ -73,7 +73,6 @@ export default function ClientMetricsTab({
             ? kgToLbs(metrics.weight_kg)
             : metrics.weight_kg || 0,
         recovery_score: metrics.recovery_score || 0,
-        preferred_training_days: metrics.preferred_training_days || [],
         injury_history: metrics.injury_history || '',
       },
     };
@@ -207,7 +206,8 @@ export default function ClientMetricsTab({
         mile_time: editedData.metrics.mile_time,
         gender: editedData.metrics.gender,
         age: parseInt(editedData.metrics.age) || 0,
-        years_of_experience: parseInt(editedData.metrics.years_of_experience) || 0,
+        years_of_experience:
+          parseInt(editedData.metrics.years_of_experience) || 0,
         workout_experience_type: editedData.metrics.workout_experience_type,
         height_cm: Math.round(
           useImperial
@@ -412,7 +412,11 @@ export default function ClientMetricsTab({
             className="btn btn-ghost btn-sm btn-circle hidden lg:flex"
             aria-label="Collapse sidebar"
           >
-            <ChevronRight className={`h-5 w-5 transition-transform ${!isCollapsed ? 'rotate-180' : ''}`} />
+            <ChevronRight
+              className={`h-5 w-5 transition-transform ${
+                !isCollapsed ? 'rotate-180' : ''
+              }`}
+            />
           </button>
         )}
 
@@ -451,7 +455,6 @@ export default function ClientMetricsTab({
                 Edit
               </button>
             )}
-
           </div>
         )}
       </div>
@@ -639,7 +642,10 @@ export default function ClientMetricsTab({
                       className="input input-bordered w-full"
                       value={editedData.metrics.age || ''}
                       onChange={(e) =>
-                        handleMetricsChange('age', parseInt(e.target.value) || 0)
+                        handleMetricsChange(
+                          'age',
+                          parseInt(e.target.value) || 0
+                        )
                       }
                       placeholder="Age in years"
                     />
@@ -801,24 +807,34 @@ export default function ClientMetricsTab({
                       className="input input-bordered w-full"
                       value={editedData.metrics.years_of_experience || ''}
                       onChange={(e) =>
-                        handleMetricsChange('years_of_experience', parseFloat(e.target.value) || 0)
+                        handleMetricsChange(
+                          'years_of_experience',
+                          parseFloat(e.target.value) || 0
+                        )
                       }
                       placeholder="Years of training experience"
                     />
                   </div>
                   <div className="w-full">
                     <label className="label">
-                      <span className="text-sm">Primary Workout Experience</span>
+                      <span className="text-sm">
+                        Primary Workout Experience
+                      </span>
                     </label>
                     <select
                       className="select select-bordered w-full"
                       value={editedData.metrics.workout_experience_type || ''}
                       onChange={(e) =>
-                        handleMetricsChange('workout_experience_type', e.target.value)
+                        handleMetricsChange(
+                          'workout_experience_type',
+                          e.target.value
+                        )
                       }
                     >
                       <option value="">Select Experience Type</option>
-                      <option value="Weightlifting/Powerlifting">Weightlifting/Powerlifting</option>
+                      <option value="Weightlifting/Powerlifting">
+                        Weightlifting/Powerlifting
+                      </option>
                       <option value="Bodybuilding">Bodybuilding</option>
                       <option value="CrossFit">CrossFit</option>
                       <option value="Running">Running</option>
@@ -829,7 +845,9 @@ export default function ClientMetricsTab({
                       <option value="Martial Arts">Martial Arts</option>
                       <option value="Team Sports">Team Sports</option>
                       <option value="General Fitness">General Fitness</option>
-                      <option value="Beginner/No Experience">Beginner/No Experience</option>
+                      <option value="Beginner/No Experience">
+                        Beginner/No Experience
+                      </option>
                     </select>
                   </div>
                 </div>

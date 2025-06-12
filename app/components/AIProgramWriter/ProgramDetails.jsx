@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { difficulties, gymTypes, focusAreas } from '../utils';
 import WorkoutFormatSelector from '@/components/selectors/WorkoutFormatSelector';
+import { useEquipment } from '@/contexts/EquipmentContext';
 import { ChevronDown } from 'lucide-react';
 
 export default function ProgramDetails({
@@ -11,6 +12,7 @@ export default function ProgramDetails({
   equipmentSelector,
   triggerAutoSave,
 }) {
+  const { updateGymType } = useEquipment();
   const [openDropdowns, setOpenDropdowns] = useState({
     gymType: false,
     difficulty: false,
@@ -44,6 +46,10 @@ export default function ProgramDetails({
   const handleGymTypeSelect = (value) => {
     handleChange({ target: { name: 'gymType', value } });
     closeDropdown('gymType');
+    
+    // Update EquipmentContext with the gym type
+    updateGymType(value);
+    
     if (triggerAutoSave) triggerAutoSave();
   };
 
@@ -221,7 +227,7 @@ export default function ProgramDetails({
                     name: 'sessionDetails',
                     value: {
                       ...formData.sessionDetails,
-                      duration_minutes: value ? parseInt(value, 10) : null,
+                      duration_minutes: value === '' ? null : parseInt(value, 10),
                     },
                   },
                 });

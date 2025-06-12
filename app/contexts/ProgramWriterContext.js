@@ -160,10 +160,26 @@ function programWriterReducer(state, action) {
         newAllEquipmentSelected = updatedData.equipment.length === allEquipmentIds.length &&
           allEquipmentIds.every(id => updatedData.equipment.includes(id));
           
-        // Show equipment selector if equipment exists
+        // Show equipment selector if equipment exists and is different from default
         if (updatedData.equipment.length > 0) {
-          newShowEquipment = true;
+          // Check if gym type is provided to determine default equipment
+          const gymType = updatedData.gymType || state.formData.gymType;
+          const defaultEquipment = gymEquipmentPresets[gymType] || [];
+          
+          // Show equipment if it's different from the default preset or if there's no gym type
+          const isCustomEquipment = !gymType || 
+            updatedData.equipment.length !== defaultEquipment.length ||
+            !updatedData.equipment.every(id => defaultEquipment.includes(id));
+          
+          if (isCustomEquipment || updatedData.showEquipment === true) {
+            newShowEquipment = true;
+          }
         }
+      }
+      
+      // If showEquipment is explicitly set in the update, use that value
+      if (updatedData.hasOwnProperty('showEquipment')) {
+        newShowEquipment = updatedData.showEquipment;
       }
       
       return { 

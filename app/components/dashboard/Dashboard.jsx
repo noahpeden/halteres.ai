@@ -96,8 +96,8 @@ export default function Dashboard() {
     createEntity(event, entities, setEntities);
   };
 
-  const handleSubmitProgram = (event) => {
-    createProgram(event, entities);
+  const handleSubmitProgram = (event, method) => {
+    createProgram(event, entities, method);
   };
 
   const handleDeleteProgram = (programId) => {

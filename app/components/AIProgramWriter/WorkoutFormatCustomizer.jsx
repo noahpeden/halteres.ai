@@ -88,7 +88,7 @@ export default function WorkoutFormatCustomizer({
     const newSections = [...sections];
     newSections[index] = {
       ...newSections[index],
-      [field]: field === 'duration' ? parseInt(value) || 0 : value,
+      [field]: field === 'duration' ? (value === '' ? '' : parseInt(value)) : value,
     };
     setSections(newSections);
   };
