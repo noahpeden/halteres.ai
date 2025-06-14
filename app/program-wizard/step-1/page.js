@@ -20,7 +20,7 @@ import {
   Repeat,
   GitBranch,
 } from 'lucide-react';
-import { useProgramWizard } from '../../contexts/ProgramWizardContext';
+import useProgramStore from '../../store/programStore';
 import WizardProgress from '../../components/ProgramWizard/WizardProgress';
 
 const trainingMethodologies = [
@@ -132,7 +132,9 @@ const periodizationTypes = [
 ];
 
 export default function Step1Page() {
-  const { wizardData, updateWizardData, goToNext } = useProgramWizard();
+  const wizardData = useProgramStore((state) => state.wizardData);
+  const updateWizardData = useProgramStore((state) => state.updateWizardData);
+  const goToNext = useProgramStore((state) => state.goToNext);
   const [selectedMethodology, setSelectedMethodology] = useState(
     wizardData.trainingMethodology || ''
   );

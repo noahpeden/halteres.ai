@@ -1,11 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useProgramWizard } from '../../contexts/ProgramWizardContext';
+import useProgramStore from '../../store/programStore';
 import WizardProgress from '../../components/ProgramWizard/WizardProgress';
 
 export default function Step2Page() {
-  const { wizardData, updateWizardData, goToNext, goToPrevious } = useProgramWizard();
+  const wizardData = useProgramStore((state) => state.wizardData);
+  const updateWizardData = useProgramStore((state) => state.updateWizardData);
+  const goToNext = useProgramStore((state) => state.goToNext);
+  const goToPrevious = useProgramStore((state) => state.goToPrevious);
   const [programName, setProgramName] = useState(wizardData.programName || '');
   const [programDescription, setProgramDescription] = useState(wizardData.programDescription || '');
   const [errors, setErrors] = useState({});

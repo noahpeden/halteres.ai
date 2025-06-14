@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useProgramWizard } from '../../contexts/ProgramWizardContext';
+import useProgramStore from '../../store/programStore';
 import WizardProgress from '../../components/ProgramWizard/WizardProgress';
 import {
   kgToLbs,
@@ -15,8 +15,10 @@ import {
 } from '@/utils/unitConversions';
 
 export default function Step5Page() {
-  const { wizardData, goToPrevious, completeWizard, updateWizardData } =
-    useProgramWizard();
+  const wizardData = useProgramStore((state) => state.wizardData);
+  const goToPrevious = useProgramStore((state) => state.goToPrevious);
+  const completeWizard = useProgramStore((state) => state.completeWizard);
+  const updateWizardData = useProgramStore((state) => state.updateWizardData);
   const { supabase } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [entityData, setEntityData] = useState(null);

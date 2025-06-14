@@ -11,7 +11,7 @@ import equipmentList from '@/utils/equipmentList';
 
 const ProgramForm = ({
   formData,
-  dispatch,
+  setFieldValue,
   handleWorkoutFormatChange,
   handleDayOfWeekChange,
   isLoading,
@@ -46,46 +46,28 @@ const ProgramForm = ({
             })
             .filter(Boolean);
           // Update gymType, equipment, and gymDetails.equipment
-          dispatch({
-            type: 'SET_FIELD_VALUE',
-            payload: { field: 'gymType', value },
-          });
-          dispatch({
-            type: 'SET_FIELD_VALUE',
-            payload: { field: 'equipment', value: preset },
-          });
-          dispatch({
-            type: 'SET_FIELD_VALUE',
-            payload: {
-              field: 'gymDetails',
-              value: {
-                ...formData.gymDetails,
-                gym_type: value,
-                equipment: equipmentNames,
-              },
-            },
+          setFieldValue('gymType', value);
+          setFieldValue('equipment', preset);
+          setFieldValue('gymDetails', {
+            ...formData.gymDetails,
+            gym_type: value,
+            equipment: equipmentNames,
           });
         } else {
           // Just update the gym type without resetting equipment
-          dispatch({
-            type: 'SET_FIELD_VALUE',
-            payload: { field: 'gymType', value },
-          });
+          setFieldValue('gymType', value);
         }
         // Trigger auto-save after gym type change
         if (triggerAutoSave) triggerAutoSave();
         return;
       }
 
-      dispatch({
-        type: 'SET_FIELD_VALUE',
-        payload: { field: name, value: updateValue },
-      });
+      setFieldValue(name, updateValue);
 
       // Don't trigger auto-save on every keystroke for text fields
       // Auto-save will be triggered on blur instead
     },
-    [dispatch, formData.gymDetails, formData.gymType, triggerAutoSave]
+    [setFieldValue, formData.gymDetails, formData.gymType, triggerAutoSave]
   );
 
   // --- Eligibility Logic ---

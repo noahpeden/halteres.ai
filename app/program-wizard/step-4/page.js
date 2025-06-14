@@ -1,8 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useProgramWizard } from '../../contexts/ProgramWizardContext';
-import { useEquipment } from '../../contexts/EquipmentContext';
+import useProgramStore from '../../store/programStore';
 import WizardProgress from '../../components/ProgramWizard/WizardProgress';
 
 const gymTypes = [
@@ -43,15 +42,14 @@ const workoutFormats = [
 ];
 
 export default function Step4Page() {
-  const { wizardData, updateWizardData, goToPrevious, goToNext } = useProgramWizard();
-  const {
-    selectedEquipment,
-    selectedGymType,
-    updateGymType,
-    updateEquipment,
-    setSelectedGymType,
-    setSelectedEquipment,
-  } = useEquipment();
+  const wizardData = useProgramStore((state) => state.wizardData);
+  const updateWizardData = useProgramStore((state) => state.updateWizardData);
+  const goToPrevious = useProgramStore((state) => state.goToPrevious);
+  const goToNext = useProgramStore((state) => state.goToNext);
+  const selectedEquipment = useProgramStore((state) => state.selectedEquipment);
+  const selectedGymType = useProgramStore((state) => state.selectedGymType);
+  const updateGymType = useProgramStore((state) => state.updateGymType);
+  const updateEquipment = useProgramStore((state) => state.updateEquipment);
   
   const [difficultyLevel, setDifficultyLevel] = useState(wizardData.difficulty || 'intermediate');
   const [focusArea, setFocusArea] = useState(wizardData.focusArea || 'full_body');
@@ -60,18 +58,16 @@ export default function Step4Page() {
 
   useEffect(() => {
     if (wizardData.gymType) {
-      setSelectedGymType(wizardData.gymType);
       updateGymType(wizardData.gymType);
     }
     if (wizardData.equipment) {
-      setSelectedEquipment(wizardData.equipment);
       updateEquipment(wizardData.equipment);
     }
     setDifficultyLevel(wizardData.difficulty || 'intermediate');
     setFocusArea(wizardData.focusArea || 'full_body');
     setWorkoutDuration(wizardData.workoutDuration || 60);
     setSelectedFormats(wizardData.workoutFormats || []);
-  }, [wizardData, setSelectedGymType, setSelectedEquipment, updateGymType, updateEquipment]);
+  }, [wizardData, updateGymType, updateEquipment]);
 
   const handleGymTypeChange = (gymType) => {
     // Update gym type in context - this will automatically trigger equipment update

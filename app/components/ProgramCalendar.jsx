@@ -11,7 +11,7 @@ import enUS from 'date-fns/locale/en-US';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import { parseISO, isValid } from 'date-fns';
 
-// Import the simpler version of WorkoutModal that doesn't rely on ProgramWriterContext
+// Import the simpler version of WorkoutModal
 import CalendarWorkoutModal from './CalendarWorkoutModal';
 import EditWorkoutModal from './AIProgramWriter/EditWorkoutModal';
 import Toast from './Toast';

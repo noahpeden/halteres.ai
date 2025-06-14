@@ -5,7 +5,6 @@ import { useParams, useSearchParams } from 'next/navigation';
 import AIProgramWriter from '@/components/AIProgramWriter/AIProgramWriter';
 import ClientMetricsTab from '@/components/ClientMetricsTab';
 import { Edit2, Check, X, ChevronRight, Share2 } from 'lucide-react';
-import { ProgramWriterProvider } from '@/contexts/ProgramWriterContext';
 
 export default function ProgramWriterPage() {
   const { programId } = useParams();
@@ -137,8 +136,7 @@ export default function ProgramWriterPage() {
   };
 
   return (
-    <ProgramWriterProvider initialProgramId={programId}>
-      <div className="w-full max-w-full overflow-hidden relative">
+    <div className="w-full max-w-full overflow-hidden relative">
         <div className="mb-6">
           {isEditingName ? (
             <div className="flex items-center gap-2">
@@ -230,6 +228,5 @@ export default function ProgramWriterPage() {
           </div>
         </div>
       </div>
-    </ProgramWriterProvider>
   );
 }

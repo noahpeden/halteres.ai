@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useProgramWizard } from '../../contexts/ProgramWizardContext';
+import useProgramStore from '../../store/programStore';
 import WizardProgress from '../../components/ProgramWizard/WizardProgress';
 import equipmentList from '@/utils/equipmentList';
 import {
@@ -14,8 +14,10 @@ import {
 } from '../../components/utils';
 
 export default function Step3Page() {
-  const { wizardData, updateWizardData, goToNext, goToPrevious } =
-    useProgramWizard();
+  const wizardData = useProgramStore((state) => state.wizardData);
+  const updateWizardData = useProgramStore((state) => state.updateWizardData);
+  const goToNext = useProgramStore((state) => state.goToNext);
+  const goToPrevious = useProgramStore((state) => state.goToPrevious);
   const [previousWorkout, setPreviousWorkout] = useState(
     wizardData.previousWorkout || ''
   );

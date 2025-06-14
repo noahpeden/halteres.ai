@@ -1,17 +1,15 @@
 'use client';
 
-import { useEquipment } from '../../contexts/EquipmentContext';
+import useProgramStore from '../../store/programStore';
 
 export default function EquipmentSelector({
   isVisible,
   onToggleVisibility,
 }) {
-  const {
-    selectedEquipment,
-    equipmentList,
-    isAllEquipmentSelected,
-    handleEquipmentToggle,
-  } = useEquipment();
+  const selectedEquipment = useProgramStore((state) => state.selectedEquipment);
+  const equipmentList = useProgramStore((state) => state.equipmentList);
+  const isAllEquipmentSelected = useProgramStore((state) => state.isAllEquipmentSelected);
+  const handleEquipmentToggle = useProgramStore((state) => state.handleEquipmentToggle);
   return (
     <div>
       <button

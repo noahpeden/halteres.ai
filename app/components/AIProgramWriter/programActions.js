@@ -28,7 +28,9 @@ export async function generateProgram({
   setAiStreamingContent,
   showAiStream,
   hideAiStream,
-  dispatch,
+  triggerProgramRefreshAction,
+  setPreventFetch,
+  setGenerationStage,
   refetchProfile,
   suggestions, // Add suggestions to determine if this is a regeneration
 }) {
@@ -427,22 +429,21 @@ export async function generateProgram({
                     setGenerationStage('complete');
 
                     // Immediately trigger a program data refresh
-                    if (dispatch) {
-                      dispatch({ type: 'TRIGGER_PROGRAM_REFRESH' });
+                    if (triggerProgramRefreshAction) {
+                      triggerProgramRefreshAction();
                     }
 
                     // Set preventFetch flag to prevent fetchProgramData from clearing workouts
-                    if (dispatch) {
-                      dispatch({ type: 'SET_PREVENT_FETCH', payload: true });
+                    if (setPreventFetch) {
+                      setPreventFetch(true);
                       // Clear the flag after a delay and trigger a refresh
                       setTimeout(() => {
-                        dispatch({ type: 'SET_PREVENT_FETCH', payload: false });
+                        setPreventFetch(false);
                         // Trigger a refresh by clearing generation stage
                         setTimeout(() => {
-                          dispatch({
-                            type: 'SET_GENERATION_STAGE',
-                            payload: null,
-                          });
+                          if (setGenerationStage) {
+                            setGenerationStage(null);
+                          }
                         }, 100);
                       }, 5000); // Reduced to 5 seconds
                     }
@@ -511,14 +512,16 @@ export async function generateProgram({
 
           if (data.suggestions && data.suggestions.length > 0) {
             // Set preventFetch flag to prevent fetchProgramData from clearing workouts
-            if (dispatch) {
-              dispatch({ type: 'SET_PREVENT_FETCH', payload: true });
+            if (setPreventFetch) {
+              setPreventFetch(true);
               // Clear the flag after a delay and trigger a refresh
               setTimeout(() => {
-                dispatch({ type: 'SET_PREVENT_FETCH', payload: false });
+                setPreventFetch(false);
                 // Trigger a refresh by clearing generation stage
                 setTimeout(() => {
-                  dispatch({ type: 'SET_GENERATION_STAGE', payload: null });
+                  if (setGenerationStage) {
+                    setGenerationStage(null);
+                  }
                 }, 100);
               }, 5000); // Reduced to 5 seconds
             }
