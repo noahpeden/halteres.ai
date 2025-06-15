@@ -1,5 +1,5 @@
 'use client';
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import ProgramTypeSelector from '@/components/selectors/ProgramTypeSelector';
 import { programTypes } from '@/components/utils';
 import { InfoIcon, ChevronDown } from 'lucide-react';

@@ -186,14 +186,9 @@ export function updateFormDataFromProgram(program, formData) {
     }
   }
 
-  // Update periodization if available
-  if (program.periodization && typeof program.periodization === 'object') {
-    updatedData.periodization = program.periodization;
-
-    // Also update programType if available in periodization
-    if (program.periodization.program_type) {
-      updatedData.programType = program.periodization.program_type;
-    }
+  // Update programType from periodization if available
+  if (program.periodization?.program_type) {
+    updatedData.programType = program.periodization.program_type;
   }
 
   // Update session details if available
@@ -221,7 +216,6 @@ export const handleFormChange = (e, setFormData) => {
       'sessionDetails',
       'programOverview',
       'gymDetails',
-      'periodization',
     ].includes(name)
   ) {
     try {

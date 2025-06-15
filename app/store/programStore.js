@@ -71,7 +71,6 @@ const useProgramStore = create(
           sessionDetails: {},
           programOverview: {},
           gymDetails: {},
-          periodization: {},
           trainingMethodology: '',
           referenceInput: '',
           customWorkoutSections: [],
@@ -493,16 +492,11 @@ const useProgramStore = create(
                 main_workout_duration: 40
               },
               programOverview: {
-                progression_model: 'linear',
                 intensity_focus: 'moderate_to_high'
               },
               gymDetails: {
                 gym_type: 'Crossfit Box',
                 equipment: gymEquipmentPresets['Crossfit Box'] || []
-              },
-              periodization: {
-                program_type: 'linear',
-                phase_structure: 'progressive'
               },
               trainingMethodology: 'hiit', // Default to HIIT
               referenceInput: '',
@@ -650,6 +644,67 @@ const useProgramStore = create(
             selectedEquipment: programData.equipment || gymEquipmentPresets['Crossfit Box'] || [],
           });
         },
+        
+        // Fetch program data from database
+        fetchProgramFromDatabase: async (programId, supabase) => {
+          if (!programId || !supabase) return null;
+          
+          try {
+            set({ isLoading: true });
+            
+            const { data: program, error } = await supabase
+              .from('programs')
+              .select('*')
+              .eq('id', programId)
+              .single();
+              
+            if (error) {
+              console.error('Error fetching program:', error);
+              return null;
+            }
+            
+            if (program) {
+              // Process the program data
+              const processedData = {
+                ...program,
+                name: program.name || 'My Training Program',
+                description: program.description || '',
+                entityId: program.entity_id,
+                goal: program.goal || 'strength',
+                difficulty: program.difficulty || 'intermediate',
+                equipment: program.equipment || [],
+                focusArea: program.focus_area || 'full_body',
+                personalization: program.personalization || '',
+                workoutFormats: program.workout_formats || [],
+                numberOfWeeks: String(program.duration_weeks || 4),
+                daysPerWeek: String(program.days_of_week?.length || 3),
+                daysOfWeek: program.days_of_week || ['Monday', 'Wednesday', 'Friday'],
+                programType: program.periodization?.program_type || program.program_type || 'linear',
+                gymType: program.gym_type || 'Crossfit Box',
+                startDate: program.start_date || '',
+                endDate: program.end_date || '',
+                sessionDetails: program.session_details || {},
+                programOverview: program.program_overview || {},
+                gymDetails: program.gym_details || {},
+                trainingMethodology: program.training_methodology || '',
+                referenceInput: program.reference_input || '',
+                customWorkoutSections: program.custom_workout_sections || [],
+              };
+              
+              // Load the program data into state
+              await get().loadProgramData(processedData);
+              
+              return processedData;
+            }
+            
+            return null;
+          } catch (error) {
+            console.error('Error in fetchProgramFromDatabase:', error);
+            return null;
+          } finally {
+            set({ isLoading: false });
+          }
+        },
 
         // Utility Actions
         setLoading: (isLoading) => set({ isLoading }),
@@ -737,7 +792,12 @@ const useProgramStore = create(
         // Program Wizard Navigation Actions
         goToStep: (step) => {
           if (typeof window !== 'undefined') {
-            window.location.href = `/program-wizard/step-${step}`;
+            const { programId, wizardData } = get();
+            // Use programId from state or wizardData
+            const currentProgramId = programId || wizardData.programId;
+            const baseUrl = `/program-wizard/step-${step}`;
+            const url = currentProgramId ? `${baseUrl}?programId=${currentProgramId}` : baseUrl;
+            window.location.href = url;
           }
         },
 
@@ -754,18 +814,95 @@ const useProgramStore = create(
         },
 
         completeWizard: async () => {
-          const { wizardData } = get();
-          // Store wizard data temporarily
-          const wizardDataForWriter = {
-            ...wizardData,
-            isGenerating: true
-          };
+          const { wizardData, programId } = get();
+          // Update wizard data with completion flag
+          set((state) => ({
+            wizardData: {
+              ...state.wizardData,
+              isGenerating: true,
+              wizardComplete: true
+            }
+          }));
           
           if (typeof window !== 'undefined') {
-            sessionStorage.setItem('programWizardData', JSON.stringify(wizardDataForWriter));
             // Navigate to a loading page that will create the program and redirect
-            window.location.href = '/program-wizard/creating';
+            // Use programId from state or wizardData
+            const currentProgramId = programId || wizardData.programId;
+            const baseUrl = '/program-wizard/creating';
+            const url = currentProgramId ? `${baseUrl}?programId=${currentProgramId}` : baseUrl;
+            window.location.href = url;
           }
+        },
+
+        // Sync form data back to wizard data for returning to wizard
+        syncFormDataToWizard: (formData, programId) => {
+          console.log('[syncFormDataToWizard] Converting form data to wizard format:', formData);
+          console.log('[syncFormDataToWizard] Current programType:', formData.programType);
+          console.log('[syncFormDataToWizard] Current trainingMethodology:', formData.trainingMethodology);
+          
+          // Create reverse mapping for gym types (Title Case to snake_case)
+          const reverseGymTypeMapping = {
+            'Crossfit Box': 'crossfit_box',
+            'Commercial Gym': 'commercial_gym',
+            'Home Gym': 'home_gym',
+            'Minimal Equipment': 'minimal_equipment',
+            'Outdoor Space': 'outdoor_space',
+            'Powerlifting Gym': 'powerlifting_gym',
+            'Olympic Weightlifting Gym': 'olympic_weightlifting_gym',
+            'Bodyweight Only': 'bodyweight_only',
+            'Studio Gym': 'studio_gym',
+            'University Gym': 'university_gym',
+            'Hotel Gym': 'hotel_gym',
+            'Apartment Gym': 'apartment_gym',
+            'Boxing/MMA Gym': 'boxing_mma_gym',
+            'Triathlon Training Facility': 'triathlon_training_facility',
+            'Multi-Sport Complex': 'multi_sport_complex',
+          };
+
+          // Convert form data back to wizard format
+          const wizardDataToSync = {
+            // Convert form data back to wizard format
+            trainingMethodology: formData.trainingMethodology || '',
+            programType: formData.programType || '',
+            programDescription: formData.description || '',
+            programName: formData.name || '',
+            referenceInput: formData.referenceInput || '',
+            previousWorkout: formData.personalization || formData.referenceInput || '',
+
+            // Convert gym type back to snake_case using mapping
+            gymType: reverseGymTypeMapping[formData.gymType] || 
+                     formData.gymType?.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z_]/g, '') || 
+                     'crossfit_box',
+            equipment: formData.equipment || [],
+            difficulty: formData.difficulty || 'intermediate',
+            focusArea: formData.focusArea || 'full_body',
+            workoutDuration: formData.sessionDetails?.duration_minutes || 
+                           parseInt(formData.sessionDetails?.main_workout_duration) || 
+                           60,
+            workoutFormats: formData.workoutFormats || [],
+
+            // Scheduling data
+            entityId: formData.entityId,
+            startDate: formData.startDate,
+            numberOfWeeks: parseInt(formData.numberOfWeeks) || 4,
+            daysOfWeek: (formData.daysOfWeek || []).map((day) => {
+              // Convert from Title Case to lowercase
+              return typeof day === 'string' ? day.toLowerCase() : day;
+            }),
+
+            // Add flag to indicate returning from writer
+            returningFromWriter: true,
+            programId: programId,
+          };
+
+          console.log('[syncFormDataToWizard] Synced wizard data:', wizardDataToSync);
+
+          set((state) => ({
+            wizardData: {
+              ...state.wizardData,
+              ...wizardDataToSync
+            }
+          }));
         },
         
         // Computed values
@@ -781,6 +918,7 @@ const useProgramStore = create(
           selectedEquipment: state.selectedEquipment,
           selectedGymType: state.selectedGymType,
         }),
+        version: 1,
       }
     )
   )

@@ -1,6 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
+import { X } from 'lucide-react';
 import useProgramStore from '../../store/programStore';
 import WizardProgress from '../../components/ProgramWizard/WizardProgress';
 
@@ -42,6 +45,10 @@ const workoutFormats = [
 ];
 
 export default function Step4Page() {
+  const searchParams = useSearchParams();
+  const { supabase } = useAuth();
+  const programId = searchParams.get('programId');
+  
   const wizardData = useProgramStore((state) => state.wizardData);
   const updateWizardData = useProgramStore((state) => state.updateWizardData);
   const goToPrevious = useProgramStore((state) => state.goToPrevious);
@@ -50,11 +57,45 @@ export default function Step4Page() {
   const selectedGymType = useProgramStore((state) => state.selectedGymType);
   const updateGymType = useProgramStore((state) => state.updateGymType);
   const updateEquipment = useProgramStore((state) => state.updateEquipment);
+  const fetchProgramFromDatabase = useProgramStore((state) => state.fetchProgramFromDatabase);
   
   const [difficultyLevel, setDifficultyLevel] = useState(wizardData.difficulty || 'intermediate');
   const [focusArea, setFocusArea] = useState(wizardData.focusArea || 'full_body');
   const [workoutDuration, setWorkoutDuration] = useState(wizardData.workoutDuration || 60);
   const [selectedFormats, setSelectedFormats] = useState(wizardData.workoutFormats || []);
+  const [isLoading, setIsLoading] = useState(false);
+
+
+  // Fetch program data if programId is provided
+  useEffect(() => {
+    async function loadProgram() {
+      if (programId && supabase) {
+        setIsLoading(true);
+        try {
+          const programData = await fetchProgramFromDatabase(programId, supabase);
+          if (programData) {
+            // Update local state with fetched data
+            if (programData.gymType) {
+              updateGymType(programData.gymType.toLowerCase().replace(/\s+/g, '_'));
+            }
+            if (programData.equipment) {
+              updateEquipment(programData.equipment);
+            }
+            setDifficultyLevel(programData.difficulty || 'intermediate');
+            setFocusArea(programData.focusArea || 'full_body');
+            setWorkoutDuration(programData.sessionDetails?.main_workout_duration || 60);
+            setSelectedFormats(programData.workoutFormats || []);
+          }
+        } catch (error) {
+          console.error('Error loading program:', error);
+        } finally {
+          setIsLoading(false);
+        }
+      }
+    }
+    
+    loadProgram();
+  }, [programId, supabase, fetchProgramFromDatabase, updateGymType, updateEquipment]);
 
   useEffect(() => {
     if (wizardData.gymType) {
@@ -68,6 +109,18 @@ export default function Step4Page() {
     setWorkoutDuration(wizardData.workoutDuration || 60);
     setSelectedFormats(wizardData.workoutFormats || []);
   }, [wizardData, updateGymType, updateEquipment]);
+
+  // Save state when fields change
+  useEffect(() => {
+    updateWizardData({
+      gymType: selectedGymType,
+      equipment: selectedEquipment,
+      difficulty: difficultyLevel,
+      focusArea,
+      workoutDuration,
+      workoutFormats: selectedFormats,
+    });
+  }, [selectedGymType, selectedEquipment, difficultyLevel, focusArea, workoutDuration, selectedFormats, updateWizardData]);
 
   const handleGymTypeChange = (gymType) => {
     // Update gym type in context - this will automatically trigger equipment update
@@ -113,9 +166,28 @@ export default function Step4Page() {
   };
 
   return (
-    <div>
+    <div className="relative">
+      {/* Exit button when there's a programId */}
+      {programId && (
+        <button
+          onClick={() =>
+            (window.location.href = `/program/${programId}/writer`)
+          }
+          className="absolute top-4 right-4 btn btn-ghost btn-circle z-10"
+          title="Exit wizard and go to program writer"
+        >
+          <X className="w-6 h-6" />
+        </button>
+      )}
+
       <WizardProgress currentStep={4} />
       
+      {isLoading && (
+        <div className="flex justify-center items-center py-8">
+          <span className="loading loading-spinner loading-lg text-primary"></span>
+        </div>
+      )}
+
       <div className="bg-base-200 rounded-lg p-6">
         <div className="text-center mb-6">
           <h2 className="text-2xl font-bold text-primary mb-2">Gym Setup & Preferences</h2>

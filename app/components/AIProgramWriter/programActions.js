@@ -32,6 +32,7 @@ export async function generateProgram({
   setPreventFetch,
   refetchProfile,
   suggestions, // Add suggestions to determine if this is a regeneration
+  updateWizardData, // Add updateWizardData to sync with wizard store
 }) {
   return new Promise(async (resolve, reject) => {
     setIsLoading(true);
@@ -125,7 +126,6 @@ export async function generateProgram({
 
         // Prepare periodization with program type
         const periodizationData = {
-          ...formData.periodization,
           program_type: formData.programType,
         };
 
@@ -143,6 +143,7 @@ export async function generateProgram({
           difficulty: formData.difficulty,
           focus_area: formData.focusArea,
           personalization: formData.personalization,
+          referenceInput: formData.referenceInput || '', // Add referenceInput field
           trainingMethodology: formData.trainingMethodology,
           duration_weeks: parseInt(formData.numberOfWeeks, 10),
           days_per_week: parseInt(formData.daysPerWeek, 10),
@@ -462,6 +463,30 @@ export async function generateProgram({
                       setLoadingTimer(null);
                     }
 
+                    // Update wizard data with the generated program information (streaming)
+                    if (updateWizardData) {
+                      const wizardUpdateData = {
+                        trainingMethodology: formData.trainingMethodology,
+                        programType: formData.programType,
+                        gymType: formData.gymType?.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z_]/g, '') || 'crossfit_box',
+                        equipment: formData.equipment || [],
+                        difficulty: formData.difficulty || 'intermediate',
+                        focusArea: formData.focusArea || 'full_body',
+                        workoutDuration: formData.sessionDetails?.duration_minutes || 60,
+                        workoutFormats: formData.workoutFormats || [],
+                        entityId: formData.entityId,
+                        startDate: formData.startDate,
+                        numberOfWeeks: parseInt(formData.numberOfWeeks) || 4,
+                        daysOfWeek: (formData.daysOfWeek || []).map(day => day.toLowerCase()),
+                        // Mark as having a generated program
+                        hasGeneratedProgram: true,
+                        programId: programId,
+                      };
+                      
+                      console.log('[generateProgram SSE] Updating wizard data:', wizardUpdateData);
+                      updateWizardData(wizardUpdateData);
+                    }
+
                     // Call refetchProfile if provided
                     if (refetchProfile) {
                       // Delay refetchProfile to allow auto-save to complete
@@ -557,6 +582,32 @@ export async function generateProgram({
                 ? 'Program generated and saved successfully! You can now add workouts to your calendar.'
                 : 'Program generated successfully!'
             );
+
+            // Update wizard data with the generated program information
+            if (updateWizardData) {
+              const wizardUpdateData = {
+                programName: data.title || formData.name,
+                programDescription: data.description || formData.description,
+                trainingMethodology: formData.trainingMethodology,
+                programType: formData.programType,
+                gymType: formData.gymType?.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z_]/g, '') || 'crossfit_box',
+                equipment: formData.equipment || [],
+                difficulty: formData.difficulty || 'intermediate',
+                focusArea: formData.focusArea || 'full_body',
+                workoutDuration: formData.sessionDetails?.duration_minutes || 60,
+                workoutFormats: formData.workoutFormats || [],
+                entityId: formData.entityId,
+                startDate: formData.startDate,
+                numberOfWeeks: parseInt(formData.numberOfWeeks) || 4,
+                daysOfWeek: (formData.daysOfWeek || []).map(day => day.toLowerCase()),
+                // Mark as having a generated program
+                hasGeneratedProgram: true,
+                programId: programId,
+              };
+              
+              console.log('[generateProgram] Updating wizard data:', wizardUpdateData);
+              updateWizardData(wizardUpdateData);
+            }
 
             // Refresh the auth context profile after generation completes
             if (refetchProfile) {
@@ -681,6 +732,7 @@ export async function saveProgram({
   setIsLoading,
   showToastMessage,
   generatedDescription,
+  updateWizardData, // Add updateWizardData to sync with wizard store
 }) {
   if (!programId) {
     showToastMessage(
@@ -815,6 +867,32 @@ export async function saveProgram({
       }
     } else {
       showToastMessage('Program details saved successfully!');
+    }
+
+    // Update wizard data after successful save
+    if (updateWizardData) {
+      const wizardUpdateData = {
+        programName: programData.name,
+        programDescription: programData.description,
+        trainingMethodology: programData.trainingMethodology,
+        programType: programData.programType,
+        gymType: programData.gymType?.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z_]/g, '') || 'crossfit_box',
+        equipment: programData.equipment || [],
+        difficulty: programData.difficulty || 'intermediate',
+        focusArea: programData.focusArea || 'full_body',
+        workoutDuration: programData.sessionDetails?.duration_minutes || 60,
+        workoutFormats: programData.workoutFormats || [],
+        entityId: programData.entityId,
+        startDate: programData.startDate,
+        numberOfWeeks: parseInt(programData.numberOfWeeks) || 4,
+        daysOfWeek: (programData.daysOfWeek || []).map(day => day.toLowerCase()),
+        programId: programId,
+        // Mark as saved
+        hasGeneratedProgram: suggestions && suggestions.length > 0,
+      };
+      
+      console.log('[saveProgram] Updating wizard data:', wizardUpdateData);
+      updateWizardData(wizardUpdateData);
     }
   } catch (error) {
     console.error('Error saving program:', error);

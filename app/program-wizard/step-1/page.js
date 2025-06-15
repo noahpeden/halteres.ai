@@ -1,6 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   Dumbbell,
   Target,
@@ -19,6 +21,7 @@ import {
   Layers,
   Repeat,
   GitBranch,
+  X,
 } from 'lucide-react';
 import useProgramStore from '../../store/programStore';
 import WizardProgress from '../../components/ProgramWizard/WizardProgress';
@@ -100,31 +103,31 @@ const trainingMethodologies = [
 
 const periodizationTypes = [
   {
-    value: 'linear_progression',
+    value: 'linear',
     label: 'Linear Progression',
     description: 'Gradual intensity increase over time',
     icon: TrendingUp,
   },
   {
-    value: 'undulating_periodization',
+    value: 'undulating',
     label: 'Undulating Periodization',
     description: 'Varied intensity within weekly cycles',
     icon: BarChart3,
   },
   {
-    value: 'block_periodization',
+    value: 'block',
     label: 'Block Periodization',
     description: 'Focused training blocks',
     icon: Layers,
   },
   {
-    value: 'conjugate_method',
+    value: 'conjugate',
     label: 'Conjugate Method',
     description: 'Rotating strength emphasis',
     icon: Repeat,
   },
   {
-    value: 'concurrent_training',
+    value: 'concurrent',
     label: 'Concurrent Training',
     description: 'Multiple fitness qualities',
     icon: GitBranch,
@@ -132,20 +135,94 @@ const periodizationTypes = [
 ];
 
 export default function Step1Page() {
+  const searchParams = useSearchParams();
+  const { supabase } = useAuth();
+  const programId = searchParams.get('programId');
+
   const wizardData = useProgramStore((state) => state.wizardData);
   const updateWizardData = useProgramStore((state) => state.updateWizardData);
   const goToNext = useProgramStore((state) => state.goToNext);
+  // Don't use wizardData for initial state when we have a programId - let database load handle it
   const [selectedMethodology, setSelectedMethodology] = useState(
-    wizardData.trainingMethodology || ''
+    programId ? '' : wizardData.trainingMethodology || ''
   );
   const [selectedPeriodization, setSelectedPeriodization] = useState(
-    wizardData.programType || ''
+    programId ? '' : wizardData.programType || ''
   );
+  const [isLoading, setIsLoading] = useState(false);
+  const initializeFromDatabaseRef = useRef(false);
 
+  console.log('wizardData', wizardData);
+  console.log('selectedMethodology', selectedMethodology);
+  console.log('selectedPeriodization', selectedPeriodization);
+
+  // Fetch program data if programId is provided (only once)
   useEffect(() => {
-    setSelectedMethodology(wizardData.trainingMethodology || '');
-    setSelectedPeriodization(wizardData.programType || '');
-  }, [wizardData.trainingMethodology, wizardData.programType]);
+    async function loadProgram() {
+      if (programId && supabase && !initializeFromDatabaseRef.current) {
+        initializeFromDatabaseRef.current = true;
+        setIsLoading(true);
+        try {
+          // Fetch directly from Supabase
+          const { data: program, error } = await supabase
+            .from('programs')
+            .select('*')
+            .eq('id', programId)
+            .single();
+
+          if (error) {
+            console.error('Error fetching program:', error);
+            return;
+          }
+          console.log('program', program);
+          if (program) {
+            console.log('Loading from database:', {
+              training_methodology: program.training_methodology,
+              periodization: program.periodization,
+              program_type: program.program_type,
+              periodization_program_type: program.periodization?.program_type,
+            });
+
+            // Update local state directly from database (don't touch store to avoid loops)
+            setSelectedMethodology(program.training_methodology || '');
+            // Try periodization.program_type first, then fallback to program_type
+            setSelectedPeriodization(
+              program.periodization?.program_type || program.program_type || ''
+            );
+
+            // Update wizard data with the fetched data
+            updateWizardData({
+              trainingMethodology: program.training_methodology || '',
+              programType:
+                program.periodization?.program_type ||
+                program.program_type ||
+                '',
+              programDescription: program.description || '',
+              programName: program.name || '',
+              referenceInput: program.reference_input || '',
+              gymType: program.gym_type || 'crossfit_box',
+              equipment: program.equipment || [],
+              difficulty: program.difficulty || 'intermediate',
+              focusArea: program.focus_area || 'full_body',
+              workoutDuration: program.session_details?.duration_minutes || 60,
+              workoutFormats: program.workout_formats || [],
+              entityId: program.entity_id,
+              startDate: program.start_date || '',
+              numberOfWeeks: program.duration_weeks || 4,
+              daysOfWeek: program.days_of_week || [],
+            });
+          }
+        } catch (error) {
+          console.error('Error loading program:', error);
+        } finally {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    loadProgram();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [programId, supabase]);
 
   const handleNext = () => {
     if (!selectedMethodology || !selectedPeriodization) {
@@ -160,9 +237,37 @@ export default function Step1Page() {
     goToNext(1);
   };
 
+  // Save state when selections change
+  useEffect(() => {
+    if (selectedMethodology && selectedPeriodization) {
+      updateWizardData({
+        trainingMethodology: selectedMethodology,
+        programType: selectedPeriodization,
+      });
+    }
+  }, [selectedMethodology, selectedPeriodization, updateWizardData]);
   return (
-    <div>
+    <div className="relative">
+      {/* Exit button when there's a programId */}
+      {programId && (
+        <button
+          onClick={() =>
+            (window.location.href = `/program/${programId}/writer`)
+          }
+          className="absolute top-4 right-4 btn btn-ghost btn-circle z-10"
+          title="Exit wizard and go to program writer"
+        >
+          <X className="w-6 h-6" />
+        </button>
+      )}
+
       <WizardProgress currentStep={1} />
+
+      {isLoading && (
+        <div className="flex justify-center items-center py-8">
+          <span className="loading loading-spinner loading-lg text-primary"></span>
+        </div>
+      )}
 
       <div className="bg-base-200 rounded-lg p-6 max-w-6xl mx-auto">
         <div className="text-center mb-6">

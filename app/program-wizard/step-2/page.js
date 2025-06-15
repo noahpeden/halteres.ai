@@ -1,23 +1,66 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
+import { X } from 'lucide-react';
 import useProgramStore from '../../store/programStore';
 import WizardProgress from '../../components/ProgramWizard/WizardProgress';
 
 export default function Step2Page() {
+  const searchParams = useSearchParams();
+  const { supabase } = useAuth();
+  const programId = searchParams.get('programId');
+  
   const wizardData = useProgramStore((state) => state.wizardData);
   const updateWizardData = useProgramStore((state) => state.updateWizardData);
   const goToNext = useProgramStore((state) => state.goToNext);
   const goToPrevious = useProgramStore((state) => state.goToPrevious);
+  const fetchProgramFromDatabase = useProgramStore((state) => state.fetchProgramFromDatabase);
   const [programName, setProgramName] = useState(wizardData.programName || '');
   const [programDescription, setProgramDescription] = useState(wizardData.programDescription || '');
   const [errors, setErrors] = useState({});
+  const [isLoading, setIsLoading] = useState(false);
+
+
+  // Fetch program data if programId is provided
+  useEffect(() => {
+    async function loadProgram() {
+      if (programId && supabase) {
+        setIsLoading(true);
+        try {
+          const programData = await fetchProgramFromDatabase(programId, supabase);
+          if (programData) {
+            // Update local state with fetched data
+            setProgramName(programData.name || '');
+            setProgramDescription(programData.description || '');
+          }
+        } catch (error) {
+          console.error('Error loading program:', error);
+        } finally {
+          setIsLoading(false);
+        }
+      }
+    }
+    
+    loadProgram();
+  }, [programId, supabase, fetchProgramFromDatabase]);
 
   useEffect(() => {
     // Set program name from wizard data (from dashboard) or use existing
     setProgramName(wizardData.programName || '');
     setProgramDescription(wizardData.programDescription || '');
   }, [wizardData.programName, wizardData.programDescription]);
+
+  // Save state when fields change
+  useEffect(() => {
+    if (programName.trim() || programDescription.trim()) {
+      updateWizardData({
+        programName: programName.trim(),
+        programDescription: programDescription.trim(),
+      });
+    }
+  }, [programName, programDescription, updateWizardData]);
 
   const validateForm = () => {
     const newErrors = {};
@@ -64,9 +107,28 @@ export default function Step2Page() {
   ];
 
   return (
-    <div>
+    <div className="relative">
+      {/* Exit button when there's a programId */}
+      {programId && (
+        <button
+          onClick={() =>
+            (window.location.href = `/program/${programId}/writer`)
+          }
+          className="absolute top-4 right-4 btn btn-ghost btn-circle z-10"
+          title="Exit wizard and go to program writer"
+        >
+          <X className="w-6 h-6" />
+        </button>
+      )}
+
       <WizardProgress currentStep={2} />
       
+      {isLoading && (
+        <div className="flex justify-center items-center py-8">
+          <span className="loading loading-spinner loading-lg text-primary"></span>
+        </div>
+      )}
+
       <div className="bg-base-200 rounded-lg p-6">
         <div className="text-center mb-6">
           <h2 className="text-2xl font-bold text-primary mb-2">Program Description</h2>

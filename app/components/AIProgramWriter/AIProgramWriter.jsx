@@ -36,7 +36,7 @@ import ProgramGenerationModalComponent from './ProgramGenerationModal';
 import ReferenceWorkoutSearchModal from './ReferenceWorkoutSearchModal';
 import EnhancedReferenceWorkoutSearchModal from './EnhancedReferenceWorkoutSearchModal';
 
-import { InfoIcon, Sparkles } from 'lucide-react';
+import { InfoIcon, Sparkles, ArrowLeftIcon } from 'lucide-react';
 import AutoSaveStatusIndicator from './AutoSaveStatusIndicator';
 
 const ProgramForm = memo(ProgramFormComponent);
@@ -189,6 +189,8 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
     (state) => state.triggerProgramRefresh
   );
   const setPreventFetch = useProgramStore((state) => state.setPreventFetch);
+  const syncFormDataToWizard = useProgramStore((state) => state.syncFormDataToWizard);
+  const updateWizardData = useProgramStore((state) => state.updateWizardData);
 
   const initializeNewProgram = useProgramStore(
     (state) => state.initializeNewProgram
@@ -201,12 +203,6 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
   const isAutoUpdating = useRef(false);
   const generationAreaRef = useRef(null);
   const hasScrolledToGeneration = useRef(false);
-  const [isEnhancingProgram, setIsEnhancingProgram] = useState(false);
-  const [showEnhanceProgramInput, setShowEnhanceProgramInput] = useState(false);
-  const [enhanceProgramText, setEnhanceProgramText] = useState('');
-  const [pendingProgramEnhancement, setPendingProgramEnhancement] =
-    useState(null);
-  const [showProgramSavePrompt, setShowProgramSavePrompt] = useState(false);
   const isGeneratingRef = useRef(false);
   const isInitializingRef = useRef(false);
   const isFetchingRef = useRef(false);
@@ -483,11 +479,12 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
         setGenerationStage: setGenerationStage,
         refetchProfile,
         suggestions, // Pass current suggestions to determine if this is a regeneration
+        updateWizardData: updateWizardData, // Add updateWizardData for wizard sync
       });
     } finally {
       isGeneratingRef.current = false;
     }
-  }, [programId, formData, showToastMessage, refetchProfile, suggestions]);
+  }, [programId, formData, showToastMessage, refetchProfile, suggestions, updateWizardData]);
 
   const handleSaveProgram = useCallback(() => {
     saveProgram({
@@ -502,6 +499,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
       setIsLoading: setLoading,
       showToastMessage,
       generatedDescription,
+      updateWizardData: updateWizardData, // Add updateWizardData for wizard sync
     });
   }, [
     programId,
@@ -510,6 +508,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
     supabase,
     showToastMessage,
     generatedDescription,
+    updateWizardData,
   ]);
 
   const handleRescheduleProgram = useCallback(() => {
@@ -670,303 +669,14 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
     [supabase, suggestions, showToastMessage]
   );
 
-  // Enhance Program Handler
-  const handleEnhanceProgram = useCallback(() => {
-    setShowEnhanceProgramInput(true);
-  }, []);
+  // Back to Wizard Handler
+  const handleBackToWizard = useCallback(() => {
+    // Sync current form data back to wizard store before navigating
+    syncFormDataToWizard(formData, programId);
 
-  const handleEnhanceProgramSubmit = useCallback(async () => {
-    if (!enhanceProgramText.trim()) {
-      showToastMessage('Please provide enhancement instructions', 'error');
-      return;
-    }
-
-    setIsEnhancingProgram(true);
-    setShowEnhanceProgramInput(false);
-
-    try {
-      const payload = {
-        workouts: suggestions.filter((w) => !w.is_reference),
-        instructions: enhanceProgramText,
-        programName: formData.name,
-        methodology: formData.trainingMethodology || 'General fitness',
-        gymEquipment: formData.equipment || [],
-        injuries: formData.injuries || '',
-        focusArea: formData.focusArea || '',
-        workoutFormats: formData.workoutFormats || [],
-      };
-
-      const res = await fetch('/api/enhance-program', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || 'Failed to enhance program');
-      }
-
-      const { enhancedProgram } = await res.json();
-
-      // Store the enhanced program for preview
-      setPendingProgramEnhancement(enhancedProgram);
-      setShowProgramSavePrompt(true);
-      setEnhanceProgramText('');
-    } catch (err) {
-      console.error('Error enhancing program:', err);
-      showToastMessage(`Failed to enhance program: ${err.message}`, 'error');
-    } finally {
-      setIsEnhancingProgram(false);
-    }
-  }, [enhanceProgramText, suggestions, formData, showToastMessage]);
-
-  const handleSaveProgramEnhancement = useCallback(async () => {
-    if (!pendingProgramEnhancement) return;
-
-    try {
-      setLoading(true);
-
-      // Update all workouts in the database
-      const updatePromises = pendingProgramEnhancement.enhancedWorkouts.map(
-        async (enhancedWorkout) => {
-          if (enhancedWorkout.id) {
-            const { error } = await supabase
-              .from('program_workouts')
-              .update({
-                title: enhancedWorkout.title,
-                body: enhancedWorkout.body,
-                updated_at: new Date().toISOString(),
-              })
-              .eq('id', enhancedWorkout.id);
-
-            if (error) throw error;
-          }
-          return enhancedWorkout;
-        }
-      );
-
-      await Promise.all(updatePromises);
-
-      // Update local state with enhanced workouts
-      setSuggestions(
-        suggestions.map((workout) => {
-          const enhanced = pendingProgramEnhancement.enhancedWorkouts.find(
-            (w) => w.id === workout.id
-          );
-          return enhanced
-            ? { ...workout, title: enhanced.title, body: enhanced.body }
-            : workout;
-        })
-      );
-
-      showToastMessage('Program successfully enhanced!');
-      setPendingProgramEnhancement(null);
-      setShowProgramSavePrompt(false);
-    } catch (err) {
-      console.error('Error saving enhanced program:', err);
-      showToastMessage(
-        `Failed to save enhanced program: ${err.message}`,
-        'error'
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [pendingProgramEnhancement, suggestions, supabase, showToastMessage]);
-
-  const handleDiscardProgramEnhancement = useCallback(() => {
-    setPendingProgramEnhancement(null);
-    setShowProgramSavePrompt(false);
-  }, []);
-
-  // --- Effects ---
-
-  // Inject wizard data if coming from wizard
-  useEffect(() => {
-    if (!wizardComplete) return;
-
-    const wizardData = sessionStorage.getItem('programWizardData');
-    if (!wizardData) return;
-
-    try {
-      const data = JSON.parse(wizardData);
-
-      // Convert days of week from wizard format to form format
-      const daysOfWeekMapping = {
-        sunday: 'Sunday',
-        monday: 'Monday',
-        tuesday: 'Tuesday',
-        wednesday: 'Wednesday',
-        thursday: 'Thursday',
-        friday: 'Friday',
-        saturday: 'Saturday',
-      };
-
-      const mappedDaysOfWeek = (data.daysOfWeek || [])
-        .map((day) => daysOfWeekMapping[day])
-        .filter(Boolean);
-
-      // Convert gym type from wizard snake_case to title case
-      const gymTypeMapping = {
-        crossfit_box: 'Crossfit Box',
-        commercial_gym: 'Commercial Gym',
-        home_gym: 'Home Gym',
-        minimal_equipment: 'Minimal Equipment',
-        outdoor_space: 'Outdoor Space',
-        powerlifting_gym: 'Powerlifting Gym',
-        olympic_weightlifting_gym: 'Olympic Weightlifting Gym',
-        bodyweight_only: 'Bodyweight Only',
-        studio_gym: 'Studio Gym',
-        university_gym: 'University Gym',
-        hotel_gym: 'Hotel Gym',
-        apartment_gym: 'Apartment Gym',
-        boxing_mma_gym: 'Boxing/MMA Gym',
-        triathlon_training_facility: 'Triathlon Training Facility',
-        multi_sport_complex: 'Multi-Sport Complex',
-      };
-
-      const mappedGymType = gymTypeMapping[data.gymType] || data.gymType || '';
-
-      // Convert workout formats from wizard kebab-case to AI writer format
-      const workoutFormatMapping = {
-        'for-time': 'for_time',
-        'giant-set': 'giant_set',
-      };
-
-      const mappedWorkoutFormats = (data.workoutFormats || []).map(
-        (format) => workoutFormatMapping[format] || format
-      );
-
-      // Map wizard data to form data structure
-      const formDataUpdates = {
-        trainingMethodology: data.trainingMethodology || '',
-        programType: data.programType || '',
-        description: data.programDescription || '',
-        referenceInput: data.referenceInput || data.previousWorkout || '',
-        gymType: mappedGymType,
-        equipment: data.equipment || [],
-        difficulty: data.difficulty || 'intermediate',
-        focusArea: data.focusArea || 'full_body',
-        sessionDetails: {
-          duration_minutes: data.workoutDuration || 60,
-        },
-        workoutFormats: mappedWorkoutFormats,
-        numberOfWeeks: String(data.numberOfWeeks || 4),
-        startDate: data.startDate || '',
-        daysOfWeek: mappedDaysOfWeek,
-        personalization: data.previousWorkout || '',
-        showEquipment: data.equipment && data.equipment.length > 0,
-      };
-
-      updateFormData(formDataUpdates);
-
-      if (
-        data.selectedWorkouts &&
-        data.selectedWorkouts.length > 0 &&
-        programId
-      ) {
-        try {
-          console.log(
-            'Transferring wizard selected workouts as reference workouts:',
-            data.selectedWorkouts
-          );
-
-          // Save selected workouts as reference workouts in the database
-          const workoutsToSave = data.selectedWorkouts.map((workout) => ({
-            program_id: programId,
-            entity_id: formData.entityId,
-            title: workout.title,
-            body: workout.body || workout.description || '',
-            tags: {
-              source: workout.source || 'wizard-selection',
-              wizard_transferred: true,
-            },
-            is_reference: true,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          }));
-
-          // Save to database
-          supabase
-            .from('program_workouts')
-            .insert(workoutsToSave)
-            .then(({ error }) => {
-              if (error) {
-                console.error('Error saving wizard reference workouts:', error);
-                showToastMessage(
-                  'Failed to transfer reference workouts from wizard',
-                  'warning'
-                );
-              } else {
-                console.log(
-                  'Successfully transferred reference workouts from wizard'
-                );
-                showToastMessage(
-                  `Transferred ${data.selectedWorkouts.length} reference workouts from wizard`,
-                  'success'
-                );
-                // Refresh reference workouts display
-                supabase
-                  .from('program_workouts')
-                  .select('*')
-                  .eq('program_id', programId)
-                  .eq('is_reference', true)
-                  .then(({ data: refreshedData, error: refreshError }) => {
-                    if (!refreshError) {
-                      setDbReferenceWorkouts(refreshedData || []);
-                    }
-                  });
-              }
-            });
-        } catch (error) {
-          console.error('Error transferring wizard selected workouts:', error);
-        }
-      }
-
-      // Clear wizard data after injection
-      sessionStorage.removeItem('programWizardData');
-
-      // Show a success message to guide user to generate button
-      showToastMessage(
-        'Program setup complete! Review your settings and click "Generate Program Workouts" when ready.',
-        'success'
-      );
-
-      // Highlight the generate button for wizard users
-      setHighlightGenerateButton(true);
-
-      // Scroll to the form area where the generate button is
-      setTimeout(() => {
-        const generateButton = document.querySelector('[data-generate-button]');
-        if (generateButton) {
-          generateButton.scrollIntoView({
-            behavior: 'smooth',
-            block: 'center',
-          });
-          // Add a pulsing animation to draw attention
-          generateButton.classList.add(
-            'animate-pulse',
-            'ring-4',
-            'ring-primary',
-            'ring-offset-4'
-          );
-
-          // Remove the highlight after a few seconds
-          setTimeout(() => {
-            generateButton.classList.remove(
-              'animate-pulse',
-              'ring-4',
-              'ring-primary',
-              'ring-offset-4'
-            );
-            setHighlightGenerateButton(false);
-          }, 5000);
-        }
-      }, 500);
-    } catch (error) {
-      console.error('Error injecting wizard data:', error);
-    }
-  }, [wizardComplete, handleConfirmGenerate, scrollToGeneration]);
+    // Navigate to wizard step 1 with programId
+    window.location.href = `/program-wizard/step-1${programId ? `?programId=${programId}` : ''}`;
+  }, [formData, programId, syncFormDataToWizard]);
 
   // Cleanup auto-save timer on unmount
   useEffect(() => {
@@ -1196,6 +906,198 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
       fetchProgramData();
     }
   }, [programId, preventFetch]);
+
+  // Get wizard data and sync to form when wizard is complete
+  const wizardData = useProgramStore((state) => state.wizardData);
+  
+  // Inject wizard data AFTER program data is loaded to prevent overwriting
+  useEffect(() => {
+    if (!wizardComplete || !programId || !wizardData.wizardComplete) return;
+
+    // Wait for initial program data to load first
+    const injectWizardData = () => {
+      try {
+        // Convert days of week from wizard format to form format
+        const daysOfWeekMapping = {
+          sunday: 'Sunday',
+          monday: 'Monday',
+          tuesday: 'Tuesday',
+          wednesday: 'Wednesday',
+          thursday: 'Thursday',
+          friday: 'Friday',
+          saturday: 'Saturday',
+        };
+
+        const mappedDaysOfWeek = (wizardData.daysOfWeek || [])
+          .map((day) => daysOfWeekMapping[day])
+          .filter(Boolean);
+
+        // Convert gym type from wizard snake_case to title case
+        const gymTypeMapping = {
+          crossfit_box: 'Crossfit Box',
+          commercial_gym: 'Commercial Gym',
+          home_gym: 'Home Gym',
+          minimal_equipment: 'Minimal Equipment',
+          outdoor_space: 'Outdoor Space',
+          powerlifting_gym: 'Powerlifting Gym',
+          olympic_weightlifting_gym: 'Olympic Weightlifting Gym',
+          bodyweight_only: 'Bodyweight Only',
+          studio_gym: 'Studio Gym',
+          university_gym: 'University Gym',
+          hotel_gym: 'Hotel Gym',
+          apartment_gym: 'Apartment Gym',
+          boxing_mma_gym: 'Boxing/MMA Gym',
+          triathlon_training_facility: 'Triathlon Training Facility',
+          multi_sport_complex: 'Multi-Sport Complex',
+        };
+
+        const mappedGymType =
+          gymTypeMapping[wizardData.gymType] || wizardData.gymType || '';
+
+        // Convert workout formats from wizard kebab-case to AI writer format
+        const workoutFormatMapping = {
+          'for-time': 'for_time',
+          'giant-set': 'giant_set',
+          // Add more mappings as needed - most formats should pass through unchanged
+        };
+
+        const mappedWorkoutFormats = (wizardData.workoutFormats || []).map(
+          (format) => {
+            // Convert kebab-case to snake_case if needed, otherwise keep as-is
+            const mapped = workoutFormatMapping[format] || format;
+            return mapped;
+          }
+        );
+
+        // Map wizard data to form data structure
+        const formDataUpdates = {
+          trainingMethodology: wizardData.trainingMethodology || '',
+          programType: wizardData.programType || '',
+          description: wizardData.programDescription || '',
+          name: wizardData.programName || 'My Training Program', // Use wizard program name
+          referenceInput: wizardData.referenceInput || wizardData.previousWorkout || '',
+          gymType: mappedGymType,
+          equipment: wizardData.equipment || [],
+          difficulty: wizardData.difficulty || 'intermediate',
+          focusArea: wizardData.focusArea || 'full_body',
+          sessionDetails: {
+            duration_minutes: wizardData.workoutDuration || 60,
+            main_workout_duration: wizardData.workoutDuration || 60,
+            warmup_duration: 10,
+            cooldown_duration: 10,
+          },
+          workoutFormats: mappedWorkoutFormats,
+          numberOfWeeks: String(wizardData.numberOfWeeks || 4),
+          startDate: wizardData.startDate || '',
+          daysOfWeek: mappedDaysOfWeek,
+          daysPerWeek: String(mappedDaysOfWeek.length),
+          personalization: wizardData.previousWorkout || wizardData.referenceInput || '',
+          showEquipment: wizardData.equipment && wizardData.equipment.length > 0,
+          // Add entity information from wizard
+          entityId: wizardData.entityId || formData.entityId,
+        };
+
+        console.log(
+          '[Wizard Data] Injecting wizard data into form:',
+          formDataUpdates
+        );
+        updateFormData(formDataUpdates);
+
+        if (
+          wizardData.selectedWorkouts &&
+          wizardData.selectedWorkouts.length > 0 &&
+          programId
+        ) {
+          try {
+            console.log(
+              'Transferring wizard selected workouts as reference workouts:',
+              wizardData.selectedWorkouts
+            );
+
+            // Save selected workouts as reference workouts in the database
+            const workoutsToSave = wizardData.selectedWorkouts.map((workout) => ({
+              program_id: programId,
+              entity_id: formData.entityId,
+              title: workout.title,
+              body: workout.body || workout.description || '',
+              tags: {
+                source: workout.source || 'wizard-selection',
+                wizard_transferred: true,
+              },
+              is_reference: true,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            }));
+
+            // Save to database
+            supabase
+              .from('program_workouts')
+              .insert(workoutsToSave)
+              .then(({ error }) => {
+                if (error) {
+                  console.error(
+                    'Error saving wizard reference workouts:',
+                    error
+                  );
+                  showToastMessage(
+                    'Failed to transfer reference workouts from wizard',
+                    'warning'
+                  );
+                } else {
+                  console.log(
+                    'Successfully transferred reference workouts from wizard'
+                  );
+                  showToastMessage(
+                    `Transferred ${wizardData.selectedWorkouts.length} reference workouts from wizard`,
+                    'success'
+                  );
+                  // Refresh reference workouts display
+                  supabase
+                    .from('program_workouts')
+                    .select('*')
+                    .eq('program_id', programId)
+                    .eq('is_reference', true)
+                    .then(({ data: refreshedData, error: refreshError }) => {
+                      if (!refreshError) {
+                        setDbReferenceWorkouts(refreshedData || []);
+                      }
+                    });
+                }
+              });
+          } catch (error) {
+            console.error(
+              'Error transferring wizard selected workouts:',
+              error
+            );
+          }
+        }
+
+        // Show a success message to guide user to generate button
+        showToastMessage(
+          'Wizard data loaded! Ready to generate your program.',
+          'success'
+        );
+
+        // Set highlight flag to draw attention to generate button
+        setHighlightGenerateButton(true);
+        setTimeout(() => setHighlightGenerateButton(false), 3000);
+      } catch (error) {
+        console.error('Error injecting wizard data:', error);
+      }
+    };
+
+    // Delay injection to ensure program data is loaded first
+    const timeoutId = setTimeout(injectWizardData, 500);
+    return () => clearTimeout(timeoutId);
+  }, [
+    wizardComplete,
+    programId,
+    wizardData,
+    formData.entityId,
+    updateFormData,
+    supabase,
+    showToastMessage,
+  ]);
 
   // Listen for triggerProgramRefresh and immediately fetch program data
   useEffect(() => {
@@ -1481,10 +1383,6 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
     []
   );
 
-  const handleOpenLegacyReferenceWorkoutModal = useCallback(
-    () => setReferenceWorkoutModalOpen(true),
-    []
-  );
   const handleCloseReferenceWorkoutModal = useCallback(
     () => setReferenceWorkoutModalOpen(false),
     []
@@ -1580,8 +1478,6 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
     }
   };
 
-  // --- Render ---
-
   return (
     <div className="bg-white rounded-lg shadow-md p-3 sm:p-4">
       {showToast && (
@@ -1618,27 +1514,32 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
       )}
 
       {programId && (
-        <div className="flex flex-col sm:flex-row justify-end items-stretch sm:items-center mt-4 mb-4 sm:mt-6 sm:mb-6 gap-2">
-          <div
-            className="tooltip tooltip-top tooltip-info mr-2"
-            data-tip="Your changes are automatically saved, but you can use this to manually save."
-          >
-            <InfoIcon className="w-4 h-4 text-primary bg-white rounded-full" />
-          </div>
+        <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center mt-4 mb-4 sm:mt-6 sm:mb-6 gap-2">
           <button
-            className="btn btn-sm btn-primary text-white w-full sm:w-auto"
-            onClick={handleSaveProgram}
-            disabled={isLoading}
+            onClick={handleBackToWizard}
+            className="btn btn-outline btn-secondary w-full sm:w-auto"
+            title="Return to wizard to modify program settings"
           >
-            {isLoading ? (
-              <>
-                <span className="loading loading-spinner loading-xs"></span>
-                Saving...
-              </>
-            ) : (
-              'Save'
-            )}
+            <ArrowLeftIcon className="w-4 h-4 mr-2" />
+            Go to Program Wizard
           </button>
+          <div>
+            <button
+              className="btn btn-sm btn-primary text-white w-full sm:w-auto tooltip tooltip-top tooltip-info"
+              data-tip="Your changes are automatically saved, but you can use this to manually save."
+              onClick={handleSaveProgram}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <>
+                  <span className="loading loading-spinner loading-xs"></span>
+                  Saving...
+                </>
+              ) : (
+                'Save'
+              )}
+            </button>
+          </div>
         </div>
       )}
       <div className="space-y-4 lg:space-y-0 lg:grid lg:grid-cols-1 xl:grid-cols-3 lg:gap-6">
@@ -1696,31 +1597,6 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
         }}
         showToastMessage={showToastMessage}
       />
-
-      {suggestions.length > 0 && (
-        <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center mt-4 sm:mt-6 gap-3">
-          <div className="flex-1" />
-          <div className="flex flex-col sm:flex-row gap-2">
-            <button
-              onClick={handleEnhanceProgram}
-              className="btn btn-outline btn-primary w-full sm:w-auto"
-              disabled={isEnhancingProgram}
-            >
-              {isEnhancingProgram ? (
-                <>
-                  <span className="loading loading-spinner loading-sm"></span>
-                  Enhancing...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-4 h-4 mr-2" />
-                  Enhance Program
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-      )}
 
       {suggestions.length > 0 && (
         <div ref={generationAreaRef} className="scroll-mt-20 mt-4 sm:mt-6">
@@ -1813,122 +1689,6 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
         selectedWorkouts={dbReferenceWorkouts}
         programId={programId}
       />
-
-      {/* Enhance Program Input Dialog */}
-      {showEnhanceProgramInput && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl border border-gray-200 p-4 sm:p-6 w-full max-w-lg">
-            <div className="mb-4">
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                Enhance Entire Program
-              </h3>
-              <p className="text-sm text-gray-600 mb-4">
-                Describe how you'd like to improve or modify all workouts in
-                this program
-              </p>
-            </div>
-            <textarea
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none mb-4"
-              rows="4"
-              placeholder='e.g., "Add more CrossFit metcons", "Include more mobility work", "Make it more strength-focused", "Replace cardio with HIIT sessions"'
-              value={enhanceProgramText}
-              onChange={(e) => setEnhanceProgramText(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && e.ctrlKey) {
-                  e.preventDefault();
-                  handleEnhanceProgramSubmit();
-                }
-              }}
-            />
-            <div className="flex gap-3 justify-end">
-              <button
-                className="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium transition-colors"
-                onClick={() => {
-                  setShowEnhanceProgramInput(false);
-                  setEnhanceProgramText('');
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                className="btn btn-primary"
-                onClick={handleEnhanceProgramSubmit}
-                disabled={!enhanceProgramText.trim()}
-              >
-                <Sparkles className="w-4 h-4 mr-2" />
-                Enhance Program
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Save Enhanced Program Prompt */}
-      {showProgramSavePrompt && pendingProgramEnhancement && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl border border-gray-200 p-4 sm:p-6 w-full max-w-2xl max-h-[80vh] overflow-y-auto">
-            <div className="mb-4">
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                ✨ Enhanced Program Ready!
-              </h3>
-              <p className="text-sm text-gray-600 mb-4">
-                Your program has been enhanced. Review the changes below:
-              </p>
-              {pendingProgramEnhancement.notes && (
-                <div className="p-4 bg-primary/10 border border-primary/20 rounded-lg mb-4">
-                  <div className="flex items-start gap-3">
-                    <Sparkles className="w-5 h-5 mt-0.5 flex-shrink-0 text-primary" />
-                    <div>
-                      <div className="font-semibold text-gray-900 mb-1">
-                        Enhancement Notes
-                      </div>
-                      <div className="text-gray-700">
-                        {pendingProgramEnhancement.notes}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-            <div className="mb-6">
-              <h4 className="font-medium text-gray-900 mb-2">
-                Enhanced Workouts Preview:
-              </h4>
-              <div className="space-y-2 max-h-64 overflow-y-auto">
-                {pendingProgramEnhancement.enhancedWorkouts.map(
-                  (workout, index) => (
-                    <div
-                      key={workout.id || index}
-                      className="p-3 bg-gray-50 rounded-lg"
-                    >
-                      <h5 className="font-medium text-gray-900">
-                        {workout.title}
-                      </h5>
-                      <p className="text-sm text-gray-600 line-clamp-2 mt-1">
-                        {workout.body}
-                      </p>
-                    </div>
-                  )
-                )}
-              </div>
-            </div>
-            <div className="flex gap-3 justify-end">
-              <button
-                className="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium transition-colors"
-                onClick={handleDiscardProgramEnhancement}
-              >
-                Discard Changes
-              </button>
-              <button
-                className="btn btn-primary"
-                onClick={handleSaveProgramEnhancement}
-              >
-                Save Enhanced Program
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Auto-save status indicator */}
       <AutoSaveStatusIndicator

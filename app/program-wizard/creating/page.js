@@ -1,15 +1,23 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import useProgramStore from '@/store/programStore';
 
 export default function CreatingProgramPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const existingProgramId = searchParams.get('programId');
   const { supabase } = useAuth();
   const [status, setStatus] = useState('Creating your program...');
   const [error, setError] = useState(null);
   const hasCreated = useRef(false);
+  
+  // Get wizard data and actions from Zustand store
+  const wizardData = useProgramStore((state) => state.wizardData);
+  const updateWizardData = useProgramStore((state) => state.updateWizardData);
+  const clearWizardData = useProgramStore((state) => state.clearWizardData);
 
   useEffect(() => {
     // Prevent multiple executions
@@ -18,93 +26,121 @@ export default function CreatingProgramPage() {
     async function createAndRedirect() {
       hasCreated.current = true; // Mark as started immediately
       
-      const wizardData = sessionStorage.getItem('programWizardData');
-      if (!wizardData) {
+      if (!wizardData || !wizardData.wizardComplete) {
         setError('No wizard data found');
         router.push('/dashboard');
         return;
       }
-      
-      // Clear session data immediately to prevent reuse
-      sessionStorage.removeItem('programWizardData');
 
       try {
-        const data = JSON.parse(wizardData);
+        let programId = existingProgramId;
         
         // Validate required data
-        if (!data.startDate || !data.numberOfWeeks) {
+        if (!wizardData.startDate || !wizardData.numberOfWeeks) {
           throw new Error('Missing required scheduling data');
         }
         
         // Calculate end date with validation
-        const startDate = new Date(data.startDate);
+        const startDate = new Date(wizardData.startDate);
         if (isNaN(startDate.getTime())) {
           throw new Error('Invalid start date');
         }
         
         const endDate = new Date(startDate);
-        endDate.setDate(endDate.getDate() + (parseInt(data.numberOfWeeks) * 7) - 1);
-        
-        setStatus('Setting up your program structure...');
+        endDate.setDate(endDate.getDate() + (parseInt(wizardData.numberOfWeeks) * 7) - 1);
         
         // Format dates properly
-        const formattedStartDate = typeof data.startDate === 'string' 
-          ? data.startDate 
+        const formattedStartDate = typeof wizardData.startDate === 'string' 
+          ? wizardData.startDate 
           : startDate.toISOString().split('T')[0];
         const formattedEndDate = endDate.toISOString().split('T')[0];
         
-        console.log('Creating program with dates:', {
-          startDate: formattedStartDate,
-          endDate: formattedEndDate,
-          numberOfWeeks: data.numberOfWeeks
-        });
-        
-        // Create the program with all wizard data
-        const createResponse = await fetch('/api/CreateProgram', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name: data.programName || 'New Program',
-            entity_id: data.entityId,
-            duration_weeks: parseInt(data.numberOfWeeks) || 4,
-            start_date: formattedStartDate,
-            end_date: formattedEndDate,
-            days_of_week: data.daysOfWeek || ['monday', 'wednesday', 'friday'],
-            description: data.programDescription,
-            training_methodology: data.trainingMethodology,
-            difficulty: data.difficulty,
-            focus_area: data.focusArea,
-            gym_type: data.gymType,
-            equipment: data.equipment || [],
-            workout_formats: data.workoutFormats || [],
-            reference_input: data.referenceInput,
-            program_type: data.programType,
-            workout_duration: data.workoutDuration,
-          }),
-        });
+        if (existingProgramId) {
+          setStatus('Updating your program...');
+          
+          // Update existing program
+          const updateResponse = await fetch(`/api/programs/${existingProgramId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              name: wizardData.programName || 'New Program',
+              entity_id: wizardData.entityId,
+              duration_weeks: parseInt(wizardData.numberOfWeeks) || 4,
+              start_date: formattedStartDate,
+              end_date: formattedEndDate,
+              days_of_week: wizardData.daysOfWeek || ['monday', 'wednesday', 'friday'],
+              description: wizardData.programDescription,
+              training_methodology: wizardData.trainingMethodology,
+              difficulty: wizardData.difficulty,
+              focus_area: wizardData.focusArea,
+              gym_type: wizardData.gymType,
+              equipment: wizardData.equipment || [],
+              workout_formats: wizardData.workoutFormats || [],
+              reference_input: wizardData.referenceInput,
+              program_type: wizardData.programType,
+              workout_duration: wizardData.workoutDuration,
+            }),
+          });
 
-        if (!createResponse.ok) {
-          const errorData = await createResponse.json();
-          throw new Error(errorData.error || 'Failed to create program');
+          if (!updateResponse.ok) {
+            const errorData = await updateResponse.json();
+            throw new Error(errorData.error || 'Failed to update program');
+          }
+        } else {
+          setStatus('Setting up your program structure...');
+          
+          console.log('Creating program with dates:', {
+            startDate: formattedStartDate,
+            endDate: formattedEndDate,
+            numberOfWeeks: wizardData.numberOfWeeks
+          });
+          
+          // Create new program with all wizard data
+          const createResponse = await fetch('/api/CreateProgram', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              name: wizardData.programName || 'New Program',
+              entity_id: wizardData.entityId,
+              duration_weeks: parseInt(wizardData.numberOfWeeks) || 4,
+              start_date: formattedStartDate,
+              end_date: formattedEndDate,
+              days_of_week: wizardData.daysOfWeek || ['monday', 'wednesday', 'friday'],
+              description: wizardData.programDescription,
+              training_methodology: wizardData.trainingMethodology,
+              difficulty: wizardData.difficulty,
+              focus_area: wizardData.focusArea,
+              gym_type: wizardData.gymType,
+              equipment: wizardData.equipment || [],
+              workout_formats: wizardData.workoutFormats || [],
+              reference_input: wizardData.referenceInput,
+              program_type: wizardData.programType,
+              workout_duration: wizardData.workoutDuration,
+            }),
+          });
+
+          if (!createResponse.ok) {
+            const errorData = await createResponse.json();
+            throw new Error(errorData.error || 'Failed to create program');
+          }
+
+          const result = await createResponse.json();
+          const program = result.data[0];
+          programId = program.id;
         }
-
-        const result = await createResponse.json();
-        const program = result.data[0];
 
         setStatus('Preparing AI generation...');
         
-        // Update wizard data with program ID
-        const wizardDataForWriter = {
-          ...data,
-          programId: program.id
-        };
-        sessionStorage.setItem('programWizardData', JSON.stringify(wizardDataForWriter));
+        // Update wizard data with program ID in Zustand store
+        updateWizardData({
+          programId: programId
+        });
 
         // Small delay for UX
         await new Promise(resolve => setTimeout(resolve, 500));
         
         // Redirect to the program writer
-        router.push(`/program/${program.id}/writer?wizardComplete=true`);
+        router.push(`/program/${programId}/writer?wizardComplete=true`);
       } catch (error) {
         console.error('Error creating program:', error);
         setError(error.message);

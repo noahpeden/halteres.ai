@@ -1,5 +1,5 @@
 'use client';
-import { MessageCircleWarningIcon } from 'lucide-react';
+import { MessageCircleWarningIcon, InfoIcon } from 'lucide-react';
 import React from 'react';
 
 const ConfirmationModal = ({

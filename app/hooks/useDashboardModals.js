@@ -2,10 +2,12 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import useProgramStore from '@/store/programStore';
 
 export function useDashboardModals() {
   const router = useRouter();
   const { user, supabase } = useAuth();
+  const updateWizardData = useProgramStore((state) => state.updateWizardData);
 
   // Modal states
   const [showEntitySelectionModal, setShowEntitySelectionModal] =
@@ -153,8 +155,8 @@ export function useDashboardModals() {
       const selectedEntity = entities.find(e => e.id === selectedEntityId);
       
       if (method === 'wizard') {
-        // Store program creation data in sessionStorage for the wizard
-        const wizardData = {
+        // Store program creation data in Zustand store for the wizard
+        const wizardDataUpdates = {
           programName,
           entityId: selectedEntityId,
           entityName: selectedEntity?.name || '',
@@ -164,7 +166,7 @@ export function useDashboardModals() {
           daysOfWeek: daysOfWeekStrings,
         };
         
-        sessionStorage.setItem('programWizardData', JSON.stringify(wizardData));
+        updateWizardData(wizardDataUpdates);
         
         // Close the modal
         closeCreateProgramModal();

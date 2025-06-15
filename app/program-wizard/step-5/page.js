@@ -1,7 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import { X } from 'lucide-react';
 import useProgramStore from '../../store/programStore';
 import WizardProgress from '../../components/ProgramWizard/WizardProgress';
 import {
@@ -15,10 +17,14 @@ import {
 } from '@/utils/unitConversions';
 
 export default function Step5Page() {
+  const searchParams = useSearchParams();
+  const programId = searchParams.get('programId');
+  
   const wizardData = useProgramStore((state) => state.wizardData);
   const goToPrevious = useProgramStore((state) => state.goToPrevious);
   const completeWizard = useProgramStore((state) => state.completeWizard);
   const updateWizardData = useProgramStore((state) => state.updateWizardData);
+  const fetchProgramFromDatabase = useProgramStore((state) => state.fetchProgramFromDatabase);
   const { supabase } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [entityData, setEntityData] = useState(null);
@@ -70,6 +76,100 @@ export default function Step5Page() {
       daysOfWeek: daysOfWeekIndices,
     };
   });
+
+  // Fetch program data if programId is provided
+  useEffect(() => {
+    async function loadProgram() {
+      if (programId && supabase) {
+        try {
+          const programData = await fetchProgramFromDatabase(programId, supabase);
+          if (programData) {
+            // Update scheduling data with fetched data
+            const dayNames = [
+              'sunday',
+              'monday',
+              'tuesday',
+              'wednesday',
+              'thursday',
+              'friday',
+              'saturday',
+            ];
+            
+            let daysOfWeekIndices = [];
+            if (programData.daysOfWeek && Array.isArray(programData.daysOfWeek)) {
+              daysOfWeekIndices = programData.daysOfWeek.map((day) => {
+                if (typeof day === 'string') {
+                  return dayNames.indexOf(day.toLowerCase());
+                }
+                return day;
+              }).filter((index) => index !== -1 && index >= 0 && index <= 6);
+            }
+            
+            setSchedulingData({
+              programName: programData.name || '',
+              startDate: programData.startDate || (() => {
+                const tomorrow = new Date();
+                tomorrow.setDate(tomorrow.getDate() + 1);
+                return tomorrow.toISOString().split('T')[0];
+              })(),
+              numberOfWeeks: parseInt(programData.numberOfWeeks) || 4,
+              daysOfWeek: daysOfWeekIndices,
+            });
+            
+            if (programData.entityId) {
+              setSelectedEntityId(programData.entityId);
+            }
+          }
+        } catch (error) {
+          console.error('Error loading program:', error);
+        }
+      }
+    }
+    
+    loadProgram();
+  }, [programId, supabase, fetchProgramFromDatabase]);
+
+  // Update local entity selection from wizard data
+  useEffect(() => {
+    if (wizardData.entityId) {
+      setSelectedEntityId(wizardData.entityId);
+    }
+  }, [wizardData.entityId]);
+
+  // Update schedulingData when wizardData changes
+  useEffect(() => {
+    const dayNames = [
+      'sunday',
+      'monday',
+      'tuesday',
+      'wednesday',
+      'thursday',
+      'friday',
+      'saturday',
+    ];
+
+    // Convert day names to indices for display (handle both string and number formats)
+    let daysOfWeekIndices = [];
+    if (wizardData.daysOfWeek && Array.isArray(wizardData.daysOfWeek)) {
+      daysOfWeekIndices = wizardData.daysOfWeek.map((day) => {
+        if (typeof day === 'string') {
+          return dayNames.indexOf(day.toLowerCase());
+        }
+        return day; // Already a number
+      }).filter((index) => index !== -1 && index >= 0 && index <= 6);
+    }
+
+    setSchedulingData({
+      programName: wizardData.programName || '',
+      startDate: wizardData.startDate || (() => {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        return tomorrow.toISOString().split('T')[0];
+      })(),
+      numberOfWeeks: wizardData.numberOfWeeks || 4,
+      daysOfWeek: daysOfWeekIndices,
+    });
+  }, [wizardData.programName, wizardData.startDate, wizardData.numberOfWeeks, wizardData.daysOfWeek]);
 
   // Fetch all entities for selection
   useEffect(() => {
@@ -190,6 +290,16 @@ export default function Step5Page() {
     updateWizardData({ [field]: value });
   };
 
+  // Save state when scheduling data changes
+  useEffect(() => {
+    updateWizardData({
+      programName: schedulingData.programName,
+      startDate: schedulingData.startDate,
+      numberOfWeeks: schedulingData.numberOfWeeks,
+      // Don't overwrite daysOfWeek here since it's handled in handleToggleDay
+    });
+  }, [schedulingData.programName, schedulingData.startDate, schedulingData.numberOfWeeks, updateWizardData]);
+
   const handleToggleDay = (dayIndex) => {
     const dayNames = [
       'sunday',
@@ -278,7 +388,20 @@ export default function Step5Page() {
     currentEntity?.name || wizardData.entityName || 'Selected entity';
 
   return (
-    <div>
+    <div className="relative">
+      {/* Exit button when there's a programId */}
+      {programId && (
+        <button
+          onClick={() =>
+            (window.location.href = `/program/${programId}/writer`)
+          }
+          className="absolute top-4 right-4 btn btn-ghost btn-circle z-10"
+          title="Exit wizard and go to program writer"
+        >
+          <X className="w-6 h-6" />
+        </button>
+      )}
+
       <WizardProgress currentStep={5} />
 
       <div className="bg-base-200 rounded-lg p-6">
