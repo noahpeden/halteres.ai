@@ -456,6 +456,201 @@ const useProgramStore = create(
           });
         },
 
+        // Clear all program state (for navigation between programs)
+        clearProgramState: () => {
+          const tomorrow = new Date();
+          tomorrow.setDate(tomorrow.getDate() + 1);
+          const defaultStartDate = tomorrow.toISOString().split('T')[0];
+          
+          // Calculate end date for 4 weeks
+          const endDate = new Date(tomorrow);
+          endDate.setDate(endDate.getDate() + (4 * 7) - 1);
+          const defaultEndDate = endDate.toISOString().split('T')[0];
+
+          set({
+            // Reset Program Writer State
+            programId: null,
+            formData: {
+              name: 'My Training Program',
+              description: 'A personalized training program designed to help you reach your fitness goals through structured, progressive workouts.',
+              entityId: null,
+              goal: 'strength',
+              difficulty: 'intermediate',
+              equipment: gymEquipmentPresets['Crossfit Box'] || [],
+              focusArea: 'full_body',
+              personalization: 'Focus on proper form and progressive overload. Include both strength and conditioning elements.',
+              workoutFormats: ['hiit', 'strength', 'metcon'], // Multiple default formats
+              numberOfWeeks: '4',
+              daysPerWeek: '5', // Default to 5 days
+              daysOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'], // All weekdays
+              programType: 'linear',
+              gymType: 'Crossfit Box',
+              startDate: defaultStartDate,
+              endDate: defaultEndDate,
+              sessionDetails: {
+                warmup_duration: 10,
+                cooldown_duration: 10,
+                main_workout_duration: 40
+              },
+              programOverview: {
+                progression_model: 'linear',
+                intensity_focus: 'moderate_to_high'
+              },
+              gymDetails: {
+                gym_type: 'Crossfit Box',
+                equipment: gymEquipmentPresets['Crossfit Box'] || []
+              },
+              periodization: {
+                program_type: 'linear',
+                phase_structure: 'progressive'
+              },
+              trainingMethodology: 'hiit', // Default to HIIT
+              referenceInput: '',
+              customWorkoutSections: [],
+            },
+            suggestions: [],
+            referenceWorkouts: [],
+            generatedDescription: '',
+            isLoading: false,
+            generationStage: null,
+            loadingDuration: 0,
+            serverStatus: null,
+            aiStreamingContent: '',
+            showAiStream: false,
+            autoSaveState: 'idle',
+            isDirty: false,
+            initialFormData: null,
+            preventFetch: false,
+            
+            // Reset Modal States
+            isWorkoutModalOpen: false,
+            selectedWorkout: null,
+            isDatePickerModalOpen: false,
+            selectedWorkoutForDate: null,
+            selectedDate: null,
+            isRescheduleModalOpen: false,
+            newStartDate: defaultStartDate,
+            isEditModalOpen: false,
+            selectedWorkoutForEdit: null,
+            isConfirmationModalOpen: false,
+            confirmationModalContent: { title: '', message: '', confirmText: '' },
+            
+            // Reset UI States
+            showToast: false,
+            toastMessage: '',
+            toastType: 'success',
+            showEquipment: false,
+            allEquipmentSelected: false,
+            hasCustomWorkoutFormat: false,
+            customSectionName: '',
+            customSectionDuration: '',
+            customSectionDescription: '',
+            triggerProgramRefresh: 0,
+
+            // Reset Equipment State
+            selectedEquipment: gymEquipmentPresets['Crossfit Box'] || [],
+            selectedGymType: 'crossfit_box',
+
+            // Reset Wizard Data to defaults
+            wizardData: {
+              trainingMethodology: 'hiit', // Default to HIIT
+              programType: 'linear',
+              programDescription: '',
+              programName: '',
+              previousWorkout: '',
+              referenceInput: '',
+              referenceWorkouts: [],
+              gymType: 'crossfit_box',
+              equipment: gymEquipmentPresets['Crossfit Box'] || [],
+              difficulty: 'intermediate',
+              focusArea: 'full_body',
+              workoutDuration: 60,
+              workoutFormats: ['hiit'],
+              entityId: null,
+              entityName: '',
+              entityType: 'CLIENT',
+              startDate: defaultStartDate,
+              numberOfWeeks: 4,
+              daysOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+            }
+          });
+        },
+
+        // Initialize for new program with sensible defaults
+        initializeNewProgram: (entityId = null) => {
+          const tomorrow = new Date();
+          tomorrow.setDate(tomorrow.getDate() + 1);
+          const defaultStartDate = tomorrow.toISOString().split('T')[0];
+
+          // Calculate end date for 4 weeks with 5 days per week
+          const endDate = new Date(tomorrow);
+          endDate.setDate(endDate.getDate() + (4 * 7) - 1); // 4 weeks minus 1 day
+          const defaultEndDate = endDate.toISOString().split('T')[0];
+
+          get().clearProgramState();
+          
+          set((state) => ({
+            formData: {
+              ...state.formData,
+              entityId,
+              startDate: defaultStartDate,
+              endDate: defaultEndDate,
+            },
+            wizardData: {
+              ...state.wizardData,
+              entityId,
+              startDate: defaultStartDate,
+              trainingMethodology: 'hiit',
+              programType: 'linear',
+              gymType: 'crossfit_box',
+              equipment: gymEquipmentPresets['Crossfit Box'] || [],
+              workoutFormats: ['hiit', 'strength', 'metcon'],
+            }
+          }));
+        },
+
+        // Load existing program data from backend
+        loadProgramData: async (programData) => {
+          // Clear current state first
+          get().clearProgramState();
+
+          // Calculate equipment selection state
+          let allEquipmentSelected = false;
+          let showEquipment = false;
+          
+          if (programData.equipment && Array.isArray(programData.equipment)) {
+            const allEquipmentIds = equipmentList.map(item => item.value);
+            allEquipmentSelected = programData.equipment.length === allEquipmentIds.length &&
+              allEquipmentIds.every(id => programData.equipment.includes(id));
+            
+            const defaultEquipment = gymEquipmentPresets['Crossfit Box'] || [];
+            const hasCustomEquipment = programData.equipment.length !== defaultEquipment.length ||
+              !programData.equipment.every(id => defaultEquipment.includes(id));
+            
+            if (hasCustomEquipment) {
+              showEquipment = true;
+            }
+          }
+
+          // Map gym type if needed
+          const mappedGymType = gymTypeMapping[programData.gymType] || programData.gymType;
+          
+          set({
+            programId: programData.id,
+            formData: {
+              ...get().formData,
+              ...programData,
+              // Ensure gym type is properly mapped
+              gymType: mappedGymType,
+            },
+            initialFormData: JSON.parse(JSON.stringify(programData)),
+            allEquipmentSelected,
+            showEquipment,
+            selectedGymType: programData.gymType || 'crossfit_box',
+            selectedEquipment: programData.equipment || gymEquipmentPresets['Crossfit Box'] || [],
+          });
+        },
+
         // Utility Actions
         setLoading: (isLoading) => set({ isLoading }),
         setGenerationStage: (stage) => set({ generationStage: stage }),
@@ -481,6 +676,63 @@ const useProgramStore = create(
         setGeneratedDescription: (description) => set({ generatedDescription: description }),
         setInitialFormDataClone: () => set({ initialFormData: JSON.parse(JSON.stringify(get().formData)) }),
         triggerProgramRefresh: () => set((state) => ({ triggerProgramRefresh: state.triggerProgramRefresh + 1 })),
+        
+        // Validation functions
+        validateProgramData: () => {
+          const { formData } = get();
+          const errors = [];
+          const missingFields = [];
+          const missingOptionalFields = [];
+          
+          // Required fields
+          if (!formData.trainingMethodology || formData.trainingMethodology === '') {
+            errors.push('Training methodology is required');
+            missingFields.push('trainingMethodology');
+          }
+          
+          if (!formData.description || formData.description.trim() === '') {
+            errors.push('Program description is required');
+            missingFields.push('description');
+          }
+          
+          if (!formData.daysOfWeek || formData.daysOfWeek.length === 0) {
+            errors.push('At least one day of the week must be selected');
+            missingFields.push('daysOfWeek');
+          }
+          
+          if (!formData.gymType || formData.gymType === '') {
+            errors.push('Gym type is required');
+            missingFields.push('gymType');
+          }
+          
+          // Important optional fields
+          if (!formData.personalization || formData.personalization.trim() === '') {
+            missingOptionalFields.push('previousWorkouts');
+          }
+          
+          if (!formData.difficulty || formData.difficulty === '') {
+            missingOptionalFields.push('difficulty');
+          }
+          
+          if (!formData.programType || formData.programType === '') {
+            missingOptionalFields.push('periodization');
+          }
+          
+          if (!formData.focusArea || formData.focusArea === '') {
+            missingOptionalFields.push('focusArea');
+          }
+          
+          return {
+            isValid: errors.length === 0,
+            errors,
+            missingFields,
+            missingOptionalFields
+          };
+        },
+        
+        getValidationErrors: () => {
+          return get().validateProgramData();
+        },
         
         // Program Wizard Navigation Actions
         goToStep: (step) => {

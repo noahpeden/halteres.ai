@@ -129,6 +129,7 @@ export default function ProgramEssentials({
             onChange={handleChange}
             onBlur={() => triggerAutoSave && triggerAutoSave()}
             name="description"
+            placeholder="Enter a description of your program (e.g., 'Intro to strength training, 4x4 program, etc.)"
             rows="3"
           ></textarea>
         </label>

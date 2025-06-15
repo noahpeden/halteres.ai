@@ -30,7 +30,6 @@ export async function generateProgram({
   hideAiStream,
   triggerProgramRefreshAction,
   setPreventFetch,
-  setGenerationStage,
   refetchProfile,
   suggestions, // Add suggestions to determine if this is a regeneration
 }) {

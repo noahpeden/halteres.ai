@@ -100,7 +100,7 @@ const workoutFormats = [
 ];
 
 export default function WorkoutFormatSelector({
-  selectedFormats = [],
+  selectedFormats = ['strength', 'hypertrophy', 'endurance', 'power', 'metcon'],
   onChange,
 }) {
   const handleFormatChange = (formatId) => {
