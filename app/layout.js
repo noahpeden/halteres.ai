@@ -6,8 +6,6 @@ import { AuthProvider } from '@/contexts/AuthContext';
 import Navbar from './components/Navbar';
 import TrialStatusBanner from './components/TrialStatusBanner';
 import { StripeProvider } from './contexts/StripeContext';
-// No longer need createClient imported directly here if called inside
-// import { createClient } from '@/utils/supabase/server'; // <-- Remove or comment out if unused at module scope
 
 export const nunitoSans = Nunito_Sans({
   weight: ['300', '400', '600', '700'],

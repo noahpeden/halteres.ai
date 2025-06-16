@@ -14,10 +14,12 @@ export default function CreatingProgramPage() {
   const [error, setError] = useState(null);
   const hasCreated = useRef(false);
   
-  // Get wizard data and actions from Zustand store
-  const wizardData = useProgramStore((state) => state.wizardData);
-  const updateWizardData = useProgramStore((state) => state.updateWizardData);
-  const clearWizardData = useProgramStore((state) => state.clearWizardData);
+  // Get form data and actions from Zustand store
+  const formData = useProgramStore((state) => state.formData);
+  const entityName = useProgramStore((state) => state.entityName);
+  const entityType = useProgramStore((state) => state.entityType);
+  const clearProgramState = useProgramStore((state) => state.clearProgramState);
+  const setProgramId = useProgramStore((state) => state.setProgramId);
 
   useEffect(() => {
     // Prevent multiple executions
@@ -26,34 +28,78 @@ export default function CreatingProgramPage() {
     async function createAndRedirect() {
       hasCreated.current = true; // Mark as started immediately
       
-      if (!wizardData || !wizardData.wizardComplete) {
-        setError('No wizard data found');
+      // For existing programs, we can proceed even if formData is incomplete
+      // since we'll fetch the data from the database
+      if (!existingProgramId && (!formData || !formData.entityId)) {
+        setError('No program data found for new program creation');
         router.push('/dashboard');
         return;
       }
 
       try {
         let programId = existingProgramId;
+        let effectiveFormData = formData;
+        
+        // If updating an existing program and form data is incomplete, fetch existing data
+        if (existingProgramId && (!formData || !formData.startDate || !formData.numberOfWeeks)) {
+          setStatus('Fetching existing program data...');
+          
+          const { data: existingProgram, error: fetchError } = await supabase
+            .from('programs')
+            .select('*')
+            .eq('id', existingProgramId)
+            .single();
+            
+          if (fetchError) {
+            throw new Error(`Failed to fetch existing program: ${fetchError.message}`);
+          }
+          
+          // Merge existing data with form data
+          effectiveFormData = {
+            ...formData,
+            name: formData.name || existingProgram.name || 'Updated Program',
+            entityId: formData.entityId || existingProgram.entity_id,
+            startDate: formData.startDate || existingProgram.start_date,
+            numberOfWeeks: formData.numberOfWeeks || String(existingProgram.duration_weeks) || '4',
+            daysOfWeek: formData.daysOfWeek || existingProgram.days_of_week || ['Monday', 'Wednesday', 'Friday'],
+            description: formData.description || existingProgram.description || '',
+            trainingMethodology: formData.trainingMethodology || existingProgram.training_methodology || '',
+            difficulty: formData.difficulty || existingProgram.difficulty || 'intermediate',
+            focusArea: formData.focusArea || existingProgram.focus_area || 'full_body',
+            gymType: formData.gymType || existingProgram.gym_type || 'Crossfit Box',
+            equipment: formData.equipment || existingProgram.equipment || [],
+            workoutFormats: formData.workoutFormats || existingProgram.workout_formats || [],
+            referenceInput: formData.referenceInput || existingProgram.reference_input || '',
+            personalization: formData.personalization || existingProgram.personalization || '',
+            programType: formData.programType || existingProgram.program_type || 'linear',
+            sessionDetails: formData.sessionDetails || existingProgram.session_details || {},
+          };
+        }
         
         // Validate required data
-        if (!wizardData.startDate || !wizardData.numberOfWeeks) {
+        if (!effectiveFormData.startDate || !effectiveFormData.numberOfWeeks) {
           throw new Error('Missing required scheduling data');
         }
         
         // Calculate end date with validation
-        const startDate = new Date(wizardData.startDate);
+        const startDate = new Date(effectiveFormData.startDate);
         if (isNaN(startDate.getTime())) {
           throw new Error('Invalid start date');
         }
         
         const endDate = new Date(startDate);
-        endDate.setDate(endDate.getDate() + (parseInt(wizardData.numberOfWeeks) * 7) - 1);
+        endDate.setDate(endDate.getDate() + (parseInt(effectiveFormData.numberOfWeeks) * 7) - 1);
         
         // Format dates properly
-        const formattedStartDate = typeof wizardData.startDate === 'string' 
-          ? wizardData.startDate 
+        const formattedStartDate = typeof effectiveFormData.startDate === 'string' 
+          ? effectiveFormData.startDate 
           : startDate.toISOString().split('T')[0];
         const formattedEndDate = endDate.toISOString().split('T')[0];
+        
+        // Convert gym type from Title Case to snake_case for database storage
+        const dbGymType = effectiveFormData.gymType 
+          ? effectiveFormData.gymType.toLowerCase().replace(/\s+/g, '_').replace(/\//g, '_')
+          : 'crossfit_box';
         
         if (existingProgramId) {
           setStatus('Updating your program...');
@@ -63,22 +109,23 @@ export default function CreatingProgramPage() {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              name: wizardData.programName || 'New Program',
-              entity_id: wizardData.entityId,
-              duration_weeks: parseInt(wizardData.numberOfWeeks) || 4,
+              name: effectiveFormData.name || 'Updated Program',
+              entity_id: effectiveFormData.entityId,
+              duration_weeks: parseInt(effectiveFormData.numberOfWeeks) || 4,
               start_date: formattedStartDate,
               end_date: formattedEndDate,
-              days_of_week: wizardData.daysOfWeek || ['monday', 'wednesday', 'friday'],
-              description: wizardData.programDescription,
-              training_methodology: wizardData.trainingMethodology,
-              difficulty: wizardData.difficulty,
-              focus_area: wizardData.focusArea,
-              gym_type: wizardData.gymType,
-              equipment: wizardData.equipment || [],
-              workout_formats: wizardData.workoutFormats || [],
-              reference_input: wizardData.referenceInput,
-              program_type: wizardData.programType,
-              workout_duration: wizardData.workoutDuration,
+              days_of_week: effectiveFormData.daysOfWeek?.map(day => day.toLowerCase()) || ['monday', 'wednesday', 'friday'],
+              description: effectiveFormData.description,
+              training_methodology: effectiveFormData.trainingMethodology,
+              difficulty: effectiveFormData.difficulty,
+              focus_area: effectiveFormData.focusArea,
+              gym_type: dbGymType,
+              equipment: effectiveFormData.equipment || [],
+              workout_formats: effectiveFormData.workoutFormats || [],
+              reference_input: effectiveFormData.referenceInput,
+              personalization: effectiveFormData.personalization,
+              program_type: effectiveFormData.programType,
+              session_details: effectiveFormData.sessionDetails,
             }),
           });
 
@@ -92,7 +139,7 @@ export default function CreatingProgramPage() {
           console.log('Creating program with dates:', {
             startDate: formattedStartDate,
             endDate: formattedEndDate,
-            numberOfWeeks: wizardData.numberOfWeeks
+            numberOfWeeks: effectiveFormData.numberOfWeeks
           });
           
           // Create new program with all wizard data
@@ -100,22 +147,23 @@ export default function CreatingProgramPage() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              name: wizardData.programName || 'New Program',
-              entity_id: wizardData.entityId,
-              duration_weeks: parseInt(wizardData.numberOfWeeks) || 4,
+              name: formData.name || 'New Program',
+              entity_id: formData.entityId,
+              duration_weeks: parseInt(formData.numberOfWeeks) || 4,
               start_date: formattedStartDate,
               end_date: formattedEndDate,
-              days_of_week: wizardData.daysOfWeek || ['monday', 'wednesday', 'friday'],
-              description: wizardData.programDescription,
-              training_methodology: wizardData.trainingMethodology,
-              difficulty: wizardData.difficulty,
-              focus_area: wizardData.focusArea,
-              gym_type: wizardData.gymType,
-              equipment: wizardData.equipment || [],
-              workout_formats: wizardData.workoutFormats || [],
-              reference_input: wizardData.referenceInput,
-              program_type: wizardData.programType,
-              workout_duration: wizardData.workoutDuration,
+              days_of_week: formData.daysOfWeek?.map(day => day.toLowerCase()) || ['monday', 'wednesday', 'friday'],
+              description: formData.description,
+              training_methodology: formData.trainingMethodology,
+              difficulty: formData.difficulty,
+              focus_area: formData.focusArea,
+              gym_type: formData.gymType,
+              equipment: formData.equipment || [],
+              workout_formats: formData.workoutFormats || [],
+              reference_input: formData.referenceInput,
+              personalization: formData.personalization,
+              program_type: formData.programType,
+              session_details: formData.sessionDetails,
             }),
           });
 
@@ -131,10 +179,8 @@ export default function CreatingProgramPage() {
 
         setStatus('Preparing AI generation...');
         
-        // Update wizard data with program ID in Zustand store
-        updateWizardData({
-          programId: programId
-        });
+        // Update program ID in Zustand store
+        setProgramId(programId);
 
         // Small delay for UX
         await new Promise(resolve => setTimeout(resolve, 500));

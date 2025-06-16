@@ -8,7 +8,6 @@ export default function ProgramEssentials({
   formData,
   handleChange,
   triggerAutoSave,
-  wizardData,
 }) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
@@ -16,15 +15,10 @@ export default function ProgramEssentials({
     (type) => type.value === formData.programType
   );
 
-  // Pre-populate reference input with wizard data if available
+  // Pre-populate reference input with form data
   const getReferenceInputValue = () => {
-    if (formData.referenceInput) {
-      return formData.referenceInput;
-    }
-    if (wizardData?.previousWorkout) {
-      return wizardData.previousWorkout;
-    }
-    return '';
+    // Use formData.referenceInput or personalization field
+    return formData.referenceInput || formData.personalization || '';
   };
 
   const handleProgramTypeSelect = (value) => {

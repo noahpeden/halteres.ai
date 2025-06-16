@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -64,7 +64,7 @@ const trainingMethodologies = [
     icon: Users,
   },
   {
-    value: 'sport_specific',
+    value: 'sport',
     label: 'Sport-Specific',
     description: 'Training for athletic performance',
     icon: Target,
@@ -139,20 +139,20 @@ export default function Step1Page() {
   const { supabase } = useAuth();
   const programId = searchParams.get('programId');
 
-  const wizardData = useProgramStore((state) => state.wizardData);
-  const updateWizardData = useProgramStore((state) => state.updateWizardData);
+  const formData = useProgramStore((state) => state.formData);
+  const updateFormData = useProgramStore((state) => state.updateFormData);
   const goToNext = useProgramStore((state) => state.goToNext);
-  // Don't use wizardData for initial state when we have a programId - let database load handle it
+  // Don't use formData for initial state when we have a programId - let database load handle it
   const [selectedMethodology, setSelectedMethodology] = useState(
-    programId ? '' : wizardData.trainingMethodology || ''
+    programId ? '' : formData.trainingMethodology || ''
   );
   const [selectedPeriodization, setSelectedPeriodization] = useState(
-    programId ? '' : wizardData.programType || ''
+    programId ? '' : formData.programType || ''
   );
   const [isLoading, setIsLoading] = useState(false);
   const initializeFromDatabaseRef = useRef(false);
 
-  console.log('wizardData', wizardData);
+  console.log('formData', formData);
   console.log('selectedMethodology', selectedMethodology);
   console.log('selectedPeriodization', selectedPeriodization);
 
@@ -174,15 +174,8 @@ export default function Step1Page() {
             console.error('Error fetching program:', error);
             return;
           }
-          console.log('program', program);
-          if (program) {
-            console.log('Loading from database:', {
-              training_methodology: program.training_methodology,
-              periodization: program.periodization,
-              program_type: program.program_type,
-              periodization_program_type: program.periodization?.program_type,
-            });
 
+          if (program) {
             // Update local state directly from database (don't touch store to avoid loops)
             setSelectedMethodology(program.training_methodology || '');
             // Try periodization.program_type first, then fallback to program_type
@@ -190,25 +183,28 @@ export default function Step1Page() {
               program.periodization?.program_type || program.program_type || ''
             );
 
-            // Update wizard data with the fetched data
-            updateWizardData({
+            // Update form data with the fetched data
+            updateFormData({
               trainingMethodology: program.training_methodology || '',
               programType:
                 program.periodization?.program_type ||
                 program.program_type ||
                 '',
-              programDescription: program.description || '',
-              programName: program.name || '',
+              description: program.description || '',
+              name: program.name || '',
               referenceInput: program.reference_input || '',
+              personalization: program.personalization || '',
               gymType: program.gym_type || 'crossfit_box',
               equipment: program.equipment || [],
               difficulty: program.difficulty || 'intermediate',
               focusArea: program.focus_area || 'full_body',
-              workoutDuration: program.session_details?.duration_minutes || 60,
+              sessionDetails: program.session_details || {
+                main_workout_duration: 60,
+              },
               workoutFormats: program.workout_formats || [],
               entityId: program.entity_id,
               startDate: program.start_date || '',
-              numberOfWeeks: program.duration_weeks || 4,
+              numberOfWeeks: String(program.duration_weeks || 4),
               daysOfWeek: program.days_of_week || [],
             });
           }
@@ -230,7 +226,7 @@ export default function Step1Page() {
       return;
     }
 
-    updateWizardData({
+    updateFormData({
       trainingMethodology: selectedMethodology,
       programType: selectedPeriodization,
     });
@@ -240,27 +236,14 @@ export default function Step1Page() {
   // Save state when selections change
   useEffect(() => {
     if (selectedMethodology && selectedPeriodization) {
-      updateWizardData({
+      updateFormData({
         trainingMethodology: selectedMethodology,
         programType: selectedPeriodization,
       });
     }
-  }, [selectedMethodology, selectedPeriodization, updateWizardData]);
+  }, [selectedMethodology, selectedPeriodization, updateFormData]);
   return (
     <div className="relative">
-      {/* Exit button when there's a programId */}
-      {programId && (
-        <button
-          onClick={() =>
-            (window.location.href = `/program/${programId}/writer`)
-          }
-          className="absolute top-4 right-4 btn btn-ghost btn-circle z-10"
-          title="Exit wizard and go to program writer"
-        >
-          <X className="w-6 h-6" />
-        </button>
-      )}
-
       <WizardProgress currentStep={1} />
 
       {isLoading && (

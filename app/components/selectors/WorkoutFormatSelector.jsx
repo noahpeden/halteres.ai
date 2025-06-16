@@ -1,9 +1,3 @@
-'use client';
-
-import { useState } from 'react';
-import { CheckSquare, Square } from 'lucide-react';
-
-// Common workout formats with descriptions
 const workoutFormats = [
   {
     id: 'strength',

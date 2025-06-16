@@ -34,17 +34,22 @@ export default function Step3Page() {
   const searchParams = useSearchParams();
   const { supabase } = useAuth();
   const programId = searchParams.get('programId');
-  
-  const wizardData = useProgramStore((state) => state.wizardData);
-  const updateWizardData = useProgramStore((state) => state.updateWizardData);
+
+  const formData = useProgramStore((state) => state.formData);
+  const updateFormData = useProgramStore((state) => state.updateFormData);
+  const selectedWorkouts =
+    useProgramStore((state) => state.selectedWorkouts) || [];
+  const setSelectedWorkouts = useProgramStore(
+    (state) => state.setSelectedWorkouts
+  );
   const goToNext = useProgramStore((state) => state.goToNext);
   const goToPrevious = useProgramStore((state) => state.goToPrevious);
-  const fetchProgramFromDatabase = useProgramStore((state) => state.fetchProgramFromDatabase);
-  const [previousWorkout, setPreviousWorkout] = useState(
-    wizardData.previousWorkout || ''
+  const fetchProgramFromDatabase = useProgramStore(
+    (state) => state.fetchProgramFromDatabase
   );
-  const [selectedWorkouts, setSelectedWorkouts] = useState(
-    wizardData.selectedWorkouts || []
+  // Don't use formData for initial state when we have a programId - let database load handle it
+  const [previousWorkout, setPreviousWorkout] = useState(
+    programId ? '' : formData.personalization || ''
   );
   const [skipReason, setSkipReason] = useState('');
   const [searchLoading, setSearchLoading] = useState(false);
@@ -63,6 +68,9 @@ export default function Step3Page() {
   const [selectedWorkoutModal, setSelectedWorkoutModal] = useState(null);
   const [activeTab, setActiveTab] = useState('ai'); // 'manual' or 'ai'
   const [isLoading, setIsLoading] = useState(false);
+  const [previousGeneratedWorkouts, setPreviousGeneratedWorkouts] = useState(
+    []
+  );
 
   // Helper function to create unique workout identifier
   const getWorkoutId = (workout) => {
@@ -75,11 +83,65 @@ export default function Step3Page() {
       if (programId && supabase) {
         setIsLoading(true);
         try {
-          const programData = await fetchProgramFromDatabase(programId, supabase);
+          const programData = await fetchProgramFromDatabase(
+            programId,
+            supabase
+          );
           if (programData) {
             // Update local state with fetched data
-            setPreviousWorkout(programData.personalization || programData.referenceInput || '');
-            // Note: selectedWorkouts might need to be loaded from referenceWorkouts if stored
+            setPreviousWorkout(
+              programData.personalization || programData.referenceInput || ''
+            );
+
+            // Load reference workouts (previously selected workouts)
+            const { data: referenceWorkouts, error: refError } = await supabase
+              .from('program_workouts')
+              .select('*')
+              .eq('program_id', programId)
+              .eq('is_reference', true)
+              .order('created_at', { ascending: false });
+
+            if (refError) {
+              console.error('Error loading reference workouts:', refError);
+            } else if (referenceWorkouts && referenceWorkouts.length > 0) {
+              // Convert database reference workouts to the format expected by the UI
+              const formattedWorkouts = referenceWorkouts.map((workout) => ({
+                title: workout.title,
+                body: workout.body,
+                description: workout.body, // Alias for consistency
+                source: workout.tags?.source || 'Previously Selected',
+                // Add any other fields that might be needed
+              }));
+
+              setSelectedWorkouts(
+                Array.isArray(formattedWorkouts) ? formattedWorkouts : []
+              );
+            }
+
+            // Load previously generated workouts (from AI writer)
+            const { data: generatedWorkouts, error: genError } = await supabase
+              .from('program_workouts')
+              .select('*')
+              .eq('program_id', programId)
+              .eq('is_reference', false)
+              .order('scheduled_date', { ascending: true, nullsFirst: true });
+
+            if (genError) {
+              console.error('Error loading generated workouts:', genError);
+            } else if (generatedWorkouts && generatedWorkouts.length > 0) {
+              // Format generated workouts for display
+              const formattedGenWorkouts = generatedWorkouts.map((workout) => ({
+                title: workout.title,
+                body: workout.body,
+                description: workout.body,
+                source: 'Previously Generated',
+                scheduled_date: workout.scheduled_date,
+                completed: workout.completed,
+                // Add any other fields that might be needed
+              }));
+
+              setPreviousGeneratedWorkouts(formattedGenWorkouts);
+            }
           }
         } catch (error) {
           console.error('Error loading program:', error);
@@ -88,53 +150,102 @@ export default function Step3Page() {
         }
       }
     }
-    
-    loadProgram();
-  }, [programId, supabase, fetchProgramFromDatabase]);
 
+    loadProgram();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [programId, supabase, setSelectedWorkouts]);
+
+  // Only update from form data if we're NOT loading from database
   useEffect(() => {
-    setPreviousWorkout(wizardData.previousWorkout || '');
-    setSelectedWorkouts(wizardData.selectedWorkouts || []);
-  }, [wizardData.previousWorkout, wizardData.selectedWorkouts]);
+    if (!programId) {
+      setPreviousWorkout(formData.personalization || '');
+    }
+  }, [formData.personalization, programId]);
 
   // Save state when fields change
   useEffect(() => {
-    updateWizardData({
-      previousWorkout: previousWorkout.trim(),
-      selectedWorkouts: selectedWorkouts,
+    updateFormData({
+      personalization: previousWorkout.trim(),
+      referenceInput: previousWorkout.trim(),
     });
-  }, [previousWorkout, selectedWorkouts, updateWizardData]);
+  }, [previousWorkout, updateFormData]);
 
-  useEffect(() => {
-    if (searchCriteria.gymType) {
-      setSearchCriteria((prev) => ({
-        ...prev,
-        equipment: gymEquipmentPresets[searchCriteria.gymType] || [],
-      }));
+  const handleNext = async () => {
+    // Save form data
+    updateFormData({
+      personalization: previousWorkout.trim(),
+      referenceInput: previousWorkout.trim(),
+    });
+
+    // Save selected workouts as reference workouts if we have a programId and selected workouts
+    if (programId && selectedWorkouts.length > 0 && supabase) {
+      try {
+        // First, delete existing reference workouts for this program
+        await supabase
+          .from('program_workouts')
+          .delete()
+          .eq('program_id', programId)
+          .eq('is_reference', true);
+
+        // Then insert the new selected workouts as reference workouts
+        const referenceWorkoutsToInsert = selectedWorkouts.map((workout) => ({
+          program_id: programId,
+          title: workout.title,
+          body: workout.body || workout.description || '',
+          is_reference: true,
+          tags: {
+            source: workout.source || 'Web Search',
+            wizard_transferred: true,
+          },
+          created_at: new Date().toISOString(),
+        }));
+
+        const { error: insertError } = await supabase
+          .from('program_workouts')
+          .insert(referenceWorkoutsToInsert);
+
+        if (insertError) {
+          console.error('Error saving reference workouts:', insertError);
+        } else {
+          console.log('Successfully saved reference workouts to database');
+        }
+      } catch (error) {
+        console.error('Error handling reference workouts:', error);
+      }
     }
-  }, [searchCriteria.gymType]);
 
-  const handleNext = () => {
-    updateWizardData({
-      previousWorkout: previousWorkout.trim(),
-      selectedWorkouts: selectedWorkouts,
-    });
     goToNext(3);
   };
 
   const handlePrevious = () => {
-    updateWizardData({
-      previousWorkout: previousWorkout.trim(),
-      selectedWorkouts: selectedWorkouts,
+    updateFormData({
+      personalization: previousWorkout.trim(),
+      referenceInput: previousWorkout.trim(),
     });
     goToPrevious(3);
   };
 
-  const handleSkip = () => {
-    updateWizardData({
-      previousWorkout: '',
-      selectedWorkouts: [],
+  const handleSkip = async () => {
+    updateFormData({
+      personalization: '',
+      referenceInput: '',
     });
+    setSelectedWorkouts([]);
+
+    // Clear any existing reference workouts if we have a programId
+    if (programId && supabase) {
+      try {
+        await supabase
+          .from('program_workouts')
+          .delete()
+          .eq('program_id', programId)
+          .eq('is_reference', true);
+        console.log('Cleared existing reference workouts');
+      } catch (error) {
+        console.error('Error clearing reference workouts:', error);
+      }
+    }
+
     goToNext(3);
   };
 
@@ -283,7 +394,7 @@ Day 3: Leg Press 4x12, DB Press 4x10, Leg Curls 4x12`,
           <div className="flex justify-center">
             <button
               onClick={() => setActiveTab('ai')}
-              className={`px-8 py-4 font-medium transition-all relative ${
+              className={`px-6 py-4 font-medium transition-all relative ${
                 activeTab === 'ai'
                   ? 'text-primary'
                   : 'text-gray-500 hover:text-gray-700'
@@ -299,7 +410,7 @@ Day 3: Leg Press 4x12, DB Press 4x10, Leg Curls 4x12`,
             </button>
             <button
               onClick={() => setActiveTab('manual')}
-              className={`px-8 py-4 font-medium transition-all relative ${
+              className={`px-6 py-4 font-medium transition-all relative ${
                 activeTab === 'manual'
                   ? 'text-primary'
                   : 'text-gray-500 hover:text-gray-700'
@@ -307,12 +418,33 @@ Day 3: Leg Press 4x12, DB Press 4x10, Leg Curls 4x12`,
             >
               <div className="flex items-center gap-2">
                 <FileText className="w-5 h-5" />
-                <span>Share Previous Workout Programming</span>
+                <span>Share Previous Programming</span>
               </div>
               {activeTab === 'manual' && (
                 <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
               )}
             </button>
+            {/* Previous Workouts Tab - Only show if there are generated workouts */}
+            {previousGeneratedWorkouts.length > 0 && (
+              <button
+                onClick={() => setActiveTab('previous')}
+                className={`px-6 py-4 font-medium transition-all relative ${
+                  activeTab === 'previous'
+                    ? 'text-primary'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="w-5 h-5" />
+                  <span>
+                    Previous Workouts ({previousGeneratedWorkouts.length})
+                  </span>
+                </div>
+                {activeTab === 'previous' && (
+                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+                )}
+              </button>
+            )}
           </div>
         </div>
 
@@ -411,6 +543,109 @@ Day 3: Leg Press 4x12, DB Press 4x10, Leg Curls 4x12`,
                   </div>
                 </div>
               </div>
+            </div>
+          ) : activeTab === 'previous' ? (
+            <div className="space-y-6">
+              {/* Previous Workouts Header */}
+              <div className="text-center mb-8">
+                <div className="inline-flex items-center justify-center p-3 bg-gradient-to-br from-green-50 to-green-100 rounded-2xl mb-4">
+                  <CheckCircle2 className="w-8 h-8 text-green-600" />
+                </div>
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                  Previously Generated Workouts
+                </h3>
+                <p className="text-gray-600 max-w-2xl mx-auto">
+                  Review workouts from your current program. You can select any
+                  of these as reference for your updated program.
+                </p>
+              </div>
+
+              {/* Previous Workouts List */}
+              <div className="grid gap-4">
+                {previousGeneratedWorkouts.map((workout, index) => {
+                  const workoutId = getWorkoutId(workout);
+                  const isSelected = selectedWorkouts.some(
+                    (w) => getWorkoutId(w) === workoutId
+                  );
+
+                  return (
+                    <div
+                      key={`prev-${index}`}
+                      className={`relative bg-white border-2 rounded-xl p-6 transition-all ${
+                        isSelected
+                          ? 'border-primary shadow-lg shadow-primary/10'
+                          : 'border-gray-200 hover:border-gray-300 hover:shadow-md'
+                      }`}
+                    >
+                      {/* Selection Badge */}
+                      {isSelected && (
+                        <div className="absolute -top-2 -right-2 p-2 bg-primary rounded-full">
+                          <CheckCircle2 className="w-4 h-4 text-white" />
+                        </div>
+                      )}
+
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <h5 className="font-semibold text-lg text-gray-900">
+                              {workout.title}
+                            </h5>
+                            {workout.completed && (
+                              <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
+                                <CheckCircle2 className="w-3 h-3" />
+                                Completed
+                              </span>
+                            )}
+                            {workout.scheduled_date && (
+                              <span className="text-xs text-gray-500">
+                                {new Date(
+                                  workout.scheduled_date
+                                ).toLocaleDateString()}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-gray-600 text-sm line-clamp-2">
+                            {workout.body || workout.description || ''}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-500">
+                          From your current program
+                        </span>
+
+                        <div className="flex gap-2">
+                          <button
+                            onClick={(e) => handleViewWorkout(workout, e)}
+                            className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleSelectWorkout(workout)}
+                            className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                              isSelected
+                                ? 'bg-red-500 hover:bg-red-600 text-white'
+                                : 'bg-primary hover:bg-primary-dark text-white'
+                            }`}
+                          >
+                            {isSelected ? 'Remove' : 'Select'}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {previousGeneratedWorkouts.length === 0 && (
+                <div className="text-center py-8">
+                  <p className="text-gray-500">
+                    No previously generated workouts found.
+                  </p>
+                </div>
+              )}
             </div>
           ) : (
             <div className="space-y-6">
@@ -690,53 +925,6 @@ Day 3: Leg Press 4x12, DB Press 4x10, Leg Curls 4x12`,
               </div>
             </div>
           )}
-
-          {/* Skip Option */}
-          {!previousWorkout && selectedWorkouts.length === 0 && (
-            <div className="mt-8 p-6 bg-gray-50 rounded-xl">
-              <h3 className="font-semibold text-gray-900 mb-3">
-                No previous workouts to share?
-              </h3>
-              <p className="text-gray-600 mb-4">
-                That's okay! Select a reason to continue:
-              </p>
-              <div className="space-y-3">
-                <label className="flex items-center p-3 bg-white rounded-lg border border-gray-200 cursor-pointer hover:border-primary transition-colors">
-                  <input
-                    type="radio"
-                    name="skip-reason"
-                    value="beginner"
-                    checked={skipReason === 'beginner'}
-                    onChange={(e) => setSkipReason(e.target.value)}
-                    className="mr-3"
-                  />
-                  <span>New to fitness or returning after a long break</span>
-                </label>
-                <label className="flex items-center p-3 bg-white rounded-lg border border-gray-200 cursor-pointer hover:border-primary transition-colors">
-                  <input
-                    type="radio"
-                    name="skip-reason"
-                    value="no-records"
-                    checked={skipReason === 'no-records'}
-                    onChange={(e) => setSkipReason(e.target.value)}
-                    className="mr-3"
-                  />
-                  <span>Don't have records of previous workouts</span>
-                </label>
-                <label className="flex items-center p-3 bg-white rounded-lg border border-gray-200 cursor-pointer hover:border-primary transition-colors">
-                  <input
-                    type="radio"
-                    name="skip-reason"
-                    value="fresh-start"
-                    checked={skipReason === 'fresh-start'}
-                    onChange={(e) => setSkipReason(e.target.value)}
-                    className="mr-3"
-                  />
-                  <span>Want a completely fresh start</span>
-                </label>
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Footer Navigation */}
@@ -753,15 +941,6 @@ Day 3: Leg Press 4x12, DB Press 4x10, Leg Curls 4x12`,
             <div className="text-sm text-gray-500">Step 3 of 5</div>
 
             <div className="flex items-center gap-3">
-              {!previousWorkout && selectedWorkouts.length === 0 && (
-                <button
-                  onClick={handleSkip}
-                  className="px-4 py-2 text-gray-500 hover:text-gray-700 transition-colors"
-                  disabled={!skipReason}
-                >
-                  Skip This Step
-                </button>
-              )}
               <button
                 onClick={handleNext}
                 className="flex items-center gap-2 px-6 py-2.5 bg-primary hover:bg-primary-dark text-white font-medium rounded-lg transition-all"

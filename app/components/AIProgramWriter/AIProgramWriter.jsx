@@ -912,7 +912,23 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
   
   // Inject wizard data AFTER program data is loaded to prevent overwriting
   useEffect(() => {
-    if (!wizardComplete || !programId || !wizardData.wizardComplete) return;
+    // Skip wizard data injection for existing program updates
+    // When updating existing programs, we rely on the form data already being properly set
+    if (!wizardComplete || !programId) return;
+    
+    // Only inject wizard data if it exists (new program from wizard)
+    if (!wizardData || !wizardData.wizardComplete) {
+      // For existing program updates, just show success message and highlight generate button
+      if (wizardComplete) {
+        showToastMessage(
+          'Program updated! You can now generate new workouts.',
+          'success'
+        );
+        setHighlightGenerateButton(true);
+        setTimeout(() => setHighlightGenerateButton(false), 3000);
+      }
+      return;
+    }
 
     // Wait for initial program data to load first
     const injectWizardData = () => {

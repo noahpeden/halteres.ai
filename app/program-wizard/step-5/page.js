@@ -20,10 +20,15 @@ export default function Step5Page() {
   const searchParams = useSearchParams();
   const programId = searchParams.get('programId');
   
-  const wizardData = useProgramStore((state) => state.wizardData);
+  const formData = useProgramStore((state) => state.formData);
+  const entityName = useProgramStore((state) => state.entityName);
+  const entityType = useProgramStore((state) => state.entityType);
+  const setEntityName = useProgramStore((state) => state.setEntityName);
+  const setEntityType = useProgramStore((state) => state.setEntityType);
+  const updateFormData = useProgramStore((state) => state.updateFormData);
   const goToPrevious = useProgramStore((state) => state.goToPrevious);
   const completeWizard = useProgramStore((state) => state.completeWizard);
-  const updateWizardData = useProgramStore((state) => state.updateWizardData);
+  const updateProgramAndReturn = useProgramStore((state) => state.updateProgramAndReturn);
   const fetchProgramFromDatabase = useProgramStore((state) => state.fetchProgramFromDatabase);
   const { supabase } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -34,7 +39,7 @@ export default function Step5Page() {
   const [useImperial, setUseImperial] = useState(true); // Default to imperial
   const [entities, setEntities] = useState([]);
   const [showEntitySelection, setShowEntitySelection] = useState(false);
-  const [selectedEntityId, setSelectedEntityId] = useState(wizardData.entityId);
+  const [selectedEntityId, setSelectedEntityId] = useState(formData.entityId);
   const [schedulingData, setSchedulingData] = useState(() => {
     // Convert day names to indices for display
     const dayNames = [
@@ -48,31 +53,31 @@ export default function Step5Page() {
     ];
     let daysOfWeekIndices = [];
 
-    if (wizardData.daysOfWeek && Array.isArray(wizardData.daysOfWeek)) {
-      if (wizardData.daysOfWeek.length > 0) {
+    if (formData.daysOfWeek && Array.isArray(formData.daysOfWeek)) {
+      if (formData.daysOfWeek.length > 0) {
         // Check if first element is a string (day name) or number (index)
-        if (typeof wizardData.daysOfWeek[0] === 'string') {
+        if (typeof formData.daysOfWeek[0] === 'string') {
           // Convert day names to indices
-          daysOfWeekIndices = wizardData.daysOfWeek
+          daysOfWeekIndices = formData.daysOfWeek
             .map((dayName) => dayNames.indexOf(dayName.toLowerCase()))
             .filter((index) => index !== -1);
         } else {
           // Already indices
-          daysOfWeekIndices = wizardData.daysOfWeek;
+          daysOfWeekIndices = formData.daysOfWeek;
         }
       }
     }
 
     return {
-      programName: wizardData.programName || '',
+      programName: formData.name || '',
       startDate:
-        wizardData.startDate ||
+        formData.startDate ||
         (() => {
           const tomorrow = new Date();
           tomorrow.setDate(tomorrow.getDate() + 1);
           return tomorrow.toISOString().split('T')[0];
         })(),
-      numberOfWeeks: wizardData.numberOfWeeks || 4,
+      numberOfWeeks: parseInt(formData.numberOfWeeks) || 4,
       daysOfWeek: daysOfWeekIndices,
     };
   });
@@ -129,14 +134,14 @@ export default function Step5Page() {
     loadProgram();
   }, [programId, supabase, fetchProgramFromDatabase]);
 
-  // Update local entity selection from wizard data
+  // Update local entity selection from form data
   useEffect(() => {
-    if (wizardData.entityId) {
-      setSelectedEntityId(wizardData.entityId);
+    if (formData.entityId) {
+      setSelectedEntityId(formData.entityId);
     }
-  }, [wizardData.entityId]);
+  }, [formData.entityId]);
 
-  // Update schedulingData when wizardData changes
+  // Update schedulingData when formData changes
   useEffect(() => {
     const dayNames = [
       'sunday',
@@ -150,8 +155,8 @@ export default function Step5Page() {
 
     // Convert day names to indices for display (handle both string and number formats)
     let daysOfWeekIndices = [];
-    if (wizardData.daysOfWeek && Array.isArray(wizardData.daysOfWeek)) {
-      daysOfWeekIndices = wizardData.daysOfWeek.map((day) => {
+    if (formData.daysOfWeek && Array.isArray(formData.daysOfWeek)) {
+      daysOfWeekIndices = formData.daysOfWeek.map((day) => {
         if (typeof day === 'string') {
           return dayNames.indexOf(day.toLowerCase());
         }
@@ -160,16 +165,16 @@ export default function Step5Page() {
     }
 
     setSchedulingData({
-      programName: wizardData.programName || '',
-      startDate: wizardData.startDate || (() => {
+      programName: formData.name || '',
+      startDate: formData.startDate || (() => {
         const tomorrow = new Date();
         tomorrow.setDate(tomorrow.getDate() + 1);
         return tomorrow.toISOString().split('T')[0];
       })(),
-      numberOfWeeks: wizardData.numberOfWeeks || 4,
+      numberOfWeeks: parseInt(formData.numberOfWeeks) || 4,
       daysOfWeek: daysOfWeekIndices,
     });
-  }, [wizardData.programName, wizardData.startDate, wizardData.numberOfWeeks, wizardData.daysOfWeek]);
+  }, [formData.name, formData.startDate, formData.numberOfWeeks, formData.daysOfWeek]);
 
   // Fetch all entities for selection
   useEffect(() => {
@@ -264,14 +269,14 @@ export default function Step5Page() {
   const handleEntitySelect = (entityId) => {
     setSelectedEntityId(entityId);
     setShowEntitySelection(false);
-    // Update wizard data with new entity selection
+    // Update form data with new entity selection
     const selectedEntity = entities.find((e) => e.id === entityId);
     if (selectedEntity) {
-      updateWizardData({
+      updateFormData({
         entityId: entityId,
-        entityName: selectedEntity.name,
-        entityType: selectedEntity.type,
       });
+      setEntityName(selectedEntity.name);
+      setEntityType(selectedEntity.type);
     }
   };
 
@@ -286,19 +291,25 @@ export default function Step5Page() {
 
   const handleSchedulingChange = (field, value) => {
     setSchedulingData((prev) => ({ ...prev, [field]: value }));
-    // Also update wizard data
-    updateWizardData({ [field]: value });
+    // Also update form data
+    if (field === 'programName') {
+      updateFormData({ name: value });
+    } else if (field === 'numberOfWeeks') {
+      updateFormData({ numberOfWeeks: String(value) });
+    } else {
+      updateFormData({ [field]: value });
+    }
   };
 
   // Save state when scheduling data changes
   useEffect(() => {
-    updateWizardData({
-      programName: schedulingData.programName,
+    updateFormData({
+      name: schedulingData.programName,
       startDate: schedulingData.startDate,
-      numberOfWeeks: schedulingData.numberOfWeeks,
+      numberOfWeeks: String(schedulingData.numberOfWeeks),
       // Don't overwrite daysOfWeek here since it's handled in handleToggleDay
     });
-  }, [schedulingData.programName, schedulingData.startDate, schedulingData.numberOfWeeks, updateWizardData]);
+  }, [schedulingData.programName, schedulingData.startDate, schedulingData.numberOfWeeks, updateFormData]);
 
   const handleToggleDay = (dayIndex) => {
     const dayNames = [
@@ -325,7 +336,7 @@ export default function Step5Page() {
       ...prev,
       daysOfWeek: newDaysOfWeekIndices,
     }));
-    updateWizardData({ daysOfWeek: newDaysOfWeekNames });
+    updateFormData({ daysOfWeek: newDaysOfWeekNames.map(name => name.charAt(0).toUpperCase() + name.slice(1)) });
   };
 
   // Calculate end date based on start date and duration
@@ -359,19 +370,45 @@ export default function Step5Page() {
 
     setIsSubmitting(true);
     try {
-      // Update wizard data with final entity selection and scheduling before completing
+      // Update form data with final entity selection and scheduling before completing
       const selectedEntity = entities.find((e) => e.id === selectedEntityId);
-      const finalWizardData = {
-        ...schedulingData,
+      
+      const dayNames = [
+        'Sunday',
+        'Monday',
+        'Tuesday',
+        'Wednesday',
+        'Thursday',
+        'Friday',
+        'Saturday',
+      ];
+      
+      const finalDaysOfWeek = schedulingData.daysOfWeek.map(index => dayNames[index]);
+      
+      const finalFormData = {
+        name: schedulingData.programName,
+        startDate: schedulingData.startDate,
+        numberOfWeeks: String(schedulingData.numberOfWeeks),
+        daysOfWeek: finalDaysOfWeek,
         entityId: selectedEntityId,
-        entityName: selectedEntity?.name,
-        entityType: selectedEntity?.type,
       };
+      
+      // Update form data and wait for it to be set
+      updateFormData(finalFormData);
+      
+      if (selectedEntity) {
+        setEntityName(selectedEntity.name);
+        setEntityType(selectedEntity.type);
+      }
 
-      updateWizardData(finalWizardData);
-
-      // This will create the program and redirect to the writer
-      await completeWizard();
+      // Choose the appropriate action based on whether we're creating or updating
+      if (programId) {
+        // Updating existing program - go directly back to writer
+        await updateProgramAndReturn(finalFormData);
+      } else {
+        // Creating new program - go through the creation process
+        await completeWizard(finalFormData);
+      }
     } catch (error) {
       console.error('Error completing wizard:', error);
       alert('Failed to create program. Please try again.');
@@ -384,8 +421,8 @@ export default function Step5Page() {
   const entityTypeText = currentEntity?.type === 'CLASS' ? 'class' : 'client';
   const entityTypeTextCap =
     currentEntity?.type === 'CLASS' ? 'Class' : 'Client';
-  const entityName =
-    currentEntity?.name || wizardData.entityName || 'Selected entity';
+  const displayEntityName =
+    currentEntity?.name || entityName || 'Selected entity';
 
   return (
     <div className="relative">
@@ -411,7 +448,7 @@ export default function Step5Page() {
           </h2>
           <p className="text-base-content/70">
             {selectedEntityId
-              ? `Review and update ${entityName}'s metrics before creating the program`
+              ? `Review and update ${displayEntityName}'s metrics before creating the program`
               : 'Select a client or class to create the program for'}
           </p>
         </div>
@@ -634,7 +671,7 @@ export default function Step5Page() {
             </div>
             <div>
               <span className="font-medium">Training Methodology:</span>{' '}
-              {wizardData.trainingMethodology}
+              {formData.trainingMethodology}
             </div>
             <div>
               <span className="font-medium">Duration:</span>{' '}
@@ -650,8 +687,8 @@ export default function Step5Page() {
             </div>
             <div>
               <span className="font-medium">Gym Type:</span>{' '}
-              {wizardData.gymType
-                ? wizardData.gymType
+              {formData.gymType
+                ? formData.gymType
                     .replace(/_/g, ' ')
                     .replace(/\b\w/g, (l) => l.toUpperCase())
                 : 'Not set'}
@@ -682,7 +719,7 @@ export default function Step5Page() {
                   About {entityTypeText} metrics
                 </div>
                 <div className="text-sm">
-                  {wizardData.entityType === 'CLASS'
+                  {entityType === 'CLASS'
                     ? 'Class metrics represent general information about the group. Individual variations may apply during training.'
                     : 'These metrics help create a more personalized program. You can update them now or after program creation.'}
                 </div>
@@ -1171,7 +1208,10 @@ export default function Step5Page() {
             className={`btn btn-primary px-6 ${isSubmitting ? 'loading' : ''}`}
             disabled={isSubmitting}
           >
-            {isSubmitting ? 'Creating Program...' : 'Create Program'}
+            {isSubmitting 
+              ? (programId ? 'Updating Program...' : 'Creating Program...') 
+              : (programId ? 'Update Program' : 'Create Program')
+            }
             {!isSubmitting && (
               <svg
                 className="w-4 h-4 ml-2"

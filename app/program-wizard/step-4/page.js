@@ -6,65 +6,67 @@ import { useAuth } from '@/contexts/AuthContext';
 import { X } from 'lucide-react';
 import useProgramStore from '../../store/programStore';
 import WizardProgress from '../../components/ProgramWizard/WizardProgress';
+import WorkoutFormatSelector from '@/components/selectors/WorkoutFormatSelector';
 
 const gymTypes = [
-  { value: 'crossfit_box', label: 'CrossFit Box', icon: '🏋️' },
-  { value: 'commercial_gym', label: 'Commercial Gym', icon: '💪' },
-  { value: 'home_gym', label: 'Home Gym', icon: '🏠' },
-  { value: 'minimal_equipment', label: 'Minimal Equipment', icon: '🎒' },
-  { value: 'outdoor_space', label: 'Outdoor Space', icon: '🌳' },
-  { value: 'powerlifting_gym', label: 'Powerlifting Gym', icon: '🏋️‍♂️' },
-  { value: 'olympic_weightlifting_gym', label: 'Olympic Weightlifting Gym', icon: '🏋️‍♀️' },
-  { value: 'bodyweight_only', label: 'Bodyweight Only', icon: '🤸' },
-  { value: 'studio_gym', label: 'Studio Gym', icon: '🏢' },
-  { value: 'university_gym', label: 'University Gym', icon: '🎓' },
-  { value: 'hotel_gym', label: 'Hotel Gym', icon: '🏨' },
-  { value: 'apartment_gym', label: 'Apartment Gym', icon: '🏘️' },
-  { value: 'boxing_mma_gym', label: 'Boxing/MMA Gym', icon: '🥊' },
-  { value: 'triathlon_training_facility', label: 'Triathlon Training Facility', icon: '🏊' },
-  { value: 'multi_sport_complex', label: 'Multi-Sport Complex', icon: '🏟️' },
-];
-
-
-const workoutFormats = [
-  { value: 'strength', label: 'Strength', icon: '🏋️‍♀️' },
-  { value: 'hypertrophy', label: 'Hypertrophy', icon: '💪' },
-  { value: 'endurance', label: 'Muscular Endurance', icon: '⏱️' },
-  { value: 'power', label: 'Power', icon: '⚡' },
-  { value: 'metcon', label: 'Metabolic Conditioning', icon: '🔥' },
-  { value: 'emom', label: 'EMOM', icon: '🕐' },
-  { value: 'amrap', label: 'AMRAP', icon: '🔄' },
-  { value: 'for-time', label: 'For Time', icon: '⏳' },
-  { value: 'circuit', label: 'Circuit Training', icon: '⭕' },
-  { value: 'superset', label: 'Supersets', icon: '🔄' },
-  { value: 'giant-set', label: 'Giant Sets', icon: '🦍' },
-  { value: 'tabata', label: 'Tabata', icon: '⏲️' },
-  { value: 'complex', label: 'Barbell/Dumbbell Complex', icon: '🏆' },
-  { value: 'pyramid', label: 'Pyramid Scheme', icon: '🔺' },
-  { value: 'hiit', label: 'HIIT', icon: '📊' },
+  { value: 'Crossfit Box', label: 'CrossFit Box', icon: '🏋️' },
+  { value: 'Commercial Gym', label: 'Commercial Gym', icon: '💪' },
+  { value: 'Home Gym', label: 'Home Gym', icon: '🏠' },
+  { value: 'Minimal Equipment', label: 'Minimal Equipment', icon: '🎒' },
+  { value: 'Outdoor Space', label: 'Outdoor Space', icon: '🌳' },
+  { value: 'Powerlifting Gym', label: 'Powerlifting Gym', icon: '🏋️‍♂️' },
+  {
+    value: 'Olympic Weightlifting Gym',
+    label: 'Olympic Weightlifting Gym',
+    icon: '🏋️‍♀️',
+  },
+  { value: 'Bodyweight Only', label: 'Bodyweight Only', icon: '🤸' },
+  { value: 'Studio Gym', label: 'Studio Gym', icon: '🏢' },
+  { value: 'University Gym', label: 'University Gym', icon: '🎓' },
+  { value: 'Hotel Gym', label: 'Hotel Gym', icon: '🏨' },
+  { value: 'Apartment Gym', label: 'Apartment Gym', icon: '🏘️' },
+  { value: 'Boxing/MMA Gym', label: 'Boxing/MMA Gym', icon: '🥊' },
+  {
+    value: 'Triathlon Training Facility',
+    label: 'Triathlon Training Facility',
+    icon: '🏊',
+  },
+  { value: 'Multi-Sport Complex', label: 'Multi-Sport Complex', icon: '🏟️' },
 ];
 
 export default function Step4Page() {
   const searchParams = useSearchParams();
   const { supabase } = useAuth();
   const programId = searchParams.get('programId');
-  
-  const wizardData = useProgramStore((state) => state.wizardData);
-  const updateWizardData = useProgramStore((state) => state.updateWizardData);
+
+  const formData = useProgramStore((state) => state.formData);
+  const updateFormData = useProgramStore((state) => state.updateFormData);
   const goToPrevious = useProgramStore((state) => state.goToPrevious);
   const goToNext = useProgramStore((state) => state.goToNext);
   const selectedEquipment = useProgramStore((state) => state.selectedEquipment);
   const selectedGymType = useProgramStore((state) => state.selectedGymType);
   const updateGymType = useProgramStore((state) => state.updateGymType);
   const updateEquipment = useProgramStore((state) => state.updateEquipment);
-  const fetchProgramFromDatabase = useProgramStore((state) => state.fetchProgramFromDatabase);
-  
-  const [difficultyLevel, setDifficultyLevel] = useState(wizardData.difficulty || 'intermediate');
-  const [focusArea, setFocusArea] = useState(wizardData.focusArea || 'full_body');
-  const [workoutDuration, setWorkoutDuration] = useState(wizardData.workoutDuration || 60);
-  const [selectedFormats, setSelectedFormats] = useState(wizardData.workoutFormats || []);
-  const [isLoading, setIsLoading] = useState(false);
+  const fetchProgramFromDatabase = useProgramStore(
+    (state) => state.fetchProgramFromDatabase
+  );
 
+  // Don't use formData for initial state when we have a programId - let database load handle it
+  const [difficultyLevel, setDifficultyLevel] = useState(
+    programId ? 'intermediate' : formData.difficulty || 'intermediate'
+  );
+  const [focusArea, setFocusArea] = useState(
+    programId ? 'full_body' : formData.focusArea || 'full_body'
+  );
+  const [workoutDuration, setWorkoutDuration] = useState(
+    programId
+      ? 60
+      : parseInt(formData.sessionDetails?.main_workout_duration) || 60
+  );
+  const [selectedFormats, setSelectedFormats] = useState(
+    programId ? [] : (formData.workoutFormats || [])
+  );
+  const [isLoading, setIsLoading] = useState(false);
 
   // Fetch program data if programId is provided
   useEffect(() => {
@@ -72,19 +74,25 @@ export default function Step4Page() {
       if (programId && supabase) {
         setIsLoading(true);
         try {
-          const programData = await fetchProgramFromDatabase(programId, supabase);
+          const programData = await fetchProgramFromDatabase(
+            programId,
+            supabase
+          );
           if (programData) {
             // Update local state with fetched data
             if (programData.gymType) {
-              updateGymType(programData.gymType.toLowerCase().replace(/\s+/g, '_'));
+              // Store gymType in Title Case format to match equipment presets
+              updateGymType(programData.gymType);
             }
             if (programData.equipment) {
               updateEquipment(programData.equipment);
             }
             setDifficultyLevel(programData.difficulty || 'intermediate');
             setFocusArea(programData.focusArea || 'full_body');
-            setWorkoutDuration(programData.sessionDetails?.main_workout_duration || 60);
-            setSelectedFormats(programData.workoutFormats || []);
+            setWorkoutDuration(
+              programData.sessionDetails?.main_workout_duration || 60
+            );
+            setSelectedFormats(programData.workoutFormats || ['strength', 'hypertrophy', 'endurance', 'power', 'metcon']);
           }
         } catch (error) {
           console.error('Error loading program:', error);
@@ -93,34 +101,68 @@ export default function Step4Page() {
         }
       }
     }
-    
-    loadProgram();
-  }, [programId, supabase, fetchProgramFromDatabase, updateGymType, updateEquipment]);
 
+    loadProgram();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [programId, supabase]);
+
+  // Only update from form data if we're NOT loading from database
   useEffect(() => {
-    if (wizardData.gymType) {
-      updateGymType(wizardData.gymType);
+    if (!programId) {
+      if (formData.gymType) {
+        // Convert from Title Case to snake_case if needed
+        const gymTypeSnakeCase = formData.gymType
+          .toLowerCase()
+          .replace(/\s+/g, '_');
+        updateGymType(gymTypeSnakeCase);
+      }
+      if (formData.equipment) {
+        updateEquipment(formData.equipment);
+      }
+      setDifficultyLevel(formData.difficulty || 'intermediate');
+      setFocusArea(formData.focusArea || 'full_body');
+      setWorkoutDuration(
+        parseInt(formData.sessionDetails?.main_workout_duration) || 60
+      );
+      setSelectedFormats(formData.workoutFormats || ['strength', 'hypertrophy', 'endurance', 'power', 'metcon']);
     }
-    if (wizardData.equipment) {
-      updateEquipment(wizardData.equipment);
-    }
-    setDifficultyLevel(wizardData.difficulty || 'intermediate');
-    setFocusArea(wizardData.focusArea || 'full_body');
-    setWorkoutDuration(wizardData.workoutDuration || 60);
-    setSelectedFormats(wizardData.workoutFormats || []);
-  }, [wizardData, updateGymType, updateEquipment]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    formData.gymType,
+    formData.equipment,
+    formData.difficulty,
+    formData.focusArea,
+    formData.workoutFormats,
+    programId,
+  ]);
 
   // Save state when fields change
   useEffect(() => {
-    updateWizardData({
-      gymType: selectedGymType,
+    // Convert snake_case to Title Case for gymType
+    const gymTypeLabel =
+      gymTypes.find((g) => g.value === selectedGymType)?.label ||
+      selectedGymType;
+
+    updateFormData({
+      gymType: gymTypeLabel,
       equipment: selectedEquipment,
       difficulty: difficultyLevel,
       focusArea,
-      workoutDuration,
+      sessionDetails: {
+        ...(formData.sessionDetails || {}),
+        main_workout_duration: workoutDuration,
+      },
       workoutFormats: selectedFormats,
     });
-  }, [selectedGymType, selectedEquipment, difficultyLevel, focusArea, workoutDuration, selectedFormats, updateWizardData]);
+  }, [
+    selectedGymType,
+    selectedEquipment,
+    difficultyLevel,
+    focusArea,
+    workoutDuration,
+    selectedFormats,
+    updateFormData,
+  ]);
 
   const handleGymTypeChange = (gymType) => {
     // Update gym type in context - this will automatically trigger equipment update
@@ -128,20 +170,27 @@ export default function Step4Page() {
   };
 
   const handleFormatToggle = (format) => {
-    setSelectedFormats(prev => 
+    setSelectedFormats((prev) =>
       prev.includes(format)
-        ? prev.filter(f => f !== format)
+        ? prev.filter((f) => f !== format)
         : [...prev, format]
     );
   };
 
   const handlePrevious = () => {
-    updateWizardData({
-      gymType: selectedGymType,
+    const gymTypeLabel =
+      gymTypes.find((g) => g.value === selectedGymType)?.label ||
+      selectedGymType;
+
+    updateFormData({
+      gymType: gymTypeLabel,
       equipment: selectedEquipment,
       difficulty: difficultyLevel,
       focusArea,
-      workoutDuration,
+      sessionDetails: {
+        ...(formData.sessionDetails || {}),
+        main_workout_duration: workoutDuration,
+      },
       workoutFormats: selectedFormats,
     });
     goToPrevious(4);
@@ -153,12 +202,19 @@ export default function Step4Page() {
       return;
     }
 
-    updateWizardData({
-      gymType: selectedGymType,
+    const gymTypeLabel =
+      gymTypes.find((g) => g.value === selectedGymType)?.label ||
+      selectedGymType;
+
+    updateFormData({
+      gymType: gymTypeLabel,
       equipment: selectedEquipment,
       difficulty: difficultyLevel,
       focusArea,
-      workoutDuration,
+      sessionDetails: {
+        ...(formData.sessionDetails || {}),
+        main_workout_duration: workoutDuration,
+      },
       workoutFormats: selectedFormats,
     });
 
@@ -181,7 +237,7 @@ export default function Step4Page() {
       )}
 
       <WizardProgress currentStep={4} />
-      
+
       {isLoading && (
         <div className="flex justify-center items-center py-8">
           <span className="loading loading-spinner loading-lg text-primary"></span>
@@ -190,10 +246,14 @@ export default function Step4Page() {
 
       <div className="bg-base-200 rounded-lg p-6">
         <div className="text-center mb-6">
-          <h2 className="text-2xl font-bold text-primary mb-2">Gym Setup & Preferences</h2>
-          <p className="text-base-content/70">Configure equipment, difficulty, and workout preferences</p>
+          <h2 className="text-2xl font-bold text-primary mb-2">
+            Gym Setup & Preferences
+          </h2>
+          <p className="text-base-content/70">
+            Configure equipment, difficulty, and workout preferences
+          </p>
         </div>
-        
+
         <div className="space-y-6">
           {/* Gym Type Selection */}
           <div>
@@ -304,12 +364,18 @@ export default function Step4Page() {
 
             <div>
               <label className="label">
-                <span className="label-text font-medium">Workout Duration (minutes)</span>
+                <span className="label-text font-medium">
+                  Workout Duration (minutes)
+                </span>
               </label>
               <input
                 type="number"
                 value={workoutDuration}
-                onChange={(e) => setWorkoutDuration(e.target.value === '' ? '' : parseInt(e.target.value))}
+                onChange={(e) =>
+                  setWorkoutDuration(
+                    e.target.value === '' ? '' : parseInt(e.target.value)
+                  )
+                }
                 min="15"
                 max="120"
                 step="5"
@@ -322,56 +388,55 @@ export default function Step4Page() {
                 <span className="label-text font-medium">Workout Formats</span>
               </label>
               <div className="flex flex-wrap gap-2 py-2">
-                {workoutFormats.map((format) => {
-                  const selected = selectedFormats.includes(format.value);
-                  return (
-                    <button
-                      key={format.value}
-                      type="button"
-                      className={`flex items-center gap-2 px-3 py-1 rounded-full border transition-colors focus:outline-none focus:ring-2 focus:ring-primary/60 text-sm
-                        ${
-                          selected
-                            ? 'bg-primary text-white border-primary shadow'
-                            : 'bg-base-200 text-base-content border-base-300 hover:bg-base-300'
-                        }
-                      `}
-                      aria-pressed={selected}
-                      aria-label={format.label + (selected ? ' selected' : '')}
-                      onClick={() => handleFormatToggle(format.value)}
-                    >
-                      <span>{format.icon}</span>
-                      <span className="whitespace-nowrap">{format.label}</span>
-                    </button>
-                  );
-                })}
+                <WorkoutFormatSelector
+                  selectedFormats={selectedFormats}
+                  onChange={setSelectedFormats}
+                />
               </div>
             </div>
           </div>
         </div>
 
         <div className="flex justify-between mt-8">
-          <button
-            onClick={handlePrevious}
-            className="btn btn-outline"
-          >
-            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          <button onClick={handlePrevious} className="btn btn-outline">
+            <svg
+              className="w-5 h-5 mr-2"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 19l-7-7 7-7"
+              />
             </svg>
             Back to Step 3
           </button>
-          
+
           <div className="text-sm text-base-content/60">
             Step 4 of 5 • Gym Setup
           </div>
-          
+
           <button
             onClick={handleNext}
             className="btn btn-primary px-6"
             disabled={!selectedGymType}
           >
             Continue to Step 5
-            <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            <svg
+              className="w-4 h-4 ml-2"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 5l7 7-7 7"
+              />
             </svg>
           </button>
         </div>

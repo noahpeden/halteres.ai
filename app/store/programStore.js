@@ -7,30 +7,30 @@ import equipmentList from '../utils/equipmentList';
 
 // Mapping from snake_case to Title Case for gym types
 const gymTypeMapping = {
-  'crossfit_box': 'Crossfit Box',
-  'commercial_gym': 'Commercial Gym',
-  'home_gym': 'Home Gym',
-  'minimal_equipment': 'Minimal Equipment',
-  'outdoor_space': 'Outdoor Space',
-  'powerlifting_gym': 'Powerlifting Gym',
-  'olympic_weightlifting_gym': 'Olympic Weightlifting Gym',
-  'bodyweight_only': 'Bodyweight Only',
-  'studio_gym': 'Studio Gym',
-  'university_gym': 'University Gym',
-  'hotel_gym': 'Hotel Gym',
-  'apartment_gym': 'Apartment Gym',
-  'boxing_mma_gym': 'Boxing/MMA Gym',
-  'triathlon_training_facility': 'Triathlon Training Facility',
-  'multi_sport_complex': 'Multi-Sport Complex',
+  crossfit_box: 'Crossfit Box',
+  commercial_gym: 'Commercial Gym',
+  home_gym: 'Home Gym',
+  minimal_equipment: 'Minimal Equipment',
+  outdoor_space: 'Outdoor Space',
+  powerlifting_gym: 'Powerlifting Gym',
+  olympic_weightlifting_gym: 'Olympic Weightlifting Gym',
+  bodyweight_only: 'Bodyweight Only',
+  studio_gym: 'Studio Gym',
+  university_gym: 'University Gym',
+  hotel_gym: 'Hotel Gym',
+  apartment_gym: 'Apartment Gym',
+  boxing_mma_gym: 'Boxing/MMA Gym',
+  triathlon_training_facility: 'Triathlon Training Facility',
+  multi_sport_complex: 'Multi-Sport Complex',
 };
 
 // Helper function to clean up days of week array
 function cleanDaysOfWeek(daysArray) {
   if (!Array.isArray(daysArray)) return [];
-  
+
   // Remove duplicates while preserving case consistency
   const seen = new Set();
-  return daysArray.filter(day => {
+  return daysArray.filter((day) => {
     if (typeof day !== 'string') return false;
     const lowerDay = day.toLowerCase();
     if (seen.has(lowerDay)) return false;
@@ -45,7 +45,7 @@ const useProgramStore = create(
       (set, get) => ({
         // Equipment State (from EquipmentContext)
         selectedEquipment: [],
-        selectedGymType: 'crossfit_box',
+        selectedGymType: 'Crossfit Box',
         equipmentList: equipmentList,
         onEquipmentChangeCallback: null,
 
@@ -60,7 +60,7 @@ const useProgramStore = create(
           equipment: gymEquipmentPresets['Crossfit Box'] || [],
           focusArea: '',
           personalization: '',
-          workoutFormats: [],
+          workoutFormats: ['strength', 'hypertrophy', 'endurance', 'power', 'metcon'],
           numberOfWeeks: '4',
           daysPerWeek: '3',
           daysOfWeek: ['Monday', 'Wednesday', 'Friday'],
@@ -88,7 +88,7 @@ const useProgramStore = create(
         isDirty: false,
         initialFormData: null,
         preventFetch: false,
-        
+
         // Modal States
         isWorkoutModalOpen: false,
         selectedWorkout: null,
@@ -101,7 +101,7 @@ const useProgramStore = create(
         selectedWorkoutForEdit: null,
         isConfirmationModalOpen: false,
         confirmationModalContent: { title: '', message: '', confirmText: '' },
-        
+
         // UI States
         showToast: false,
         toastMessage: '',
@@ -114,37 +114,10 @@ const useProgramStore = create(
         customSectionDescription: '',
         triggerProgramRefresh: 0,
 
-        // Program Wizard State (from ProgramWizardContext)
-        wizardData: {
-          // Step 1 - Training Methodology
-          trainingMethodology: '',
-          programType: '',
-          
-          // Step 2 - Program Description
-          programDescription: '',
-          programName: '',
-          
-          // Step 3 - Previous Workouts
-          previousWorkout: '',
-          referenceInput: '',
-          referenceWorkouts: [],
-          
-          // Step 4 - Gym Type and Equipment
-          gymType: '',
-          equipment: [],
-          difficulty: 'intermediate',
-          focusArea: 'full_body',
-          workoutDuration: 60,
-          workoutFormats: [],
-          
-          // Scheduling (from initial creation)
-          entityId: null,
-          entityName: '',
-          entityType: 'CLIENT',
-          startDate: '',
-          numberOfWeeks: 4,
-          daysOfWeek: [],
-        },
+        // Additional wizard-specific fields
+        selectedWorkouts: [], // For step 3 workout selection
+        entityName: '',
+        entityType: 'CLIENT',
 
         // Equipment Actions
         handleEquipmentToggle: (equipmentValue) => {
@@ -153,10 +126,13 @@ const useProgramStore = create(
 
           if (value === -1) {
             // Toggle all equipment
-            const allSelected = selectedEquipment.length === equipmentList.length;
-            const newEquipment = allSelected ? [] : equipmentList.map((item) => item.value);
+            const allSelected =
+              selectedEquipment.length === equipmentList.length;
+            const newEquipment = allSelected
+              ? []
+              : equipmentList.map((item) => item.value);
             set({ selectedEquipment: newEquipment });
-            
+
             // Trigger callback if provided
             if (onEquipmentChangeCallback) {
               onEquipmentChangeCallback(newEquipment);
@@ -167,12 +143,12 @@ const useProgramStore = create(
               const newEquipment = isSelected
                 ? state.selectedEquipment.filter((item) => item !== value)
                 : [...state.selectedEquipment, value];
-                
+
               // Trigger callback if provided
               if (state.onEquipmentChangeCallback) {
                 state.onEquipmentChangeCallback(newEquipment);
               }
-              
+
               return { selectedEquipment: newEquipment };
             });
           }
@@ -180,11 +156,11 @@ const useProgramStore = create(
 
         updateGymType: (gymType) => {
           set({ selectedGymType: gymType });
-          
+
           // Auto-update equipment based on gym type
-          const mappedGymType = gymTypeMapping[gymType] || gymType;
-          const preset = gymEquipmentPresets[mappedGymType];
-          
+          // gymType is now in Title Case format, so use it directly for equipment presets
+          const preset = gymEquipmentPresets[gymType];
+
           if (preset && preset.length > 0) {
             set({ selectedEquipment: preset });
           }
@@ -202,32 +178,45 @@ const useProgramStore = create(
         setInitialData: (data) => {
           const tomorrow = new Date();
           tomorrow.setDate(tomorrow.getDate() + 1);
-          const initialStartDate = data.formData?.startDate || tomorrow.toISOString().split('T')[0];
-          const initialNewStartDate = get().newStartDate || tomorrow.toISOString().split('T')[0];
-          
+          const initialStartDate =
+            data.formData?.startDate || tomorrow.toISOString().split('T')[0];
+          const initialNewStartDate =
+            get().newStartDate || tomorrow.toISOString().split('T')[0];
+
           const cleanedFormData = { ...data.formData };
           if (cleanedFormData.daysOfWeek) {
-            cleanedFormData.daysOfWeek = cleanDaysOfWeek(cleanedFormData.daysOfWeek);
+            cleanedFormData.daysOfWeek = cleanDaysOfWeek(
+              cleanedFormData.daysOfWeek
+            );
           }
-          
+
           // Check if all equipment is selected when loading equipment data
           let allEquipmentSelected = false;
           let showEquipment = false;
-          
-          if (cleanedFormData.equipment && Array.isArray(cleanedFormData.equipment)) {
-            const allEquipmentIds = equipmentList.map(item => item.value);
-            allEquipmentSelected = cleanedFormData.equipment.length === allEquipmentIds.length &&
-              allEquipmentIds.every(id => cleanedFormData.equipment.includes(id));
-            
+
+          if (
+            cleanedFormData.equipment &&
+            Array.isArray(cleanedFormData.equipment)
+          ) {
+            const allEquipmentIds = equipmentList.map((item) => item.value);
+            allEquipmentSelected =
+              cleanedFormData.equipment.length === allEquipmentIds.length &&
+              allEquipmentIds.every((id) =>
+                cleanedFormData.equipment.includes(id)
+              );
+
             const defaultEquipment = gymEquipmentPresets['Crossfit Box'] || [];
-            const hasCustomEquipment = cleanedFormData.equipment.length !== defaultEquipment.length ||
-              !cleanedFormData.equipment.every(id => defaultEquipment.includes(id));
-            
+            const hasCustomEquipment =
+              cleanedFormData.equipment.length !== defaultEquipment.length ||
+              !cleanedFormData.equipment.every((id) =>
+                defaultEquipment.includes(id)
+              );
+
             if (hasCustomEquipment) {
               showEquipment = true;
             }
           }
-          
+
           set({
             programId: data.programId,
             formData: {
@@ -236,8 +225,10 @@ const useProgramStore = create(
               startDate: cleanedFormData?.startDate || initialStartDate,
             },
             suggestions: data.suggestions || get().suggestions,
-            referenceWorkouts: data.referenceWorkouts || get().referenceWorkouts,
-            generatedDescription: data.generatedDescription || get().generatedDescription,
+            referenceWorkouts:
+              data.referenceWorkouts || get().referenceWorkouts,
+            generatedDescription:
+              data.generatedDescription || get().generatedDescription,
             initialFormData: data.initialFormData || get().initialFormData,
             newStartDate: get().newStartDate || initialNewStartDate,
             isLoading: false,
@@ -251,44 +242,47 @@ const useProgramStore = create(
           if (updatedData.daysOfWeek) {
             updatedData.daysOfWeek = cleanDaysOfWeek(updatedData.daysOfWeek);
           }
-          
+
           let newAllEquipmentSelected = get().allEquipmentSelected;
           let newShowEquipment = get().showEquipment;
-          
+
           if (updatedData.equipment && Array.isArray(updatedData.equipment)) {
-            const allEquipmentIds = equipmentList.map(item => item.value);
-            newAllEquipmentSelected = updatedData.equipment.length === allEquipmentIds.length &&
-              allEquipmentIds.every(id => updatedData.equipment.includes(id));
-              
+            const allEquipmentIds = equipmentList.map((item) => item.value);
+            newAllEquipmentSelected =
+              updatedData.equipment.length === allEquipmentIds.length &&
+              allEquipmentIds.every((id) => updatedData.equipment.includes(id));
+
             if (updatedData.equipment.length > 0) {
               const gymType = updatedData.gymType || get().formData.gymType;
               const defaultEquipment = gymEquipmentPresets[gymType] || [];
-              
-              const isCustomEquipment = !gymType || 
+
+              const isCustomEquipment =
+                !gymType ||
                 updatedData.equipment.length !== defaultEquipment.length ||
-                !updatedData.equipment.every(id => defaultEquipment.includes(id));
-              
+                !updatedData.equipment.every((id) =>
+                  defaultEquipment.includes(id)
+                );
+
               if (isCustomEquipment || updatedData.showEquipment === true) {
                 newShowEquipment = true;
               }
             }
           }
-          
+
           if (updatedData.hasOwnProperty('showEquipment')) {
             newShowEquipment = updatedData.showEquipment;
           }
-          
+
           set({
             formData: { ...get().formData, ...updatedData },
             allEquipmentSelected: newAllEquipmentSelected,
-            showEquipment: newShowEquipment
+            showEquipment: newShowEquipment,
           });
         },
 
         setFieldValue: (field, value) => {
-          const fieldValue = field === 'daysOfWeek' 
-            ? cleanDaysOfWeek(value)
-            : value;
+          const fieldValue =
+            field === 'daysOfWeek' ? cleanDaysOfWeek(value) : value;
           set((state) => ({
             formData: {
               ...state.formData,
@@ -309,7 +303,7 @@ const useProgramStore = create(
           set((state) => {
             const index = state.suggestions.findIndex((w) => w.id === id);
             if (index === -1) return state;
-            
+
             const newSuggestions = [...state.suggestions];
             newSuggestions[index] = {
               ...newSuggestions[index],
@@ -320,12 +314,14 @@ const useProgramStore = create(
         },
 
         addSuggestions: (newSuggestions) => {
-          set((state) => ({ suggestions: [...state.suggestions, ...newSuggestions] }));
+          set((state) => ({
+            suggestions: [...state.suggestions, ...newSuggestions],
+          }));
         },
 
         deleteSuggestion: (id) => {
-          set((state) => ({ 
-            suggestions: state.suggestions.filter((w) => w.id !== id) 
+          set((state) => ({
+            suggestions: state.suggestions.filter((w) => w.id !== id),
           }));
         },
 
@@ -339,27 +335,28 @@ const useProgramStore = create(
         },
 
         openDatePicker: (workout, date) => {
-          set({ 
-            isDatePickerModalOpen: true, 
+          set({
+            isDatePickerModalOpen: true,
             selectedWorkoutForDate: workout,
-            selectedDate: date 
+            selectedDate: date,
           });
         },
 
         closeDatePicker: () => {
-          set({ 
-            isDatePickerModalOpen: false, 
+          set({
+            isDatePickerModalOpen: false,
             selectedWorkoutForDate: null,
-            selectedDate: null 
+            selectedDate: null,
           });
         },
 
         openRescheduleModal: () => {
           const tomorrow = new Date();
           tomorrow.setDate(tomorrow.getDate() + 1);
-          set({ 
+          set({
             isRescheduleModalOpen: true,
-            newStartDate: get().formData.startDate || tomorrow.toISOString().split('T')[0]
+            newStartDate:
+              get().formData.startDate || tomorrow.toISOString().split('T')[0],
           });
         },
 
@@ -376,7 +373,10 @@ const useProgramStore = create(
         },
 
         openConfirmationModal: (content) => {
-          set({ isConfirmationModalOpen: true, confirmationModalContent: content });
+          set({
+            isConfirmationModalOpen: true,
+            confirmationModalContent: content,
+          });
         },
 
         closeConfirmationModal: () => {
@@ -394,18 +394,26 @@ const useProgramStore = create(
 
         // Custom Section Actions
         addCustomSection: () => {
-          const { customSectionName, customSectionDuration, customSectionDescription, formData } = get();
+          const {
+            customSectionName,
+            customSectionDuration,
+            customSectionDescription,
+            formData,
+          } = get();
           const newSection = {
             name: customSectionName,
             duration: customSectionDuration,
             description: customSectionDescription,
             order: formData.customWorkoutSections.length + 1,
           };
-          
+
           set({
             formData: {
               ...formData,
-              customWorkoutSections: [...formData.customWorkoutSections, newSection],
+              customWorkoutSections: [
+                ...formData.customWorkoutSections,
+                newSection,
+              ],
             },
             customSectionName: '',
             customSectionDuration: '',
@@ -417,53 +425,32 @@ const useProgramStore = create(
           set((state) => ({
             formData: {
               ...state.formData,
-              customWorkoutSections: state.formData.customWorkoutSections.filter((_, i) => i !== index),
+              customWorkoutSections:
+                state.formData.customWorkoutSections.filter(
+                  (_, i) => i !== index
+                ),
             },
           }));
         },
 
-        // Program Wizard Actions
-        updateWizardData: (updates) => {
-          set((state) => ({
-            wizardData: { ...state.wizardData, ...updates }
-          }));
-        },
-
-        clearWizardData: () => {
-          set({
-            wizardData: {
-              trainingMethodology: '',
-              programType: '',
-              programDescription: '',
-              programName: '',
-              previousWorkout: '',
-              referenceInput: '',
-              referenceWorkouts: [],
-              gymType: '',
-              equipment: [],
-              difficulty: 'intermediate',
-              focusArea: 'full_body',
-              workoutDuration: 60,
-              workoutFormats: [],
-              entityId: null,
-              entityName: '',
-              entityType: 'CLIENT',
-              startDate: '',
-              numberOfWeeks: 4,
-              daysOfWeek: [],
-            }
-          });
-        },
+        // Wizard-specific actions
+        setSelectedWorkouts: (workouts) => set((state) => ({
+          selectedWorkouts: typeof workouts === 'function' 
+            ? Array.isArray(workouts(state.selectedWorkouts || [])) ? workouts(state.selectedWorkouts || []) : []
+            : Array.isArray(workouts) ? workouts : []
+        })),
+        setEntityName: (name) => set({ entityName: name }),
+        setEntityType: (type) => set({ entityType: type }),
 
         // Clear all program state (for navigation between programs)
         clearProgramState: () => {
           const tomorrow = new Date();
           tomorrow.setDate(tomorrow.getDate() + 1);
           const defaultStartDate = tomorrow.toISOString().split('T')[0];
-          
+
           // Calculate end date for 4 weeks
           const endDate = new Date(tomorrow);
-          endDate.setDate(endDate.getDate() + (4 * 7) - 1);
+          endDate.setDate(endDate.getDate() + 4 * 7 - 1);
           const defaultEndDate = endDate.toISOString().split('T')[0];
 
           set({
@@ -471,17 +458,25 @@ const useProgramStore = create(
             programId: null,
             formData: {
               name: 'My Training Program',
-              description: 'A personalized training program designed to help you reach your fitness goals through structured, progressive workouts.',
+              description:
+                'A personalized training program designed to help you reach your fitness goals through structured, progressive workouts.',
               entityId: null,
               goal: 'strength',
               difficulty: 'intermediate',
               equipment: gymEquipmentPresets['Crossfit Box'] || [],
               focusArea: 'full_body',
-              personalization: 'Focus on proper form and progressive overload. Include both strength and conditioning elements.',
-              workoutFormats: ['hiit', 'strength', 'metcon'], // Multiple default formats
+              personalization:
+                'Focus on proper form and progressive overload. Include both strength and conditioning elements.',
+              workoutFormats: ['strength', 'hypertrophy', 'endurance', 'power', 'metcon'], // Multiple default formats
               numberOfWeeks: '4',
               daysPerWeek: '5', // Default to 5 days
-              daysOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'], // All weekdays
+              daysOfWeek: [
+                'Monday',
+                'Tuesday',
+                'Wednesday',
+                'Thursday',
+                'Friday',
+              ], // All weekdays
               programType: 'linear',
               gymType: 'Crossfit Box',
               startDate: defaultStartDate,
@@ -489,14 +484,14 @@ const useProgramStore = create(
               sessionDetails: {
                 warmup_duration: 10,
                 cooldown_duration: 10,
-                main_workout_duration: 40
+                main_workout_duration: 40,
               },
               programOverview: {
-                intensity_focus: 'moderate_to_high'
+                intensity_focus: 'moderate_to_high',
               },
               gymDetails: {
                 gym_type: 'Crossfit Box',
-                equipment: gymEquipmentPresets['Crossfit Box'] || []
+                equipment: gymEquipmentPresets['Crossfit Box'] || [],
               },
               trainingMethodology: 'hiit', // Default to HIIT
               referenceInput: '',
@@ -515,7 +510,7 @@ const useProgramStore = create(
             isDirty: false,
             initialFormData: null,
             preventFetch: false,
-            
+
             // Reset Modal States
             isWorkoutModalOpen: false,
             selectedWorkout: null,
@@ -527,8 +522,12 @@ const useProgramStore = create(
             isEditModalOpen: false,
             selectedWorkoutForEdit: null,
             isConfirmationModalOpen: false,
-            confirmationModalContent: { title: '', message: '', confirmText: '' },
-            
+            confirmationModalContent: {
+              title: '',
+              message: '',
+              confirmText: '',
+            },
+
             // Reset UI States
             showToast: false,
             toastMessage: '',
@@ -543,30 +542,12 @@ const useProgramStore = create(
 
             // Reset Equipment State
             selectedEquipment: gymEquipmentPresets['Crossfit Box'] || [],
-            selectedGymType: 'crossfit_box',
+            selectedGymType: 'Crossfit Box',
 
-            // Reset Wizard Data to defaults
-            wizardData: {
-              trainingMethodology: 'hiit', // Default to HIIT
-              programType: 'linear',
-              programDescription: '',
-              programName: '',
-              previousWorkout: '',
-              referenceInput: '',
-              referenceWorkouts: [],
-              gymType: 'crossfit_box',
-              equipment: gymEquipmentPresets['Crossfit Box'] || [],
-              difficulty: 'intermediate',
-              focusArea: 'full_body',
-              workoutDuration: 60,
-              workoutFormats: ['hiit'],
-              entityId: null,
-              entityName: '',
-              entityType: 'CLIENT',
-              startDate: defaultStartDate,
-              numberOfWeeks: 4,
-              daysOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
-            }
+            // Reset wizard-specific fields
+            selectedWorkouts: [],
+            entityName: '',
+            entityType: 'CLIENT',
           });
         },
 
@@ -578,11 +559,11 @@ const useProgramStore = create(
 
           // Calculate end date for 4 weeks with 5 days per week
           const endDate = new Date(tomorrow);
-          endDate.setDate(endDate.getDate() + (4 * 7) - 1); // 4 weeks minus 1 day
+          endDate.setDate(endDate.getDate() + 4 * 7 - 1); // 4 weeks minus 1 day
           const defaultEndDate = endDate.toISOString().split('T')[0];
 
           get().clearProgramState();
-          
+
           set((state) => ({
             formData: {
               ...state.formData,
@@ -590,16 +571,9 @@ const useProgramStore = create(
               startDate: defaultStartDate,
               endDate: defaultEndDate,
             },
-            wizardData: {
-              ...state.wizardData,
-              entityId,
-              startDate: defaultStartDate,
-              trainingMethodology: 'hiit',
-              programType: 'linear',
-              gymType: 'crossfit_box',
-              equipment: gymEquipmentPresets['Crossfit Box'] || [],
-              workoutFormats: ['hiit', 'strength', 'metcon'],
-            }
+            selectedWorkouts: [],
+            entityName: '',
+            entityType: 'CLIENT',
           }));
         },
 
@@ -611,24 +585,29 @@ const useProgramStore = create(
           // Calculate equipment selection state
           let allEquipmentSelected = false;
           let showEquipment = false;
-          
+
           if (programData.equipment && Array.isArray(programData.equipment)) {
-            const allEquipmentIds = equipmentList.map(item => item.value);
-            allEquipmentSelected = programData.equipment.length === allEquipmentIds.length &&
-              allEquipmentIds.every(id => programData.equipment.includes(id));
-            
+            const allEquipmentIds = equipmentList.map((item) => item.value);
+            allEquipmentSelected =
+              programData.equipment.length === allEquipmentIds.length &&
+              allEquipmentIds.every((id) => programData.equipment.includes(id));
+
             const defaultEquipment = gymEquipmentPresets['Crossfit Box'] || [];
-            const hasCustomEquipment = programData.equipment.length !== defaultEquipment.length ||
-              !programData.equipment.every(id => defaultEquipment.includes(id));
-            
+            const hasCustomEquipment =
+              programData.equipment.length !== defaultEquipment.length ||
+              !programData.equipment.every((id) =>
+                defaultEquipment.includes(id)
+              );
+
             if (hasCustomEquipment) {
               showEquipment = true;
             }
           }
 
-          // Map gym type if needed
-          const mappedGymType = gymTypeMapping[programData.gymType] || programData.gymType;
-          
+          // Map gym type from snake_case to Title Case if needed
+          const mappedGymType =
+            gymTypeMapping[programData.gymType] || programData.gymType;
+
           set({
             programId: programData.id,
             formData: {
@@ -640,29 +619,32 @@ const useProgramStore = create(
             initialFormData: JSON.parse(JSON.stringify(programData)),
             allEquipmentSelected,
             showEquipment,
-            selectedGymType: programData.gymType || 'crossfit_box',
-            selectedEquipment: programData.equipment || gymEquipmentPresets['Crossfit Box'] || [],
+            selectedGymType: programData.gymType || 'Crossfit Box',
+            selectedEquipment:
+              programData.equipment ||
+              gymEquipmentPresets['Crossfit Box'] ||
+              [],
           });
         },
-        
+
         // Fetch program data from database
         fetchProgramFromDatabase: async (programId, supabase) => {
           if (!programId || !supabase) return null;
-          
+
           try {
             set({ isLoading: true });
-            
+
             const { data: program, error } = await supabase
               .from('programs')
               .select('*')
               .eq('id', programId)
               .single();
-              
+
             if (error) {
               console.error('Error fetching program:', error);
               return null;
             }
-            
+
             if (program) {
               // Process the program data
               const processedData = {
@@ -678,8 +660,15 @@ const useProgramStore = create(
                 workoutFormats: program.workout_formats || [],
                 numberOfWeeks: String(program.duration_weeks || 4),
                 daysPerWeek: String(program.days_of_week?.length || 3),
-                daysOfWeek: program.days_of_week || ['Monday', 'Wednesday', 'Friday'],
-                programType: program.periodization?.program_type || program.program_type || 'linear',
+                daysOfWeek: program.days_of_week || [
+                  'Monday',
+                  'Wednesday',
+                  'Friday',
+                ],
+                programType:
+                  program.periodization?.program_type ||
+                  program.program_type ||
+                  'linear',
                 gymType: program.gym_type || 'Crossfit Box',
                 startDate: program.start_date || '',
                 endDate: program.end_date || '',
@@ -690,13 +679,13 @@ const useProgramStore = create(
                 referenceInput: program.reference_input || '',
                 customWorkoutSections: program.custom_workout_sections || [],
               };
-              
+
               // Load the program data into state
               await get().loadProgramData(processedData);
-              
+
               return processedData;
             }
-            
+
             return null;
           } catch (error) {
             console.error('Error in fetchProgramFromDatabase:', error);
@@ -708,95 +697,116 @@ const useProgramStore = create(
 
         // Utility Actions
         setLoading: (isLoading) => set({ isLoading }),
+        setProgramId: (id) => set({ programId: id }),
         setGenerationStage: (stage) => set({ generationStage: stage }),
         setLoadingDuration: (duration) => set({ loadingDuration: duration }),
         setServerStatus: (status) => set({ serverStatus: status }),
-        setAiStreamingContent: (content) => set({ aiStreamingContent: content }),
+        setAiStreamingContent: (content) =>
+          set({ aiStreamingContent: content }),
         showAiStream: () => set({ showAiStream: true, aiStreamingContent: '' }),
-        hideAiStream: () => set({ showAiStream: false, aiStreamingContent: '' }),
+        hideAiStream: () =>
+          set({ showAiStream: false, aiStreamingContent: '' }),
         setAutoSaveState: (state) => set({ autoSaveState: state }),
         setDirty: (isDirty) => set({ isDirty }),
         setPreventFetch: (preventFetch) => set({ preventFetch }),
-        toggleEquipment: () => set((state) => ({ showEquipment: !state.showEquipment })),
+        toggleEquipment: () =>
+          set((state) => ({ showEquipment: !state.showEquipment })),
         setShowEquipment: (show) => set({ showEquipment: show }),
-        setAllEquipmentSelected: (selected) => set({ allEquipmentSelected: selected }),
-        setHasCustomWorkoutFormat: (hasCustom) => set({ hasCustomWorkoutFormat: hasCustom }),
+        setAllEquipmentSelected: (selected) =>
+          set({ allEquipmentSelected: selected }),
+        setHasCustomWorkoutFormat: (hasCustom) =>
+          set({ hasCustomWorkoutFormat: hasCustom }),
         setCustomSectionField: (field, value) => set({ [field]: value }),
         setSelectedDate: (date) => set({ selectedDate: date }),
         setNewStartDate: (date) => set({ newStartDate: date }),
-        setReferenceWorkouts: (workouts) => set({ referenceWorkouts: workouts }),
-        removeReferenceWorkout: (id) => set((state) => ({ 
-          referenceWorkouts: state.referenceWorkouts.filter((w) => w.id !== id) 
-        })),
-        setGeneratedDescription: (description) => set({ generatedDescription: description }),
-        setInitialFormDataClone: () => set({ initialFormData: JSON.parse(JSON.stringify(get().formData)) }),
-        triggerProgramRefresh: () => set((state) => ({ triggerProgramRefresh: state.triggerProgramRefresh + 1 })),
-        
+        setReferenceWorkouts: (workouts) =>
+          set({ referenceWorkouts: workouts }),
+        removeReferenceWorkout: (id) =>
+          set((state) => ({
+            referenceWorkouts: state.referenceWorkouts.filter(
+              (w) => w.id !== id
+            ),
+          })),
+        setGeneratedDescription: (description) =>
+          set({ generatedDescription: description }),
+        setInitialFormDataClone: () =>
+          set({ initialFormData: JSON.parse(JSON.stringify(get().formData)) }),
+        triggerProgramRefresh: () =>
+          set((state) => ({
+            triggerProgramRefresh: state.triggerProgramRefresh + 1,
+          })),
+
         // Validation functions
         validateProgramData: () => {
           const { formData } = get();
           const errors = [];
           const missingFields = [];
           const missingOptionalFields = [];
-          
+
           // Required fields
-          if (!formData.trainingMethodology || formData.trainingMethodology === '') {
+          if (
+            !formData.trainingMethodology ||
+            formData.trainingMethodology === ''
+          ) {
             errors.push('Training methodology is required');
             missingFields.push('trainingMethodology');
           }
-          
+
           if (!formData.description || formData.description.trim() === '') {
             errors.push('Program description is required');
             missingFields.push('description');
           }
-          
+
           if (!formData.daysOfWeek || formData.daysOfWeek.length === 0) {
             errors.push('At least one day of the week must be selected');
             missingFields.push('daysOfWeek');
           }
-          
+
           if (!formData.gymType || formData.gymType === '') {
             errors.push('Gym type is required');
             missingFields.push('gymType');
           }
-          
+
           // Important optional fields
-          if (!formData.personalization || formData.personalization.trim() === '') {
+          if (
+            !formData.personalization ||
+            formData.personalization.trim() === ''
+          ) {
             missingOptionalFields.push('previousWorkouts');
           }
-          
+
           if (!formData.difficulty || formData.difficulty === '') {
             missingOptionalFields.push('difficulty');
           }
-          
+
           if (!formData.programType || formData.programType === '') {
             missingOptionalFields.push('periodization');
           }
-          
+
           if (!formData.focusArea || formData.focusArea === '') {
             missingOptionalFields.push('focusArea');
           }
-          
+
           return {
             isValid: errors.length === 0,
             errors,
             missingFields,
-            missingOptionalFields
+            missingOptionalFields,
           };
         },
-        
+
         getValidationErrors: () => {
           return get().validateProgramData();
         },
-        
+
         // Program Wizard Navigation Actions
         goToStep: (step) => {
           if (typeof window !== 'undefined') {
-            const { programId, wizardData } = get();
-            // Use programId from state or wizardData
-            const currentProgramId = programId || wizardData.programId;
+            const { programId } = get();
             const baseUrl = `/program-wizard/step-${step}`;
-            const url = currentProgramId ? `${baseUrl}?programId=${currentProgramId}` : baseUrl;
+            const url = programId
+              ? `${baseUrl}?programId=${programId}`
+              : baseUrl;
             window.location.href = url;
           }
         },
@@ -813,98 +823,85 @@ const useProgramStore = create(
           }
         },
 
-        completeWizard: async () => {
-          const { wizardData, programId } = get();
-          // Update wizard data with completion flag
-          set((state) => ({
-            wizardData: {
-              ...state.wizardData,
-              isGenerating: true,
-              wizardComplete: true
-            }
-          }));
+        completeWizard: async (finalFormData = null) => {
+          const { programId } = get();
           
+          // If final form data is provided, update it in the store first
+          if (finalFormData) {
+            set((state) => ({
+              formData: {
+                ...state.formData,
+                ...finalFormData,
+              },
+            }));
+          }
+          
+          // Set loading state
+          set({ isLoading: true });
+
           if (typeof window !== 'undefined') {
             // Navigate to a loading page that will create the program and redirect
-            // Use programId from state or wizardData
-            const currentProgramId = programId || wizardData.programId;
             const baseUrl = '/program-wizard/creating';
-            const url = currentProgramId ? `${baseUrl}?programId=${currentProgramId}` : baseUrl;
+            const url = programId
+              ? `${baseUrl}?programId=${programId}`
+              : baseUrl;
             window.location.href = url;
           }
         },
 
-        // Sync form data back to wizard data for returning to wizard
-        syncFormDataToWizard: (formData, programId) => {
-          console.log('[syncFormDataToWizard] Converting form data to wizard format:', formData);
-          console.log('[syncFormDataToWizard] Current programType:', formData.programType);
-          console.log('[syncFormDataToWizard] Current trainingMethodology:', formData.trainingMethodology);
+        // Update existing program and return to writer
+        updateProgramAndReturn: async (finalFormData) => {
+          const { programId } = get();
           
-          // Create reverse mapping for gym types (Title Case to snake_case)
-          const reverseGymTypeMapping = {
-            'Crossfit Box': 'crossfit_box',
-            'Commercial Gym': 'commercial_gym',
-            'Home Gym': 'home_gym',
-            'Minimal Equipment': 'minimal_equipment',
-            'Outdoor Space': 'outdoor_space',
-            'Powerlifting Gym': 'powerlifting_gym',
-            'Olympic Weightlifting Gym': 'olympic_weightlifting_gym',
-            'Bodyweight Only': 'bodyweight_only',
-            'Studio Gym': 'studio_gym',
-            'University Gym': 'university_gym',
-            'Hotel Gym': 'hotel_gym',
-            'Apartment Gym': 'apartment_gym',
-            'Boxing/MMA Gym': 'boxing_mma_gym',
-            'Triathlon Training Facility': 'triathlon_training_facility',
-            'Multi-Sport Complex': 'multi_sport_complex',
-          };
-
-          // Convert form data back to wizard format
-          const wizardDataToSync = {
-            // Convert form data back to wizard format
-            trainingMethodology: formData.trainingMethodology || '',
-            programType: formData.programType || '',
-            programDescription: formData.description || '',
-            programName: formData.name || '',
-            referenceInput: formData.referenceInput || '',
-            previousWorkout: formData.personalization || formData.referenceInput || '',
-
-            // Convert gym type back to snake_case using mapping
-            gymType: reverseGymTypeMapping[formData.gymType] || 
-                     formData.gymType?.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z_]/g, '') || 
-                     'crossfit_box',
-            equipment: formData.equipment || [],
-            difficulty: formData.difficulty || 'intermediate',
-            focusArea: formData.focusArea || 'full_body',
-            workoutDuration: formData.sessionDetails?.duration_minutes || 
-                           parseInt(formData.sessionDetails?.main_workout_duration) || 
-                           60,
-            workoutFormats: formData.workoutFormats || [],
-
-            // Scheduling data
-            entityId: formData.entityId,
-            startDate: formData.startDate,
-            numberOfWeeks: parseInt(formData.numberOfWeeks) || 4,
-            daysOfWeek: (formData.daysOfWeek || []).map((day) => {
-              // Convert from Title Case to lowercase
-              return typeof day === 'string' ? day.toLowerCase() : day;
-            }),
-
-            // Add flag to indicate returning from writer
-            returningFromWriter: true,
-            programId: programId,
-          };
-
-          console.log('[syncFormDataToWizard] Synced wizard data:', wizardDataToSync);
-
+          if (!programId) {
+            console.error('No program ID found for update');
+            return;
+          }
+          
+          // Update form data in store
           set((state) => ({
-            wizardData: {
-              ...state.wizardData,
-              ...wizardDataToSync
-            }
+            formData: {
+              ...state.formData,
+              ...finalFormData,
+            },
+            isLoading: true,
+          }));
+
+          if (typeof window !== 'undefined') {
+            // Navigate directly back to the program writer with updated state
+            window.location.href = `/program/${programId}/writer?wizardComplete=true`;
+          }
+        },
+
+        // Sync form data back to wizard store for navigation
+        syncFormDataToWizard: (formData, programId) => {
+          // This function syncs the current form state back to wizard data
+          // when navigating from the writer back to the wizard
+          console.log('Syncing form data to wizard store:', { formData, programId });
+          
+          // Update the form data with current values
+          set((state) => ({
+            formData: {
+              ...state.formData,
+              ...formData,
+            },
           }));
         },
-        
+
+        // Update wizard data (used by program actions)
+        updateWizardData: (updates) => {
+          console.log('Updating wizard data:', updates);
+          // This can be used to sync data between the writer and wizard
+          // For now, just update the form data
+          set((state) => ({
+            formData: {
+              ...state.formData,
+              ...updates,
+            },
+          }));
+        },
+
+
         // Computed values
         get isAllEquipmentSelected() {
           const { selectedEquipment } = get();
@@ -914,9 +911,12 @@ const useProgramStore = create(
       {
         name: 'program-store',
         partialize: (state) => ({
-          wizardData: state.wizardData,
+          formData: state.formData,
           selectedEquipment: state.selectedEquipment,
           selectedGymType: state.selectedGymType,
+          selectedWorkouts: state.selectedWorkouts,
+          entityName: state.entityName,
+          entityType: state.entityType,
         }),
         version: 1,
       }

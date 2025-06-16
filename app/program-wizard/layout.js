@@ -1,8 +1,37 @@
+'use client';
+import { X } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
+import useProgramStore from '../store/programStore';
+import { useEffect } from 'react';
+
 export default function ProgramWizardLayout({ children }) {
+  const searchParams = useSearchParams();
+  const programId = searchParams.get('programId');
+
+  const setProgramId = useProgramStore((state) => state.setProgramId);
+  useEffect(() => {
+    setProgramId(programId);
+  }, [programId]);
+
   return (
     <div className="min-h-screen bg-base-100">
       <div className="container mx-auto px-4 py-8">
-        <div className="mx-auto">{children}</div>
+        <div className="mx-auto">
+          <div className="relative w-full">
+            {programId && (
+              <button
+                onClick={() =>
+                  (window.location.href = `/program/${programId}/writer`)
+                }
+                className="absolute top-4 right-4 btn btn-ghost btn-circle z-10"
+                title="Exit wizard and go to program writer"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            )}
+          </div>
+          {children}
+        </div>
       </div>
     </div>
   );
