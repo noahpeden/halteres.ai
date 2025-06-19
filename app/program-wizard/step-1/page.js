@@ -152,9 +152,12 @@ export default function Step1Page() {
   const [isLoading, setIsLoading] = useState(false);
   const initializeFromDatabaseRef = useRef(false);
 
-  console.log('formData', formData);
-  console.log('selectedMethodology', selectedMethodology);
-  console.log('selectedPeriodization', selectedPeriodization);
+  console.log('Step1Page - Full formData:', formData);
+  console.log('Step1Page - formData.name:', formData.name);
+  console.log('Step1Page - formData.entityId:', formData.entityId);
+  console.log('Step1Page - formData.startDate:', formData.startDate);
+  console.log('Step1Page - selectedMethodology:', selectedMethodology);
+  console.log('Step1Page - selectedPeriodization:', selectedPeriodization);
 
   // Fetch program data if programId is provided (only once)
   useEffect(() => {

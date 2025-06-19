@@ -7,6 +7,7 @@ import { X } from 'lucide-react';
 import useProgramStore from '../../store/programStore';
 import WizardProgress from '../../components/ProgramWizard/WizardProgress';
 import WorkoutFormatSelector from '@/components/selectors/WorkoutFormatSelector';
+import { gymEquipmentPresets } from '../../components/utils';
 
 const gymTypes = [
   { value: 'Crossfit Box', label: 'CrossFit Box', icon: '🏋️' },
@@ -64,7 +65,7 @@ export default function Step4Page() {
       : parseInt(formData.sessionDetails?.main_workout_duration) || 60
   );
   const [selectedFormats, setSelectedFormats] = useState(
-    programId ? [] : (formData.workoutFormats || [])
+    programId ? [] : formData.workoutFormats || []
   );
   const [isLoading, setIsLoading] = useState(false);
 
@@ -82,9 +83,22 @@ export default function Step4Page() {
             // Update local state with fetched data
             if (programData.gymType) {
               // Store gymType in Title Case format to match equipment presets
+              // This will also update equipment automatically based on gym type preset
               updateGymType(programData.gymType);
-            }
-            if (programData.equipment) {
+              
+              // Only override with custom equipment if it's different from the preset
+              if (programData.equipment) {
+                const gymPreset = gymEquipmentPresets[programData.gymType] || [];
+                const isCustomEquipment = 
+                  programData.equipment.length !== gymPreset.length ||
+                  !programData.equipment.every(item => gymPreset.includes(item));
+                
+                if (isCustomEquipment) {
+                  updateEquipment(programData.equipment);
+                }
+              }
+            } else if (programData.equipment) {
+              // Only update equipment directly if no gym type is set
               updateEquipment(programData.equipment);
             }
             setDifficultyLevel(programData.difficulty || 'intermediate');
@@ -92,7 +106,15 @@ export default function Step4Page() {
             setWorkoutDuration(
               programData.sessionDetails?.main_workout_duration || 60
             );
-            setSelectedFormats(programData.workoutFormats || ['strength', 'hypertrophy', 'endurance', 'power', 'metcon']);
+            setSelectedFormats(
+              programData.workoutFormats || [
+                'strength',
+                'hypertrophy',
+                'endurance',
+                'power',
+                'metcon',
+              ]
+            );
           }
         } catch (error) {
           console.error('Error loading program:', error);
@@ -110,13 +132,11 @@ export default function Step4Page() {
   useEffect(() => {
     if (!programId) {
       if (formData.gymType) {
-        // Convert from Title Case to snake_case if needed
-        const gymTypeSnakeCase = formData.gymType
-          .toLowerCase()
-          .replace(/\s+/g, '_');
-        updateGymType(gymTypeSnakeCase);
-      }
-      if (formData.equipment) {
+        // Store gym type as-is, no conversion needed here
+        // This will also update equipment automatically based on gym type preset
+        updateGymType(formData.gymType);
+      } else if (formData.equipment) {
+        // Only update equipment directly if no gym type is set
         updateEquipment(formData.equipment);
       }
       setDifficultyLevel(formData.difficulty || 'intermediate');
@@ -124,27 +144,35 @@ export default function Step4Page() {
       setWorkoutDuration(
         parseInt(formData.sessionDetails?.main_workout_duration) || 60
       );
-      setSelectedFormats(formData.workoutFormats || ['strength', 'hypertrophy', 'endurance', 'power', 'metcon']);
+      setSelectedFormats(
+        formData.workoutFormats || [
+          'strength',
+          'hypertrophy',
+          'endurance',
+          'power',
+          'metcon',
+        ]
+      );
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     formData.gymType,
     formData.equipment,
     formData.difficulty,
     formData.focusArea,
     formData.workoutFormats,
+    formData.sessionDetails?.main_workout_duration,
     programId,
+    updateGymType,
+    updateEquipment,
   ]);
 
   // Save state when fields change
   useEffect(() => {
-    // Convert snake_case to Title Case for gymType
-    const gymTypeLabel =
-      gymTypes.find((g) => g.value === selectedGymType)?.label ||
-      selectedGymType;
+    // Use the gym type value directly, no conversion needed
+    const gymTypeValue = selectedGymType;
 
     updateFormData({
-      gymType: gymTypeLabel,
+      gymType: gymTypeValue,
       equipment: selectedEquipment,
       difficulty: difficultyLevel,
       focusArea,
@@ -161,13 +189,15 @@ export default function Step4Page() {
     focusArea,
     workoutDuration,
     selectedFormats,
-    updateFormData,
+    // Removed updateFormData and formData.sessionDetails to prevent infinite loop
   ]);
 
   const handleGymTypeChange = (gymType) => {
     // Update gym type in context - this will automatically trigger equipment update
+    // Store the gym type value directly (not converted to snake_case here)
     updateGymType(gymType);
   };
+  console.log('selectedGymType', selectedGymType, formData.gymType);
 
   const handleFormatToggle = (format) => {
     setSelectedFormats((prev) =>
@@ -178,12 +208,10 @@ export default function Step4Page() {
   };
 
   const handlePrevious = () => {
-    const gymTypeLabel =
-      gymTypes.find((g) => g.value === selectedGymType)?.label ||
-      selectedGymType;
+    const gymTypeValue = selectedGymType;
 
     updateFormData({
-      gymType: gymTypeLabel,
+      gymType: gymTypeValue,
       equipment: selectedEquipment,
       difficulty: difficultyLevel,
       focusArea,
@@ -202,12 +230,10 @@ export default function Step4Page() {
       return;
     }
 
-    const gymTypeLabel =
-      gymTypes.find((g) => g.value === selectedGymType)?.label ||
-      selectedGymType;
+    const gymTypeValue = selectedGymType;
 
     updateFormData({
-      gymType: gymTypeLabel,
+      gymType: gymTypeValue,
       equipment: selectedEquipment,
       difficulty: difficultyLevel,
       focusArea,
@@ -327,8 +353,8 @@ export default function Step4Page() {
           <div className="divider"></div>
 
           {/* Additional Preferences */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
+          <div className="flex gap-4">
+            <div className="flex-1">
               <label className="label">
                 <span className="label-text font-medium">Difficulty Level</span>
               </label>
@@ -344,7 +370,7 @@ export default function Step4Page() {
               </select>
             </div>
 
-            <div>
+            <div className="flex-1">
               <label className="label">
                 <span className="label-text font-medium">Focus Area</span>
               </label>
@@ -362,7 +388,7 @@ export default function Step4Page() {
               </select>
             </div>
 
-            <div>
+            <div className="flex-1">
               <label className="label">
                 <span className="label-text font-medium">
                   Workout Duration (minutes)
@@ -383,7 +409,7 @@ export default function Step4Page() {
               />
             </div>
 
-            <div>
+            {/* <div>
               <label className="label">
                 <span className="label-text font-medium">Workout Formats</span>
               </label>
@@ -393,7 +419,7 @@ export default function Step4Page() {
                   onChange={setSelectedFormats}
                 />
               </div>
-            </div>
+            </div> */}
           </div>
         </div>
 

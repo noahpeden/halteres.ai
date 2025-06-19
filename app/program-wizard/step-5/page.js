@@ -20,6 +20,8 @@ export default function Step5Page() {
   const searchParams = useSearchParams();
   const programId = searchParams.get('programId');
   
+  // Get the entire store state for debugging
+  const storeState = useProgramStore();
   const formData = useProgramStore((state) => state.formData);
   const entityName = useProgramStore((state) => state.entityName);
   const entityType = useProgramStore((state) => state.entityType);
@@ -31,6 +33,17 @@ export default function Step5Page() {
   const updateProgramAndReturn = useProgramStore((state) => state.updateProgramAndReturn);
   const fetchProgramFromDatabase = useProgramStore((state) => state.fetchProgramFromDatabase);
   const { supabase } = useAuth();
+  
+  // Debug logging - simplified
+  console.log('Step5Page - Key data check:', {
+    name: formData.name,
+    entityId: formData.entityId,
+    entityName: entityName,
+    entityType: entityType,
+    startDate: formData.startDate,
+    numberOfWeeks: formData.numberOfWeeks,
+    daysOfWeek: formData.daysOfWeek
+  });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [entityData, setEntityData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);

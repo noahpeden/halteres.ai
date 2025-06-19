@@ -24,9 +24,6 @@ export default function Step2Page() {
     (state) => state.fetchProgramFromDatabase
   );
   // Don't use formData for initial state when we have a programId - let database load handle it
-  const [programName, setProgramName] = useState(
-    programId ? '' : formData.name || ''
-  );
   const [programDescription, setProgramDescription] = useState(
     programId ? '' : formData.description || ''
   );
@@ -45,7 +42,6 @@ export default function Step2Page() {
           );
           if (programData) {
             // Update local state with fetched data
-            setProgramName(programData.name || '');
             setProgramDescription(programData.description || '');
           }
         } catch (error) {
@@ -63,27 +59,21 @@ export default function Step2Page() {
   // Only update from form data if we're NOT loading from database
   useEffect(() => {
     if (!programId) {
-      setProgramName(formData.name || '');
       setProgramDescription(formData.description || '');
     }
-  }, [formData.name, formData.description, programId]);
+  }, [formData.description, programId]);
 
   // Save state when fields change
   useEffect(() => {
-    if (programName.trim() || programDescription.trim()) {
+    if (programDescription.trim()) {
       updateFormData({
-        name: programName.trim(),
         description: programDescription.trim(),
       });
     }
-  }, [programName, programDescription, updateFormData]);
+  }, [programDescription, updateFormData]);
 
   const validateForm = () => {
     const newErrors = {};
-
-    if (!programName.trim()) {
-      newErrors.programName = 'Program name is required';
-    }
 
     if (!programDescription.trim()) {
       newErrors.programDescription = 'Program description is required';
@@ -102,7 +92,6 @@ export default function Step2Page() {
     }
 
     updateFormData({
-      name: programName.trim(),
       description: programDescription.trim(),
     });
     goToNext(2);
@@ -110,7 +99,6 @@ export default function Step2Page() {
 
   const handlePrevious = () => {
     updateFormData({
-      name: programName.trim(),
       description: programDescription.trim(),
     });
     goToPrevious(2);
@@ -157,40 +145,6 @@ export default function Step2Page() {
         </div>
 
         <div className="space-y-6">
-          <div>
-            <label className="label">
-              <span className="label-text text-lg font-medium">
-                Program Name
-              </span>
-              <span className="label-text-alt">
-                From dashboard - you can edit if needed
-              </span>
-            </label>
-            <input
-              type="text"
-              value={programName}
-              onChange={(e) => setProgramName(e.target.value)}
-              placeholder="e.g., John's Basketball Prep, Sarah's Marathon Training, Mike's Strength Builder"
-              className={`input input-bordered w-full ${
-                errors.programName ? 'input-error' : ''
-              } ${formData.name ? 'bg-primary/5' : ''}`}
-            />
-            {formData.name && (
-              <label className="label">
-                <span className="label-text-alt text-success">
-                  ✓ Pre-filled from dashboard
-                </span>
-              </label>
-            )}
-            {errors.programName && (
-              <label className="label">
-                <span className="label-text-alt text-error">
-                  {errors.programName}
-                </span>
-              </label>
-            )}
-          </div>
-
           <div>
             <label className="label">
               <span className="label-text text-lg font-medium">

@@ -34,6 +34,7 @@ const ProgramForm = ({
       const updateValue = type === 'checkbox' ? checked : value;
 
       if (name === 'gymType') {
+        console.log('[ProgramForm] Gym type change:', { from: formData.gymType, to: value });
         // Only reset equipment if the gym type actually changed
         if (value !== formData.gymType) {
           // Get the preset for the new gym type

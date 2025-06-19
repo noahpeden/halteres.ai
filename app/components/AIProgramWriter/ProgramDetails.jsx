@@ -18,7 +18,7 @@ export default function ProgramDetails({
     difficulty: false,
     focusArea: false,
   });
-
+  console.log('formData', formData.gymType);
   const selectedGymType = gymTypes.find(
     (type) => type.value === formData.gymType
   );
@@ -46,10 +46,10 @@ export default function ProgramDetails({
   const handleGymTypeSelect = (value) => {
     handleChange({ target: { name: 'gymType', value } });
     closeDropdown('gymType');
-    
+
     // Update equipment store with the gym type
     updateGymType(value);
-    
+
     if (triggerAutoSave) triggerAutoSave();
   };
 
@@ -227,7 +227,8 @@ export default function ProgramDetails({
                     name: 'sessionDetails',
                     value: {
                       ...formData.sessionDetails,
-                      duration_minutes: value === '' ? null : parseInt(value, 10),
+                      duration_minutes:
+                        value === '' ? null : parseInt(value, 10),
                     },
                   },
                 });

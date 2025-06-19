@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "-": "^0.0.1",
     "@anthropic-ai/sdk": "^0.51.0",
     "@stripe/stripe-js": "^7.3.0",
     "@supabase/auth-helpers-nextjs": "^0.10.0",
@@ -34,6 +35,7 @@
     "zustand": "^5.0.5"
   },
   "devDependencies": {
+    "@redux-devtools/extension": "^3.3.0",
     "@tailwindcss/postcss": "^4.1.7",
     "@types/react": "19.1.4",
     "autoprefixer": "^10.4.21",

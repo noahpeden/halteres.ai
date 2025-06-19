@@ -22,9 +22,11 @@ export function useDashboardModals() {
   const [entityType, setEntityType] = useState('CLIENT');
   const [programName, setProgramName] = useState('');
   const [programDuration, setProgramDuration] = useState(1);
-  const [startDate, setStartDate] = useState(
-    new Date().toISOString().split('T')[0]
-  );
+  const [startDate, setStartDate] = useState(() => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return tomorrow.toISOString().split('T')[0];
+  });
   const [daysOfWeek, setDaysOfWeek] = useState([1, 3, 5]);
   const [errorMessage, setErrorMessage] = useState('');
   const [selectedProgramId, setSelectedProgramId] = useState(null);
@@ -157,22 +159,27 @@ export function useDashboardModals() {
       if (method === 'wizard') {
         // Store program creation data in Zustand store for the wizard
         const wizardDataUpdates = {
-          programName,
+          name: programName,  // Changed from programName to name
           entityId: selectedEntityId,
           entityName: selectedEntity?.name || '',
           entityType: selectedEntity?.type || 'CLIENT',
           startDate,
-          numberOfWeeks: programDuration,
+          numberOfWeeks: programDuration.toString(),  // Convert to string to match formData
           daysOfWeek: daysOfWeekStrings,
+          daysPerWeek: daysOfWeek.length.toString(),  // Add daysPerWeek
         };
         
+        console.log('Creating program with wizard data:', wizardDataUpdates);
         updateWizardData(wizardDataUpdates);
         
         // Close the modal
         closeCreateProgramModal();
         
-        // Navigate to step 1 of the programming wizard
-        router.push('/program-wizard/step-1');
+        // Small delay to ensure store update completes before navigation
+        setTimeout(() => {
+          // Navigate to step 1 of the programming wizard
+          router.push('/program-wizard/step-1');
+        }, 100);
       } else {
         // Direct method - create program and go straight to writer
         const endDate = calculateEndDate();

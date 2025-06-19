@@ -41,7 +41,7 @@ const programTypes = [
 ];
 
 const gymTypes = [
-  { value: 'Crossfit Box', label: 'Crossfit Box' },
+  { value: 'Crossfit Box', label: 'CrossFit Box' },
   { value: 'Commercial Gym', label: 'Commercial Gym' },
   { value: 'Home Gym', label: 'Home Gym' },
   { value: 'Minimal Equipment', label: 'Minimal Equipment' },

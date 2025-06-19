@@ -902,218 +902,27 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
   // This effect triggers fetchProgramData only for refreshes (not initial loads)
   // Remove fetchProgramData from dependencies to prevent infinite loop
   useEffect(() => {
-    if (programId && !preventFetch) {
+    if (programId && !preventFetch && !wizardComplete) {
+      console.log('[AIProgramWriter] Fetching program data from database');
       fetchProgramData();
+    } else if (wizardComplete) {
+      console.log('[AIProgramWriter] Skipping database fetch - wizard completed');
     }
-  }, [programId, preventFetch]);
+  }, [programId, preventFetch, wizardComplete]);
 
-  // Get wizard data and sync to form when wizard is complete
-  const wizardData = useProgramStore((state) => state.wizardData);
-  
-  // Inject wizard data AFTER program data is loaded to prevent overwriting
+  // Handle wizard completion
   useEffect(() => {
-    // Skip wizard data injection for existing program updates
-    // When updating existing programs, we rely on the form data already being properly set
-    if (!wizardComplete || !programId) return;
-    
-    // Only inject wizard data if it exists (new program from wizard)
-    if (!wizardData || !wizardData.wizardComplete) {
-      // For existing program updates, just show success message and highlight generate button
-      if (wizardComplete) {
-        showToastMessage(
-          'Program updated! You can now generate new workouts.',
-          'success'
-        );
-        setHighlightGenerateButton(true);
-        setTimeout(() => setHighlightGenerateButton(false), 3000);
-      }
-      return;
+    if (wizardComplete && programId) {
+      console.log('[AIProgramWriter] Wizard completed, current formData.gymType:', formData.gymType);
+      showToastMessage(
+        'Program setup complete! Ready to generate workouts.',
+        'success'
+      );
+      setHighlightGenerateButton(true);
+      setTimeout(() => setHighlightGenerateButton(false), 3000);
     }
+  }, [wizardComplete, programId, formData.gymType, showToastMessage]);
 
-    // Wait for initial program data to load first
-    const injectWizardData = () => {
-      try {
-        // Convert days of week from wizard format to form format
-        const daysOfWeekMapping = {
-          sunday: 'Sunday',
-          monday: 'Monday',
-          tuesday: 'Tuesday',
-          wednesday: 'Wednesday',
-          thursday: 'Thursday',
-          friday: 'Friday',
-          saturday: 'Saturday',
-        };
-
-        const mappedDaysOfWeek = (wizardData.daysOfWeek || [])
-          .map((day) => daysOfWeekMapping[day])
-          .filter(Boolean);
-
-        // Convert gym type from wizard snake_case to title case
-        const gymTypeMapping = {
-          crossfit_box: 'Crossfit Box',
-          commercial_gym: 'Commercial Gym',
-          home_gym: 'Home Gym',
-          minimal_equipment: 'Minimal Equipment',
-          outdoor_space: 'Outdoor Space',
-          powerlifting_gym: 'Powerlifting Gym',
-          olympic_weightlifting_gym: 'Olympic Weightlifting Gym',
-          bodyweight_only: 'Bodyweight Only',
-          studio_gym: 'Studio Gym',
-          university_gym: 'University Gym',
-          hotel_gym: 'Hotel Gym',
-          apartment_gym: 'Apartment Gym',
-          boxing_mma_gym: 'Boxing/MMA Gym',
-          triathlon_training_facility: 'Triathlon Training Facility',
-          multi_sport_complex: 'Multi-Sport Complex',
-        };
-
-        const mappedGymType =
-          gymTypeMapping[wizardData.gymType] || wizardData.gymType || '';
-
-        // Convert workout formats from wizard kebab-case to AI writer format
-        const workoutFormatMapping = {
-          'for-time': 'for_time',
-          'giant-set': 'giant_set',
-          // Add more mappings as needed - most formats should pass through unchanged
-        };
-
-        const mappedWorkoutFormats = (wizardData.workoutFormats || []).map(
-          (format) => {
-            // Convert kebab-case to snake_case if needed, otherwise keep as-is
-            const mapped = workoutFormatMapping[format] || format;
-            return mapped;
-          }
-        );
-
-        // Map wizard data to form data structure
-        const formDataUpdates = {
-          trainingMethodology: wizardData.trainingMethodology || '',
-          programType: wizardData.programType || '',
-          description: wizardData.programDescription || '',
-          name: wizardData.programName || 'My Training Program', // Use wizard program name
-          referenceInput: wizardData.referenceInput || wizardData.previousWorkout || '',
-          gymType: mappedGymType,
-          equipment: wizardData.equipment || [],
-          difficulty: wizardData.difficulty || 'intermediate',
-          focusArea: wizardData.focusArea || 'full_body',
-          sessionDetails: {
-            duration_minutes: wizardData.workoutDuration || 60,
-            main_workout_duration: wizardData.workoutDuration || 60,
-            warmup_duration: 10,
-            cooldown_duration: 10,
-          },
-          workoutFormats: mappedWorkoutFormats,
-          numberOfWeeks: String(wizardData.numberOfWeeks || 4),
-          startDate: wizardData.startDate || '',
-          daysOfWeek: mappedDaysOfWeek,
-          daysPerWeek: String(mappedDaysOfWeek.length),
-          personalization: wizardData.previousWorkout || wizardData.referenceInput || '',
-          showEquipment: wizardData.equipment && wizardData.equipment.length > 0,
-          // Add entity information from wizard
-          entityId: wizardData.entityId || formData.entityId,
-        };
-
-        console.log(
-          '[Wizard Data] Injecting wizard data into form:',
-          formDataUpdates
-        );
-        updateFormData(formDataUpdates);
-
-        if (
-          wizardData.selectedWorkouts &&
-          wizardData.selectedWorkouts.length > 0 &&
-          programId
-        ) {
-          try {
-            console.log(
-              'Transferring wizard selected workouts as reference workouts:',
-              wizardData.selectedWorkouts
-            );
-
-            // Save selected workouts as reference workouts in the database
-            const workoutsToSave = wizardData.selectedWorkouts.map((workout) => ({
-              program_id: programId,
-              entity_id: formData.entityId,
-              title: workout.title,
-              body: workout.body || workout.description || '',
-              tags: {
-                source: workout.source || 'wizard-selection',
-                wizard_transferred: true,
-              },
-              is_reference: true,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-            }));
-
-            // Save to database
-            supabase
-              .from('program_workouts')
-              .insert(workoutsToSave)
-              .then(({ error }) => {
-                if (error) {
-                  console.error(
-                    'Error saving wizard reference workouts:',
-                    error
-                  );
-                  showToastMessage(
-                    'Failed to transfer reference workouts from wizard',
-                    'warning'
-                  );
-                } else {
-                  console.log(
-                    'Successfully transferred reference workouts from wizard'
-                  );
-                  showToastMessage(
-                    `Transferred ${wizardData.selectedWorkouts.length} reference workouts from wizard`,
-                    'success'
-                  );
-                  // Refresh reference workouts display
-                  supabase
-                    .from('program_workouts')
-                    .select('*')
-                    .eq('program_id', programId)
-                    .eq('is_reference', true)
-                    .then(({ data: refreshedData, error: refreshError }) => {
-                      if (!refreshError) {
-                        setDbReferenceWorkouts(refreshedData || []);
-                      }
-                    });
-                }
-              });
-          } catch (error) {
-            console.error(
-              'Error transferring wizard selected workouts:',
-              error
-            );
-          }
-        }
-
-        // Show a success message to guide user to generate button
-        showToastMessage(
-          'Wizard data loaded! Ready to generate your program.',
-          'success'
-        );
-
-        // Set highlight flag to draw attention to generate button
-        setHighlightGenerateButton(true);
-        setTimeout(() => setHighlightGenerateButton(false), 3000);
-      } catch (error) {
-        console.error('Error injecting wizard data:', error);
-      }
-    };
-
-    // Delay injection to ensure program data is loaded first
-    const timeoutId = setTimeout(injectWizardData, 500);
-    return () => clearTimeout(timeoutId);
-  }, [
-    wizardComplete,
-    programId,
-    wizardData,
-    formData.entityId,
-    updateFormData,
-    supabase,
-    showToastMessage,
-  ]);
 
   // Listen for triggerProgramRefresh and immediately fetch program data
   useEffect(() => {

@@ -5,24 +5,7 @@ import { devtools, persist } from 'zustand/middleware';
 import { gymEquipmentPresets } from '../components/utils';
 import equipmentList from '../utils/equipmentList';
 
-// Mapping from snake_case to Title Case for gym types
-const gymTypeMapping = {
-  crossfit_box: 'Crossfit Box',
-  commercial_gym: 'Commercial Gym',
-  home_gym: 'Home Gym',
-  minimal_equipment: 'Minimal Equipment',
-  outdoor_space: 'Outdoor Space',
-  powerlifting_gym: 'Powerlifting Gym',
-  olympic_weightlifting_gym: 'Olympic Weightlifting Gym',
-  bodyweight_only: 'Bodyweight Only',
-  studio_gym: 'Studio Gym',
-  university_gym: 'University Gym',
-  hotel_gym: 'Hotel Gym',
-  apartment_gym: 'Apartment Gym',
-  boxing_mma_gym: 'Boxing/MMA Gym',
-  triathlon_training_facility: 'Triathlon Training Facility',
-  multi_sport_complex: 'Multi-Sport Complex',
-};
+// Removed gym type mapping - keeping gym types consistent throughout the app
 
 // Helper function to clean up days of week array
 function cleanDaysOfWeek(daysArray) {
@@ -604,17 +587,13 @@ const useProgramStore = create(
             }
           }
 
-          // Map gym type from snake_case to Title Case if needed
-          const mappedGymType =
-            gymTypeMapping[programData.gymType] || programData.gymType;
-
           set({
             programId: programData.id,
             formData: {
               ...get().formData,
               ...programData,
-              // Ensure gym type is properly mapped
-              gymType: mappedGymType,
+              // Keep gym type as-is, no conversion needed
+              gymType: programData.gymType,
             },
             initialFormData: JSON.parse(JSON.stringify(programData)),
             allEquipmentSelected,
@@ -890,16 +869,41 @@ const useProgramStore = create(
 
         // Update wizard data (used by program actions)
         updateWizardData: (updates) => {
-          console.log('Updating wizard data:', updates);
-          // This can be used to sync data between the writer and wizard
-          // For now, just update the form data
-          set((state) => ({
-            formData: {
+          console.log('updateWizardData called with:', updates);
+          
+          // Get current state to debug
+          const currentState = get();
+          console.log('Current formData before update:', currentState.formData);
+          
+          // Update both formData and top-level state for entityName/entityType
+          set((state) => {
+            const newFormData = {
               ...state.formData,
               ...updates,
-            },
-          }));
+            };
+            
+            const newState = {
+              formData: newFormData,
+              // Also update top-level entityName and entityType if provided
+              ...(updates.entityName !== undefined && { entityName: updates.entityName }),
+              ...(updates.entityType !== undefined && { entityType: updates.entityType }),
+            };
+            
+            console.log('New formData after update:', newFormData);
+            console.log('New state after updateWizardData:', newState);
+            return newState;
+          });
+          
+          // Verify the update
+          setTimeout(() => {
+            const afterState = get();
+            console.log('Verified formData after update:', afterState.formData);
+          }, 0);
         },
+        
+        // Entity setters (used by step-5)
+        setEntityName: (name) => set({ entityName: name }),
+        setEntityType: (type) => set({ entityType: type }),
 
 
         // Computed values
@@ -920,7 +924,13 @@ const useProgramStore = create(
         }),
         version: 1,
       }
-    )
+    ),
+    {
+      name: 'ProgramStore', // This will show in Redux DevTools
+      trace: false, // Set to true to trace actions
+      // anonymousActionType: 'action', // Customize anonymous action names
+      // serialize: true, // Serialize/deserialize options
+    }
   )
 );
 

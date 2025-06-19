@@ -123,31 +123,10 @@ export function updateFormDataFromProgram(program, formData) {
     updatedData.endDate = program.calendar_data.end_date;
   }
 
-  // Gym type mapping from snake_case to title case
-  const gymTypeMapping = {
-    'crossfit_box': 'Crossfit Box',
-    'commercial_gym': 'Commercial Gym',
-    'home_gym': 'Home Gym',
-    'minimal_equipment': 'Minimal Equipment',
-    'outdoor_space': 'Outdoor Space',
-    'powerlifting_gym': 'Powerlifting Gym',
-    'olympic_weightlifting_gym': 'Olympic Weightlifting Gym',
-    'bodyweight_only': 'Bodyweight Only',
-    'studio_gym': 'Studio Gym',
-    'university_gym': 'University Gym',
-    'hotel_gym': 'Hotel Gym',
-    'apartment_gym': 'Apartment Gym',
-    'boxing_mma_gym': 'Boxing/MMA Gym',
-    'triathlon_training_facility': 'Triathlon Training Facility',
-    'multi_sport_complex': 'Multi-Sport Complex'
-  };
-
-  // Update gym type if available
+  // Update gym type if available - no conversion needed, keep as-is
   if (program.gym_type) {
     console.log('Loading gym type from program.gym_type:', program.gym_type);
-    const mappedGymType = gymTypeMapping[program.gym_type] || program.gym_type;
-    console.log('Mapped gym type to:', mappedGymType);
-    updatedData.gymType = mappedGymType;
+    updatedData.gymType = program.gym_type;
   }
 
   // Update equipment if available
@@ -159,12 +138,10 @@ export function updateFormDataFromProgram(program, formData) {
   if (program.gym_details && typeof program.gym_details === 'object') {
     updatedData.gymDetails = program.gym_details;
 
-    // Also update gymType if available in gym_details
+    // Also update gymType if available in gym_details - no conversion needed
     if (program.gym_details.gym_type) {
       console.log('Loading gym type from program.gym_details.gym_type:', program.gym_details.gym_type);
-      const mappedGymType = gymTypeMapping[program.gym_details.gym_type] || program.gym_details.gym_type;
-      console.log('Mapped gym_details gym type to:', mappedGymType);
-      updatedData.gymType = mappedGymType;
+      updatedData.gymType = program.gym_details.gym_type;
     }
 
     // Also update equipment if available in gym_details
