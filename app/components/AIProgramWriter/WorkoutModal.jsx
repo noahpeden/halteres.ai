@@ -1,8 +1,6 @@
 'use client';
 import { useEffect, useState, useRef } from 'react';
 import { Trash2, Pencil, Sparkles } from 'lucide-react';
-import useProgramStore from '@/store/programStore';
-
 export default function WorkoutModal({
   isOpen,
   workout,
@@ -11,8 +9,8 @@ export default function WorkoutModal({
   formatDate,
   onDeleteWorkout,
   onEditWorkout,
+  formData = {},
 }) {
-  const formData = useProgramStore((state) => state.formData);
 
   useEffect(() => {
     const handleEscape = (event) => {

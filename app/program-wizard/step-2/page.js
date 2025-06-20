@@ -1,136 +1,104 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { X } from 'lucide-react';
-import useProgramStore from '../../store/programStore';
 import WizardProgress from '../../components/ProgramWizard/WizardProgress';
 
 export default function Step2Page() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const { supabase } = useAuth();
-  let programId = searchParams.get('programId');
-  const programIdFromStore = useProgramStore((state) => state.programId);
-  if (!programId) {
-    programId = programIdFromStore;
-  }
+  const programId = searchParams.get('programId');
 
-  const formData = useProgramStore((state) => state.formData);
-  const updateFormData = useProgramStore((state) => state.updateFormData);
-  const goToNext = useProgramStore((state) => state.goToNext);
-  const goToPrevious = useProgramStore((state) => state.goToPrevious);
-  const fetchProgramFromDatabase = useProgramStore(
-    (state) => state.fetchProgramFromDatabase
-  );
-  // Don't use formData for initial state when we have a programId - let database load handle it
-  const [programName, setProgramName] = useState(
-    programId ? '' : formData.name || ''
-  );
-  const [programDescription, setProgramDescription] = useState(
-    programId ? '' : formData.description || ''
-  );
+  // Local state only - no more Zustand
+  const [programDescription, setProgramDescription] = useState('');
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
 
-  // Fetch program data if programId is provided
+  // Load program data from Supabase
   useEffect(() => {
     async function loadProgram() {
-      if (programId && supabase) {
+      if (!programId || !supabase) return;
+
+      try {
         setIsLoading(true);
-        try {
-          const programData = await fetchProgramFromDatabase(
-            programId,
-            supabase
-          );
-          if (programData) {
-            // Update local state with fetched data
-            setProgramName(programData.name || '');
-            setProgramDescription(programData.description || '');
-          }
-        } catch (error) {
+        const { data: program, error } = await supabase
+          .from('programs')
+          .select('*')
+          .eq('id', programId)
+          .single();
+
+        if (error) {
           console.error('Error loading program:', error);
-        } finally {
-          setIsLoading(false);
+          return;
         }
+
+        if (program && program.description) {
+          setProgramDescription(program.description);
+        }
+      } catch (error) {
+        console.error('Error loading program data:', error);
+      } finally {
+        setIsLoading(false);
       }
     }
 
     loadProgram();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [programId, supabase]);
 
-  // Only update from form data if we're NOT loading from database
+  // Auto-save with debounce
   useEffect(() => {
-    if (!programId) {
-      setProgramName(formData.name || '');
-      setProgramDescription(formData.description || '');
-    }
-  }, [formData.name, formData.description, programId]);
+    if (!programId || !supabase || isLoading || !programDescription.trim())
+      return;
 
-  // Save state when fields change
-  useEffect(() => {
-    if (programName.trim() || programDescription.trim()) {
-      updateFormData({
-        name: programName.trim(),
-        description: programDescription.trim(),
-      });
-    }
-  }, [programName, programDescription, updateFormData]);
+    const timeoutId = setTimeout(async () => {
+      try {
+        const { error } = await supabase
+          .from('programs')
+          .update({ description: programDescription.trim() })
+          .eq('id', programId);
 
-  const validateForm = () => {
+        if (error) {
+          console.error('Auto-save error:', error);
+        } else {
+          console.log('Auto-saved step 2 data');
+        }
+      } catch (error) {
+        console.error('Auto-save failed:', error);
+      }
+    }, 1000);
+
+    return () => clearTimeout(timeoutId);
+  }, [programDescription, programId, supabase, isLoading]);
+
+  const validate = () => {
     const newErrors = {};
-
-    if (!programName.trim()) {
-      newErrors.programName = 'Program name is required';
-    }
-
     if (!programDescription.trim()) {
-      newErrors.programDescription = 'Program description is required';
-    } else if (programDescription.trim().length < 50) {
-      newErrors.programDescription =
-        'Please provide a more detailed description (at least 50 characters)';
+      newErrors.description = 'Program description is required';
     }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleNext = () => {
-    if (!validateForm()) {
-      return;
-    }
-
-    updateFormData({
-      name: programName.trim(),
-      description: programDescription.trim(),
-    });
-    goToNext(2);
+    if (!validate()) return;
+    router.push(`/program-wizard/step-3?programId=${programId}`);
   };
 
   const handlePrevious = () => {
-    updateFormData({
-      name: programName.trim(),
-      description: programDescription.trim(),
-    });
-    goToPrevious(2);
+    router.push(`/program-wizard/step-1?programId=${programId}`);
   };
-
-  const examplePrompts = [
-    'Client is a competitive basketball player looking to enhance explosive power and vertical jump. They have 2 years of strength training experience and need a program focused on plyometrics and Olympic lifts.',
-    'Client is an intermediate powerlifter seeking to improve their deadlift and squat numbers. They have 3 years of training experience and need a program emphasizing progressive overload and accessory work.',
-    'Client is a former runner transitioning to triathlon. They need a program that builds swim and bike endurance while maintaining running performance. They have excellent cardiovascular fitness but limited strength training experience.',
-    'Client is a busy professional looking to improve body composition and overall fitness. They have basic gym experience and need a program that efficiently combines strength training with metabolic conditioning.',
-  ];
 
   return (
     <div className="relative">
-      {/* Exit button when there's a programId */}
+      <WizardProgress currentStep={2} />
+
+      {/* Exit button */}
       {programId && (
         <button
-          onClick={() =>
-            (window.location.href = `/program/${programId}/writer`)
-          }
+          onClick={() => router.push(`/program/${programId}/writer`)}
           className="absolute top-4 right-4 btn btn-ghost btn-circle z-10"
           title="Exit wizard and go to program writer"
         >
@@ -138,173 +106,50 @@ export default function Step2Page() {
         </button>
       )}
 
-      <WizardProgress currentStep={2} />
+      <div className="max-w-4xl mx-auto p-6">
+        <h2 className="text-2xl font-bold mb-2">
+          Step 2: Describe Your Program
+        </h2>
+        <p className="text-gray-600 mb-6">
+          Provide a brief description of your training program goals
+        </p>
 
-      {isLoading && (
-        <div className="flex justify-center items-center py-8">
-          <span className="loading loading-spinner loading-lg text-primary"></span>
-        </div>
-      )}
-
-      <div className="bg-base-200 rounded-lg p-6">
-        <div className="text-center mb-6">
-          <h2 className="text-2xl font-bold text-primary mb-2">
-            Program Description
-          </h2>
-          <p className="text-base-content/70">
-            Describe your client's goals, needs, and training preferences
+        <div className="mb-6">
+          <label className="block text-lg font-semibold mb-2">
+            Program Description <span className="text-red-500">*Required</span>
+          </label>
+          <textarea
+            className={`w-full h-32 border rounded-lg p-3 ${
+              errors.description ? 'border-red-500' : 'border-gray-300'
+            }`}
+            placeholder="Example: First time program for a 20 year old male who is looking to gain muscle mass and improve his overall fitness. Focus on compound movements and progressive overload."
+            value={programDescription}
+            onChange={(e) => setProgramDescription(e.target.value)}
+            disabled={isLoading}
+          />
+          {errors.description && (
+            <p className="text-red-500 text-sm mt-1">{errors.description}</p>
+          )}
+          <p className="text-gray-500 text-sm mt-2">
+            Tip: Be specific about your goals, target audience, and any special
+            considerations
           </p>
         </div>
 
-        <div className="space-y-6">
-          <div>
-            <label className="label">
-              <span className="label-text text-lg font-medium">
-                Program Name
-              </span>
-              <span className="label-text-alt">
-                From dashboard - you can edit if needed
-              </span>
-            </label>
-            <input
-              type="text"
-              value={programName}
-              onChange={(e) => setProgramName(e.target.value)}
-              placeholder="e.g., John's Basketball Prep, Sarah's Marathon Training, Mike's Strength Builder"
-              className={`input input-bordered w-full ${
-                errors.programName ? 'input-error' : ''
-              } ${formData.name ? 'bg-primary/5' : ''}`}
-            />
-            {formData.name && (
-              <label className="label">
-                <span className="label-text-alt text-success">
-                  ✓ Pre-filled from dashboard
-                </span>
-              </label>
-            )}
-            {errors.programName && (
-              <label className="label">
-                <span className="label-text-alt text-error">
-                  {errors.programName}
-                </span>
-              </label>
-            )}
-          </div>
-
-          <div>
-            <label className="label">
-              <span className="label-text text-lg font-medium">
-                Client Program Description
-              </span>
-              <span className="label-text-alt">
-                Be specific about their goals, needs, and current status
-              </span>
-            </label>
-            <textarea
-              value={programDescription}
-              onChange={(e) => setProgramDescription(e.target.value)}
-              placeholder="Describe your client's fitness goals, current fitness level, any limitations or injuries, training preferences, and what you want to help them achieve with this program..."
-              className={`textarea textarea-bordered w-full h-40 ${
-                errors.programDescription ? 'textarea-error' : ''
-              }`}
-            />
-            {errors.programDescription && (
-              <label className="label">
-                <span className="label-text-alt text-error">
-                  {errors.programDescription}
-                </span>
-              </label>
-            )}
-
-            <div className="mt-4">
-              <p className="text-sm font-medium mb-2">Example descriptions:</p>
-              <div className="space-y-2">
-                {examplePrompts.map((prompt, index) => (
-                  <div
-                    key={index}
-                    className="text-sm p-3 bg-base-100 rounded-lg cursor-pointer hover:bg-primary/10 transition-colors"
-                    onClick={() => setProgramDescription(prompt)}
-                  >
-                    {prompt}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <div className="alert alert-info">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              className="stroke-current shrink-0 w-6 h-6"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-              ></path>
-            </svg>
-            <div>
-              <div className="font-semibold">
-                Tips for effective client descriptions:
-              </div>
-              <ul className="text-sm mt-1 list-disc list-inside">
-                <li>
-                  Include client's current fitness level and training experience
-                </li>
-                <li>
-                  Mention specific goals (strength, muscle, endurance, weight
-                  loss)
-                </li>
-                <li>Note any injuries, limitations, or movements to avoid</li>
-                <li>Specify their time constraints and training preferences</li>
-                <li>
-                  Include their motivation and what success looks like to them
-                </li>
-              </ul>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex justify-between items-center mt-8 pt-6 border-t border-base-300">
-          <button onClick={handlePrevious} className="btn btn-outline">
-            <svg
-              className="w-4 h-4 mr-2"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M15 19l-7-7 7-7"
-              />
-            </svg>
-            Back to Step 1
+        {/* Navigation */}
+        <div className="flex justify-between mt-8">
+          <button
+            onClick={handlePrevious}
+            className="px-4 py-2 border border-gray-300 rounded text-gray-700 hover:bg-gray-50"
+          >
+            Previous
           </button>
-
-          <div className="text-sm text-base-content/60">
-            Step 2 of 5 • Client Description
-          </div>
-
-          <button onClick={handleNext} className="btn btn-primary px-6">
-            Continue to Step 3
-            <svg
-              className="w-4 h-4 ml-2"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 5l7 7-7 7"
-              />
-            </svg>
+          <button
+            onClick={handleNext}
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400"
+            disabled={!programDescription.trim() || isLoading}
+          >
+            Next Step
           </button>
         </div>
       </div>

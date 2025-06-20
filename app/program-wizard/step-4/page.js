@@ -1,12 +1,32 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useState, useEffect, useRef } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { X } from 'lucide-react';
-import useProgramStore from '../../store/programStore';
 import WizardProgress from '../../components/ProgramWizard/WizardProgress';
 import WorkoutFormatSelector from '@/components/selectors/WorkoutFormatSelector';
+import { gymEquipmentPresets } from '../../components/utils';
+import equipmentList from '../../utils/equipmentList';
+
+// Gym type mapping for database storage
+const gymTypeMapping = {
+  'Crossfit Box': 'crossfit_box',
+  'Commercial Gym': 'commercial_gym',
+  'Home Gym': 'home_gym',
+  'Minimal Equipment': 'minimal_equipment',
+  'Outdoor Space': 'outdoor_space',
+  'Powerlifting Gym': 'powerlifting_gym',
+  'Olympic Weightlifting Gym': 'olympic_weightlifting_gym',
+  'Bodyweight Only': 'bodyweight_only',
+  'Studio Gym': 'studio_gym',
+  'University Gym': 'university_gym',
+  'Hotel Gym': 'hotel_gym',
+  'Apartment Gym': 'apartment_gym',
+  'Boxing/MMA Gym': 'boxing_mma_gym',
+  'Triathlon Training Facility': 'triathlon_training_facility',
+  'Multi-Sport Complex': 'multi_sport_complex',
+};
 
 const gymTypes = [
   { value: 'Crossfit Box', label: 'CrossFit Box', icon: '🏋️' },
@@ -34,201 +54,271 @@ const gymTypes = [
   { value: 'Multi-Sport Complex', label: 'Multi-Sport Complex', icon: '🏟️' },
 ];
 
+const difficulties = [
+  { value: 'beginner', label: 'Beginner', icon: '🌱' },
+  { value: 'intermediate', label: 'Intermediate', icon: '🌿' },
+  { value: 'advanced', label: 'Advanced', icon: '🌳' },
+  { value: 'elite', label: 'Elite', icon: '🏆' },
+];
+
+const focusAreas = [
+  { value: 'strength', label: 'Strength', icon: '💪' },
+  { value: 'hypertrophy', label: 'Hypertrophy', icon: '📏' },
+  { value: 'endurance', label: 'Endurance', icon: '🏃' },
+  { value: 'power', label: 'Power', icon: '⚡' },
+  { value: 'conditioning', label: 'Conditioning', icon: '🫁' },
+  { value: 'mobility', label: 'Mobility', icon: '🤸' },
+  { value: 'full_body', label: 'Full Body', icon: '🏋️' },
+  { value: 'sport_specific', label: 'Sport Specific', icon: '🏆' },
+];
+
+const daysOfWeek = [
+  'Sunday',
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+];
+
 export default function Step4Page() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const { supabase } = useAuth();
   const programId = searchParams.get('programId');
 
-  const formData = useProgramStore((state) => state.formData);
-  const updateFormData = useProgramStore((state) => state.updateFormData);
-  const goToPrevious = useProgramStore((state) => state.goToPrevious);
-  const goToNext = useProgramStore((state) => state.goToNext);
-  const selectedEquipment = useProgramStore((state) => state.selectedEquipment);
-  const selectedGymType = useProgramStore((state) => state.selectedGymType);
-  const updateGymType = useProgramStore((state) => state.updateGymType);
-  const updateEquipment = useProgramStore((state) => state.updateEquipment);
-  const fetchProgramFromDatabase = useProgramStore(
-    (state) => state.fetchProgramFromDatabase
-  );
+  // Local state - no more Zustand
+  const [selectedGymType, setSelectedGymType] = useState('Crossfit Box');
+  const [selectedEquipment, setSelectedEquipment] = useState([]);
+  const [workoutFormats, setWorkoutFormats] = useState([
+    'strength',
+    'hypertrophy',
+    'endurance',
+    'power',
+    'metcon',
+  ]);
+  const [difficulty, setDifficulty] = useState('intermediate');
+  const [focusArea, setFocusArea] = useState('full_body');
+  const [numberOfWeeks, setNumberOfWeeks] = useState('4');
+  const [daysPerWeek, setDaysPerWeek] = useState('3');
+  const [selectedDays, setSelectedDays] = useState([
+    'Monday',
+    'Wednesday',
+    'Friday',
+  ]);
+  const [startDate, setStartDate] = useState('');
+  const [sessionDuration, setSessionDuration] = useState('60');
+  const [warmupDuration, setWarmupDuration] = useState('10');
+  const [cooldownDuration, setCooldownDuration] = useState('10');
+  const [mainWorkoutDuration, setMainWorkoutDuration] = useState('40');
 
-  // Don't use formData for initial state when we have a programId - let database load handle it
-  const [difficultyLevel, setDifficultyLevel] = useState(
-    programId ? 'intermediate' : formData.difficulty || 'intermediate'
-  );
-  const [focusArea, setFocusArea] = useState(
-    programId ? 'full_body' : formData.focusArea || 'full_body'
-  );
-  const [workoutDuration, setWorkoutDuration] = useState(
-    programId
-      ? 60
-      : parseInt(formData.sessionDetails?.main_workout_duration) || 60
-  );
-  const [selectedFormats, setSelectedFormats] = useState(
-    programId ? [] : (formData.workoutFormats || [])
-  );
   const [isLoading, setIsLoading] = useState(false);
+  const [errors, setErrors] = useState({});
+  const hasInitialized = useRef(false);
 
-  // Fetch program data if programId is provided
+  // Load program data from Supabase
   useEffect(() => {
     async function loadProgram() {
-      if (programId && supabase) {
+      if (!programId || !supabase || hasInitialized.current) return;
+      hasInitialized.current = true;
+
+      try {
         setIsLoading(true);
-        try {
-          const programData = await fetchProgramFromDatabase(
-            programId,
-            supabase
-          );
-          if (programData) {
-            // Update local state with fetched data
-            if (programData.gymType) {
-              // Store gymType in Title Case format to match equipment presets
-              updateGymType(programData.gymType);
-            }
-            if (programData.equipment) {
-              updateEquipment(programData.equipment);
-            }
-            setDifficultyLevel(programData.difficulty || 'intermediate');
-            setFocusArea(programData.focusArea || 'full_body');
-            setWorkoutDuration(
-              programData.sessionDetails?.main_workout_duration || 60
-            );
-            setSelectedFormats(programData.workoutFormats || ['strength', 'hypertrophy', 'endurance', 'power', 'metcon']);
-          }
-        } catch (error) {
+        const { data: program, error } = await supabase
+          .from('programs')
+          .select('*')
+          .eq('id', programId)
+          .single();
+
+        if (error) {
           console.error('Error loading program:', error);
-        } finally {
-          setIsLoading(false);
+          return;
         }
+
+        if (program) {
+          // Map database gym type to UI format
+          const uiGymType =
+            Object.entries(gymTypeMapping).find(
+              ([ui, db]) => db === program.gym_details?.gym_type
+            )?.[0] || 'Crossfit Box';
+
+          setSelectedGymType(uiGymType);
+          setSelectedEquipment(program.gym_details?.equipment || []);
+          setWorkoutFormats(
+            program.workout_format?.formats || [
+              'strength',
+              'hypertrophy',
+              'endurance',
+            ]
+          );
+          setDifficulty(program.difficulty || 'intermediate');
+          setFocusArea(program.focus_area || 'full_body');
+          setNumberOfWeeks(String(program.duration_weeks || 4));
+
+          // Convert days from database format
+          const dbDays = program.calendar_data?.days_of_week || [];
+          const uiDays = dbDays.map(
+            (day) => day.charAt(0).toUpperCase() + day.slice(1)
+          );
+          setSelectedDays(uiDays);
+          setDaysPerWeek(String(uiDays.length));
+
+          // Set dates and session details
+          setStartDate(program.calendar_data?.start_date || '');
+          setSessionDuration(
+            String(program.session_details?.duration_minutes || 60)
+          );
+          setWarmupDuration(
+            String(program.session_details?.warmup_duration || 10)
+          );
+          setCooldownDuration(
+            String(program.session_details?.cooldown_duration || 10)
+          );
+          setMainWorkoutDuration(
+            String(program.session_details?.main_workout_duration || 40)
+          );
+        }
+      } catch (error) {
+        console.error('Error loading program data:', error);
+      } finally {
+        setIsLoading(false);
       }
     }
 
     loadProgram();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [programId, supabase]);
 
-  // Only update from form data if we're NOT loading from database
+  // Initialize start date if not set
   useEffect(() => {
-    if (!programId) {
-      if (formData.gymType) {
-        // Convert from Title Case to snake_case if needed
-        const gymTypeSnakeCase = formData.gymType
-          .toLowerCase()
-          .replace(/\s+/g, '_');
-        updateGymType(gymTypeSnakeCase);
-      }
-      if (formData.equipment) {
-        updateEquipment(formData.equipment);
-      }
-      setDifficultyLevel(formData.difficulty || 'intermediate');
-      setFocusArea(formData.focusArea || 'full_body');
-      setWorkoutDuration(
-        parseInt(formData.sessionDetails?.main_workout_duration) || 60
-      );
-      setSelectedFormats(formData.workoutFormats || ['strength', 'hypertrophy', 'endurance', 'power', 'metcon']);
+    if (!startDate) {
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      setStartDate(tomorrow.toISOString().split('T')[0]);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    formData.gymType,
-    formData.equipment,
-    formData.difficulty,
-    formData.focusArea,
-    formData.workoutFormats,
-    programId,
-  ]);
+  }, [startDate]);
 
-  // Save state when fields change
+  // Auto-save with debounce
   useEffect(() => {
-    // Convert snake_case to Title Case for gymType
-    const gymTypeLabel =
-      gymTypes.find((g) => g.value === selectedGymType)?.label ||
-      selectedGymType;
+    if (!programId || !supabase || isLoading || !hasInitialized.current) return;
 
-    updateFormData({
-      gymType: gymTypeLabel,
-      equipment: selectedEquipment,
-      difficulty: difficultyLevel,
-      focusArea,
-      sessionDetails: {
-        ...(formData.sessionDetails || {}),
-        main_workout_duration: workoutDuration,
-      },
-      workoutFormats: selectedFormats,
-    });
+    const timeoutId = setTimeout(async () => {
+      try {
+        // Calculate end date
+        const start = new Date(startDate);
+        const end = new Date(start);
+        end.setDate(end.getDate() + parseInt(numberOfWeeks) * 7 - 1);
+        const endDate = end.toISOString().split('T')[0];
+
+        // Convert selected days to database format
+        const dbDays = selectedDays.map((day) => day.toLowerCase());
+
+        const updates = {
+          duration_weeks: parseInt(numberOfWeeks) || 4,
+          difficulty: difficulty,
+          focus_area: focusArea,
+          calendar_data: {
+            start_date: startDate,
+            end_date: endDate,
+            days_of_week: dbDays,
+          },
+          gym_details: {
+            gym_type: gymTypeMapping[selectedGymType] || 'crossfit_box',
+            equipment: selectedEquipment,
+          },
+          workout_format: {
+            formats: workoutFormats,
+          },
+          session_details: {
+            duration_minutes: parseInt(sessionDuration) || 60,
+            warmup_duration: parseInt(warmupDuration) || 10,
+            cooldown_duration: parseInt(cooldownDuration) || 10,
+            main_workout_duration: parseInt(mainWorkoutDuration) || 40,
+          },
+        };
+
+        const { error } = await supabase
+          .from('programs')
+          .update(updates)
+          .eq('id', programId);
+
+        if (error) {
+          console.error('Auto-save error:', error);
+        } else {
+          console.log('Auto-saved step 4 data');
+        }
+      } catch (error) {
+        console.error('Auto-save failed:', error);
+      }
+    }, 1000);
+
+    return () => clearTimeout(timeoutId);
   }, [
     selectedGymType,
     selectedEquipment,
-    difficultyLevel,
+    workoutFormats,
+    difficulty,
     focusArea,
-    workoutDuration,
-    selectedFormats,
-    updateFormData,
+    numberOfWeeks,
+    selectedDays,
+    startDate,
+    sessionDuration,
+    warmupDuration,
+    cooldownDuration,
+    mainWorkoutDuration,
+    programId,
+    supabase,
+    isLoading,
   ]);
 
-  const handleGymTypeChange = (gymType) => {
-    // Update gym type in context - this will automatically trigger equipment update
-    updateGymType(gymType);
-  };
-
-  const handleFormatToggle = (format) => {
-    setSelectedFormats((prev) =>
-      prev.includes(format)
-        ? prev.filter((f) => f !== format)
-        : [...prev, format]
-    );
-  };
-
-  const handlePrevious = () => {
-    const gymTypeLabel =
-      gymTypes.find((g) => g.value === selectedGymType)?.label ||
-      selectedGymType;
-
-    updateFormData({
-      gymType: gymTypeLabel,
-      equipment: selectedEquipment,
-      difficulty: difficultyLevel,
-      focusArea,
-      sessionDetails: {
-        ...(formData.sessionDetails || {}),
-        main_workout_duration: workoutDuration,
-      },
-      workoutFormats: selectedFormats,
+  const handleEquipmentToggle = (equipment) => {
+    setSelectedEquipment((prev) => {
+      if (prev.includes(equipment)) {
+        return prev.filter((e) => e !== equipment);
+      } else {
+        return [...prev, equipment];
+      }
     });
-    goToPrevious(4);
+  };
+
+  const handleDayToggle = (day) => {
+    const newDays = selectedDays.includes(day)
+      ? selectedDays.filter((d) => d !== day)
+      : [...selectedDays, day];
+
+    setSelectedDays(newDays);
+    setDaysPerWeek(String(newDays.length));
+  };
+
+  const validate = () => {
+    const newErrors = {};
+    if (selectedDays.length === 0) {
+      newErrors.days = 'Please select at least one training day';
+    }
+    if (!startDate) {
+      newErrors.startDate = 'Please select a start date';
+    }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   const handleNext = () => {
-    if (!selectedGymType) {
-      alert('Please select a gym type');
-      return;
-    }
+    if (!validate()) return;
+    router.push(`/program-wizard/step-5?programId=${programId}`);
+  };
 
-    const gymTypeLabel =
-      gymTypes.find((g) => g.value === selectedGymType)?.label ||
-      selectedGymType;
-
-    updateFormData({
-      gymType: gymTypeLabel,
-      equipment: selectedEquipment,
-      difficulty: difficultyLevel,
-      focusArea,
-      sessionDetails: {
-        ...(formData.sessionDetails || {}),
-        main_workout_duration: workoutDuration,
-      },
-      workoutFormats: selectedFormats,
-    });
-
-    goToNext(4);
+  const handlePrevious = () => {
+    router.push(`/program-wizard/step-3?programId=${programId}`);
   };
 
   return (
     <div className="relative">
-      {/* Exit button when there's a programId */}
+      <WizardProgress currentStep={4} />
+
+      {/* Exit button */}
       {programId && (
         <button
-          onClick={() =>
-            (window.location.href = `/program/${programId}/writer`)
-          }
+          onClick={() => router.push(`/program/${programId}/writer`)}
           className="absolute top-4 right-4 btn btn-ghost btn-circle z-10"
           title="Exit wizard and go to program writer"
         >
@@ -236,208 +326,252 @@ export default function Step4Page() {
         </button>
       )}
 
-      <WizardProgress currentStep={4} />
+      <div className="max-w-4xl mx-auto p-6">
+        <h2 className="text-2xl font-bold mb-2">
+          Step 4: Program Configuration
+        </h2>
+        <p className="text-gray-600 mb-6">
+          Configure your training schedule and preferences
+        </p>
 
-      {isLoading && (
-        <div className="flex justify-center items-center py-8">
-          <span className="loading loading-spinner loading-lg text-primary"></span>
-        </div>
-      )}
-
-      <div className="bg-base-200 rounded-lg p-6">
-        <div className="text-center mb-6">
-          <h2 className="text-2xl font-bold text-primary mb-2">
-            Gym Setup & Preferences
-          </h2>
-          <p className="text-base-content/70">
-            Configure equipment, difficulty, and workout preferences
-          </p>
-        </div>
-
-        <div className="space-y-6">
-          {/* Gym Type Selection */}
-          <div>
-            <h3 className="text-lg font-medium mb-4">Select Your Gym Type</h3>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-              {gymTypes.map((gym) => (
-                <label
-                  key={gym.value}
-                  className={`card bg-base-100 p-4 cursor-pointer transition-all hover:shadow-md ${
-                    selectedGymType === gym.value
-                      ? 'ring-2 ring-primary bg-primary/5'
-                      : ''
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="gymType"
-                    value={gym.value}
-                    checked={selectedGymType === gym.value}
-                    onChange={(e) => handleGymTypeChange(e.target.value)}
-                    className="hidden"
-                  />
-                  <div className="text-center">
-                    <div className="text-2xl mb-1">{gym.icon}</div>
-                    <div className="text-sm font-medium">{gym.label}</div>
-                  </div>
-                </label>
-              ))}
-            </div>
+        {/* Gym Type Selection */}
+        <div className="mb-6">
+          <h3 className="text-lg font-semibold mb-3">Gym Type</h3>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+            {gymTypes.map((gym) => (
+              <button
+                key={gym.value}
+                onClick={() => {
+                  setSelectedGymType(gym.value);
+                  // Auto-select equipment preset
+                  const preset = gymEquipmentPresets[gym.value] || [];
+                  setSelectedEquipment(preset);
+                }}
+                className={`px-3 py-2 text-sm border rounded ${
+                  selectedGymType === gym.value
+                    ? 'bg-blue-600 text-white border-blue-600'
+                    : 'border-gray-300 hover:bg-gray-50'
+                }`}
+              >
+                <span className="mr-1">{gym.icon}</span>
+                {gym.label}
+              </button>
+            ))}
           </div>
+        </div>
 
-          <div className="divider"></div>
-
-          {/* Equipment Selection - Commented out for now */}
-          {/* <div>
-            <h3 className="text-lg font-medium mb-2">Available Equipment</h3>
-            <p className="text-sm text-base-content/70 mb-4">
-              Equipment has been pre-selected based on your gym type. Add or remove as needed.
-            </p>
-            <div className="mb-2">
-              <label className="flex items-center space-x-2 cursor-pointer">
+        {/* Equipment Selection */}
+        <div className="mb-6">
+          <h3 className="text-lg font-semibold mb-3">
+            Available Equipment ({selectedEquipment.length} selected)
+          </h3>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 max-h-60 overflow-y-auto p-2 bg-gray-50 border rounded-lg">
+            {equipmentList.map((equipment) => (
+              <label
+                key={equipment.value}
+                className="cursor-pointer flex items-center"
+              >
                 <input
                   type="checkbox"
-                  checked={isAllEquipmentSelected}
-                  onChange={(e) => handleEquipmentToggle(e.target.value)}
-                  value="-1"
-                  className="checkbox checkbox-sm"
+                  className="mr-2 w-4 h-4"
+                  checked={selectedEquipment.includes(equipment.value)}
+                  onChange={() => handleEquipmentToggle(equipment.value)}
                 />
-                <span className="font-medium">Select All Equipment</span>
+                <span className="text-sm">{equipment.label}</span>
               </label>
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 max-h-64 overflow-y-auto p-2 bg-base-100 rounded-lg">
-              {equipmentList.map((equipment) => (
-                <label
-                  key={equipment.value}
-                  className="flex items-center space-x-2 cursor-pointer"
+            ))}
+          </div>
+        </div>
+
+        {/* Workout Formats */}
+        <div className="mb-6">
+          <h3 className="text-lg font-semibold mb-3">Workout Formats</h3>
+          <WorkoutFormatSelector
+            selectedFormats={workoutFormats}
+            onChange={setWorkoutFormats}
+          />
+        </div>
+
+        {/* Program Details Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          {/* Difficulty */}
+          <div>
+            <label className="block font-semibold mb-2">Difficulty Level</label>
+            <div className="grid grid-cols-2 gap-2">
+              {difficulties.map((diff) => (
+                <button
+                  key={diff.value}
+                  onClick={() => setDifficulty(diff.value)}
+                  className={`px-3 py-2 text-sm border rounded ${
+                    difficulty === diff.value
+                      ? 'bg-blue-600 text-white border-blue-600'
+                      : 'border-gray-300 hover:bg-gray-50'
+                  }`}
                 >
-                  <input
-                    type="checkbox"
-                    checked={selectedEquipment.includes(equipment.value)}
-                    onChange={(e) => handleEquipmentToggle(e.target.value)}
-                    value={equipment.value}
-                    className="checkbox checkbox-sm"
-                  />
-                  <span className="text-sm">{equipment.label}</span>
-                </label>
+                  {diff.icon} {diff.label}
+                </button>
               ))}
             </div>
-          </div> */}
+          </div>
 
-          <div className="divider"></div>
+          {/* Focus Area */}
+          <div>
+            <label className="block font-semibold mb-2">Focus Area</label>
+            <select
+              className="w-full border border-gray-300 rounded-lg p-2"
+              value={focusArea}
+              onChange={(e) => setFocusArea(e.target.value)}
+            >
+              {focusAreas.map((area) => (
+                <option key={area.value} value={area.value}>
+                  {area.icon} {area.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
 
-          {/* Additional Preferences */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Schedule Configuration */}
+        <div className="mb-6">
+          <h3 className="text-lg font-semibold mb-3">Training Schedule</h3>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <div>
-              <label className="label">
-                <span className="label-text font-medium">Difficulty Level</span>
+              <label className="block font-semibold mb-2">
+                Program Duration
               </label>
               <select
-                value={difficultyLevel}
-                onChange={(e) => setDifficultyLevel(e.target.value)}
-                className="select select-bordered w-full"
+                className="w-full border border-gray-300 rounded-lg p-2"
+                value={numberOfWeeks}
+                onChange={(e) => setNumberOfWeeks(e.target.value)}
               >
-                <option value="beginner">Beginner</option>
-                <option value="intermediate">Intermediate</option>
-                <option value="advanced">Advanced</option>
-                <option value="elite">Elite</option>
+                {[1, 2, 3, 4, 6, 8, 10, 12, 16, 20, 24].map((weeks) => (
+                  <option key={weeks} value={weeks}>
+                    {weeks} weeks
+                  </option>
+                ))}
               </select>
             </div>
 
             <div>
-              <label className="label">
-                <span className="label-text font-medium">Focus Area</span>
-              </label>
+              <label className="block font-semibold mb-2">Start Date</label>
+              <input
+                type="date"
+                className={`w-full border rounded-lg p-2 ${
+                  errors.startDate ? 'border-red-500' : 'border-gray-300'
+                }`}
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                min={new Date().toISOString().split('T')[0]}
+              />
+              {errors.startDate && (
+                <p className="text-red-500 text-sm mt-1">{errors.startDate}</p>
+              )}
+            </div>
+          </div>
+
+          {/* Days of Week */}
+          <div className="mb-4">
+            <label className="block font-semibold mb-2">
+              Training Days ({selectedDays.length} days/week)
+            </label>
+            <div className="grid grid-cols-7 gap-2">
+              {daysOfWeek.map((day) => (
+                <button
+                  key={day}
+                  onClick={() => handleDayToggle(day)}
+                  className={`px-2 py-2 text-sm border rounded ${
+                    selectedDays.includes(day)
+                      ? 'bg-blue-600 text-white border-blue-600'
+                      : 'border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  {day.slice(0, 3)}
+                </button>
+              ))}
+            </div>
+            {errors.days && (
+              <p className="text-red-500 text-sm mt-1">{errors.days}</p>
+            )}
+          </div>
+        </div>
+
+        {/* Session Duration */}
+        <div className="mb-6">
+          <h3 className="text-lg font-semibold mb-3">Session Structure</h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div>
+              <label className="block font-semibold mb-2">Total Duration</label>
               <select
-                value={focusArea}
-                onChange={(e) => setFocusArea(e.target.value)}
-                className="select select-bordered w-full"
+                className="w-full border border-gray-300 rounded-lg p-2"
+                value={sessionDuration}
+                onChange={(e) => setSessionDuration(e.target.value)}
               >
-                <option value="upper_body">Upper Body</option>
-                <option value="lower_body">Lower Body</option>
-                <option value="full_body">Full Body</option>
-                <option value="core">Core</option>
-                <option value="posterior_chain">Posterior Chain</option>
-                <option value="anterior_chain">Anterior Chain</option>
+                {[30, 45, 60, 75, 90, 120].map((mins) => (
+                  <option key={mins} value={mins}>
+                    {mins} minutes
+                  </option>
+                ))}
               </select>
             </div>
 
             <div>
-              <label className="label">
-                <span className="label-text font-medium">
-                  Workout Duration (minutes)
-                </span>
-              </label>
+              <label className="block font-semibold mb-2">Warm-up</label>
+              <select
+                className="w-full border border-gray-300 rounded-lg p-2"
+                value={warmupDuration}
+                onChange={(e) => setWarmupDuration(e.target.value)}
+              >
+                {[5, 10, 15, 20].map((mins) => (
+                  <option key={mins} value={mins}>
+                    {mins} min
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block font-semibold mb-2">Main Workout</label>
               <input
                 type="number"
-                value={workoutDuration}
-                onChange={(e) =>
-                  setWorkoutDuration(
-                    e.target.value === '' ? '' : parseInt(e.target.value)
-                  )
-                }
-                min="15"
-                max="120"
-                step="5"
-                className="input input-bordered w-full"
+                className="w-full border border-gray-300 rounded-lg p-2 bg-gray-100"
+                value={mainWorkoutDuration}
+                readOnly
+                disabled
               />
             </div>
 
             <div>
-              <label className="label">
-                <span className="label-text font-medium">Workout Formats</span>
-              </label>
-              <div className="flex flex-wrap gap-2 py-2">
-                <WorkoutFormatSelector
-                  selectedFormats={selectedFormats}
-                  onChange={setSelectedFormats}
-                />
-              </div>
+              <label className="block font-semibold mb-2">Cool-down</label>
+              <select
+                className="w-full border border-gray-300 rounded-lg p-2"
+                value={cooldownDuration}
+                onChange={(e) => setCooldownDuration(e.target.value)}
+              >
+                {[5, 10, 15, 20].map((mins) => (
+                  <option key={mins} value={mins}>
+                    {mins} min
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
         </div>
 
-        <div className="flex justify-between mt-8">
-          <button onClick={handlePrevious} className="btn btn-outline">
-            <svg
-              className="w-5 h-5 mr-2"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M15 19l-7-7 7-7"
-              />
-            </svg>
-            Back to Step 3
+        {/* Navigation */}
+        <div className="flex justify-between">
+          <button
+            onClick={handlePrevious}
+            className="px-4 py-2 border border-gray-300 rounded text-gray-700 hover:bg-gray-50"
+          >
+            Previous
           </button>
-
-          <div className="text-sm text-base-content/60">
-            Step 4 of 5 • Gym Setup
-          </div>
-
           <button
             onClick={handleNext}
-            className="btn btn-primary px-6"
-            disabled={!selectedGymType}
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400"
+            disabled={isLoading}
           >
-            Continue to Step 5
-            <svg
-              className="w-4 h-4 ml-2"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 5l7 7-7 7"
-              />
-            </svg>
+            Next Step
           </button>
         </div>
       </div>

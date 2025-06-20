@@ -1,9 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import useProgramStore from '../../store/programStore';
 import WizardProgress from '../../components/ProgramWizard/WizardProgress';
 import equipmentList from '@/utils/equipmentList';
 import {
@@ -32,26 +31,22 @@ import {
 
 export default function Step3Page() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const { supabase } = useAuth();
   const programId = searchParams.get('programId');
 
-  const formData = useProgramStore((state) => state.formData);
-  const updateFormData = useProgramStore((state) => state.updateFormData);
-  const selectedWorkouts =
-    useProgramStore((state) => state.selectedWorkouts) || [];
-  const setSelectedWorkouts = useProgramStore(
-    (state) => state.setSelectedWorkouts
-  );
-  const goToNext = useProgramStore((state) => state.goToNext);
-  const goToPrevious = useProgramStore((state) => state.goToPrevious);
-  const fetchProgramFromDatabase = useProgramStore(
-    (state) => state.fetchProgramFromDatabase
-  );
-  // Don't use formData for initial state when we have a programId - let database load handle it
-  const [previousWorkout, setPreviousWorkout] = useState(
-    programId ? '' : formData.personalization || ''
-  );
-  const [skipReason, setSkipReason] = useState('');
+  // Local state - no more Zustand
+  const [previousWorkout, setPreviousWorkout] = useState('');
+  const [selectedWorkouts, setSelectedWorkouts] = useState([]);
+  const [referenceWorkouts, setReferenceWorkouts] = useState([]);
+  const [generatedWorkouts, setGeneratedWorkouts] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [programData, setProgramData] = useState(null);
+
+  // UI states
+  const [errors, setErrors] = useState({});
+
+  // Search functionality states
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchResults, setSearchResults] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -66,116 +61,130 @@ export default function Step3Page() {
   });
   const [errorMessage, setErrorMessage] = useState('');
   const [selectedWorkoutModal, setSelectedWorkoutModal] = useState(null);
-  const [activeTab, setActiveTab] = useState('ai'); // 'manual' or 'ai'
-  const [isLoading, setIsLoading] = useState(false);
-  const [previousGeneratedWorkouts, setPreviousGeneratedWorkouts] = useState(
-    []
-  );
+  const [activeTab, setActiveTab] = useState('ai'); // 'manual', 'ai', or 'previous'
 
   // Helper function to create unique workout identifier
   const getWorkoutId = (workout) => {
     return `${workout.title || 'untitled'}-${workout.source || 'unknown'}`;
   };
 
-  // Fetch program data if programId is provided
+  // Load program data from Supabase
   useEffect(() => {
     async function loadProgram() {
-      if (programId && supabase) {
+      if (!programId || !supabase) return;
+
+      try {
         setIsLoading(true);
-        try {
-          const programData = await fetchProgramFromDatabase(
-            programId,
-            supabase
-          );
-          if (programData) {
-            // Update local state with fetched data
-            setPreviousWorkout(
-              programData.personalization || programData.referenceInput || ''
-            );
 
-            // Load reference workouts (previously selected workouts)
-            const { data: referenceWorkouts, error: refError } = await supabase
-              .from('program_workouts')
-              .select('*')
-              .eq('program_id', programId)
-              .eq('is_reference', true)
-              .order('created_at', { ascending: false });
+        // Load program data
+        const { data: program, error: programError } = await supabase
+          .from('programs')
+          .select('*')
+          .eq('id', programId)
+          .single();
 
-            if (refError) {
-              console.error('Error loading reference workouts:', refError);
-            } else if (referenceWorkouts && referenceWorkouts.length > 0) {
-              // Convert database reference workouts to the format expected by the UI
-              const formattedWorkouts = referenceWorkouts.map((workout) => ({
-                title: workout.title,
-                body: workout.body,
-                description: workout.body, // Alias for consistency
-                source: workout.tags?.source || 'Previously Selected',
-                // Add any other fields that might be needed
-              }));
-
-              setSelectedWorkouts(
-                Array.isArray(formattedWorkouts) ? formattedWorkouts : []
-              );
-            }
-
-            // Load previously generated workouts (from AI writer)
-            const { data: generatedWorkouts, error: genError } = await supabase
-              .from('program_workouts')
-              .select('*')
-              .eq('program_id', programId)
-              .eq('is_reference', false)
-              .order('scheduled_date', { ascending: true, nullsFirst: true });
-
-            if (genError) {
-              console.error('Error loading generated workouts:', genError);
-            } else if (generatedWorkouts && generatedWorkouts.length > 0) {
-              // Format generated workouts for display
-              const formattedGenWorkouts = generatedWorkouts.map((workout) => ({
-                title: workout.title,
-                body: workout.body,
-                description: workout.body,
-                source: 'Previously Generated',
-                scheduled_date: workout.scheduled_date,
-                completed: workout.completed,
-                // Add any other fields that might be needed
-              }));
-
-              setPreviousGeneratedWorkouts(formattedGenWorkouts);
-            }
-          }
-        } catch (error) {
-          console.error('Error loading program:', error);
-        } finally {
-          setIsLoading(false);
+        if (programError) {
+          console.error('Error loading program:', programError);
+          return;
         }
+
+        setProgramData(program);
+
+        // Load personalization/reference input
+        if (program.reference_input) {
+          setPreviousWorkout(program.reference_input);
+        }
+
+        // Load reference workouts
+        const { data: refWorkouts, error: refError } = await supabase
+          .from('program_workouts')
+          .select('*')
+          .eq('program_id', programId)
+          .eq('is_reference', true)
+          .order('created_at', { ascending: false });
+
+        if (!refError && refWorkouts) {
+          // Convert database reference workouts to the format expected by the UI
+          const formattedWorkouts = refWorkouts.map((workout) => ({
+            title: workout.title,
+            body: workout.body,
+            description: workout.body, // Alias for consistency
+            source: workout.tags?.source || 'Previously Selected',
+            // Add any other fields that might be needed
+          }));
+          setReferenceWorkouts(refWorkouts);
+          setSelectedWorkouts(formattedWorkouts);
+        }
+
+        // Load generated workouts
+        const { data: genWorkouts, error: genError } = await supabase
+          .from('program_workouts')
+          .select('*')
+          .eq('program_id', programId)
+          .eq('is_reference', false)
+          .order('scheduled_date', { ascending: true, nullsFirst: true });
+
+        if (!genError && genWorkouts) {
+          // Format generated workouts for display
+          const formattedGenWorkouts = genWorkouts.map((workout) => ({
+            title: workout.title,
+            body: workout.body,
+            description: workout.body,
+            source: 'Previously Generated',
+            scheduled_date: workout.scheduled_date,
+            completed: workout.completed,
+            // Add any other fields that might be needed
+          }));
+          setGeneratedWorkouts(formattedGenWorkouts);
+        }
+      } catch (error) {
+        console.error('Error loading program data:', error);
+      } finally {
+        setIsLoading(false);
       }
     }
 
     loadProgram();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [programId, supabase, setSelectedWorkouts]);
+  }, [programId, supabase]);
 
-  // Only update from form data if we're NOT loading from database
+  // Auto-save personalization text with debounce
   useEffect(() => {
-    if (!programId) {
-      setPreviousWorkout(formData.personalization || '');
+    if (!programId || !supabase || isLoading) return;
+
+    const timeoutId = setTimeout(async () => {
+      if (previousWorkout.trim()) {
+        try {
+          const { error } = await supabase
+            .from('programs')
+            .update({ reference_input: previousWorkout.trim() })
+            .eq('id', programId);
+
+          if (error) {
+            console.error('Auto-save error:', error);
+          } else {
+            console.log('Auto-saved step 3 personalization');
+          }
+        } catch (error) {
+          console.error('Auto-save failed:', error);
+        }
+      }
+    }, 1000);
+
+    return () => clearTimeout(timeoutId);
+  }, [previousWorkout, programId, supabase, isLoading]);
+
+  const validate = () => {
+    const newErrors = {};
+    if (!previousWorkout.trim() && selectedWorkouts.length === 0) {
+      newErrors.previousWorkout =
+        'Please provide personalization details or select reference workouts';
     }
-  }, [formData.personalization, programId]);
-
-  // Save state when fields change
-  useEffect(() => {
-    updateFormData({
-      personalization: previousWorkout.trim(),
-      referenceInput: previousWorkout.trim(),
-    });
-  }, [previousWorkout, updateFormData]);
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const handleNext = async () => {
-    // Save form data
-    updateFormData({
-      personalization: previousWorkout.trim(),
-      referenceInput: previousWorkout.trim(),
-    });
+    if (!validate()) return;
 
     // Save selected workouts as reference workouts if we have a programId and selected workouts
     if (programId && selectedWorkouts.length > 0 && supabase) {
@@ -214,24 +223,14 @@ export default function Step3Page() {
       }
     }
 
-    goToNext(3);
+    router.push(`/program-wizard/step-4?programId=${programId}`);
   };
 
   const handlePrevious = () => {
-    updateFormData({
-      personalization: previousWorkout.trim(),
-      referenceInput: previousWorkout.trim(),
-    });
-    goToPrevious(3);
+    router.push(`/program-wizard/step-2?programId=${programId}`);
   };
 
   const handleSkip = async () => {
-    updateFormData({
-      personalization: '',
-      referenceInput: '',
-    });
-    setSelectedWorkouts([]);
-
     // Clear any existing reference workouts if we have a programId
     if (programId && supabase) {
       try {
@@ -246,7 +245,7 @@ export default function Step3Page() {
       }
     }
 
-    goToNext(3);
+    router.push(`/program-wizard/step-4?programId=${programId}`);
   };
 
   const handleSearchWorkouts = async () => {
@@ -356,20 +355,18 @@ Day 3: Leg Press 4x12, DB Press 4x10, Leg Curls 4x12`,
 
   return (
     <div className="relative">
-      {/* Exit button when there's a programId */}
+      <WizardProgress currentStep={3} />
+
+      {/* Exit button */}
       {programId && (
         <button
-          onClick={() =>
-            (window.location.href = `/program/${programId}/writer`)
-          }
+          onClick={() => router.push(`/program/${programId}/writer`)}
           className="absolute top-4 right-4 btn btn-ghost btn-circle z-10"
           title="Exit wizard and go to program writer"
         >
           <X className="w-6 h-6" />
         </button>
       )}
-
-      <WizardProgress currentStep={3} />
 
       {isLoading && (
         <div className="flex justify-center items-center py-8">
@@ -425,7 +422,7 @@ Day 3: Leg Press 4x12, DB Press 4x10, Leg Curls 4x12`,
               )}
             </button>
             {/* Previous Workouts Tab - Only show if there are generated workouts */}
-            {previousGeneratedWorkouts.length > 0 && (
+            {generatedWorkouts.length > 0 && (
               <button
                 onClick={() => setActiveTab('previous')}
                 className={`px-6 py-4 font-medium transition-all relative ${
@@ -436,9 +433,7 @@ Day 3: Leg Press 4x12, DB Press 4x10, Leg Curls 4x12`,
               >
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="w-5 h-5" />
-                  <span>
-                    Previous Workouts ({previousGeneratedWorkouts.length})
-                  </span>
+                  <span>Previous Workouts ({generatedWorkouts.length})</span>
                 </div>
                 {activeTab === 'previous' && (
                   <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
@@ -492,6 +487,7 @@ Day 3: Leg Press 4x12, DB Press 4x10, Leg Curls 4x12`,
                   onChange={(e) => setPreviousWorkout(e.target.value)}
                   placeholder="Paste or describe your recent workouts, previous program, or training history. Include exercises, sets, reps, and weights if possible..."
                   className="w-full h-64 px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
+                  disabled={isLoading}
                 />
 
                 <div className="mt-6">
@@ -504,6 +500,7 @@ Day 3: Leg Press 4x12, DB Press 4x10, Leg Curls 4x12`,
                         key={index}
                         onClick={() => setPreviousWorkout(workout)}
                         className="text-left p-4 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors group"
+                        disabled={isLoading}
                       >
                         <div className="flex items-start justify-between">
                           <p className="text-sm font-mono text-gray-600 whitespace-pre-wrap line-clamp-3">
@@ -562,7 +559,7 @@ Day 3: Leg Press 4x12, DB Press 4x10, Leg Curls 4x12`,
 
               {/* Previous Workouts List */}
               <div className="grid gap-4">
-                {previousGeneratedWorkouts.map((workout, index) => {
+                {generatedWorkouts.map((workout, index) => {
                   const workoutId = getWorkoutId(workout);
                   const isSelected = selectedWorkouts.some(
                     (w) => getWorkoutId(w) === workoutId
@@ -639,7 +636,7 @@ Day 3: Leg Press 4x12, DB Press 4x10, Leg Curls 4x12`,
                 })}
               </div>
 
-              {previousGeneratedWorkouts.length === 0 && (
+              {generatedWorkouts.length === 0 && (
                 <div className="text-center py-8">
                   <p className="text-gray-500">
                     No previously generated workouts found.
@@ -942,8 +939,15 @@ Day 3: Leg Press 4x12, DB Press 4x10, Leg Curls 4x12`,
 
             <div className="flex items-center gap-3">
               <button
+                onClick={handleSkip}
+                className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+              >
+                Skip
+              </button>
+              <button
                 onClick={handleNext}
                 className="flex items-center gap-2 px-6 py-2.5 bg-primary hover:bg-primary-dark text-white font-medium rounded-lg transition-all"
+                disabled={isLoading}
               >
                 <span>Continue</span>
                 <ChevronRight className="w-5 h-5" />

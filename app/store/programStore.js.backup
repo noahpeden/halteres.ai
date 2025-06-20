@@ -6,7 +6,7 @@ import { gymEquipmentPresets } from '../components/utils';
 import equipmentList from '../utils/equipmentList';
 
 // Mapping from snake_case to Title Case for gym types
-const gymTypeMapping = {
+export const gymTypeMapping = {
   crossfit_box: 'Crossfit Box',
   commercial_gym: 'Commercial Gym',
   home_gym: 'Home Gym',
@@ -39,6 +39,51 @@ function cleanDaysOfWeek(daysArray) {
   });
 }
 
+// Helper function to normalize day names to Title Case
+function normalizeDayNames(daysArray) {
+  if (!Array.isArray(daysArray)) return [];
+
+  const dayNameMap = {
+    sunday: 'Sunday',
+    sun: 'Sunday',
+    monday: 'Monday',
+    mon: 'Monday',
+    tuesday: 'Tuesday',
+    tue: 'Tuesday',
+    tues: 'Tuesday',
+    wednesday: 'Wednesday',
+    wed: 'Wednesday',
+    thursday: 'Thursday',
+    thu: 'Thursday',
+    thurs: 'Thursday',
+    friday: 'Friday',
+    fri: 'Friday',
+    saturday: 'Saturday',
+    sat: 'Saturday',
+  };
+
+  return daysArray
+    .map((day) => {
+      if (typeof day === 'number') {
+        const dayNames = [
+          'Sunday',
+          'Monday',
+          'Tuesday',
+          'Wednesday',
+          'Thursday',
+          'Friday',
+          'Saturday',
+        ];
+        return dayNames[day] || day;
+      }
+      if (typeof day === 'string') {
+        return dayNameMap[day.toLowerCase()] || day;
+      }
+      return day;
+    })
+    .filter(Boolean);
+}
+
 const useProgramStore = create(
   devtools(
     persist(
@@ -60,7 +105,13 @@ const useProgramStore = create(
           equipment: gymEquipmentPresets['Crossfit Box'] || [],
           focusArea: '',
           personalization: '',
-          workoutFormats: ['strength', 'hypertrophy', 'endurance', 'power', 'metcon'],
+          workoutFormats: [
+            'strength',
+            'hypertrophy',
+            'endurance',
+            'power',
+            'metcon',
+          ],
           numberOfWeeks: '4',
           daysPerWeek: '3',
           daysOfWeek: ['Monday', 'Wednesday', 'Friday'],
@@ -240,7 +291,9 @@ const useProgramStore = create(
         updateFormData: (updates) => {
           const updatedData = { ...updates };
           if (updatedData.daysOfWeek) {
-            updatedData.daysOfWeek = cleanDaysOfWeek(updatedData.daysOfWeek);
+            updatedData.daysOfWeek = normalizeDayNames(
+              cleanDaysOfWeek(updatedData.daysOfWeek)
+            );
           }
 
           let newAllEquipmentSelected = get().allEquipmentSelected;
@@ -282,7 +335,9 @@ const useProgramStore = create(
 
         setFieldValue: (field, value) => {
           const fieldValue =
-            field === 'daysOfWeek' ? cleanDaysOfWeek(value) : value;
+            field === 'daysOfWeek'
+              ? normalizeDayNames(cleanDaysOfWeek(value))
+              : value;
           set((state) => ({
             formData: {
               ...state.formData,
@@ -434,11 +489,17 @@ const useProgramStore = create(
         },
 
         // Wizard-specific actions
-        setSelectedWorkouts: (workouts) => set((state) => ({
-          selectedWorkouts: typeof workouts === 'function' 
-            ? Array.isArray(workouts(state.selectedWorkouts || [])) ? workouts(state.selectedWorkouts || []) : []
-            : Array.isArray(workouts) ? workouts : []
-        })),
+        setSelectedWorkouts: (workouts) =>
+          set((state) => ({
+            selectedWorkouts:
+              typeof workouts === 'function'
+                ? Array.isArray(workouts(state.selectedWorkouts || []))
+                  ? workouts(state.selectedWorkouts || [])
+                  : []
+                : Array.isArray(workouts)
+                ? workouts
+                : [],
+          })),
         setEntityName: (name) => set({ entityName: name }),
         setEntityType: (type) => set({ entityType: type }),
 
@@ -467,7 +528,13 @@ const useProgramStore = create(
               focusArea: 'full_body',
               personalization:
                 'Focus on proper form and progressive overload. Include both strength and conditioning elements.',
-              workoutFormats: ['strength', 'hypertrophy', 'endurance', 'power', 'metcon'], // Multiple default formats
+              workoutFormats: [
+                'strength',
+                'hypertrophy',
+                'endurance',
+                'power',
+                'metcon',
+              ], // Multiple default formats
               numberOfWeeks: '4',
               daysPerWeek: '5', // Default to 5 days
               daysOfWeek: [
@@ -493,7 +560,7 @@ const useProgramStore = create(
                 gym_type: 'Crossfit Box',
                 equipment: gymEquipmentPresets['Crossfit Box'] || [],
               },
-              trainingMethodology: 'hiit', // Default to HIIT
+              trainingMethodology: 'hiit_metabolic', // Default to HIIT/Metabolic
               referenceInput: '',
               customWorkoutSections: [],
             },
@@ -825,7 +892,7 @@ const useProgramStore = create(
 
         completeWizard: async (finalFormData = null) => {
           const { programId } = get();
-          
+
           // If final form data is provided, update it in the store first
           if (finalFormData) {
             set((state) => ({
@@ -835,7 +902,7 @@ const useProgramStore = create(
               },
             }));
           }
-          
+
           // Set loading state
           set({ isLoading: true });
 
@@ -852,12 +919,12 @@ const useProgramStore = create(
         // Update existing program and return to writer
         updateProgramAndReturn: async (finalFormData) => {
           const { programId } = get();
-          
+
           if (!programId) {
             console.error('No program ID found for update');
             return;
           }
-          
+
           // Update form data in store
           set((state) => ({
             formData: {
@@ -877,8 +944,11 @@ const useProgramStore = create(
         syncFormDataToWizard: (formData, programId) => {
           // This function syncs the current form state back to wizard data
           // when navigating from the writer back to the wizard
-          console.log('Syncing form data to wizard store:', { formData, programId });
-          
+          console.log('Syncing form data to wizard store:', {
+            formData,
+            programId,
+          });
+
           // Update the form data with current values
           set((state) => ({
             formData: {
@@ -901,6 +971,86 @@ const useProgramStore = create(
           }));
         },
 
+        // Auto-save program data to Supabase (for wizard steps)
+        autoSaveProgram: async (stepNumber, supabase) => {
+          const { programId, formData } = get();
+          if (!programId || !supabase) {
+            console.warn('Cannot auto-save: missing programId or supabase');
+            return false;
+          }
+
+          try {
+            const { autoSaveProgramStep } = await import('../utils/programUtils');
+            const success = await autoSaveProgramStep({
+              programId,
+              stepNumber,
+              formData,
+              supabase,
+            });
+            
+            if (success) {
+              console.log(`Auto-saved step ${stepNumber} for program ${programId}`);
+            }
+            
+            return success;
+          } catch (error) {
+            console.error('Auto-save failed:', error);
+            return false;
+          }
+        },
+
+        // Create minimal program immediately (for wizard start)
+        createMinimalProgram: async (entityId, supabase) => {
+          if (!entityId || !supabase) {
+            throw new Error('Missing required parameters');
+          }
+
+          try {
+            const { createMinimalProgram } = await import('../utils/programUtils');
+            const program = await createMinimalProgram({ entityId, supabase });
+            
+            // Update store with the new program ID
+            set({ programId: program.id });
+            
+            console.log('Created minimal program:', program.id);
+            return program;
+          } catch (error) {
+            console.error('Failed to create minimal program:', error);
+            throw error;
+          }
+        },
+
+        // Load program data from database and update form
+        loadProgramFromDatabase: async (programId, supabase) => {
+          if (!programId || !supabase) {
+            return null;
+          }
+
+          try {
+            set({ isLoading: true });
+            const { getProgramFormData } = await import('../utils/programUtils');
+            const formData = await getProgramFormData(programId, supabase);
+            
+            if (formData) {
+              set({
+                programId,
+                formData: {
+                  ...get().formData,
+                  ...formData,
+                },
+                initialFormData: JSON.parse(JSON.stringify(formData)),
+              });
+              console.log('Loaded program data from database:', programId);
+            }
+            
+            return formData;
+          } catch (error) {
+            console.error('Error loading program from database:', error);
+            return null;
+          } finally {
+            set({ isLoading: false });
+          }
+        },
 
         // Computed values
         get isAllEquipmentSelected() {

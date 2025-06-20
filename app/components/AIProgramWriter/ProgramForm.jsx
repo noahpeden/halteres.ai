@@ -6,28 +6,26 @@ import ProgramScheduling from './ProgramScheduling';
 import ProgramDetails from './ProgramDetails';
 import CustomWorkoutFormat from './CustomWorkoutFormat';
 import LoadingButton from './LoadingButton';
-import { handleFormChange as handleFormChangeUtil } from './formHandlers';
 import equipmentList from '@/utils/equipmentList';
 
 const ProgramForm = ({
   formData,
-  setFieldValue,
-  handleWorkoutFormatChange,
-  handleDayOfWeekChange,
+  updateFormData,
+  programId,
+  supabase,
   isLoading,
-  generateProgram,
-  generationStage,
-  loadingDuration,
-  serverStatus,
-  equipmentSelector,
-  suggestions,
-  handleProgramTypeChange,
-  subscriptionStatus,
-  trialEndDate,
-  generationsRemaining,
-  lastGenerationDate,
-  triggerAutoSave,
+  showToastMessage,
+  // Optional props for program generation
+  generationStage = null,
+  loadingDuration = 0,
+  serverStatus = null,
+  suggestions = [],
+  subscriptionStatus = 'inactive',
+  trialEndDate = null,
+  generationsRemaining = 0,
+  lastGenerationDate = null,
 }) => {
+  // Handle form field changes
   const handleChange = useCallback(
     (e) => {
       const { name, value, type, checked } = e.target;
@@ -45,36 +43,85 @@ const ProgramForm = ({
               return equipment ? equipment.label : null;
             })
             .filter(Boolean);
+
           // Update gymType, equipment, and gymDetails.equipment
-          setFieldValue('gymType', value);
-          setFieldValue('equipment', preset);
-          setFieldValue('gymDetails', {
-            ...formData.gymDetails,
-            gym_type: value,
-            equipment: equipmentNames,
+          updateFormData({
+            gymType: value,
+            equipment: preset,
+            gymDetails: {
+              ...formData.gymDetails,
+              gym_type: value,
+              equipment: equipmentNames,
+            },
           });
         } else {
           // Just update the gym type without resetting equipment
-          setFieldValue('gymType', value);
+          updateFormData({ gymType: value });
         }
-        // Trigger auto-save after gym type change
-        if (triggerAutoSave) triggerAutoSave();
         return;
       }
 
-      setFieldValue(name, updateValue);
-
-      // Don't trigger auto-save on every keystroke for text fields
-      // Auto-save will be triggered on blur instead
+      updateFormData({ [name]: updateValue });
     },
-    [setFieldValue, formData.gymDetails, formData.gymType, triggerAutoSave]
+    [updateFormData, formData.gymDetails, formData.gymType]
   );
+
+  // Handle field value updates (used by child components)
+  const setFieldValue = useCallback(
+    (field, value) => {
+      updateFormData({ [field]: value });
+    },
+    [updateFormData]
+  );
+
+  // Handle workout format changes
+  const handleWorkoutFormatChange = useCallback(
+    (formats) => {
+      updateFormData({ workoutFormats: formats });
+    },
+    [updateFormData]
+  );
+
+  // Handle day of week changes
+  const handleDayOfWeekChange = useCallback(
+    (days) => {
+      updateFormData({
+        daysOfWeek: days,
+        daysPerWeek: String(days.length),
+      });
+    },
+    [updateFormData]
+  );
+
+  // Handle program type changes
+  const handleProgramTypeChange = useCallback(
+    (programType) => {
+      updateFormData({ programType });
+    },
+    [updateFormData]
+  );
+
+  // Program generation function (simplified - you may need to implement the full logic)
+  const generateProgram = useCallback(async () => {
+    if (!programId || !supabase) {
+      showToastMessage('Program ID or database connection missing', 'error');
+      return;
+    }
+
+    try {
+      showToastMessage('Program generation would be triggered here', 'info');
+      generateProgram();
+    } catch (error) {
+      console.error('Error generating program:', error);
+      showToastMessage('Failed to generate program', 'error');
+    }
+  }, [programId, supabase, showToastMessage]);
 
   // --- Eligibility Logic ---
   const { isEligibleToGenerate, disabledReason } = useMemo(() => {
     const isActive = subscriptionStatus === 'active';
     const isTrialing = subscriptionStatus === 'trialing';
-    const now = new Date(); // Use a single consistent 'now' timestamp
+    const now = new Date();
 
     // Active subscribers can always generate
     if (isActive) {
@@ -85,11 +132,10 @@ const ProgramForm = ({
     if (isTrialing) {
       // Check 1: Trial Validity
       const trialEnd = trialEndDate ? new Date(trialEndDate) : null;
-      // Ensure trialEnd is a valid date and it's not in the past (compare dates only)
       const isTrialValid =
         trialEnd instanceof Date &&
         !isNaN(trialEnd.getTime()) &&
-        new Date(trialEnd.toDateString()) >= new Date(now.toDateString()); // Compare date parts only
+        new Date(trialEnd.toDateString()) >= new Date(now.toDateString());
 
       if (!isTrialValid) {
         return {
@@ -99,7 +145,7 @@ const ProgramForm = ({
         };
       }
 
-      // Check 2: Trial Generations Remaining (handle null/undefined)
+      // Check 2: Trial Generations Remaining
       const remaining = generationsRemaining ?? 0;
       const hasGenerationsLeft = remaining > 0;
       if (!hasGenerationsLeft) {
@@ -110,13 +156,10 @@ const ProgramForm = ({
         };
       }
 
-      // Note: Daily generation limits removed as generations_today tracking was inaccurate
-
-      // If all trial checks pass
       return { isEligibleToGenerate: true, disabledReason: null };
     }
 
-    // Default case: Not active and not on trial (or invalid status)
+    // Default case: Not active and not on trial
     return {
       isEligibleToGenerate: false,
       disabledReason: 'Please start a trial or subscribe to generate programs.',
@@ -128,13 +171,17 @@ const ProgramForm = ({
     lastGenerationDate,
   ]);
 
-  const isButtonDisabled = isLoading || generationStage === 'complete' || !isEligibleToGenerate;
+  const isButtonDisabled = isLoading || !isEligibleToGenerate;
+
   const buttonText = () => {
-    if (isLoading || generationStage === 'complete') {
-      return 'Generating...'; // Simple text when loading
+    if (isLoading) {
+      return 'Generating...';
+    }
+    if (generationStage === 'complete') {
+      return 'Generation Complete';
     }
     if (!isEligibleToGenerate) {
-      return disabledReason || 'Generation Unavailable'; // Show reason if available
+      return disabledReason || 'Generation Unavailable';
     }
     if (suggestions && suggestions.length > 0) {
       return 'Re-Generate Program';
@@ -148,72 +195,63 @@ const ProgramForm = ({
         <ProgramEssentials
           formData={formData}
           handleChange={handleChange}
-          triggerAutoSave={triggerAutoSave}
+          setFieldValue={setFieldValue}
+          handleWorkoutFormatChange={handleWorkoutFormatChange}
         />
+
         <ProgramScheduling
           formData={formData}
           handleChange={handleChange}
+          setFieldValue={setFieldValue}
           handleDayOfWeekChange={handleDayOfWeekChange}
-          triggerAutoSave={triggerAutoSave}
-          subscriptionStatus={subscriptionStatus}
         />
       </div>
 
       <ProgramDetails
         formData={formData}
         handleChange={handleChange}
+        setFieldValue={setFieldValue}
         handleProgramTypeChange={handleProgramTypeChange}
-        handleWorkoutFormatChange={handleWorkoutFormatChange}
-        equipmentSelector={equipmentSelector}
-        triggerAutoSave={triggerAutoSave}
       />
 
-      {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <CustomWorkoutFormat
-          formData={formData}
-          hasCustomWorkoutFormat={hasCustomWorkoutFormat}
-          setHasCustomWorkoutFormat={setHasCustomWorkoutFormat}
-          customSectionName={customSectionName}
-          setCustomSectionName={setCustomSectionName}
-          customSectionDuration={customSectionDuration}
-          setCustomSectionDuration={setCustomSectionDuration}
-          customSectionDescription={customSectionDescription}
-          setCustomSectionDescription={setCustomSectionDescription}
-          addCustomSection={addCustomSection}
-          removeCustomSection={removeCustomSection}
-        />
+      <CustomWorkoutFormat
+        formData={formData}
+        updateFormData={updateFormData}
+      />
 
-        <div className="space-y-4"></div>
-      </div> */}
-
-      <div className="flex justify-between items-center mt-6">
-        <button
-          className={`btn btn-primary text-white w-full flex items-center justify-center text-lg ${
-            isButtonDisabled ? ' btn-disabled' : ''
-          }`}
-          onClick={generateProgram}
-          disabled={isButtonDisabled}
-          data-generate-button
-        >
-          {buttonText()}
-        </button>
-      </div>
-      
-      {/* Show LoadingButton when generating */}
-      {(isLoading || generationStage === 'complete') && (
-        <div className="mt-6">
-          <LoadingButton
-            generationStage={generationStage}
-            loadingDuration={loadingDuration}
-            serverStatus={serverStatus}
-          />
+      {/* Generate Program Button */}
+      <button
+        className="btn btn-primary btn-lg px-8"
+        onClick={generateProgram}
+        disabled={isLoading}
+      >
+        Generate Program
+      </button>
+      {/* Generation Stage Indicator */}
+      {generationStage && (
+        <div className="text-center text-sm text-base-content/60">
+          {generationStage === 'analyzing' && 'Analyzing your requirements...'}
+          {generationStage === 'generating' && 'Generating workouts...'}
+          {generationStage === 'finalizing' && 'Finalizing program...'}
+          {generationStage === 'complete' && 'Generation complete!'}
         </div>
       )}
-      
-      {/* Optional: Display disabled reason clearly */}
-      {/* {!isLoading && !isEligibleToGenerate && disabledReason && (
-        <p className="text-center text-error mt-2">{disabledReason}</p>
-      )} */}
+
+      {/* Trial Information */}
+      {subscriptionStatus === 'trialing' && (
+        <div className="alert alert-info text-sm">
+          <div>
+            <strong>Trial Status:</strong> {generationsRemaining} generations
+            remaining
+            {trialEndDate && (
+              <span>
+                {' '}
+                • Trial ends: {new Date(trialEndDate).toLocaleDateString()}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

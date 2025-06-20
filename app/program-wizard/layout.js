@@ -1,17 +1,10 @@
 'use client';
-import { X } from 'lucide-react';
+import { ArrowLeftIcon } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
-import useProgramStore from '../store/programStore';
-import { useEffect } from 'react';
 
 export default function ProgramWizardLayout({ children }) {
   const searchParams = useSearchParams();
   const programId = searchParams.get('programId');
-
-  const setProgramId = useProgramStore((state) => state.setProgramId);
-  useEffect(() => {
-    setProgramId(programId);
-  }, [programId]);
 
   return (
     <div className="min-h-screen bg-base-100">
@@ -26,7 +19,10 @@ export default function ProgramWizardLayout({ children }) {
                 className="absolute top-4 right-4 btn btn-ghost btn-circle z-10"
                 title="Exit wizard and go to program writer"
               >
-                <X className="w-6 h-6" />
+                <button variant="ghost">
+                  <ArrowLeftIcon className="w-4 h-4" />
+                  Go to Writer
+                </button>
               </button>
             )}
           </div>

@@ -49,10 +49,6 @@ export default function Dashboard() {
     selectedEntityId,
     entityName,
     entityType,
-    programName,
-    programDuration,
-    startDate,
-    daysOfWeek,
     errorMessage,
     isDeleting,
 
@@ -60,9 +56,6 @@ export default function Dashboard() {
     setSelectedEntityId,
     setEntityName,
     setEntityType,
-    setProgramName,
-    setProgramDuration,
-    setStartDate,
 
     // Modal handlers
     openEntitySelectionModal,
@@ -74,12 +67,8 @@ export default function Dashboard() {
     openDeleteProgramModal,
     closeDeleteProgramModal,
 
-    // Form handlers
-    toggleDay,
-
     // API handlers
     createEntity,
-    createProgram,
     deleteProgram,
   } = useDashboardModals();
 
@@ -96,9 +85,7 @@ export default function Dashboard() {
     createEntity(event, entities, setEntities);
   };
 
-  const handleSubmitProgram = (event, method) => {
-    createProgram(event, entities, method);
-  };
+  // handleSubmitProgram logic moved to CreateProgramModal component
 
   const handleDeleteProgram = (programId) => {
     openDeleteProgramModal(programId);
@@ -424,17 +411,7 @@ export default function Dashboard() {
           isOpen={showCreateProgramModal}
           selectedEntityId={selectedEntityId}
           entities={entities}
-          programName={programName}
-          startDate={startDate}
-          programDuration={programDuration}
-          daysOfWeek={daysOfWeek}
-          onProgramNameChange={setProgramName}
-          onStartDateChange={setStartDate}
-          onProgramDurationChange={setProgramDuration}
-          onToggleDay={toggleDay}
-          onChangeEntity={handleChangeEntity}
-          onSubmit={handleSubmitProgram}
-          onCancel={closeCreateProgramModal}
+          onClose={closeCreateProgramModal}
         />
 
         <DeleteProgramModal

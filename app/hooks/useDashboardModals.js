@@ -2,12 +2,10 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import useProgramStore from '@/store/programStore';
 
 export function useDashboardModals() {
   const router = useRouter();
   const { user, supabase } = useAuth();
-  const updateWizardData = useProgramStore((state) => state.updateWizardData);
 
   // Modal states
   const [showEntitySelectionModal, setShowEntitySelectionModal] =
@@ -16,16 +14,10 @@ export function useDashboardModals() {
   const [showCreateProgramModal, setShowCreateProgramModal] = useState(false);
   const [showDeleteProgramModal, setShowDeleteProgramModal] = useState(false);
 
-  // Form states
+  // Form states - simplified for the remaining modals
   const [selectedEntityId, setSelectedEntityId] = useState('');
   const [entityName, setEntityName] = useState('');
   const [entityType, setEntityType] = useState('CLIENT');
-  const [programName, setProgramName] = useState('');
-  const [programDuration, setProgramDuration] = useState(1);
-  const [startDate, setStartDate] = useState(
-    new Date().toISOString().split('T')[0]
-  );
-  const [daysOfWeek, setDaysOfWeek] = useState([1, 3, 5]);
   const [errorMessage, setErrorMessage] = useState('');
   const [selectedProgramId, setSelectedProgramId] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -57,13 +49,6 @@ export function useDashboardModals() {
 
   const closeCreateProgramModal = () => {
     setShowCreateProgramModal(false);
-    setProgramName('');
-    setProgramDuration(4);
-    // Set start date to tomorrow by default
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    setStartDate(tomorrow.toISOString().split('T')[0]);
-    setDaysOfWeek([1, 3, 5]);
     setSelectedEntityId('');
   };
 
@@ -77,20 +62,7 @@ export function useDashboardModals() {
     setSelectedProgramId(null);
   };
 
-  // Form handlers
-  const toggleDay = (day) => {
-    if (daysOfWeek.includes(day)) {
-      setDaysOfWeek(daysOfWeek.filter((d) => d !== day));
-    } else {
-      setDaysOfWeek([...daysOfWeek, day].sort());
-    }
-  };
-
-  const calculateEndDate = () => {
-    const date = new Date(startDate);
-    date.setDate(date.getDate() + programDuration * 7 - 1);
-    return date.toISOString().split('T')[0];
-  };
+  // Form handlers - simplified
 
   // API handlers
   const createEntity = async (event, entities, setEntities) => {
@@ -136,79 +108,7 @@ export function useDashboardModals() {
     }
   };
 
-  const createProgram = async (event, entities, method = 'wizard') => {
-    event.preventDefault();
-    if (!programName.trim() || daysOfWeek.length === 0 || !selectedEntityId)
-      return;
-
-    if (!user || !user.id) {
-      console.error('User not properly authenticated');
-      return;
-    }
-
-    try {
-      // Convert numeric day indices to string day names
-      const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-      const daysOfWeekStrings = daysOfWeek.map(dayIndex => dayNames[dayIndex]);
-      
-      // Get the selected entity to include its name and type
-      const selectedEntity = entities.find(e => e.id === selectedEntityId);
-      
-      if (method === 'wizard') {
-        // Store program creation data in Zustand store for the wizard
-        const wizardDataUpdates = {
-          programName,
-          entityId: selectedEntityId,
-          entityName: selectedEntity?.name || '',
-          entityType: selectedEntity?.type || 'CLIENT',
-          startDate,
-          numberOfWeeks: programDuration,
-          daysOfWeek: daysOfWeekStrings,
-        };
-        
-        updateWizardData(wizardDataUpdates);
-        
-        // Close the modal
-        closeCreateProgramModal();
-        
-        // Navigate to step 1 of the programming wizard
-        router.push('/program-wizard/step-1');
-      } else {
-        // Direct method - create program and go straight to writer
-        const endDate = calculateEndDate();
-        
-        const response = await fetch('/api/CreateProgram', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name: programName,
-            entity_id: selectedEntityId,
-            duration_weeks: programDuration,
-            start_date: startDate,
-            end_date: endDate,
-            days_of_week: daysOfWeekStrings,
-          }),
-        });
-
-        if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.message || 'Failed to create program');
-        }
-
-        const result = await response.json();
-        const program = result.data[0];
-        
-        // Close the modal
-        closeCreateProgramModal();
-        
-        // Navigate directly to the program writer
-        router.push(`/program/${program.id}/writer`);
-      }
-    } catch (error) {
-      console.error('Error:', error);
-      alert('Error creating program: ' + error.message);
-    }
-  };
+  // createProgram logic moved to CreateProgramModal component
 
   const deleteProgram = async (programs, setPrograms, stats, setStats) => {
     if (!selectedProgramId) return;
@@ -263,10 +163,6 @@ export function useDashboardModals() {
     selectedEntityId,
     entityName,
     entityType,
-    programName,
-    programDuration,
-    startDate,
-    daysOfWeek,
     errorMessage,
     selectedProgramId,
     isDeleting,
@@ -275,9 +171,6 @@ export function useDashboardModals() {
     setSelectedEntityId,
     setEntityName,
     setEntityType,
-    setProgramName,
-    setProgramDuration,
-    setStartDate,
 
     // Modal handlers
     openEntitySelectionModal,
@@ -289,13 +182,8 @@ export function useDashboardModals() {
     openDeleteProgramModal,
     closeDeleteProgramModal,
 
-    // Form handlers
-    toggleDay,
-    calculateEndDate,
-
     // API handlers
     createEntity,
-    createProgram,
     deleteProgram,
   };
 }
