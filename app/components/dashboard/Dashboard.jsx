@@ -18,6 +18,7 @@ import CreateEntityModal from './CreateEntityModal';
 import CreateProgramModal from './CreateProgramModal';
 import DeleteProgramModal from './DeleteProgramModal';
 import CollapsibleWorkoutsSection from './CollapsibleWorkoutsSection';
+import TodaysWorkoutsCard from './TodaysWorkoutsCard';
 
 // Custom hooks
 import { useDashboardData } from '@/hooks/useDashboardData';
@@ -187,21 +188,7 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 sm:p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-slate-600">
-                  Today's Workouts
-                </p>
-                <p className="text-2xl sm:text-3xl font-bold text-slate-900 mt-1">
-                  {stats.activeWorkouts}
-                </p>
-              </div>
-              <div className="p-2 sm:p-3 bg-green-100 rounded-lg">
-                <Calendar className="w-5 h-5 sm:w-6 sm:h-6 text-green-600" />
-              </div>
-            </div>
-          </div>
+          <TodaysWorkoutsCard />
 
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 sm:p-6">
             <div className="flex items-center justify-between">
