@@ -6,8 +6,8 @@ export default function ProgramScheduling({
   formData,
   handleChange,
   handleDayOfWeekChange,
-  triggerAutoSave,
   subscriptionStatus, // Add subscription status prop
+  calculatedEndDate, // Add calculated end date prop
 }) {
   // Base week options for all users
   const freeWeekOptions = [1, 2];
@@ -28,7 +28,7 @@ export default function ProgramScheduling({
 
   const handleWeeksSelect = (value) => {
     handleChange({ target: { name: 'numberOfWeeks', value } });
-    if (triggerAutoSave) triggerAutoSave();
+    // Auto-save will be triggered by handleChange
     setWeeksDropdownOpen(false); // Close dropdown after selection
   };
 
@@ -74,7 +74,7 @@ export default function ProgramScheduling({
                   checked={isChecked}
                   onChange={() => {
                     handleDayOfWeekChange(day);
-                    if (triggerAutoSave) triggerAutoSave();
+                    // Auto-save will be triggered by handleDayOfWeekChange
                   }}
                 />
                 <span>{day}</span>
@@ -139,7 +139,9 @@ export default function ProgramScheduling({
             className="input input-bordered w-full border-base-300 focus:border-primary"
             value={formData.startDate}
             onChange={handleChange}
-            onBlur={() => triggerAutoSave && triggerAutoSave()}
+            onBlur={() => {
+              // Auto-save will be triggered by handleChange
+            }}
             min={(() => {
               const tomorrow = new Date();
               tomorrow.setDate(tomorrow.getDate() + 1);
@@ -157,7 +159,7 @@ export default function ProgramScheduling({
             type="date"
             name="endDate"
             className="input input-bordered w-full border-base-300 focus:border-primary"
-            value={formData.endDate}
+            value={calculatedEndDate || ''}
             readOnly
             disabled
           />

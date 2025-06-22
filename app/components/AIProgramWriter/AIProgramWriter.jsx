@@ -1,28 +1,19 @@
 'use client';
-import { useEffect, useRef, useCallback, memo, useState } from 'react';
+import { useEffect, useRef, useCallback, memo, useState, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import useProgramStore from '@/store/programStore';
+import { useProgram } from '@/contexts/ProgramContext';
 import { useRouter } from 'next/navigation';
-import equipmentList from '@/utils/equipmentList';
-import { gymEquipmentPresets } from '../utils';
 import Toast from '../Toast';
 import { formatDate } from './utils';
 import {
   generateProgram,
   saveProgram,
-  autoSaveProgramDetails,
   handleAutoAssignDates,
   handleDatePickerSave as datePickerSaveAction,
-  deleteWorkout as deleteWorkoutAction,
-  editWorkout as editWorkoutAction,
 } from './programActions';
 
-import {
-  processWorkoutForDisplay,
-  updateFormDataFromProgram,
-  handleDayOfWeekChangeUtil,
-} from './formHandlers';
 import { calculateEndDate } from './dateHandlers';
+import { handleDayOfWeekChangeUtil } from './formHandlers';
 
 import ProgramFormComponent from './ProgramForm';
 import EquipmentSelectorComponent from './EquipmentSelector';
@@ -36,8 +27,7 @@ import ProgramGenerationModalComponent from './ProgramGenerationModal';
 import ReferenceWorkoutSearchModal from './ReferenceWorkoutSearchModal';
 import EnhancedReferenceWorkoutSearchModal from './EnhancedReferenceWorkoutSearchModal';
 
-import { InfoIcon, Sparkles, ArrowLeftIcon } from 'lucide-react';
-import AutoSaveStatusIndicator from './AutoSaveStatusIndicator';
+import { Sparkles, ArrowLeftIcon } from 'lucide-react';
 
 const ProgramForm = memo(ProgramFormComponent);
 const EquipmentSelector = memo(EquipmentSelectorComponent);
@@ -50,13 +40,6 @@ const ProgramGenerationModal = memo(ProgramGenerationModalComponent);
 
 export default function AIProgramWriter({ programId, wizardComplete }) {
   const router = useRouter();
-  const contextEquipment = useProgramStore((state) => state.selectedEquipment);
-  const contextGymType = useProgramStore((state) => state.selectedGymType);
-  const updateEquipment = useProgramStore((state) => state.updateEquipment);
-  const updateGymType = useProgramStore((state) => state.updateGymType);
-  const setEquipmentChangeCallback = useProgramStore(
-    (state) => state.setEquipmentChangeCallback
-  );
   const {
     supabase,
     subscriptionStatus,
@@ -65,232 +48,48 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
     lastGenerationDate,
     refetchProfile,
   } = useAuth();
-  // Program Writer State from Zustand
-  const formData = useProgramStore((state) => state.formData);
-  const suggestions = useProgramStore((state) => state.suggestions);
-  const generatedDescription = useProgramStore(
-    (state) => state.generatedDescription
-  );
-  const isLoading = useProgramStore((state) => state.isLoading);
-  const generationStage = useProgramStore((state) => state.generationStage);
-  const loadingDuration = useProgramStore((state) => state.loadingDuration);
-  const serverStatus = useProgramStore((state) => state.serverStatus);
-  const isWorkoutModalOpen = useProgramStore(
-    (state) => state.isWorkoutModalOpen
-  );
-  const selectedWorkout = useProgramStore((state) => state.selectedWorkout);
-  const isDatePickerModalOpen = useProgramStore(
-    (state) => state.isDatePickerModalOpen
-  );
-  const selectedWorkoutForDate = useProgramStore(
-    (state) => state.selectedWorkoutForDate
-  );
-  const selectedDate = useProgramStore((state) => state.selectedDate);
-  const isRescheduleModalOpen = useProgramStore(
-    (state) => state.isRescheduleModalOpen
-  );
-  const newStartDate = useProgramStore((state) => state.newStartDate);
-  const isEditModalOpen = useProgramStore((state) => state.isEditModalOpen);
-  const selectedWorkoutForEdit = useProgramStore(
-    (state) => state.selectedWorkoutForEdit
-  );
-  const isConfirmationModalOpen = useProgramStore(
-    (state) => state.isConfirmationModalOpen
-  );
-  const confirmationModalContent = useProgramStore(
-    (state) => state.confirmationModalContent
-  );
-  const showToast = useProgramStore((state) => state.showToast);
-  const toastMessage = useProgramStore((state) => state.toastMessage);
-  const toastType = useProgramStore((state) => state.toastType);
-  const showEquipment = useProgramStore((state) => state.showEquipment);
-  const allEquipmentSelected = useProgramStore(
-    (state) => state.allEquipmentSelected
-  );
-  const hasCustomWorkoutFormat = useProgramStore(
-    (state) => state.hasCustomWorkoutFormat
-  );
-  const customSectionName = useProgramStore((state) => state.customSectionName);
-  const customSectionDuration = useProgramStore(
-    (state) => state.customSectionDuration
-  );
-  const customSectionDescription = useProgramStore(
-    (state) => state.customSectionDescription
-  );
 
-  // Actions from Zustand
-  const setAutoSaveState = useProgramStore((state) => state.setAutoSaveState);
-  const setDirty = useProgramStore((state) => state.setDirty);
-  const showToastStore = useProgramStore((state) => state.showToast);
-  const hideToast = useProgramStore((state) => state.hideToast);
-  const setLoading = useProgramStore((state) => state.setLoading);
-  const setSuggestions = useProgramStore((state) => state.setSuggestions);
-  const setGenerationStage = useProgramStore(
-    (state) => state.setGenerationStage
-  );
-  const updateFormData = useProgramStore((state) => state.updateFormData);
-  const setGeneratedDescription = useProgramStore(
-    (state) => state.setGeneratedDescription
-  );
-  const setServerStatus = useProgramStore((state) => state.setServerStatus);
-  const setLoadingDuration = useProgramStore(
-    (state) => state.setLoadingDuration
-  );
-  const setAiStreamingContent = useProgramStore(
-    (state) => state.setAiStreamingContent
-  );
-  const showAiStreamAction = useProgramStore((state) => state.showAiStream);
-  const hideAiStreamAction = useProgramStore((state) => state.hideAiStream);
-  const closeConfirmationModal = useProgramStore(
-    (state) => state.closeConfirmationModal
-  );
-  const openConfirmationModal = useProgramStore(
-    (state) => state.openConfirmationModal
-  );
-  const openEditModal = useProgramStore((state) => state.openEditModal);
-  const closeEditModal = useProgramStore((state) => state.closeEditModal);
-  const addCustomSectionAction = useProgramStore(
-    (state) => state.addCustomSection
-  );
-  const removeCustomSectionAction = useProgramStore(
-    (state) => state.removeCustomSection
-  );
-  const setFieldValue = useProgramStore((state) => state.setFieldValue);
-  const openWorkoutModal = useProgramStore((state) => state.openWorkoutModal);
-  const closeWorkoutModal = useProgramStore((state) => state.closeWorkoutModal);
-  const openDatePicker = useProgramStore((state) => state.openDatePicker);
-  const closeDatePicker = useProgramStore((state) => state.closeDatePicker);
-  const closeRescheduleModal = useProgramStore(
-    (state) => state.closeRescheduleModal
-  );
-  const setNewStartDate = useProgramStore((state) => state.setNewStartDate);
-  const setSelectedDate = useProgramStore((state) => state.setSelectedDate);
-  const setCustomSectionField = useProgramStore(
-    (state) => state.setCustomSectionField
-  );
-  const setHasCustomWorkoutFormat = useProgramStore(
-    (state) => state.setHasCustomWorkoutFormat
-  );
-  const toggleEquipment = useProgramStore((state) => state.toggleEquipment);
-  const setAllEquipmentSelected = useProgramStore(
-    (state) => state.setAllEquipmentSelected
-  );
-  const setReferenceWorkouts = useProgramStore(
-    (state) => state.setReferenceWorkouts
-  );
-  const setInitialData = useProgramStore((state) => state.setInitialData);
-  const preventFetch = useProgramStore((state) => state.preventFetch);
-  const triggerProgramRefresh = useProgramStore(
-    (state) => state.triggerProgramRefresh
-  );
-  const autoSaveState = useProgramStore((state) => state.autoSaveState);
-  const isDirty = useProgramStore((state) => state.isDirty);
-  const triggerProgramRefreshAction = useProgramStore(
-    (state) => state.triggerProgramRefresh
-  );
-  const setPreventFetch = useProgramStore((state) => state.setPreventFetch);
-  const syncFormDataToWizard = useProgramStore((state) => state.syncFormDataToWizard);
-  const updateWizardData = useProgramStore((state) => state.updateWizardData);
+  const {
+    program,
+    formData,
+    loading,
+    workouts,
+    referenceWorkouts,
+    showEquipmentSelector,
+    toggleEquipmentVisibility,
+    generationStage,
+    isGenerating,
+    startGeneration,
+    updateGenerationStage,
+    modals,
+    openModal,
+    closeModal,
+    toast,
+    showToast,
+    updateFormField,
+    updateFormFields,
+    updateFromFormData,
+    addWorkout,
+    updateWorkout,
+    deleteWorkout,
+    saveGeneratedWorkouts,
+    toggleWorkoutCompletion,
+    updateWorkoutDate,
+  } = useProgram();
 
-  const initializeNewProgram = useProgramStore(
-    (state) => state.initializeNewProgram
-  );
-  const validateProgramData = useProgramStore(
-    (state) => state.validateProgramData
-  );
+  // Local state for UI-specific features
+  const [loadingDuration, setLoadingDuration] = useState(0);
+  const [serverStatus, setServerStatus] = useState(null);
+  const [isReferenceWorkoutModalOpen, setReferenceWorkoutModalOpen] = useState(false);
+  const [isEnhancedReferenceModalOpen, setIsEnhancedReferenceModalOpen] = useState(false);
+  const [hasCustomWorkoutFormat, setHasCustomWorkoutFormat] = useState(false);
+  const [customSectionName, setCustomSectionName] = useState('');
+  const [customSectionDuration, setCustomSectionDuration] = useState('');
+  const [customSectionDescription, setCustomSectionDescription] = useState('');
 
-  const loadingTimer = useRef(null);
-  const isAutoUpdating = useRef(false);
   const generationAreaRef = useRef(null);
   const hasScrolledToGeneration = useRef(false);
-  const isGeneratingRef = useRef(false);
-  const isInitializingRef = useRef(false);
-  const isFetchingRef = useRef(false);
-  const [isReferenceWorkoutModalOpen, setReferenceWorkoutModalOpen] =
-    useState(false);
-  const [isEnhancedReferenceModalOpen, setIsEnhancedReferenceModalOpen] =
-    useState(false);
-  const [dbReferenceWorkouts, setDbReferenceWorkouts] = useState([]);
-  const [highlightGenerateButton, setHighlightGenerateButton] = useState(false);
-  const autoSaveTimerRef = useRef(null);
-  const lastSaveRef = useRef(null);
-
-  const performAutoSave = useCallback(async () => {
-    if (
-      !programId ||
-      isLoading ||
-      isGeneratingRef.current ||
-      isInitializingRef.current
-    ) {
-      return;
-    }
-
-    try {
-      setAutoSaveState('saving');
-
-      // Use autoSaveProgramDetails for better performance (doesn't save workouts)
-      const success = await autoSaveProgramDetails({
-        programId,
-        formData,
-        supabase,
-        showToastMessage: () => {}, // Don't show toast for auto-save
-        generatedDescription,
-      });
-
-      if (success) {
-        setAutoSaveState('idle');
-        setDirty(false);
-        lastSaveRef.current = Date.now();
-      } else {
-        setAutoSaveState('error');
-      }
-    } catch (error) {
-      console.error('Auto-save failed:', error);
-      setAutoSaveState('error');
-    }
-  }, [programId, formData, supabase, generatedDescription, isLoading]);
-
-  const triggerAutoSave = useCallback(() => {
-    if (!programId) return;
-
-    // Clear existing timer
-    if (autoSaveTimerRef.current) {
-      clearTimeout(autoSaveTimerRef.current);
-    }
-
-    // Mark as dirty immediately
-    setDirty(true);
-    setAutoSaveState('dirty');
-
-    // Set timer for auto-save (500ms delay for faster response)
-    autoSaveTimerRef.current = setTimeout(() => {
-      performAutoSave();
-    }, 500);
-  }, [programId, performAutoSave]);
-
-  // Set up equipment change callback to trigger auto-save
-  useEffect(() => {
-    const handleEquipmentChangeAutoSave = (newEquipment) => {
-      console.log('Equipment changed, triggering auto-save:', newEquipment);
-      triggerAutoSave();
-    };
-
-    setEquipmentChangeCallback(handleEquipmentChangeAutoSave);
-
-    // Cleanup
-    return () => {
-      setEquipmentChangeCallback(null);
-    };
-  }, [setEquipmentChangeCallback, triggerAutoSave]);
-
-  // --- Utility Functions ---
-
-  const showToastMessage = useCallback((message, type = 'success') => {
-    showToastStore(message, type);
-    setTimeout(() => {
-      hideToast();
-    }, 5000);
-  }, []);
+  const loadingTimer = useRef(null);
 
   // Smart scrolling function for wizard users
   const scrollToGeneration = useCallback(() => {
@@ -298,12 +97,11 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
       return;
     }
 
-    // Add a small delay to ensure the content is rendered
     setTimeout(() => {
       if (generationAreaRef.current) {
         const element = generationAreaRef.current;
         const elementTop = element.offsetTop;
-        const offset = 100; // Scroll a bit above the element for better visibility
+        const offset = 100;
 
         window.scrollTo({
           top: elementTop - offset,
@@ -311,1201 +109,539 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
         });
 
         hasScrolledToGeneration.current = true;
-      } else {
-        // If element not found, try again in a bit
-        setTimeout(() => {
-          if (generationAreaRef.current && !hasScrolledToGeneration.current) {
-            const element = generationAreaRef.current;
-            const elementTop = element.offsetTop;
-            const offset = 100;
-            window.scrollTo({
-              top: elementTop - offset,
-              behavior: 'smooth',
-            });
-            hasScrolledToGeneration.current = true;
-          }
-        }, 1000);
       }
     }, 500);
-  }, [wizardComplete]);
-
-  // Reset scroll flag when component unmounts or wizard complete changes
-  useEffect(() => {
-    if (!wizardComplete) {
-      hasScrolledToGeneration.current = false;
-    }
   }, [wizardComplete]);
 
   // Trigger scrolling when generation starts or workouts appear
   useEffect(() => {
     if (wizardComplete && !hasScrolledToGeneration.current) {
-      // Scroll when generation starts OR when workouts appear
-      if (generationStage || (suggestions && suggestions.length > 0)) {
+      if (generationStage || (workouts && workouts.length > 0)) {
         scrollToGeneration();
       }
     }
-  }, [wizardComplete, generationStage, suggestions, scrollToGeneration]);
+  }, [wizardComplete, generationStage, workouts, scrollToGeneration]);
 
-  // Additional effect to handle when workouts finish loading
+  // Show success message when wizard is complete
   useEffect(() => {
-    if (
-      wizardComplete &&
-      !hasScrolledToGeneration.current &&
-      suggestions &&
-      suggestions.length > 0 &&
-      !isLoading
-    ) {
-      // Delay a bit more to ensure the WorkoutList is fully rendered
-      setTimeout(() => {
-        scrollToGeneration();
-      }, 800);
+    if (!wizardComplete || !programId) return;
+
+    showToast(
+      'Program setup complete! You can now generate workouts.',
+      'success'
+    );
+  }, [wizardComplete, programId, showToast]);
+
+  // Validation helper
+  const validateProgramData = useCallback(() => {
+    const errors = [];
+    const missingFields = [];
+    const missingOptionalFields = [];
+
+    if (!formData?.trainingMethodology || formData.trainingMethodology === '') {
+      errors.push('Training methodology is required');
+      missingFields.push('trainingMethodology');
     }
-  }, [wizardComplete, suggestions, isLoading, scrollToGeneration]);
 
-  // Program initialization effect - handles new vs existing programs
-  useEffect(() => {
-    if (!programId) {
-      console.log('Initializing new program with defaults');
-      isInitializingRef.current = true;
-      initializeNewProgram(formData.entityId);
-      // Clear the flag after a delay to allow for state updates
-      setTimeout(() => {
-        isInitializingRef.current = false;
-      }, 1000);
+    if (!formData?.description || formData.description.trim() === '') {
+      errors.push('Program description is required');
+      missingFields.push('description');
     }
-    // For existing programs (programId exists), let the separate fetchProgramData effect handle it
-  }, [programId, formData.entityId, initializeNewProgram]);
 
-  // Cleanup effect - clear state when component unmounts or programId changes
-  useEffect(() => {
-    return () => {
-      // Optional: Clear state when navigating away
-      // Uncomment if you want to clear state on unmount
-      // clearProgramState();
+    if (!formData?.daysOfWeek || formData.daysOfWeek.length === 0) {
+      errors.push('At least one day of the week must be selected');
+      missingFields.push('daysOfWeek');
+    }
+
+    if (!formData?.gymType || formData.gymType === '') {
+      errors.push('Gym type is required');
+      missingFields.push('gymType');
+    }
+
+    // Optional fields
+    if (!formData?.personalization || formData.personalization.trim() === '') {
+      missingOptionalFields.push('previousWorkouts');
+    }
+
+    if (!formData?.difficulty || formData.difficulty === '') {
+      missingOptionalFields.push('difficulty');
+    }
+
+    if (!formData?.programType || formData.programType === '') {
+      missingOptionalFields.push('periodization');
+    }
+
+    if (!formData?.focusArea || formData.focusArea === '') {
+      missingOptionalFields.push('focusArea');
+    }
+
+    return {
+      isValid: errors.length === 0,
+      errors,
+      missingFields,
+      missingOptionalFields,
     };
-  }, []);
+  }, [formData]);
 
-  // --- Event Handlers ---
+  // Calculate end date for display
+  const calculatedEndDate = useMemo(() => {
+    if (
+      formData?.startDate &&
+      formData?.numberOfWeeks &&
+      formData?.daysOfWeek?.length > 0
+    ) {
+      const testDate = new Date(formData.startDate);
+      if (!isNaN(testDate.getTime()) && parseInt(formData.numberOfWeeks) > 0) {
+        return calculateEndDate(
+          formData.startDate,
+          formData.numberOfWeeks,
+          formData.daysOfWeek
+        );
+      }
+    }
+    return null;
+  }, [formData?.startDate, formData?.numberOfWeeks, formData?.daysOfWeek]);
 
+  // Event Handlers
   const handleGenerateClick = useCallback(() => {
-    // First check subscription status and trial limitations
+    // Check subscription status
     if (subscriptionStatus === 'trialing') {
-      // Check if trial has expired
       const trialEndDateObj = trialEndDate ? new Date(trialEndDate) : null;
       const now = new Date();
       if (trialEndDateObj && trialEndDateObj < now) {
-        showToastMessage(
+        showToast(
           'Your free trial has expired. Please upgrade to continue.',
           'error'
         );
         return;
       }
 
-      // Check if user has generations remaining
       if (generationsRemaining <= 0) {
-        showToastMessage(
+        showToast(
           'You have used all your free generations. Please upgrade to continue.',
           'error'
         );
         return;
       }
     } else if (subscriptionStatus !== 'active') {
-      // Not on trial and not active - redirect to pricing
-      showToastMessage('Please subscribe to generate programs.', 'error');
+      showToast('Please subscribe to generate programs.', 'error');
       setTimeout(() => {
         window.location.href = '/pricing';
       }, 1500);
       return;
     }
 
-    // Validate required fields before showing confirmation modal
     const validation = validateProgramData();
+    const isReGenerating = workouts && workouts.length > 0;
 
-    const isReGenerating = suggestions && suggestions.length > 0;
-    console.log('validation', validation);
-    openConfirmationModal({
-      title: isReGenerating
-        ? 'Re-generate Program Workouts?'
-        : 'Generate Program Workouts?',
-      message: isReGenerating
-        ? 'This will replace the currently generated workouts for this program with new ones based on the current settings. Are you sure?'
-        : 'Ready to generate the initial set of workouts for this program based on your settings?',
-      confirmText: isReGenerating
-        ? 'Re-generate Workouts'
-        : 'Generate Workouts',
-      validation: validation, // Pass validation results to modal
+    openModal('confirmationModal', {
+      content: {
+        title: isReGenerating
+          ? 'Re-generate Program Workouts?'
+          : 'Generate Program Workouts?',
+        message: isReGenerating
+          ? 'This will replace the currently generated workouts for this program with new ones based on the current settings. Are you sure?'
+          : 'Ready to generate the initial set of workouts for this program based on your settings?',
+        confirmText: isReGenerating
+          ? 'Re-generate Workouts'
+          : 'Generate Workouts',
+        validation: validation,
+      }
     });
   }, [
-    openConfirmationModal,
-    suggestions,
     subscriptionStatus,
     trialEndDate,
     generationsRemaining,
-    showToastMessage,
+    workouts,
+    showToast,
     validateProgramData,
+    openModal,
   ]);
 
   const handleConfirmGenerate = useCallback(async () => {
-    closeConfirmationModal();
+    closeModal('confirmationModal');
     if (!programId) {
-      showToastMessage(
+      showToast(
         'Cannot generate workouts: Program ID is missing. Please save the form first.',
         'error'
       );
-      console.error('Attempted to generate workouts without a programId.');
       return;
     }
 
-    isGeneratingRef.current = true;
+    startGeneration();
 
     try {
       await generateProgram({
         programId,
         formData,
-        setIsLoading: setLoading,
-        setSuggestions: setSuggestions,
-        showToastMessage,
-        setGenerationStage: setGenerationStage,
-        setFormData: updateFormData,
-        setGeneratedDescription: setGeneratedDescription,
+        setIsLoading: () => {},
+        setSuggestions: saveGeneratedWorkouts,
+        showToastMessage: showToast,
+        setGenerationStage: updateGenerationStage,
+        setFormData: updateFromFormData,
+        setGeneratedDescription: (desc) => updateFormField('program_overview', { generated_description: desc }),
         setLoadingTimer: (timer) => (loadingTimer.current = timer),
         setServerStatus: setServerStatus,
         setLoadingDuration: setLoadingDuration,
-        setAiStreamingContent: setAiStreamingContent,
-        showAiStream: showAiStreamAction,
-        hideAiStream: hideAiStreamAction,
-        triggerProgramRefreshAction: triggerProgramRefreshAction,
-        setPreventFetch: setPreventFetch,
-        setGenerationStage: setGenerationStage,
+        setAiStreamingContent: () => {},
+        showAiStream: () => {},
+        hideAiStream: () => {},
+        triggerProgramRefreshAction: () => {},
+        setPreventFetch: () => {},
         refetchProfile,
-        suggestions, // Pass current suggestions to determine if this is a regeneration
-        updateWizardData: updateWizardData, // Add updateWizardData for wizard sync
+        suggestions: workouts,
+        updateWizardData: () => {},
       });
     } finally {
-      isGeneratingRef.current = false;
+      updateGenerationStage('complete');
     }
-  }, [programId, formData, showToastMessage, refetchProfile, suggestions, updateWizardData]);
-
-  const handleSaveProgram = useCallback(() => {
-    saveProgram({
-      programId,
-      programData: {
-        ...formData,
-        name: formData.name,
-        description: formData.description,
-      },
-      suggestions,
-      supabase,
-      setIsLoading: setLoading,
-      showToastMessage,
-      generatedDescription,
-      updateWizardData: updateWizardData, // Add updateWizardData for wizard sync
-    });
   }, [
     programId,
     formData,
-    suggestions,
-    supabase,
-    showToastMessage,
-    generatedDescription,
-    updateWizardData,
+    showToast,
+    refetchProfile,
+    workouts,
+    startGeneration,
+    saveGeneratedWorkouts,
+    updateGenerationStage,
+    updateFromFormData,
+    updateFormField,
+    closeModal,
   ]);
 
-  const handleRescheduleProgram = useCallback(() => {
-    if (!newStartDate) {
-      showToastMessage('Please select a new start date', 'error');
+  const handleSaveProgram = useCallback(async () => {
+    if (!programId) {
+      showToast('No program to save', 'error');
       return;
     }
 
-    handleAutoAssignDates({
-      programId,
-      formData,
-      suggestions,
-      supabase,
-      setIsLoading: setLoading,
-      setSuggestions: setSuggestions,
-      showToastMessage,
-      newStartDate,
-      setFormData: updateFormData,
-    });
-    closeRescheduleModal();
-  }, [
-    programId,
-    formData,
-    suggestions,
-    supabase,
-    showToastMessage,
-    newStartDate,
-  ]);
+    const success = await updateFromFormData(formData);
+    if (success) {
+      showToast('Program saved successfully!', 'success');
+    } else {
+      showToast('Failed to save program', 'error');
+    }
+  }, [programId, formData, updateFromFormData, showToast]);
 
-  const handleDatePickerSave = useCallback(() => {
-    datePickerSaveAction({
-      programId,
-      selectedWorkoutForDate,
-      selectedDate,
-      supabase,
-      setSuggestions: setSuggestions,
-      handleDatePickerClose: closeDatePicker,
-      showToastMessage,
-    });
-  }, [
-    programId,
-    selectedWorkoutForDate,
-    selectedDate,
-    supabase,
-    showToastMessage,
-  ]);
-
-  const handleDeleteWorkout = useCallback(
-    (workoutId, e) => {
-      deleteWorkoutAction({
-        workoutId,
-        supabase,
-        setSuggestions: setSuggestions,
-        showToastMessage,
-        e,
-      });
-    },
-    [supabase, showToastMessage]
-  );
+  const handleDeleteWorkout = useCallback(async (workoutId, e) => {
+    if (e) e.stopPropagation();
+    const success = await deleteWorkout(workoutId);
+    if (success) {
+      showToast('Workout deleted successfully', 'success');
+    } else {
+      showToast('Failed to delete workout', 'error');
+    }
+  }, [deleteWorkout, showToast]);
 
   const handleEditWorkout = useCallback((workout) => {
-    openEditModal(workout);
-  }, []);
+    openModal('editModal', { workout });
+  }, [openModal]);
 
-  const handleCloseEditModal = useCallback(() => {
-    closeEditModal();
-  }, []);
+  const handleSaveEditedWorkout = useCallback(async (editedWorkout) => {
+    const success = await updateWorkout(editedWorkout.id, editedWorkout);
+    if (success) {
+      closeModal('editModal');
+      showToast('Workout updated successfully', 'success');
+    } else {
+      showToast('Failed to update workout', 'error');
+    }
+  }, [updateWorkout, closeModal, showToast]);
 
-  const handleSaveEditedWorkout = useCallback(
-    async (editedWorkout) => {
-      setLoading(true);
-      const success = await editWorkoutAction({
-        workout: editedWorkout,
-        supabase,
-        setSuggestions: setSuggestions,
-        showToastMessage,
-        setIsLoading: setLoading,
-      });
-      setLoading(false);
+  const handleMarkComplete = useCallback(async (workout) => {
+    const success = await toggleWorkoutCompletion(workout.id);
+    if (success) {
+      showToast(
+        workout.completed
+          ? `Workout "${workout.title || 'Untitled'}" marked as incomplete`
+          : `Workout "${workout.title || 'Untitled'}" marked as complete`,
+        'success'
+      );
+    } else {
+      showToast('Failed to update workout status', 'error');
+    }
+  }, [toggleWorkoutCompletion, showToast]);
 
-      if (success) {
-        closeEditModal();
+  const handleDatePickerSave = useCallback(async () => {
+    const { workout, date } = modals.datePickerModal;
+    if (!workout || !date) return;
+
+    const success = await updateWorkoutDate(workout.id, date);
+    if (success) {
+      closeModal('datePickerModal');
+      showToast('Workout date updated', 'success');
+    } else {
+      showToast('Failed to update workout date', 'error');
+    }
+  }, [modals.datePickerModal, updateWorkoutDate, closeModal, showToast]);
+
+  const handleRescheduleProgram = useCallback(async () => {
+    const { newStartDate } = modals.rescheduleModal;
+    if (!newStartDate) {
+      showToast('Please select a new start date', 'error');
+      return;
+    }
+
+    const success = await updateFormFields({
+      calendar_data: {
+        ...formData.calendar_data,
+        start_date: newStartDate,
       }
-    },
-    [supabase, showToastMessage]
-  );
+    });
 
+    if (success) {
+      closeModal('rescheduleModal');
+      showToast('Program rescheduled successfully', 'success');
+    } else {
+      showToast('Failed to reschedule program', 'error');
+    }
+  }, [modals.rescheduleModal, formData, updateFormFields, closeModal, showToast]);
+
+  const handleBackToWizard = useCallback(() => {
+    window.location.href = `/program-wizard/step-1${
+      programId ? `?programId=${programId}` : ''
+    }`;
+  }, [programId]);
+
+  // Form field handlers with database field mapping
+  const handleFieldChange = useCallback(async (nameOrEvent, valueOrUndefined) => {
+    let name, value;
+    
+    // Handle different call patterns:
+    // 1. handleFieldChange(event) - from real form events
+    // 2. handleFieldChange('fieldName', 'value') - from direct calls
+    // 3. handleFieldChange({ target: { name, value } }) - from synthetic events
+    
+    if (typeof nameOrEvent === 'string') {
+      // Direct call: handleFieldChange('fieldName', 'value')
+      name = nameOrEvent;
+      value = valueOrUndefined;
+    } else if (nameOrEvent && nameOrEvent.target) {
+      // Event object or synthetic event: handleFieldChange(event)
+      name = nameOrEvent.target.name;
+      value = nameOrEvent.target.value;
+    } else {
+      console.warn('handleFieldChange called with invalid arguments:', nameOrEvent, valueOrUndefined);
+      return;
+    }
+    
+    // Map form field names to database columns
+    const fieldMapping = {
+      // Direct mappings
+      'description': 'description',
+      'trainingMethodology': 'training_methodology',
+      'referenceInput': 'reference_input',
+      'name': 'name',
+      'goal': 'goal',
+      'difficulty': 'difficulty',
+      'focusArea': 'focus_area',
+      
+      // Nested mappings handled separately
+      'programType': async (val) => {
+        await updateFormFields({
+          periodization: {
+            ...formData.periodization,
+            program_type: val,
+          }
+        });
+      },
+      'numberOfWeeks': async (val) => {
+        await updateFormFields({
+          duration_weeks: parseInt(val) || 4,
+        });
+      },
+      'startDate': async (val) => {
+        await updateFormFields({
+          calendar_data: {
+            ...formData.calendar_data,
+            start_date: val,
+          }
+        });
+      },
+      'gymType': async (val) => {
+        await updateFormFields({
+          gym_details: {
+            ...formData.gym_details,
+            gym_type: val.toLowerCase().replace(/\s+/g, '_'),
+          }
+        });
+      },
+      'equipment': async (val) => {
+        await updateFormFields({
+          gym_details: {
+            ...formData.gym_details,
+            equipment: val,
+          }
+        });
+      },
+      'gymDetails': async (val) => {
+        await updateFormFields({
+          gym_details: val,
+        });
+      },
+      'personalization': async (val) => {
+        await updateFormFields({
+          program_overview: {
+            ...formData.program_overview,
+            personalization: val,
+          }
+        });
+      },
+      'workoutFormats': async (val) => {
+        await updateFormFields({
+          workout_format: {
+            formats: Array.isArray(val) ? val : []
+          }
+        });
+      },
+      'sessionDetails': async (val) => {
+        await updateFormFields({
+          session_details: val,
+        });
+      },
+    };
+    
+    // Handle nested fields
+    if (typeof fieldMapping[name] === 'function') {
+      await fieldMapping[name](value);
+    } else if (fieldMapping[name]) {
+      // Direct field mapping
+      await updateFormField(fieldMapping[name], value);
+    } else {
+      // Field not mapped - this might cause issues
+      console.warn(`Field '${name}' not mapped in handleFieldChange. Consider adding explicit mapping.`);
+      await updateFormField(name, value);
+    }
+  }, [updateFormField, updateFormFields, formData]);
+
+  const handleProgramTypeChange = useCallback(async (e) => {
+    await updateFormFields({
+      periodization: {
+        ...formData.periodization,
+        program_type: e.target.value,
+      }
+    });
+  }, [updateFormFields, formData]);
+
+  const handleWorkoutFormatChange = useCallback(async (formats) => {
+    await updateFormFields({
+      workout_format: {
+        formats: Array.isArray(formats) ? formats : []
+      }
+    });
+  }, [updateFormFields]);
+
+  const handleDayOfWeekChange = useCallback((day) => {
+    const newDaysOfWeek = handleDayOfWeekChangeUtil(day, formData?.daysOfWeek || []);
+    updateFormFields({
+      calendar_data: {
+        start_date: formData?.startDate || '',
+        days_per_week: newDaysOfWeek.length,
+        days_of_week: newDaysOfWeek,
+      }
+    });
+  }, [formData, updateFormFields]);
+
+  // Custom sections
   const addCustomSection = useCallback(() => {
     if (customSectionName.trim() === '') {
-      showToastMessage('Section name is required', 'error');
-      return;
-    }
-    addCustomSectionAction();
-  }, [customSectionName, showToastMessage, addCustomSectionAction]);
-
-  const removeCustomSection = useCallback(
-    (index) => {
-      removeCustomSectionAction(index);
-    },
-    [removeCustomSectionAction]
-  );
-
-  const handleProgramTypeChange = useCallback((e) => {
-    setFieldValue('programType', e.target.value);
-  }, []);
-
-  const handleMarkComplete = useCallback(
-    async (workout) => {
-      if (!workout.id) {
-        showToastMessage('Cannot update workout: missing id', 'error');
-        return;
-      }
-
-      try {
-        setLoading(true);
-
-        // Toggle completed status
-        const newCompletedStatus = !workout.completed;
-
-        // Update in Supabase
-        const { error } = await supabase
-          .from('program_workouts')
-          .update({
-            completed: newCompletedStatus,
-            completed_at: newCompletedStatus ? new Date().toISOString() : null,
-          })
-          .eq('id', workout.id);
-
-        if (error) throw error;
-
-        // Update local state
-        setSuggestions(
-          suggestions.map((w) =>
-            w.id === workout.id
-              ? {
-                  ...w,
-                  completed: newCompletedStatus,
-                  completed_at: newCompletedStatus
-                    ? new Date().toISOString()
-                    : null,
-                }
-              : w
-          )
-        );
-
-        showToastMessage(
-          newCompletedStatus
-            ? `Workout "${workout.title || 'Untitled'}" marked as complete`
-            : `Workout "${workout.title || 'Untitled'}" marked as incomplete`
-        );
-      } catch (error) {
-        console.error('Error updating workout completion status:', error);
-        showToastMessage('Failed to update workout status', 'error');
-      } finally {
-        setLoading(false);
-      }
-    },
-    [supabase, suggestions, showToastMessage]
-  );
-
-  // Back to Wizard Handler
-  const handleBackToWizard = useCallback(() => {
-    // Sync current form data back to wizard store before navigating
-    syncFormDataToWizard(formData, programId);
-
-    // Navigate to wizard step 1 with programId
-    window.location.href = `/program-wizard/step-1${programId ? `?programId=${programId}` : ''}`;
-  }, [formData, programId, syncFormDataToWizard]);
-
-  // Cleanup auto-save timer on unmount
-  useEffect(() => {
-    return () => {
-      if (autoSaveTimerRef.current) {
-        clearTimeout(autoSaveTimerRef.current);
-      }
-    };
-  }, []);
-
-  useEffect(() => {
-    async function fetchReferenceWorkouts() {
-      try {
-        const { data, error } = await supabase
-          .from('external_workouts_new')
-          .select('id, title, body, tags')
-          .limit(10);
-
-        if (error) throw error;
-        setReferenceWorkouts(data || []);
-      } catch (error) {
-        console.error('Error fetching reference workouts:', error);
-        showToastMessage('Failed to load reference workouts', 'error');
-      }
-    }
-    fetchReferenceWorkouts();
-  }, [supabase, showToastMessage]);
-
-  // Define fetchProgramData function
-  const fetchProgramData = useCallback(async () => {
-    if (!programId) return;
-
-    // Don't fetch if we're already fetching
-    if (isFetchingRef.current) {
-      console.log('[fetchProgramData] Skipping fetch - already fetching');
+      showToast('Section name is required', 'error');
       return;
     }
 
-    // Don't fetch if we're currently loading or generating
-    if (
-      isLoading ||
-      generationStage ||
-      isGeneratingRef.current ||
-      isInitializingRef.current
-    ) {
-      console.log(
-        '[fetchProgramData] Skipping fetch - currently loading or generating'
-      );
-      return;
-    }
-
-    // Don't fetch if preventFetch flag is set
-    if (preventFetch) {
-      console.log(
-        '[fetchProgramData] Skipping fetch - preventFetch flag is set'
-      );
-      return;
-    }
-
-    // Don't fetch if we just completed generation and have unsaved workouts
-    // This prevents clearing freshly generated workouts before they're saved
-    const hasRecentlyGeneratedWorkouts =
-      suggestions &&
-      suggestions.length > 0 &&
-      suggestions.some((workout) => !workout.id) &&
-      (generationStage === 'complete' || generationStage === 'finalizing');
-
-    if (hasRecentlyGeneratedWorkouts) {
-      console.log(
-        '[fetchProgramData] Skipping fetch - recently generated workouts present'
-      );
-      return;
-    }
-
-    isFetchingRef.current = true;
-    setLoading(true);
-
-    try {
-      const { data: program, error: programError } = await supabase
-        .from('programs')
-        .select('*')
-        .eq('id', programId)
-        .single();
-
-      if (programError && programError.code !== 'PGRST116') {
-        throw programError;
-      }
-
-      const { data: programReferenceWorkouts, error: referenceError } =
-        await supabase
-          .from('program_workouts')
-          .select('*')
-          .eq('program_id', programId)
-          .eq('is_reference', true)
-          .order('created_at', { ascending: false });
-
-      if (referenceError) {
-        console.error('Error fetching reference workouts:', referenceError);
-      }
-
-      let fetchedFormData = {};
-      let fetchedGeneratedDesc = '';
-      if (program) {
-        // Pass the *current* formData to be potentially updated by fetched data
-        fetchedFormData = updateFormDataFromProgram(program, formData);
-        if (program.program_overview?.generated_description) {
-          fetchedGeneratedDesc = program.program_overview.generated_description;
-        }
-      }
-
-      const { data: savedWorkouts, error: workoutsError } = await supabase
-        .from('program_workouts')
-        .select(
-          'id, title, body, tags, created_at, scheduled_date, is_reference, completed, completed_at'
-        )
-        .eq('program_id', programId)
-        .eq('is_reference', false)
-        .order('scheduled_date', { ascending: true, nullsFirst: true });
-
-      if (workoutsError) throw workoutsError;
-
-      console.log('[fetchProgramData] Fetched workouts from database:', {
-        count: savedWorkouts?.length || 0,
-        currentSuggestionsCount: suggestions?.length || 0,
-        preventFetch: preventFetch,
-        generationStage: generationStage,
-      });
-
-      let processedWorkouts = [];
-      if (savedWorkouts && savedWorkouts.length > 0) {
-        processedWorkouts = savedWorkouts.map(processWorkoutForDisplay);
-        console.log('[fetchProgramData] Processed workouts from database:', {
-          count: processedWorkouts.length,
-        });
-      } else if (
-        program?.generated_program?.length > 0 &&
-        suggestions?.length === 0
-      ) {
-        console.warn(
-          'Using potentially stale generated_program data from program object'
-        );
-        processedWorkouts = program.generated_program.map(
-          processWorkoutForDisplay
-        );
-      }
-
-      // Check if we have unsaved generated workouts in state
-      const hasUnsavedWorkouts =
-        suggestions &&
-        suggestions.length > 0 &&
-        suggestions.some((workout) => !workout.id);
-
-      // Check if we just completed generation (to avoid clearing fresh workouts)
-      const justCompletedGeneration =
-        generationStage === 'complete' ||
-        generationStage === 'finalizing' ||
-        preventFetch;
-
-      console.log('[fetchProgramData] Decision factors:', {
-        hasUnsavedWorkouts,
-        justCompletedGeneration,
-        processedWorkoutsCount: processedWorkouts.length,
-        currentSuggestionsCount: suggestions?.length || 0,
-        shouldPreserveWorkouts:
-          hasUnsavedWorkouts ||
-          (justCompletedGeneration && suggestions?.length > 0),
-      });
-
-      // Only update suggestions if:
-      // 1. We don't have unsaved workouts AND
-      // 2. We didn't just complete generation (to avoid race conditions) AND
-      // 3. We have saved workouts to replace them with OR we have no current workouts
-      const shouldUpdateSuggestions =
-        !hasUnsavedWorkouts &&
-        !justCompletedGeneration &&
-        (processedWorkouts.length > 0 || suggestions?.length === 0);
-
-      if (shouldUpdateSuggestions) {
-        console.log(
-          '[fetchProgramData] Updating suggestions with database workouts'
-        );
-        setInitialData({
-          programId: programId,
-          formData: fetchedFormData,
-          suggestions: processedWorkouts,
-          referenceWorkouts: programReferenceWorkouts || [],
-          generatedDescription: fetchedGeneratedDesc,
-          initialFormData: JSON.parse(JSON.stringify(fetchedFormData)),
-        });
-      } else {
-        // Update everything except suggestions
-        console.log('[fetchProgramData] Preserving current workouts in state');
-        setInitialData({
-          programId: programId,
-          formData: fetchedFormData,
-          suggestions: suggestions, // Keep existing suggestions
-          referenceWorkouts: programReferenceWorkouts || [],
-          generatedDescription: generatedDescription || fetchedGeneratedDesc,
-          initialFormData: JSON.parse(JSON.stringify(fetchedFormData)),
-        });
-      }
-      // Clear loading state after updating
-      setLoading(false);
-    } catch (error) {
-      console.error('Error fetching program data:', error);
-      showToastMessage(
-        'Failed to load program data: ' + (error.message || 'Unknown error'),
-        'error'
-      );
-      setLoading(false);
-    } finally {
-      isFetchingRef.current = false;
-    }
-  }, [
-    programId,
-    supabase,
-    showToastMessage,
-    preventFetch,
-    isLoading,
-    generationStage,
-  ]);
-
-  // This effect triggers fetchProgramData only for refreshes (not initial loads)
-  // Remove fetchProgramData from dependencies to prevent infinite loop
-  useEffect(() => {
-    if (programId && !preventFetch) {
-      fetchProgramData();
-    }
-  }, [programId, preventFetch]);
-
-  // Get wizard data and sync to form when wizard is complete
-  const wizardData = useProgramStore((state) => state.wizardData);
-  
-  // Inject wizard data AFTER program data is loaded to prevent overwriting
-  useEffect(() => {
-    // Skip wizard data injection for existing program updates
-    // When updating existing programs, we rely on the form data already being properly set
-    if (!wizardComplete || !programId) return;
-    
-    // Only inject wizard data if it exists (new program from wizard)
-    if (!wizardData || !wizardData.wizardComplete) {
-      // For existing program updates, just show success message and highlight generate button
-      if (wizardComplete) {
-        showToastMessage(
-          'Program updated! You can now generate new workouts.',
-          'success'
-        );
-        setHighlightGenerateButton(true);
-        setTimeout(() => setHighlightGenerateButton(false), 3000);
-      }
-      return;
-    }
-
-    // Wait for initial program data to load first
-    const injectWizardData = () => {
-      try {
-        // Convert days of week from wizard format to form format
-        const daysOfWeekMapping = {
-          sunday: 'Sunday',
-          monday: 'Monday',
-          tuesday: 'Tuesday',
-          wednesday: 'Wednesday',
-          thursday: 'Thursday',
-          friday: 'Friday',
-          saturday: 'Saturday',
-        };
-
-        const mappedDaysOfWeek = (wizardData.daysOfWeek || [])
-          .map((day) => daysOfWeekMapping[day])
-          .filter(Boolean);
-
-        // Convert gym type from wizard snake_case to title case
-        const gymTypeMapping = {
-          crossfit_box: 'Crossfit Box',
-          commercial_gym: 'Commercial Gym',
-          home_gym: 'Home Gym',
-          minimal_equipment: 'Minimal Equipment',
-          outdoor_space: 'Outdoor Space',
-          powerlifting_gym: 'Powerlifting Gym',
-          olympic_weightlifting_gym: 'Olympic Weightlifting Gym',
-          bodyweight_only: 'Bodyweight Only',
-          studio_gym: 'Studio Gym',
-          university_gym: 'University Gym',
-          hotel_gym: 'Hotel Gym',
-          apartment_gym: 'Apartment Gym',
-          boxing_mma_gym: 'Boxing/MMA Gym',
-          triathlon_training_facility: 'Triathlon Training Facility',
-          multi_sport_complex: 'Multi-Sport Complex',
-        };
-
-        const mappedGymType =
-          gymTypeMapping[wizardData.gymType] || wizardData.gymType || '';
-
-        // Convert workout formats from wizard kebab-case to AI writer format
-        const workoutFormatMapping = {
-          'for-time': 'for_time',
-          'giant-set': 'giant_set',
-          // Add more mappings as needed - most formats should pass through unchanged
-        };
-
-        const mappedWorkoutFormats = (wizardData.workoutFormats || []).map(
-          (format) => {
-            // Convert kebab-case to snake_case if needed, otherwise keep as-is
-            const mapped = workoutFormatMapping[format] || format;
-            return mapped;
-          }
-        );
-
-        // Map wizard data to form data structure
-        const formDataUpdates = {
-          trainingMethodology: wizardData.trainingMethodology || '',
-          programType: wizardData.programType || '',
-          description: wizardData.programDescription || '',
-          name: wizardData.programName || 'My Training Program', // Use wizard program name
-          referenceInput: wizardData.referenceInput || wizardData.previousWorkout || '',
-          gymType: mappedGymType,
-          equipment: wizardData.equipment || [],
-          difficulty: wizardData.difficulty || 'intermediate',
-          focusArea: wizardData.focusArea || 'full_body',
-          sessionDetails: {
-            duration_minutes: wizardData.workoutDuration || 60,
-            main_workout_duration: wizardData.workoutDuration || 60,
-            warmup_duration: 10,
-            cooldown_duration: 10,
-          },
-          workoutFormats: mappedWorkoutFormats,
-          numberOfWeeks: String(wizardData.numberOfWeeks || 4),
-          startDate: wizardData.startDate || '',
-          daysOfWeek: mappedDaysOfWeek,
-          daysPerWeek: String(mappedDaysOfWeek.length),
-          personalization: wizardData.previousWorkout || wizardData.referenceInput || '',
-          showEquipment: wizardData.equipment && wizardData.equipment.length > 0,
-          // Add entity information from wizard
-          entityId: wizardData.entityId || formData.entityId,
-        };
-
-        console.log(
-          '[Wizard Data] Injecting wizard data into form:',
-          formDataUpdates
-        );
-        updateFormData(formDataUpdates);
-
-        if (
-          wizardData.selectedWorkouts &&
-          wizardData.selectedWorkouts.length > 0 &&
-          programId
-        ) {
-          try {
-            console.log(
-              'Transferring wizard selected workouts as reference workouts:',
-              wizardData.selectedWorkouts
-            );
-
-            // Save selected workouts as reference workouts in the database
-            const workoutsToSave = wizardData.selectedWorkouts.map((workout) => ({
-              program_id: programId,
-              entity_id: formData.entityId,
-              title: workout.title,
-              body: workout.body || workout.description || '',
-              tags: {
-                source: workout.source || 'wizard-selection',
-                wizard_transferred: true,
-              },
-              is_reference: true,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-            }));
-
-            // Save to database
-            supabase
-              .from('program_workouts')
-              .insert(workoutsToSave)
-              .then(({ error }) => {
-                if (error) {
-                  console.error(
-                    'Error saving wizard reference workouts:',
-                    error
-                  );
-                  showToastMessage(
-                    'Failed to transfer reference workouts from wizard',
-                    'warning'
-                  );
-                } else {
-                  console.log(
-                    'Successfully transferred reference workouts from wizard'
-                  );
-                  showToastMessage(
-                    `Transferred ${wizardData.selectedWorkouts.length} reference workouts from wizard`,
-                    'success'
-                  );
-                  // Refresh reference workouts display
-                  supabase
-                    .from('program_workouts')
-                    .select('*')
-                    .eq('program_id', programId)
-                    .eq('is_reference', true)
-                    .then(({ data: refreshedData, error: refreshError }) => {
-                      if (!refreshError) {
-                        setDbReferenceWorkouts(refreshedData || []);
-                      }
-                    });
-                }
-              });
-          } catch (error) {
-            console.error(
-              'Error transferring wizard selected workouts:',
-              error
-            );
-          }
-        }
-
-        // Show a success message to guide user to generate button
-        showToastMessage(
-          'Wizard data loaded! Ready to generate your program.',
-          'success'
-        );
-
-        // Set highlight flag to draw attention to generate button
-        setHighlightGenerateButton(true);
-        setTimeout(() => setHighlightGenerateButton(false), 3000);
-      } catch (error) {
-        console.error('Error injecting wizard data:', error);
-      }
+    const newSection = {
+      name: customSectionName,
+      duration: customSectionDuration,
+      description: customSectionDescription,
+      order: (formData?.customWorkoutSections?.length || 0) + 1,
     };
 
-    // Delay injection to ensure program data is loaded first
-    const timeoutId = setTimeout(injectWizardData, 500);
-    return () => clearTimeout(timeoutId);
-  }, [
-    wizardComplete,
-    programId,
-    wizardData,
-    formData.entityId,
-    updateFormData,
-    supabase,
-    showToastMessage,
-  ]);
-
-  // Listen for triggerProgramRefresh and immediately fetch program data
-  useEffect(() => {
-    if (triggerProgramRefresh) {
-      // Call fetchProgramData immediately
-      (async () => {
-        if (!programId) return;
-        setLoading(true);
-        try {
-          const { data: program, error: programError } = await supabase
-            .from('programs')
-            .select('*')
-            .eq('id', programId)
-            .single();
-
-          if (programError && programError.code !== 'PGRST116') {
-            throw programError;
-          }
-
-          const { data: programReferenceWorkouts, error: referenceError } =
-            await supabase
-              .from('program_workouts')
-              .select('*')
-              .eq('program_id', programId)
-              .eq('is_reference', true)
-              .order('created_at', { ascending: false });
-
-          if (referenceError) {
-            console.error('Error fetching reference workouts:', referenceError);
-          }
-
-          let fetchedFormData = {};
-          let fetchedGeneratedDesc = '';
-          if (program) {
-            fetchedFormData = updateFormDataFromProgram(program, formData);
-            if (program.program_overview?.generated_description) {
-              fetchedGeneratedDesc =
-                program.program_overview.generated_description;
-            }
-          }
-
-          const { data: savedWorkouts, error: workoutsError } = await supabase
-            .from('program_workouts')
-            .select(
-              'id, title, body, tags, created_at, scheduled_date, is_reference, completed, completed_at'
-            )
-            .eq('program_id', programId)
-            .eq('is_reference', false)
-            .order('scheduled_date', { ascending: true, nullsFirst: true });
-
-          if (workoutsError) throw workoutsError;
-
-          let processedWorkouts = [];
-          if (savedWorkouts && savedWorkouts.length > 0) {
-            processedWorkouts = savedWorkouts.map(processWorkoutForDisplay);
-          } else if (
-            program?.generated_program?.length > 0 &&
-            suggestions?.length === 0
-          ) {
-            processedWorkouts = program.generated_program.map(
-              processWorkoutForDisplay
-            );
-          }
-
-          setInitialData({
-            programId: programId,
-            formData: fetchedFormData,
-            suggestions: processedWorkouts,
-            referenceWorkouts: programReferenceWorkouts || [],
-            generatedDescription: fetchedGeneratedDesc,
-            initialFormData: JSON.parse(JSON.stringify(fetchedFormData)),
-          });
-          // Clear loading state after updating
-          setLoading(false);
-        } catch (error) {
-          console.error('Error fetching program data:', error);
-          showToastMessage(
-            'Failed to load program data: ' +
-              (error.message || 'Unknown error'),
-            'error'
-          );
-          setLoading(false);
-        }
-      })();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [triggerProgramRefresh]);
-
-  // --- Form Field Handlers (Wrapped) ---
-
-  useEffect(() => {
-    // Only apply preset if equipment is empty (prevents overwriting custom selections)
-    // AND if we're not coming from the wizard (which already has equipment set)
-    if (
-      formData.gymType &&
-      (!formData.equipment || formData.equipment.length === 0) &&
-      !wizardComplete // Don't override wizard equipment
-    ) {
-      const newEquipment = gymEquipmentPresets[formData.gymType] || [];
-      setFieldValue('equipment', newEquipment);
-      const allSelected =
-        equipmentList.length > 0 &&
-        newEquipment.length === equipmentList.length;
-      setAllEquipmentSelected(allSelected);
-
-      // Sync with equipment store
-      updateGymType(formData.gymType);
-      updateEquipment(newEquipment);
-    }
-  }, [
-    formData.gymType,
-    formData.equipment,
-    wizardComplete,
-    updateGymType,
-    updateEquipment,
-  ]);
-
-  // One-way sync: form data to context (for wizard data initialization)
-  useEffect(() => {
-    if (formData.gymType && formData.gymType !== contextGymType) {
-      updateGymType(formData.gymType);
-    }
-  }, [formData.gymType, contextGymType, updateGymType]);
-
-  // One-way sync: equipment from context to form (when context changes via gym type)
-  useEffect(() => {
-    if (
-      contextEquipment &&
-      contextEquipment.length > 0 &&
-      JSON.stringify(contextEquipment) !== JSON.stringify(formData.equipment)
-    ) {
-      setFieldValue('equipment', contextEquipment);
-      const allSelected =
-        equipmentList.length > 0 &&
-        contextEquipment.length === equipmentList.length;
-      setAllEquipmentSelected(allSelected);
-
-      // Trigger auto-save when equipment changes
-      triggerAutoSave();
-    }
-  }, [contextEquipment, triggerAutoSave]);
-
-  useEffect(() => {
-    const equipmentNames = formData.equipment
-      .map((id) => {
-        const equipment = equipmentList.find((item) => item.value === id);
-        return equipment ? equipment.label : null;
-      })
-      .filter(Boolean);
-
-    const currentGymDetailsEquipment = formData.gymDetails?.equipment;
-    if (
-      JSON.stringify(equipmentNames) !==
-      JSON.stringify(currentGymDetailsEquipment)
-    ) {
-      setFieldValue('gymDetails', {
-        ...formData.gymDetails,
-        gym_type: formData.gymType,
-        equipment: equipmentNames,
-      });
-    }
-  }, [formData.equipment, formData.gymType, formData.gymDetails]);
-
-  const handleWorkoutFormatChange = useCallback((selectedFormats) => {
-    setFieldValue('workoutFormats', selectedFormats);
-  }, []);
-
-  const handleDayOfWeekChangeWrapper = useCallback(
-    (day) => {
-      const newDaysOfWeek = handleDayOfWeekChangeUtil(day, formData.daysOfWeek);
-      setFieldValue('daysOfWeek', newDaysOfWeek);
-    },
-    [formData.daysOfWeek]
-  );
-
-  useEffect(() => {
-    if (isAutoUpdating.current) {
-      isAutoUpdating.current = false;
-      return;
-    }
-    const numDaysSelected = formData.daysOfWeek.length;
-    const currentDaysPerWeek = parseInt(formData.daysPerWeek) || 0;
-    if (currentDaysPerWeek !== numDaysSelected) {
-      setFieldValue('daysPerWeek', numDaysSelected.toString());
-    }
-  }, [formData.daysOfWeek, formData.daysPerWeek]);
-
-  useEffect(() => {
-    // Only calculate end date if we have valid inputs
-    if (
-      formData.startDate &&
-      formData.numberOfWeeks &&
-      formData.daysOfWeek?.length > 0
-    ) {
-      // Additional validation for date format
-      const testDate = new Date(formData.startDate);
-      if (!isNaN(testDate.getTime()) && parseInt(formData.numberOfWeeks) > 0) {
-        const endDate = calculateEndDate(
-          formData.startDate,
-          formData.numberOfWeeks,
-          formData.daysOfWeek
-        );
-        if (endDate && endDate !== formData.endDate) {
-          setFieldValue('endDate', endDate);
-        }
-      } else {
-        console.warn('Invalid date or weeks data:', {
-          startDate: formData.startDate,
-          numberOfWeeks: formData.numberOfWeeks,
-          testDate: testDate.toString(),
-        });
+    updateFormFields({
+      session_details: {
+        ...formData.session_details,
+        custom_sections: [...(formData.customWorkoutSections || []), newSection],
       }
-    }
+    });
+
+    setCustomSectionName('');
+    setCustomSectionDuration('');
+    setCustomSectionDescription('');
   }, [
-    formData.startDate,
-    formData.numberOfWeeks,
-    formData.daysOfWeek,
-    formData.endDate,
+    customSectionName,
+    customSectionDuration,
+    customSectionDescription,
+    formData,
+    updateFormFields,
+    showToast,
   ]);
 
-  // --- Modal Handlers (Wrapped) ---
-
-  const handleViewWorkoutDetailsWrapper = useCallback(
-    (workout) => {
-      if (workout.id) {
-        router.push(`/program/${programId}/workout/${workout.id}`);
-      } else {
-        // Fallback to modal for workouts without IDs
-        openWorkoutModal(workout);
+  const removeCustomSection = useCallback((index) => {
+    const customSections = formData?.customWorkoutSections || [];
+    updateFormFields({
+      session_details: {
+        ...formData.session_details,
+        custom_sections: customSections.filter((_, i) => i !== index),
       }
-    },
-    [router, programId]
-  );
+    });
+  }, [formData, updateFormFields]);
 
-  const handleDatePickerOpenWrapper = useCallback(
-    (workout) => {
-      const initialDate =
-        workout.suggestedDate ||
-        workout.scheduled_date ||
-        formData.startDate ||
-        null;
-      openDatePicker(workout, initialDate);
-    },
-    [formData.startDate]
-  );
-
-  const handleCloseWorkoutModalWrapper = useCallback(() => {
-    closeWorkoutModal();
-  }, []);
-
-  const handleCloseDatePickerModalWrapper = useCallback(() => {
-    closeDatePicker();
-  }, []);
-
-  const handleCloseRescheduleModal = useCallback(() => {
-    closeRescheduleModal();
-  }, []);
-
-  const handleSetNewStartDate = useCallback((date) => {
-    setNewStartDate(date);
-  }, []);
-
-  const handleSetSelectedDate = useCallback((date) => {
-    setSelectedDate(date);
-  }, []);
-
-  const handleSetCustomSectionField = useCallback((field, value) => {
-    setCustomSectionField(field, value);
-  }, []);
-
-  const handleSetHasCustomFormat = useCallback((value) => {
-    setHasCustomWorkoutFormat(value);
-  }, []);
-
-  const handleToggleEquipment = useCallback(() => {
-    toggleEquipment();
-  }, []);
-
-  // --- Reference Workout Handlers ---
-
-  const handleOpenReferenceWorkoutModal = useCallback(
-    () => setIsEnhancedReferenceModalOpen(true),
-    []
-  );
-
-  const handleCloseReferenceWorkoutModal = useCallback(
-    () => setReferenceWorkoutModalOpen(false),
-    []
-  );
-
-  const handleCloseEnhancedReferenceModal = useCallback(
-    () => setIsEnhancedReferenceModalOpen(false),
-    []
-  );
-
-  useEffect(() => {
+  // Reference workouts handlers
+  const handleReferenceWorkoutsSelected = useCallback(async (workouts) => {
     if (!programId) return;
-    supabase
-      .from('program_workouts')
-      .select('*')
-      .eq('program_id', programId)
-      .eq('is_reference', true)
-      .then(({ data, error }) => {
-        if (!error) setDbReferenceWorkouts(data || []);
+
+    for (const workout of workouts) {
+      await addWorkout({
+        title: workout.title,
+        body: workout.body,
+        tags: workout.tags,
+        is_reference: true,
       });
-  }, [programId, supabase]);
+    }
 
-  const handleReferenceWorkoutsSelected = useCallback(
-    async (workouts) => {
-      if (!programId) return;
-      for (const workout of workouts) {
-        // Check if already exists for this program
-        const { data: existing } = await supabase
-          .from('program_workouts')
-          .select('id')
-          .eq('program_id', programId)
-          .eq('is_reference', true)
-          .eq('title', workout.title)
-          .maybeSingle();
-        if (!existing) {
-          await supabase.from('program_workouts').insert({
-            program_id: programId,
-            title: workout.title,
-            body: workout.body,
-            tags: workout.tags,
-            is_reference: true,
-          });
-        }
-      }
-      // Refetch from DB
-      const { data: dbReferenceWorkouts, error } = await supabase
-        .from('program_workouts')
-        .select('*')
-        .eq('program_id', programId)
-        .eq('is_reference', true);
-      if (!error) setDbReferenceWorkouts(dbReferenceWorkouts || []);
-      setReferenceWorkoutModalOpen(false);
-      setIsEnhancedReferenceModalOpen(false);
-      showToastMessage('Reference workouts added successfully!', 'success');
-    },
-    [programId, supabase]
-  );
+    setReferenceWorkoutModalOpen(false);
+    setIsEnhancedReferenceModalOpen(false);
+    showToast('Reference workouts added successfully!', 'success');
+  }, [programId, addWorkout, showToast]);
 
-  // --- Enhanced Workout Save Handler ---
-  const handleSaveEnhancedWorkout = async (workout) => {
+  const handleSaveEnhancedWorkout = useCallback(async (workout) => {
     if (!workout.id) {
-      showToastMessage('Cannot update workout: missing id', 'error');
-      console.error('Cannot update workout: missing id', workout);
+      showToast('Cannot update workout: missing id', 'error');
       return false;
     }
-    try {
-      const { error } = await supabase.from('program_workouts').upsert(
-        {
-          id: workout.id,
-          program_id: programId,
-          title: workout.title,
-          body: workout.body || workout.description,
-          scheduled_date:
-            workout.scheduled_date || workout.suggestedDate || null,
-        },
-        { onConflict: 'id' }
-      );
-      if (error) {
-        showToastMessage('Error saving enhanced workout', 'error');
-        console.error('Supabase upsert error:', error, workout);
-        return false;
-      }
-      showToastMessage('Workout updated!', 'success');
-      return true;
-    } catch (err) {
-      showToastMessage('Unexpected error saving workout', 'error');
-      console.error(
-        'Unexpected error in handleSaveEnhancedWorkout:',
-        err,
-        workout
-      );
-      return false;
+
+    const success = await updateWorkout(workout.id, {
+      title: workout.title,
+      body: workout.body || workout.description,
+      scheduled_date: workout.scheduled_date || workout.suggestedDate || null,
+    });
+
+    if (success) {
+      showToast('Workout updated!', 'success');
+    } else {
+      showToast('Error saving enhanced workout', 'error');
     }
-  };
+    return success;
+  }, [updateWorkout, showToast]);
+
+  if (loading && !formData) {
+    return (
+      <div className="flex justify-center items-center min-h-[400px]">
+        <span className="loading loading-spinner loading-lg"></span>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white rounded-lg shadow-md p-3 sm:p-4">
-      {showToast && (
+      {toast.show && (
         <Toast
-          message={toastMessage}
-          type={toastType}
-          onClose={() => hideToast()}
+          message={toast.message}
+          type={toast.type}
+          onClose={() => {}}
         />
       )}
 
       {/* Wizard Review Banner */}
-      {wizardComplete && !suggestions.length && (
+      {wizardComplete && !workouts.length && (
         <div className="mb-6 p-4 bg-primary/10 border border-primary/20 rounded-lg">
           <div className="flex items-start gap-3">
             <Sparkles className="w-5 h-5 mt-0.5 flex-shrink-0 text-primary" />
@@ -1544,9 +680,9 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
               className="btn btn-sm btn-primary text-white w-full sm:w-auto tooltip tooltip-top tooltip-info"
               data-tip="Your changes are automatically saved, but you can use this to manually save."
               onClick={handleSaveProgram}
-              disabled={isLoading}
+              disabled={loading}
             >
-              {isLoading ? (
+              {loading ? (
                 <>
                   <span className="loading loading-spinner loading-xs"></span>
                   Saving...
@@ -1558,87 +694,95 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
           </div>
         </div>
       )}
+
       <div className="space-y-4 lg:space-y-0 lg:grid lg:grid-cols-1 xl:grid-cols-3 lg:gap-6">
         <ProgramForm
-          setFieldValue={setFieldValue}
+          setFieldValue={handleFieldChange}
           handleWorkoutFormatChange={handleWorkoutFormatChange}
-          handleDayOfWeekChange={handleDayOfWeekChangeWrapper}
+          handleDayOfWeekChange={handleDayOfWeekChange}
           generateProgram={handleGenerateClick}
           addCustomSection={addCustomSection}
           removeCustomSection={removeCustomSection}
           handleProgramTypeChange={handleProgramTypeChange}
           formData={{
-            ...formData,
-            onOpenReferenceWorkoutModal: handleOpenReferenceWorkoutModal,
+            ...(formData || {}),
+            onOpenReferenceWorkoutModal: () => setIsEnhancedReferenceModalOpen(true),
           }}
-          isLoading={isLoading}
-          suggestions={suggestions}
+          isLoading={isGenerating}
+          suggestions={workouts}
           generationStage={generationStage}
           loadingDuration={loadingDuration}
           serverStatus={serverStatus}
           hasCustomWorkoutFormat={hasCustomWorkoutFormat}
-          setHasCustomWorkoutFormat={handleSetHasCustomFormat}
+          setHasCustomWorkoutFormat={setHasCustomWorkoutFormat}
           customSectionName={customSectionName}
-          setCustomSectionName={(value) =>
-            handleSetCustomSectionField('customSectionName', value)
-          }
+          setCustomSectionName={setCustomSectionName}
           customSectionDuration={customSectionDuration}
-          setCustomSectionDuration={(value) =>
-            handleSetCustomSectionField('customSectionDuration', value)
-          }
+          setCustomSectionDuration={setCustomSectionDuration}
           customSectionDescription={customSectionDescription}
-          setCustomSectionDescription={(value) =>
-            handleSetCustomSectionField('customSectionDescription', value)
-          }
+          setCustomSectionDescription={setCustomSectionDescription}
           equipmentSelector={
             <EquipmentSelector
-              isVisible={showEquipment}
-              onToggleVisibility={handleToggleEquipment}
+              isVisible={showEquipmentSelector}
+              onToggleVisibility={toggleEquipmentVisibility}
             />
           }
           subscriptionStatus={subscriptionStatus}
           trialEndDate={trialEndDate}
           generationsRemaining={generationsRemaining}
           lastGenerationDate={lastGenerationDate}
-          triggerAutoSave={triggerAutoSave}
+          calculatedEndDate={calculatedEndDate}
         />
       </div>
 
       <ReferenceWorkouts
-        workouts={dbReferenceWorkouts}
+        workouts={referenceWorkouts}
         supabase={supabase}
         onRemove={async (id) => {
-          await supabase.from('program_workouts').delete().eq('id', id);
-          setDbReferenceWorkouts((prev) => prev.filter((w) => w.id !== id));
+          await deleteWorkout(id);
         }}
-        showToastMessage={showToastMessage}
+        showToastMessage={showToast}
       />
 
-      {suggestions.length > 0 && (
+      {workouts.length > 0 && (
         <div ref={generationAreaRef} className="scroll-mt-20 mt-4 sm:mt-6">
           <WorkoutList
-            workouts={suggestions.filter((w) => !w.is_reference)}
-            daysPerWeek={formData.daysPerWeek}
+            workouts={workouts}
+            daysPerWeek={formData?.daysPerWeek}
             formatDate={formatDate}
-            onViewDetails={handleViewWorkoutDetailsWrapper}
-            onDatePick={handleDatePickerOpenWrapper}
+            onViewDetails={(workout) => {
+              if (workout.id) {
+                router.push(`/program/${programId}/workout/${workout.id}`);
+              } else {
+                openModal('workoutModal', { workout });
+              }
+            }}
+            onDatePick={(workout) => {
+              const initialDate =
+                workout.suggestedDate ||
+                workout.scheduled_date ||
+                formData?.startDate ||
+                null;
+              openModal('datePickerModal', { workout, date: initialDate });
+            }}
             onSelectWorkout={handleSaveEnhancedWorkout}
             onDeleteWorkout={handleDeleteWorkout}
             onEditWorkout={handleEditWorkout}
             onMarkComplete={handleMarkComplete}
-            isLoading={isLoading}
-            generatedDescription={generatedDescription}
-            setFormData={(data) => updateFormData(data)}
-            showToastMessage={showToastMessage}
+            isLoading={loading}
+            generatedDescription={program?.program_overview?.generated_description}
+            setFormData={(data) => updateFromFormData(data)}
+            showToastMessage={showToast}
           />
         </div>
       )}
 
-      {isWorkoutModalOpen && (
+      {/* Modals */}
+      {modals.workoutModal.isOpen && (
         <WorkoutModal
-          isOpen={isWorkoutModalOpen}
-          workout={selectedWorkout}
-          onClose={handleCloseWorkoutModalWrapper}
+          isOpen={modals.workoutModal.isOpen}
+          workout={modals.workoutModal.workout}
+          onClose={() => closeModal('workoutModal')}
           onSaveEnhancedWorkout={handleSaveEnhancedWorkout}
           formatDate={formatDate}
           onDeleteWorkout={handleDeleteWorkout}
@@ -1646,71 +790,66 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
         />
       )}
 
-      {isDatePickerModalOpen && (
+      {modals.datePickerModal.isOpen && (
         <DatePickerModal
-          isOpen={isDatePickerModalOpen}
-          workout={selectedWorkoutForDate}
-          selectedDate={selectedDate}
-          setSelectedDate={handleSetSelectedDate}
-          onClose={handleCloseDatePickerModalWrapper}
+          isOpen={modals.datePickerModal.isOpen}
+          workout={modals.datePickerModal.workout}
+          selectedDate={modals.datePickerModal.date}
+          setSelectedDate={(date) => openModal('datePickerModal', { ...modals.datePickerModal, date })}
+          onClose={() => closeModal('datePickerModal')}
           onSave={handleDatePickerSave}
-          startDate={formData.startDate}
-          endDate={formData.endDate}
+          startDate={formData?.startDate}
+          endDate={formData?.endDate}
         />
       )}
 
-      {isRescheduleModalOpen && (
+      {modals.rescheduleModal.isOpen && (
         <RescheduleModal
-          isOpen={isRescheduleModalOpen}
-          currentStartDate={formData.startDate}
-          currentEndDate={formData.endDate}
-          onClose={handleCloseRescheduleModal}
+          isOpen={modals.rescheduleModal.isOpen}
+          currentStartDate={formData?.startDate}
+          currentEndDate={formData?.endDate}
+          onClose={() => closeModal('rescheduleModal')}
           onSave={handleRescheduleProgram}
-          setNewStartDate={handleSetNewStartDate}
-          newStartDate={newStartDate}
+          setNewStartDate={(date) => openModal('rescheduleModal', { newStartDate: date })}
+          newStartDate={modals.rescheduleModal.newStartDate}
         />
       )}
 
-      {isEditModalOpen && (
+      {modals.editModal.isOpen && (
         <EditWorkoutModal
-          isOpen={isEditModalOpen}
-          workout={selectedWorkoutForEdit}
-          onClose={handleCloseEditModal}
+          isOpen={modals.editModal.isOpen}
+          workout={modals.editModal.workout}
+          onClose={() => closeModal('editModal')}
           onSave={handleSaveEditedWorkout}
-          isLoading={isLoading}
+          isLoading={loading}
         />
       )}
 
-      {isConfirmationModalOpen && (
+      {modals.confirmationModal.isOpen && (
         <ProgramGenerationModal
-          isOpen={isConfirmationModalOpen}
-          onClose={() => closeConfirmationModal()}
+          isOpen={modals.confirmationModal.isOpen}
+          onClose={() => closeModal('confirmationModal')}
           onConfirm={handleConfirmGenerate}
-          content={confirmationModalContent}
+          content={modals.confirmationModal.content}
         />
       )}
 
       <ReferenceWorkoutSearchModal
         isOpen={isReferenceWorkoutModalOpen}
-        onClose={handleCloseReferenceWorkoutModal}
+        onClose={() => setReferenceWorkoutModalOpen(false)}
         onSelect={handleReferenceWorkoutsSelected}
-        selectedWorkouts={dbReferenceWorkouts}
-        initialSearchText={formData.referenceInput || ''}
+        selectedWorkouts={referenceWorkouts}
+        initialSearchText={formData?.referenceInput || ''}
       />
 
       <EnhancedReferenceWorkoutSearchModal
         isOpen={isEnhancedReferenceModalOpen}
-        onClose={handleCloseEnhancedReferenceModal}
+        onClose={() => setIsEnhancedReferenceModalOpen(false)}
         onSelect={handleReferenceWorkoutsSelected}
-        selectedWorkouts={dbReferenceWorkouts}
+        selectedWorkouts={referenceWorkouts}
         programId={programId}
       />
 
-      {/* Auto-save status indicator */}
-      <AutoSaveStatusIndicator
-        autoSaveState={autoSaveState}
-        isDirty={isDirty}
-      />
     </div>
   );
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   Dumbbell,
@@ -23,7 +23,6 @@ import {
   GitBranch,
   X,
 } from 'lucide-react';
-import useProgramStore from '../../store/programStore';
 import WizardProgress from '../../components/ProgramWizard/WizardProgress';
 
 const trainingMethodologies = [
@@ -136,25 +135,15 @@ const periodizationTypes = [
 
 export default function Step1Page() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const { supabase } = useAuth();
   const programId = searchParams.get('programId');
 
-  const formData = useProgramStore((state) => state.formData);
-  const updateFormData = useProgramStore((state) => state.updateFormData);
-  const goToNext = useProgramStore((state) => state.goToNext);
-  // Don't use formData for initial state when we have a programId - let database load handle it
-  const [selectedMethodology, setSelectedMethodology] = useState(
-    programId ? '' : formData.trainingMethodology || ''
-  );
-  const [selectedPeriodization, setSelectedPeriodization] = useState(
-    programId ? '' : formData.programType || ''
-  );
+  const [selectedMethodology, setSelectedMethodology] = useState('');
+  const [selectedPeriodization, setSelectedPeriodization] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const initializeFromDatabaseRef = useRef(false);
-
-  console.log('formData', formData);
-  console.log('selectedMethodology', selectedMethodology);
-  console.log('selectedPeriodization', selectedPeriodization);
 
   // Fetch program data if programId is provided (only once)
   useEffect(() => {
@@ -183,30 +172,7 @@ export default function Step1Page() {
               program.periodization?.program_type || program.program_type || ''
             );
 
-            // Update form data with the fetched data
-            updateFormData({
-              trainingMethodology: program.training_methodology || '',
-              programType:
-                program.periodization?.program_type ||
-                program.program_type ||
-                '',
-              description: program.description || '',
-              name: program.name || '',
-              referenceInput: program.reference_input || '',
-              personalization: program.personalization || '',
-              gymType: program.gym_type || 'crossfit_box',
-              equipment: program.equipment || [],
-              difficulty: program.difficulty || 'intermediate',
-              focusArea: program.focus_area || 'full_body',
-              sessionDetails: program.session_details || {
-                main_workout_duration: 60,
-              },
-              workoutFormats: program.workout_formats || [],
-              entityId: program.entity_id,
-              startDate: program.start_date || '',
-              numberOfWeeks: String(program.duration_weeks || 4),
-              daysOfWeek: program.days_of_week || [],
-            });
+            // Data is already set in local state from the fetched program
           }
         } catch (error) {
           console.error('Error loading program:', error);
@@ -220,28 +186,47 @@ export default function Step1Page() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [programId, supabase]);
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (!selectedMethodology || !selectedPeriodization) {
       alert('Please select both a training methodology and periodization type');
       return;
     }
 
-    updateFormData({
-      trainingMethodology: selectedMethodology,
-      programType: selectedPeriodization,
-    });
-    goToNext(1);
+    if (!programId) {
+      alert('No program ID found. Please start from the beginning.');
+      router.push('/dashboard');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      // Update program directly in Supabase
+      const { error } = await supabase
+        .from('programs')
+        .update({
+          training_methodology: selectedMethodology,
+          periodization: {
+            program_type: selectedPeriodization,
+          },
+        })
+        .eq('id', programId);
+
+      if (error) {
+        console.error('Error updating program:', error);
+        alert('Failed to save program data. Please try again.');
+        return;
+      }
+
+      // Navigate to step 2
+      router.push(`/program-wizard/step-2?programId=${programId}`);
+    } catch (error) {
+      console.error('Error saving step 1:', error);
+      alert('An error occurred. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  // Save state when selections change
-  useEffect(() => {
-    if (selectedMethodology && selectedPeriodization) {
-      updateFormData({
-        trainingMethodology: selectedMethodology,
-        programType: selectedPeriodization,
-      });
-    }
-  }, [selectedMethodology, selectedPeriodization, updateFormData]);
   return (
     <div className="relative">
       <WizardProgress currentStep={1} />
@@ -375,22 +360,31 @@ export default function Step1Page() {
           <button
             onClick={handleNext}
             className="btn btn-primary px-6"
-            disabled={!selectedMethodology || !selectedPeriodization}
+            disabled={!selectedMethodology || !selectedPeriodization || isSaving}
           >
-            Continue to Step 2
-            <svg
-              className="w-4 h-4 ml-2"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 5l7 7-7 7"
-              />
-            </svg>
+            {isSaving ? (
+              <>
+                <span className="loading loading-spinner loading-sm mr-2"></span>
+                Saving...
+              </>
+            ) : (
+              <>
+                Continue to Step 2
+                <svg
+                  className="w-4 h-4 ml-2"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 5l7 7-7 7"
+                  />
+                </svg>
+              </>
+            )}
           </button>
         </div>
       </div>

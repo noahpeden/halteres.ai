@@ -1,19 +1,29 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Calendar, ExternalLink } from 'lucide-react';
+import {
+  ChevronLeft,
+  ChevronRight,
+  Calendar,
+  ExternalLink,
+} from 'lucide-react';
 import { MarkdownContent } from '@/utils/markdownParser';
 import Link from 'next/link';
 
-export default function PublicWorkoutList({ workouts, daysPerWeek, programName, programId }) {
+export default function PublicWorkoutList({
+  workouts,
+  daysPerWeek,
+  programName,
+  programId,
+}) {
   const [currentWeek, setCurrentWeek] = useState(1);
-  
+
   if (!workouts || workouts.length === 0) {
     return null;
   }
-  
+
   const daysPerWeekNum = parseInt(daysPerWeek) || 7;
   const totalWeeks = Math.ceil(workouts.length / daysPerWeekNum);
-  
+
   // Keyboard navigation
   useEffect(() => {
     const handleKeyPress = (e) => {
@@ -23,7 +33,7 @@ export default function PublicWorkoutList({ workouts, daysPerWeek, programName, 
         setCurrentWeek(currentWeek + 1);
       }
     };
-    
+
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
   }, [currentWeek, totalWeeks]);
@@ -47,7 +57,9 @@ export default function PublicWorkoutList({ workouts, daysPerWeek, programName, 
   };
 
   const weekGroups = groupWorkoutsByWeek();
-  const currentWeekData = weekGroups.find(group => group.week === currentWeek);
+  const currentWeekData = weekGroups.find(
+    (group) => group.week === currentWeek
+  );
 
   const goToPreviousWeek = () => {
     if (currentWeek > 1) {
@@ -70,11 +82,13 @@ export default function PublicWorkoutList({ workouts, daysPerWeek, programName, 
     <div className="w-full">
       {/* Program Header */}
       <div className="mb-8">
-        <h2 className="text-3xl font-bold text-gray-900 mb-2">{programName || 'Training Program'}</h2>
+        <h2 className="text-3xl font-bold text-gray-900 mb-2">
+          {programName || 'Training Program'}
+        </h2>
         <p className="text-gray-600">
           {workouts.length} workout{workouts.length !== 1 ? 's' : ''} •{' '}
-          {totalWeeks} week{totalWeeks !== 1 ? 's' : ''} •{' '}
-          {daysPerWeek} days per week
+          {totalWeeks} week{totalWeeks !== 1 ? 's' : ''} • {daysPerWeek} days
+          per week
         </p>
       </div>
 
@@ -83,20 +97,22 @@ export default function PublicWorkoutList({ workouts, daysPerWeek, programName, 
         <div className="mb-6">
           {/* Mobile Week Navigation */}
           <div className="flex sm:hidden justify-between items-center mb-4">
-            <button 
+            <button
               className="btn btn-outline btn-sm"
               onClick={goToPreviousWeek}
               disabled={currentWeek === 1}
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
-            
+
             <div className="text-center">
               <span className="text-lg font-semibold">Week {currentWeek}</span>
-              <span className="text-sm text-gray-600 block">of {totalWeeks}</span>
+              <span className="text-sm text-gray-600 block">
+                of {totalWeeks}
+              </span>
             </div>
-            
-            <button 
+
+            <button
               className="btn btn-outline btn-sm"
               onClick={goToNextWeek}
               disabled={currentWeek === totalWeeks}
@@ -107,7 +123,7 @@ export default function PublicWorkoutList({ workouts, daysPerWeek, programName, 
 
           {/* Desktop Week Navigation */}
           <div className="hidden sm:flex justify-between items-center gap-4">
-            <button 
+            <button
               className="btn btn-outline btn-sm"
               onClick={goToPreviousWeek}
               disabled={currentWeek === 1}
@@ -115,7 +131,7 @@ export default function PublicWorkoutList({ workouts, daysPerWeek, programName, 
               <ChevronLeft className="h-4 w-4" />
               Previous Week
             </button>
-            
+
             <div className="flex items-center gap-2">
               {/* Show max 7 weeks at a time with ellipsis */}
               {totalWeeks <= 7 ? (
@@ -124,7 +140,9 @@ export default function PublicWorkoutList({ workouts, daysPerWeek, programName, 
                   <button
                     key={weekGroup.week}
                     className={`btn btn-sm ${
-                      currentWeek === weekGroup.week ? 'btn-primary' : 'btn-outline'
+                      currentWeek === weekGroup.week
+                        ? 'btn-primary'
+                        : 'btn-outline'
                     }`}
                     onClick={() => setCurrentWeek(weekGroup.week)}
                   >
@@ -142,37 +160,44 @@ export default function PublicWorkoutList({ workouts, daysPerWeek, programName, 
                       >
                         1
                       </button>
-                      {currentWeek > 4 && <span className="px-2 text-gray-500">...</span>}
+                      {currentWeek > 4 && (
+                        <span className="px-2 text-gray-500">...</span>
+                      )}
                     </>
                   )}
-                  
+
                   {weekGroups
-                    .filter(wg => {
+                    .filter((wg) => {
                       const week = wg.week;
                       if (currentWeek <= 3) {
                         return week <= 5;
                       } else if (currentWeek >= totalWeeks - 2) {
                         return week >= totalWeeks - 4;
                       } else {
-                        return week >= currentWeek - 2 && week <= currentWeek + 2;
+                        return (
+                          week >= currentWeek - 2 && week <= currentWeek + 2
+                        );
                       }
                     })
                     .map((weekGroup) => (
                       <button
                         key={weekGroup.week}
                         className={`btn btn-sm ${
-                          currentWeek === weekGroup.week ? 'btn-primary' : 'btn-outline'
+                          currentWeek === weekGroup.week
+                            ? 'btn-primary'
+                            : 'btn-outline'
                         }`}
                         onClick={() => setCurrentWeek(weekGroup.week)}
                       >
                         {weekGroup.week}
                       </button>
-                    ))
-                  }
-                  
+                    ))}
+
                   {currentWeek < totalWeeks - 2 && (
                     <>
-                      {currentWeek < totalWeeks - 3 && <span className="px-2 text-gray-500">...</span>}
+                      {currentWeek < totalWeeks - 3 && (
+                        <span className="px-2 text-gray-500">...</span>
+                      )}
                       <button
                         className="btn btn-sm btn-outline"
                         onClick={() => setCurrentWeek(totalWeeks)}
@@ -184,8 +209,8 @@ export default function PublicWorkoutList({ workouts, daysPerWeek, programName, 
                 </>
               )}
             </div>
-            
-            <button 
+
+            <button
               className="btn btn-outline btn-sm"
               onClick={goToNextWeek}
               disabled={currentWeek === totalWeeks}
@@ -198,7 +223,7 @@ export default function PublicWorkoutList({ workouts, daysPerWeek, programName, 
           {/* Week progress indicator */}
           <div className="mt-4">
             <div className="w-full bg-gray-200 rounded-full h-2">
-              <div 
+              <div
                 className="bg-primary h-2 rounded-full transition-all duration-300"
                 style={{ width: `${(currentWeek / totalWeeks) * 100}%` }}
               />
@@ -220,7 +245,7 @@ export default function PublicWorkoutList({ workouts, daysPerWeek, programName, 
               )}
             </h3>
           </div>
-          
+
           <div className="space-y-4">
             {currentWeekData.workouts.map((workout, index) => (
               <div
@@ -247,7 +272,7 @@ export default function PublicWorkoutList({ workouts, daysPerWeek, programName, 
                     </div>
                     {programId && workout.id && (
                       <Link
-                        href={`/program/${programId}/workouts/${workout.id}`}
+                        href={`/program/${programId}/workout/${workout.id}`}
                         className="btn btn-sm btn-outline"
                         target="_blank"
                         rel="noopener noreferrer"
@@ -258,12 +283,16 @@ export default function PublicWorkoutList({ workouts, daysPerWeek, programName, 
                     )}
                   </div>
                 </div>
-                
+
                 {/* Workout Content */}
                 <div className="px-6 py-4">
                   <div className="prose prose-sm max-w-none">
-                    <MarkdownContent 
-                      content={workout.body || workout.description || 'No description available'}
+                    <MarkdownContent
+                      content={
+                        workout.body ||
+                        workout.description ||
+                        'No description available'
+                      }
                       className="text-gray-700"
                     />
                   </div>
@@ -273,10 +302,12 @@ export default function PublicWorkoutList({ workouts, daysPerWeek, programName, 
           </div>
         </div>
       )}
-      
+
       {!currentWeekData && totalWeeks > 0 && (
         <div className="text-center py-12">
-          <p className="text-gray-500">No workouts found for Week {currentWeek}</p>
+          <p className="text-gray-500">
+            No workouts found for Week {currentWeek}
+          </p>
         </div>
       )}
     </div>

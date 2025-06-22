@@ -360,7 +360,6 @@ export default function AIWorkoutSuggestions({ programId, onSelectWorkout }) {
         match_threshold: 0.1, // Try a very low threshold
         match_count: 100,
       });
-      console.log('Direct test:', data);
       setSearchResults(data || []);
     } catch (error) {
       console.error('Error searching with embeddings:', error);
@@ -370,8 +369,6 @@ export default function AIWorkoutSuggestions({ programId, onSelectWorkout }) {
       setIsLoading(false);
     }
   };
-
-  console.log(searchResults);
 
   return (
     <div className="bg-white rounded-lg shadow-md p-4">

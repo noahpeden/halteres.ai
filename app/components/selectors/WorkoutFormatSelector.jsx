@@ -97,14 +97,17 @@ export default function WorkoutFormatSelector({
   selectedFormats = ['strength', 'hypertrophy', 'endurance', 'power', 'metcon'],
   onChange,
 }) {
+  // Ensure selectedFormats is always an array
+  const safeSelectedFormats = Array.isArray(selectedFormats) ? selectedFormats : [];
+  
   const handleFormatChange = (formatId) => {
-    const isSelected = selectedFormats.includes(formatId);
+    const isSelected = safeSelectedFormats.includes(formatId);
     let newFormats;
 
     if (isSelected) {
-      newFormats = selectedFormats.filter((id) => id !== formatId);
+      newFormats = safeSelectedFormats.filter((id) => id !== formatId);
     } else {
-      newFormats = [...selectedFormats, formatId];
+      newFormats = [...safeSelectedFormats, formatId];
     }
 
     onChange(newFormats);
@@ -113,7 +116,7 @@ export default function WorkoutFormatSelector({
   return (
     <div className="flex flex-wrap gap-2 py-2">
       {workoutFormats.map((format) => {
-        const selected = selectedFormats.includes(format.id);
+        const selected = safeSelectedFormats.includes(format.id);
         return (
           <button
             key={format.id}

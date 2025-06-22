@@ -1,8 +1,8 @@
 'use client';
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { difficulties, gymTypes, focusAreas } from '../utils';
 import WorkoutFormatSelector from '@/components/selectors/WorkoutFormatSelector';
-import useProgramStore from '@/store/programStore';
+import { useProgram } from '@/contexts/ProgramContext';
 import { ChevronDown } from 'lucide-react';
 
 export default function ProgramDetails({
@@ -10,9 +10,8 @@ export default function ProgramDetails({
   handleChange,
   handleWorkoutFormatChange,
   equipmentSelector,
-  triggerAutoSave,
 }) {
-  const updateGymType = useProgramStore((state) => state.updateGymType);
+  const { updateFormFields } = useProgram();
   const [openDropdowns, setOpenDropdowns] = useState({
     gymType: false,
     difficulty: false,
@@ -43,27 +42,70 @@ export default function ProgramDetails({
     }));
   };
 
-  const handleGymTypeSelect = (value) => {
+  const handleGymTypeSelect = useCallback(async (value) => {
     handleChange({ target: { name: 'gymType', value } });
     closeDropdown('gymType');
     
-    // Update equipment store with the gym type
-    updateGymType(value);
+    // Update in database
+    await updateFormFields({
+      gym_details: {
+        ...formData.gym_details,
+        gym_type: value,
+      }
+    });
     
-    if (triggerAutoSave) triggerAutoSave();
-  };
+  }, [handleChange, updateFormFields]);
 
-  const handleDifficultySelect = (value) => {
+  const handleDifficultySelect = useCallback(async (value) => {
     handleChange({ target: { name: 'difficulty', value } });
     closeDropdown('difficulty');
-    if (triggerAutoSave) triggerAutoSave();
-  };
+    
+    // Update in database
+    await updateFormFields({ difficulty: value });
+    
+  }, [handleChange, updateFormFields]);
 
-  const handleFocusAreaSelect = (value) => {
+  const handleFocusAreaSelect = useCallback(async (value) => {
     handleChange({ target: { name: 'focusArea', value } });
     closeDropdown('focusArea');
-    if (triggerAutoSave) triggerAutoSave();
-  };
+    
+    // Update in database
+    await updateFormFields({ focus_area: value });
+    
+  }, [handleChange, updateFormFields]);
+
+  const handleSessionDurationChange = useCallback(async (e) => {
+    const value = e.target.value;
+    handleChange({
+      target: {
+        name: 'sessionDetails',
+        value: {
+          ...formData.sessionDetails,
+          duration_minutes: value === '' ? null : parseInt(value, 10),
+        },
+      },
+    });
+  }, [handleChange, formData.sessionDetails]);
+
+  const handleSessionDurationBlur = useCallback(async () => {
+    // Update in database
+    await updateFormFields({
+      session_details: formData.sessionDetails,
+    });
+    
+  }, [formData.sessionDetails, updateFormFields]);
+
+  const handleWorkoutFormatChangeWithDB = useCallback(async (formats) => {
+    handleWorkoutFormatChange(formats);
+    
+    // Update in database
+    await updateFormFields({
+      workout_format: {
+        formats: Array.isArray(formats) ? formats : []
+      }
+    });
+    
+  }, [handleWorkoutFormatChange, updateFormFields]);
 
   return (
     <section className="bg-base-100 p-3 sm:p-4 md:p-5 rounded-lg border border-base-300 shadow-sm w-full">
@@ -220,19 +262,8 @@ export default function ProgramDetails({
               className="input input-bordered w-full border-base-300 focus:border-primary"
               placeholder="e.g., 60"
               value={formData.sessionDetails?.duration_minutes || ''}
-              onChange={(e) => {
-                const value = e.target.value;
-                handleChange({
-                  target: {
-                    name: 'sessionDetails',
-                    value: {
-                      ...formData.sessionDetails,
-                      duration_minutes: value === '' ? null : parseInt(value, 10),
-                    },
-                  },
-                });
-              }}
-              onBlur={() => triggerAutoSave && triggerAutoSave()}
+              onChange={handleSessionDurationChange}
+              onBlur={handleSessionDurationBlur}
             />
             <div className="label">
               <span className="text-xs">
@@ -269,10 +300,7 @@ export default function ProgramDetails({
           </span>
           <WorkoutFormatSelector
             selectedFormats={formData.workoutFormats}
-            onChange={(formats) => {
-              handleWorkoutFormatChange(formats);
-              if (triggerAutoSave) triggerAutoSave();
-            }}
+            onChange={handleWorkoutFormatChangeWithDB}
           />
           <span className="text-xs text-gray-500 mt-1">
             Choose the types of workouts you want to see in your program. These

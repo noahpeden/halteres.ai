@@ -18,7 +18,7 @@ export default function ProgramLayout({ children, params }) {
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
 
   const isPublicWorkoutPage =
-    pathname.includes('/workouts/') && pathname.split('/').length === 5;
+    pathname.includes('/workout/') && pathname.split('/').length === 5;
   const isPublicProgramPage = pathname.endsWith('/share');
   const isPublicPage = isPublicWorkoutPage || isPublicProgramPage;
 

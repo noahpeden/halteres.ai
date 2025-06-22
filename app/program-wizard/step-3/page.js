@@ -1,9 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import useProgramStore from '../../store/programStore';
 import WizardProgress from '../../components/ProgramWizard/WizardProgress';
 import equipmentList from '@/utils/equipmentList';
 import {
@@ -35,22 +34,9 @@ export default function Step3Page() {
   const { supabase } = useAuth();
   const programId = searchParams.get('programId');
 
-  const formData = useProgramStore((state) => state.formData);
-  const updateFormData = useProgramStore((state) => state.updateFormData);
-  const selectedWorkouts =
-    useProgramStore((state) => state.selectedWorkouts) || [];
-  const setSelectedWorkouts = useProgramStore(
-    (state) => state.setSelectedWorkouts
-  );
-  const goToNext = useProgramStore((state) => state.goToNext);
-  const goToPrevious = useProgramStore((state) => state.goToPrevious);
-  const fetchProgramFromDatabase = useProgramStore(
-    (state) => state.fetchProgramFromDatabase
-  );
-  // Don't use formData for initial state when we have a programId - let database load handle it
-  const [previousWorkout, setPreviousWorkout] = useState(
-    programId ? '' : formData.personalization || ''
-  );
+  const router = useRouter();
+  const [selectedWorkouts, setSelectedWorkouts] = useState([]);
+  const [previousWorkout, setPreviousWorkout] = useState('');
   const [skipReason, setSkipReason] = useState('');
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchResults, setSearchResults] = useState([]);
@@ -68,6 +54,7 @@ export default function Step3Page() {
   const [selectedWorkoutModal, setSelectedWorkoutModal] = useState(null);
   const [activeTab, setActiveTab] = useState('ai'); // 'manual' or 'ai'
   const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [previousGeneratedWorkouts, setPreviousGeneratedWorkouts] = useState(
     []
   );
@@ -83,14 +70,22 @@ export default function Step3Page() {
       if (programId && supabase) {
         setIsLoading(true);
         try {
-          const programData = await fetchProgramFromDatabase(
-            programId,
-            supabase
-          );
-          if (programData) {
+          // Fetch program data directly from Supabase
+          const { data: program, error } = await supabase
+            .from('programs')
+            .select('*')
+            .eq('id', programId)
+            .single();
+
+          if (error) {
+            console.error('Error fetching program:', error);
+            return;
+          }
+
+          if (program) {
             // Update local state with fetched data
             setPreviousWorkout(
-              programData.personalization || programData.referenceInput || ''
+              program.reference_input || ''
             );
 
             // Load reference workouts (previously selected workouts)
@@ -152,34 +147,34 @@ export default function Step3Page() {
     }
 
     loadProgram();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [programId, supabase, setSelectedWorkouts]);
+  }, [programId, supabase]);
 
-  // Only update from form data if we're NOT loading from database
-  useEffect(() => {
-    if (!programId) {
-      setPreviousWorkout(formData.personalization || '');
-    }
-  }, [formData.personalization, programId]);
-
-  // Save state when fields change
-  useEffect(() => {
-    updateFormData({
-      personalization: previousWorkout.trim(),
-      referenceInput: previousWorkout.trim(),
-    });
-  }, [previousWorkout, updateFormData]);
 
   const handleNext = async () => {
-    // Save form data
-    updateFormData({
-      personalization: previousWorkout.trim(),
-      referenceInput: previousWorkout.trim(),
-    });
+    if (!programId) {
+      alert('No program ID found. Please start from the beginning.');
+      router.push('/dashboard');
+      return;
+    }
 
-    // Save selected workouts as reference workouts if we have a programId and selected workouts
-    if (programId && selectedWorkouts.length > 0 && supabase) {
-      try {
+    setIsSaving(true);
+    try {
+      // Update program with reference input
+      const { error: updateError } = await supabase
+        .from('programs')
+        .update({
+          reference_input: previousWorkout.trim(),
+        })
+        .eq('id', programId);
+
+      if (updateError) {
+        console.error('Error updating program:', updateError);
+        alert('Failed to save program data. Please try again.');
+        return;
+      }
+
+      // Save selected workouts as reference workouts if any are selected
+      if (selectedWorkouts.length > 0) {
         // First, delete existing reference workouts for this program
         await supabase
           .from('program_workouts')
@@ -206,47 +201,75 @@ export default function Step3Page() {
 
         if (insertError) {
           console.error('Error saving reference workouts:', insertError);
-        } else {
-          console.log('Successfully saved reference workouts to database');
         }
+      }
+
+      // Navigate to step 4
+      router.push(`/program-wizard/step-4?programId=${programId}`);
+    } catch (error) {
+      console.error('Error saving step 3:', error);
+      alert('An error occurred. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handlePrevious = async () => {
+    // Save current state before going back
+    if (programId && previousWorkout.trim()) {
+      try {
+        await supabase
+          .from('programs')
+          .update({
+            reference_input: previousWorkout.trim(),
+          })
+          .eq('id', programId);
       } catch (error) {
-        console.error('Error handling reference workouts:', error);
+        console.error('Error saving before navigation:', error);
       }
     }
 
-    goToNext(3);
-  };
-
-  const handlePrevious = () => {
-    updateFormData({
-      personalization: previousWorkout.trim(),
-      referenceInput: previousWorkout.trim(),
-    });
-    goToPrevious(3);
+    router.push(`/program-wizard/step-2?programId=${programId}`);
   };
 
   const handleSkip = async () => {
-    updateFormData({
-      personalization: '',
-      referenceInput: '',
-    });
-    setSelectedWorkouts([]);
-
-    // Clear any existing reference workouts if we have a programId
-    if (programId && supabase) {
-      try {
-        await supabase
-          .from('program_workouts')
-          .delete()
-          .eq('program_id', programId)
-          .eq('is_reference', true);
-        console.log('Cleared existing reference workouts');
-      } catch (error) {
-        console.error('Error clearing reference workouts:', error);
-      }
+    if (!programId) {
+      alert('No program ID found. Please start from the beginning.');
+      router.push('/dashboard');
+      return;
     }
 
-    goToNext(3);
+    setIsSaving(true);
+    try {
+      // Clear reference input
+      const { error: updateError } = await supabase
+        .from('programs')
+        .update({
+          reference_input: '',
+        })
+        .eq('id', programId);
+
+      if (updateError) {
+        console.error('Error updating program:', updateError);
+        alert('Failed to save program data. Please try again.');
+        return;
+      }
+
+      // Clear any existing reference workouts
+      await supabase
+        .from('program_workouts')
+        .delete()
+        .eq('program_id', programId)
+        .eq('is_reference', true);
+
+      // Navigate to step 4
+      router.push(`/program-wizard/step-4?programId=${programId}`);
+    } catch (error) {
+      console.error('Error in handleSkip:', error);
+      alert('An error occurred. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleSearchWorkouts = async () => {
@@ -932,7 +955,8 @@ Day 3: Leg Press 4x12, DB Press 4x10, Leg Curls 4x12`,
           <div className="flex items-center justify-between">
             <button
               onClick={handlePrevious}
-              className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:text-gray-900 transition-colors"
+              disabled={isSaving}
+              className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:text-gray-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <ChevronLeft className="w-5 h-5" />
               <span>Back</span>
@@ -942,11 +966,28 @@ Day 3: Leg Press 4x12, DB Press 4x10, Leg Curls 4x12`,
 
             <div className="flex items-center gap-3">
               <button
-                onClick={handleNext}
-                className="flex items-center gap-2 px-6 py-2.5 bg-primary hover:bg-primary-dark text-white font-medium rounded-lg transition-all"
+                onClick={handleSkip}
+                disabled={isSaving}
+                className="px-4 py-2 text-gray-600 hover:text-gray-700 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <span>Continue</span>
-                <ChevronRight className="w-5 h-5" />
+                Skip
+              </button>
+              <button
+                onClick={handleNext}
+                disabled={isSaving}
+                className="flex items-center gap-2 px-6 py-2.5 bg-primary hover:bg-primary-dark text-white font-medium rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSaving ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <span>Saving...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Continue</span>
+                    <ChevronRight className="w-5 h-5" />
+                  </>
+                )}
               </button>
             </div>
           </div>

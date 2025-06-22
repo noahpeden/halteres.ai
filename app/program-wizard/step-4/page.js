@@ -1,12 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { X } from 'lucide-react';
-import useProgramStore from '../../store/programStore';
 import WizardProgress from '../../components/ProgramWizard/WizardProgress';
 import WorkoutFormatSelector from '@/components/selectors/WorkoutFormatSelector';
+import { gymEquipmentPresets } from '../../components/utils';
+import equipmentList from '@/utils/equipmentList';
 
 const gymTypes = [
   { value: 'Crossfit Box', label: 'CrossFit Box', icon: '🏋️' },
@@ -36,37 +37,21 @@ const gymTypes = [
 
 export default function Step4Page() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const { supabase } = useAuth();
   const programId = searchParams.get('programId');
 
-  const formData = useProgramStore((state) => state.formData);
-  const updateFormData = useProgramStore((state) => state.updateFormData);
-  const goToPrevious = useProgramStore((state) => state.goToPrevious);
-  const goToNext = useProgramStore((state) => state.goToNext);
-  const selectedEquipment = useProgramStore((state) => state.selectedEquipment);
-  const selectedGymType = useProgramStore((state) => state.selectedGymType);
-  const updateGymType = useProgramStore((state) => state.updateGymType);
-  const updateEquipment = useProgramStore((state) => state.updateEquipment);
-  const fetchProgramFromDatabase = useProgramStore(
-    (state) => state.fetchProgramFromDatabase
-  );
+  // Initialize with Crossfit Box equipment preset
+  const [selectedEquipment, setSelectedEquipment] = useState(gymEquipmentPresets['Crossfit Box'] || []);
+  const [selectedGymType, setSelectedGymType] = useState('Crossfit Box');
+  const [hasLoadedEquipment, setHasLoadedEquipment] = useState(false);
 
-  // Don't use formData for initial state when we have a programId - let database load handle it
-  const [difficultyLevel, setDifficultyLevel] = useState(
-    programId ? 'intermediate' : formData.difficulty || 'intermediate'
-  );
-  const [focusArea, setFocusArea] = useState(
-    programId ? 'full_body' : formData.focusArea || 'full_body'
-  );
-  const [workoutDuration, setWorkoutDuration] = useState(
-    programId
-      ? 60
-      : parseInt(formData.sessionDetails?.main_workout_duration) || 60
-  );
-  const [selectedFormats, setSelectedFormats] = useState(
-    programId ? [] : (formData.workoutFormats || [])
-  );
+  const [difficultyLevel, setDifficultyLevel] = useState('intermediate');
+  const [focusArea, setFocusArea] = useState('full_body');
+  const [workoutDuration, setWorkoutDuration] = useState(60);
+  const [selectedFormats, setSelectedFormats] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Fetch program data if programId is provided
   useEffect(() => {
@@ -74,25 +59,58 @@ export default function Step4Page() {
       if (programId && supabase) {
         setIsLoading(true);
         try {
-          const programData = await fetchProgramFromDatabase(
-            programId,
-            supabase
-          );
-          if (programData) {
+          // Fetch program data directly from Supabase
+          const { data: program, error } = await supabase
+            .from('programs')
+            .select('*')
+            .eq('id', programId)
+            .single();
+
+          if (error) {
+            console.error('Error fetching program:', error);
+            return;
+          }
+
+          if (program) {
             // Update local state with fetched data
-            if (programData.gymType) {
-              // Store gymType in Title Case format to match equipment presets
-              updateGymType(programData.gymType);
+            const gymTypeFromDb = program.gym_details?.gym_type || program.gym_type;
+            if (gymTypeFromDb) {
+              // Convert from snake_case to Title Case
+              const gymType = gymTypes.find(g => 
+                g.value.toLowerCase().replace(/\s+/g, '_').replace(/\//g, '_') === gymTypeFromDb
+              )?.value || 'Crossfit Box';
+              setSelectedGymType(gymType);
+              
+              // Auto-set equipment based on gym type
+              const preset = gymEquipmentPresets[gymType];
+              if (preset) {
+                setSelectedEquipment(preset);
+              }
             }
-            if (programData.equipment) {
-              updateEquipment(programData.equipment);
+            
+            // Override with specific equipment if stored (convert names to IDs)
+            if (program.gym_details?.equipment && Array.isArray(program.gym_details.equipment) && program.gym_details.equipment.length > 0) {
+              const equipmentIds = program.gym_details.equipment
+                .map((name) => {
+                  const equipment = equipmentList.find((item) => item.label === name);
+                  return equipment ? equipment.value : null;
+                })
+                .filter(Boolean);
+              setSelectedEquipment(equipmentIds);
+              setHasLoadedEquipment(true);
             }
-            setDifficultyLevel(programData.difficulty || 'intermediate');
-            setFocusArea(programData.focusArea || 'full_body');
+            
+            setDifficultyLevel(program.difficulty || 'intermediate');
+            setFocusArea(program.focus_area || 'full_body');
             setWorkoutDuration(
-              programData.sessionDetails?.main_workout_duration || 60
+              program.session_details?.duration_minutes || 
+              program.session_details?.main_workout_duration || 
+              60
             );
-            setSelectedFormats(programData.workoutFormats || ['strength', 'hypertrophy', 'endurance', 'power', 'metcon']);
+            setSelectedFormats(
+              program.workout_format?.formats || 
+              ['strength', 'hypertrophy', 'endurance', 'power', 'metcon']
+            );
           }
         } catch (error) {
           console.error('Error loading program:', error);
@@ -103,70 +121,56 @@ export default function Step4Page() {
     }
 
     loadProgram();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [programId, supabase]);
 
-  // Only update from form data if we're NOT loading from database
+  // Auto-update equipment when gym type changes
   useEffect(() => {
-    if (!programId) {
-      if (formData.gymType) {
-        // Convert from Title Case to snake_case if needed
-        const gymTypeSnakeCase = formData.gymType
-          .toLowerCase()
-          .replace(/\s+/g, '_');
-        updateGymType(gymTypeSnakeCase);
+    // Only auto-update if we haven't loaded saved equipment from the database
+    if (!hasLoadedEquipment) {
+      const preset = gymEquipmentPresets[selectedGymType];
+      if (preset) {
+        setSelectedEquipment(preset);
       }
-      if (formData.equipment) {
-        updateEquipment(formData.equipment);
-      }
-      setDifficultyLevel(formData.difficulty || 'intermediate');
-      setFocusArea(formData.focusArea || 'full_body');
-      setWorkoutDuration(
-        parseInt(formData.sessionDetails?.main_workout_duration) || 60
-      );
-      setSelectedFormats(formData.workoutFormats || ['strength', 'hypertrophy', 'endurance', 'power', 'metcon']);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    formData.gymType,
-    formData.equipment,
-    formData.difficulty,
-    formData.focusArea,
-    formData.workoutFormats,
-    programId,
-  ]);
+  }, [selectedGymType, hasLoadedEquipment]);
 
-  // Save state when fields change
-  useEffect(() => {
-    // Convert snake_case to Title Case for gymType
-    const gymTypeLabel =
-      gymTypes.find((g) => g.value === selectedGymType)?.label ||
-      selectedGymType;
+  const handleGymTypeChange = async (gymType) => {
+    // Update gym type
+    setSelectedGymType(gymType);
+    
+    // Always apply the preset when user manually changes gym type
+    const preset = gymEquipmentPresets[gymType];
+    if (preset) {
+      setSelectedEquipment(preset);
+      
+      // Save the new equipment selection immediately
+      if (programId) {
+        try {
+          const gymTypeSnakeCase = gymType
+            .toLowerCase()
+            .replace(/\s+/g, '_')
+            .replace(/\//g, '_');
 
-    updateFormData({
-      gymType: gymTypeLabel,
-      equipment: selectedEquipment,
-      difficulty: difficultyLevel,
-      focusArea,
-      sessionDetails: {
-        ...(formData.sessionDetails || {}),
-        main_workout_duration: workoutDuration,
-      },
-      workoutFormats: selectedFormats,
-    });
-  }, [
-    selectedGymType,
-    selectedEquipment,
-    difficultyLevel,
-    focusArea,
-    workoutDuration,
-    selectedFormats,
-    updateFormData,
-  ]);
+          // Convert equipment IDs to names for database storage
+          const equipmentNames = preset.map((id) => {
+            const equipment = equipmentList.find((item) => item.value === id);
+            return equipment ? equipment.label : null;
+          }).filter(Boolean);
 
-  const handleGymTypeChange = (gymType) => {
-    // Update gym type in context - this will automatically trigger equipment update
-    updateGymType(gymType);
+          await supabase
+            .from('programs')
+            .update({
+              gym_details: {
+                gym_type: gymTypeSnakeCase,
+                equipment: equipmentNames,
+              },
+            })
+            .eq('id', programId);
+        } catch (error) {
+          console.error('Error saving gym type:', error);
+        }
+      }
+    }
   };
 
   const handleFormatToggle = (format) => {
@@ -177,48 +181,129 @@ export default function Step4Page() {
     );
   };
 
-  const handlePrevious = () => {
-    const gymTypeLabel =
-      gymTypes.find((g) => g.value === selectedGymType)?.label ||
-      selectedGymType;
+  const handleEquipmentToggle = async (equipmentValue) => {
+    const value = equipmentValue === '-1' ? -1 : parseInt(equipmentValue);
+    
+    let newEquipment;
+    if (value === -1) {
+      // Toggle all equipment
+      const allSelected = selectedEquipment.length === equipmentList.length;
+      newEquipment = allSelected
+        ? []
+        : equipmentList.map((item) => item.value);
+      setSelectedEquipment(newEquipment);
+    } else {
+      const isSelected = selectedEquipment.includes(value);
+      newEquipment = isSelected
+        ? selectedEquipment.filter((item) => item !== value)
+        : [...selectedEquipment, value];
+      setSelectedEquipment(newEquipment);
+    }
 
-    updateFormData({
-      gymType: gymTypeLabel,
-      equipment: selectedEquipment,
-      difficulty: difficultyLevel,
-      focusArea,
-      sessionDetails: {
-        ...(formData.sessionDetails || {}),
-        main_workout_duration: workoutDuration,
-      },
-      workoutFormats: selectedFormats,
-    });
-    goToPrevious(4);
+    // Save equipment changes to Supabase immediately
+    if (programId) {
+      try {
+        const gymTypeSnakeCase = selectedGymType
+          .toLowerCase()
+          .replace(/\s+/g, '_')
+          .replace(/\//g, '_');
+
+        // Convert equipment IDs to names for database storage
+        const equipmentNames = newEquipment.map((id) => {
+          const equipment = equipmentList.find((item) => item.value === id);
+          return equipment ? equipment.label : null;
+        }).filter(Boolean);
+
+        await supabase
+          .from('programs')
+          .update({
+            gym_details: {
+              gym_type: gymTypeSnakeCase,
+              equipment: equipmentNames,
+            },
+          })
+          .eq('id', programId);
+      } catch (error) {
+        console.error('Error saving equipment selection:', error);
+      }
+    }
   };
 
-  const handleNext = () => {
+  const handlePrevious = async () => {
+    // Save current state before going back
+    if (programId) {
+      try {
+        await saveStepData();
+      } catch (error) {
+        console.error('Error saving before navigation:', error);
+      }
+    }
+
+    router.push(`/program-wizard/step-3?programId=${programId}`);
+  };
+
+  const saveStepData = async () => {
+    if (!programId) return;
+
+    // Convert gym type to snake_case for database storage
+    const gymTypeSnakeCase = selectedGymType
+      .toLowerCase()
+      .replace(/\s+/g, '_')
+      .replace(/\//g, '_');
+
+    // Convert equipment IDs to names for database storage
+    const equipmentNames = selectedEquipment.map((id) => {
+      const equipment = equipmentList.find((item) => item.value === id);
+      return equipment ? equipment.label : null;
+    }).filter(Boolean);
+
+    const { error } = await supabase
+      .from('programs')
+      .update({
+        difficulty: difficultyLevel,
+        focus_area: focusArea,
+        gym_details: {
+          gym_type: gymTypeSnakeCase,
+          equipment: equipmentNames,
+        },
+        session_details: {
+          duration_minutes: workoutDuration,
+        },
+        workout_format: {
+          formats: selectedFormats,
+        },
+      })
+      .eq('id', programId);
+
+    if (error) {
+      throw error;
+    }
+  };
+
+  const handleNext = async () => {
     if (!selectedGymType) {
       alert('Please select a gym type');
       return;
     }
 
-    const gymTypeLabel =
-      gymTypes.find((g) => g.value === selectedGymType)?.label ||
-      selectedGymType;
+    if (!programId) {
+      alert('No program ID found. Please start from the beginning.');
+      router.push('/dashboard');
+      return;
+    }
 
-    updateFormData({
-      gymType: gymTypeLabel,
-      equipment: selectedEquipment,
-      difficulty: difficultyLevel,
-      focusArea,
-      sessionDetails: {
-        ...(formData.sessionDetails || {}),
-        main_workout_duration: workoutDuration,
-      },
-      workoutFormats: selectedFormats,
-    });
+    setIsSaving(true);
+    try {
+      await saveStepData();
 
-    goToNext(4);
+      // Navigate to step 5
+      router.push(`/program-wizard/step-5?programId=${programId}`);
+    } catch (error) {
+      console.error('Error saving step 4:', error);
+      alert('Failed to save program data. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -287,8 +372,8 @@ export default function Step4Page() {
 
           <div className="divider"></div>
 
-          {/* Equipment Selection - Commented out for now */}
-          {/* <div>
+          {/* Equipment Selection */}
+          <div>
             <h3 className="text-lg font-medium mb-2">Available Equipment</h3>
             <p className="text-sm text-base-content/70 mb-4">
               Equipment has been pre-selected based on your gym type. Add or remove as needed.
@@ -297,7 +382,7 @@ export default function Step4Page() {
               <label className="flex items-center space-x-2 cursor-pointer">
                 <input
                   type="checkbox"
-                  checked={isAllEquipmentSelected}
+                  checked={selectedEquipment.length === equipmentList.length}
                   onChange={(e) => handleEquipmentToggle(e.target.value)}
                   value="-1"
                   className="checkbox checkbox-sm"
@@ -322,7 +407,7 @@ export default function Step4Page() {
                 </label>
               ))}
             </div>
-          </div> */}
+          </div>
 
           <div className="divider"></div>
 
@@ -398,7 +483,11 @@ export default function Step4Page() {
         </div>
 
         <div className="flex justify-between mt-8">
-          <button onClick={handlePrevious} className="btn btn-outline">
+          <button 
+            onClick={handlePrevious} 
+            className="btn btn-outline"
+            disabled={isSaving}
+          >
             <svg
               className="w-5 h-5 mr-2"
               fill="none"
@@ -422,22 +511,31 @@ export default function Step4Page() {
           <button
             onClick={handleNext}
             className="btn btn-primary px-6"
-            disabled={!selectedGymType}
+            disabled={!selectedGymType || isSaving}
           >
-            Continue to Step 5
-            <svg
-              className="w-4 h-4 ml-2"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 5l7 7-7 7"
-              />
-            </svg>
+            {isSaving ? (
+              <>
+                <span className="loading loading-spinner loading-sm mr-2"></span>
+                Saving...
+              </>
+            ) : (
+              <>
+                Continue to Step 5
+                <svg
+                  className="w-4 h-4 ml-2"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 5l7 7-7 7"
+                  />
+                </svg>
+              </>
+            )}
           </button>
         </div>
       </div>

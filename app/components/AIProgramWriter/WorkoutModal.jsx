@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState, useRef } from 'react';
 import { Trash2, Pencil, Sparkles } from 'lucide-react';
-import useProgramStore from '@/store/programStore';
+import { useProgram } from '@/contexts/ProgramContext';
 
 export default function WorkoutModal({
   isOpen,
@@ -12,7 +12,7 @@ export default function WorkoutModal({
   onDeleteWorkout,
   onEditWorkout,
 }) {
-  const formData = useProgramStore((state) => state.formData);
+  const { formData } = useProgram();
 
   useEffect(() => {
     const handleEscape = (event) => {
@@ -56,13 +56,13 @@ export default function WorkoutModal({
           workout?.body || workout?.description || 'No description provided.',
       };
       const safeInstructions = enhancement || 'No specific instructions.';
-      const safeMethodology = formData.trainingMethodology || 'General fitness';
-      const safeGymEquipment = Array.isArray(formData.equipment)
+      const safeMethodology = formData?.trainingMethodology || 'General fitness';
+      const safeGymEquipment = Array.isArray(formData?.equipment)
         ? formData.equipment.length > 0
           ? formData.equipment
           : ['Bodyweight']
-        : formData.equipment || ['Bodyweight'];
-      const safeInjuries = formData.injuries || '';
+        : formData?.equipment || ['Bodyweight'];
+      const safeInjuries = formData?.injuries || '';
       const payload = {
         workout: safeWorkout,
         instructions: safeInstructions,

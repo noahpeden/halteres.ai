@@ -1,37 +1,22 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { X } from 'lucide-react';
-import useProgramStore from '../../store/programStore';
 import WizardProgress from '../../components/ProgramWizard/WizardProgress';
 
 export default function Step2Page() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const { supabase } = useAuth();
-  let programId = searchParams.get('programId');
-  const programIdFromStore = useProgramStore((state) => state.programId);
-  if (!programId) {
-    programId = programIdFromStore;
-  }
+  const programId = searchParams.get('programId');
 
-  const formData = useProgramStore((state) => state.formData);
-  const updateFormData = useProgramStore((state) => state.updateFormData);
-  const goToNext = useProgramStore((state) => state.goToNext);
-  const goToPrevious = useProgramStore((state) => state.goToPrevious);
-  const fetchProgramFromDatabase = useProgramStore(
-    (state) => state.fetchProgramFromDatabase
-  );
-  // Don't use formData for initial state when we have a programId - let database load handle it
-  const [programName, setProgramName] = useState(
-    programId ? '' : formData.name || ''
-  );
-  const [programDescription, setProgramDescription] = useState(
-    programId ? '' : formData.description || ''
-  );
+  const [programName, setProgramName] = useState('');
+  const [programDescription, setProgramDescription] = useState('');
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Fetch program data if programId is provided
   useEffect(() => {
@@ -39,14 +24,21 @@ export default function Step2Page() {
       if (programId && supabase) {
         setIsLoading(true);
         try {
-          const programData = await fetchProgramFromDatabase(
-            programId,
-            supabase
-          );
-          if (programData) {
+          const { data: program, error } = await supabase
+            .from('programs')
+            .select('*')
+            .eq('id', programId)
+            .single();
+
+          if (error) {
+            console.error('Error fetching program:', error);
+            return;
+          }
+
+          if (program) {
             // Update local state with fetched data
-            setProgramName(programData.name || '');
-            setProgramDescription(programData.description || '');
+            setProgramName(program.name || '');
+            setProgramDescription(program.description || '');
           }
         } catch (error) {
           console.error('Error loading program:', error);
@@ -57,26 +49,7 @@ export default function Step2Page() {
     }
 
     loadProgram();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [programId, supabase]);
-
-  // Only update from form data if we're NOT loading from database
-  useEffect(() => {
-    if (!programId) {
-      setProgramName(formData.name || '');
-      setProgramDescription(formData.description || '');
-    }
-  }, [formData.name, formData.description, programId]);
-
-  // Save state when fields change
-  useEffect(() => {
-    if (programName.trim() || programDescription.trim()) {
-      updateFormData({
-        name: programName.trim(),
-        description: programDescription.trim(),
-      });
-    }
-  }, [programName, programDescription, updateFormData]);
 
   const validateForm = () => {
     const newErrors = {};
@@ -96,24 +69,61 @@ export default function Step2Page() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (!validateForm()) {
       return;
     }
 
-    updateFormData({
-      name: programName.trim(),
-      description: programDescription.trim(),
-    });
-    goToNext(2);
+    if (!programId) {
+      alert('No program ID found. Please start from the beginning.');
+      router.push('/dashboard');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      // Update program directly in Supabase
+      const { error } = await supabase
+        .from('programs')
+        .update({
+          name: programName.trim(),
+          description: programDescription.trim(),
+        })
+        .eq('id', programId);
+
+      if (error) {
+        console.error('Error updating program:', error);
+        alert('Failed to save program data. Please try again.');
+        return;
+      }
+
+      // Navigate to step 3
+      router.push(`/program-wizard/step-3?programId=${programId}`);
+    } catch (error) {
+      console.error('Error saving step 2:', error);
+      alert('An error occurred. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const handlePrevious = () => {
-    updateFormData({
-      name: programName.trim(),
-      description: programDescription.trim(),
-    });
-    goToPrevious(2);
+  const handlePrevious = async () => {
+    // Save current state before going back
+    if (programId && (programName.trim() || programDescription.trim())) {
+      try {
+        await supabase
+          .from('programs')
+          .update({
+            name: programName.trim(),
+            description: programDescription.trim(),
+          })
+          .eq('id', programId);
+      } catch (error) {
+        console.error('Error saving before navigation:', error);
+      }
+    }
+
+    router.push(`/program-wizard/step-1?programId=${programId}`);
   };
 
   const examplePrompts = [
@@ -173,15 +183,8 @@ export default function Step2Page() {
               placeholder="e.g., John's Basketball Prep, Sarah's Marathon Training, Mike's Strength Builder"
               className={`input input-bordered w-full ${
                 errors.programName ? 'input-error' : ''
-              } ${formData.name ? 'bg-primary/5' : ''}`}
+              }`}
             />
-            {formData.name && (
-              <label className="label">
-                <span className="label-text-alt text-success">
-                  ✓ Pre-filled from dashboard
-                </span>
-              </label>
-            )}
             {errors.programName && (
               <label className="label">
                 <span className="label-text-alt text-error">
@@ -290,21 +293,34 @@ export default function Step2Page() {
             Step 2 of 5 • Client Description
           </div>
 
-          <button onClick={handleNext} className="btn btn-primary px-6">
-            Continue to Step 3
-            <svg
-              className="w-4 h-4 ml-2"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 5l7 7-7 7"
-              />
-            </svg>
+          <button 
+            onClick={handleNext} 
+            className="btn btn-primary px-6"
+            disabled={isSaving}
+          >
+            {isSaving ? (
+              <>
+                <span className="loading loading-spinner loading-sm mr-2"></span>
+                Saving...
+              </>
+            ) : (
+              <>
+                Continue to Step 3
+                <svg
+                  className="w-4 h-4 ml-2"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 5l7 7-7 7"
+                  />
+                </svg>
+              </>
+            )}
           </button>
         </div>
       </div>

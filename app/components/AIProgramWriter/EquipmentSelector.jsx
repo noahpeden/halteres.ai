@@ -1,15 +1,48 @@
 'use client';
 
-import useProgramStore from '../../store/programStore';
+import { useProgram } from '@/contexts/ProgramContext';
+import equipmentList from '@/utils/equipmentList';
+import { useCallback } from 'react';
 
 export default function EquipmentSelector({
   isVisible,
   onToggleVisibility,
 }) {
-  const selectedEquipment = useProgramStore((state) => state.selectedEquipment);
-  const equipmentList = useProgramStore((state) => state.equipmentList);
-  const isAllEquipmentSelected = useProgramStore((state) => state.isAllEquipmentSelected);
-  const handleEquipmentToggle = useProgramStore((state) => state.handleEquipmentToggle);
+  const { selectedEquipment, updateEquipment, updateFormFields } = useProgram();
+  
+  const isAllEquipmentSelected = selectedEquipment.length === equipmentList.length;
+
+  const handleEquipmentToggle = useCallback(async (equipmentValue) => {
+    const value = equipmentValue === '-1' ? -1 : parseInt(equipmentValue);
+    
+    if (value === -1) {
+      // Toggle all equipment
+      const newEquipment = isAllEquipmentSelected ? [] : equipmentList.map(item => item.value);
+      updateEquipment(newEquipment);
+      
+      // Update in database
+      await updateFormFields({
+        gym_details: {
+          equipment: newEquipment,
+        }
+      });
+    } else {
+      const isSelected = selectedEquipment.includes(value);
+      const newEquipment = isSelected
+        ? selectedEquipment.filter(item => item !== value)
+        : [...selectedEquipment, value];
+      
+      updateEquipment(newEquipment);
+      
+      // Update in database
+      await updateFormFields({
+        gym_details: {
+          equipment: newEquipment,
+        }
+      });
+    }
+  }, [selectedEquipment, isAllEquipmentSelected, updateEquipment, updateFormFields]);
+
   return (
     <div>
       <button

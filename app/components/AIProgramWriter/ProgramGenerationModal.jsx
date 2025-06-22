@@ -23,10 +23,6 @@ function ProgramGenerationModal({
   const hasValidationErrors = validation && !validation.isValid;
   const isDisabled = hasValidationErrors || isConfirming;
 
-  // Debug validation object
-  console.log('ProgramGenerationModal - validation object:', validation);
-  console.log('ProgramGenerationModal - hasValidationErrors:', hasValidationErrors);
-
   // Get field labels for better error display
   const getFieldLabel = (field) => {
     const labels = {
@@ -45,11 +41,11 @@ function ProgramGenerationModal({
   return (
     <>
       {/* Backdrop */}
-      <div 
+      <div
         className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 animate-in fade-in duration-200"
         onClick={onClose}
       />
-      
+
       {/* Modal */}
       <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
         <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full animate-in zoom-in-95 slide-in-from-bottom-2 duration-300">
@@ -61,7 +57,7 @@ function ProgramGenerationModal({
             >
               <X className="w-5 h-5 text-gray-500" />
             </button>
-            
+
             <div className="flex items-center gap-3">
               {hasValidationErrors ? (
                 <div className="p-2 bg-amber-100 rounded-lg">
@@ -82,44 +78,55 @@ function ProgramGenerationModal({
               <div className="space-y-4">
                 <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
                   <p className="text-sm font-medium text-amber-800 mb-3">
-                    Please complete these required fields before generating your program:
+                    Please complete these required fields before generating your
+                    program:
                   </p>
-                  {validation.missingFields && validation.missingFields.length > 0 && (
-                    <div className="space-y-2">
-                      {validation.missingFields.map((field) => (
-                        <div key={field} className="flex items-center gap-2 text-sm text-amber-700">
-                          <div className="w-1.5 h-1.5 bg-amber-400 rounded-full" />
-                          <span>{getFieldLabel(field)}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                  {validation.missingFields &&
+                    validation.missingFields.length > 0 && (
+                      <div className="space-y-2">
+                        {validation.missingFields.map((field) => (
+                          <div
+                            key={field}
+                            className="flex items-center gap-2 text-sm text-amber-700"
+                          >
+                            <div className="w-1.5 h-1.5 bg-amber-400 rounded-full" />
+                            <span>{getFieldLabel(field)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                 </div>
               </div>
             ) : (
               <>
                 <p className="text-gray-600 mb-4">{message}</p>
-                
-                {validation && validation.missingOptionalFields && validation.missingOptionalFields.length > 0 && (
-                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl">
-                    <div className="flex items-start gap-3">
-                      <Info className="w-5 h-5 text-blue-600 mt-0.5" />
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-blue-800 mb-2">
-                          Consider adding these optional fields for better results:
-                        </p>
-                        <div className="space-y-1">
-                          {validation.missingOptionalFields.map((field) => (
-                            <div key={field} className="flex items-center gap-2 text-sm text-blue-700">
-                              <CheckCircle className="w-3.5 h-3.5 text-blue-400" />
-                              <span>{getFieldLabel(field)}</span>
-                            </div>
-                          ))}
+
+                {validation &&
+                  validation.missingOptionalFields &&
+                  validation.missingOptionalFields.length > 0 && (
+                    <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl">
+                      <div className="flex items-start gap-3">
+                        <Info className="w-5 h-5 text-blue-600 mt-0.5" />
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-blue-800 mb-2">
+                            Consider adding these optional fields for better
+                            results:
+                          </p>
+                          <div className="space-y-1">
+                            {validation.missingOptionalFields.map((field) => (
+                              <div
+                                key={field}
+                                className="flex items-center gap-2 text-sm text-blue-700"
+                              >
+                                <CheckCircle className="w-3.5 h-3.5 text-blue-400" />
+                                <span>{getFieldLabel(field)}</span>
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                )}
+                  )}
               </>
             )}
           </div>
@@ -132,7 +139,7 @@ function ProgramGenerationModal({
             >
               {hasValidationErrors ? 'Close' : cancelText}
             </button>
-            
+
             {!hasValidationErrors && (
               <button
                 onClick={onConfirm}

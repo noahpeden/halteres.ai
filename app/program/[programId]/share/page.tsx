@@ -31,9 +31,6 @@ export default function PublicProgramPage({
   useEffect(() => {
     async function fetchProgramData() {
       try {
-        console.log('Fetching program with id:', programId);
-
-        // Always use the public API route for consistency
         const response = await fetch(
           `/api/public-program?programId=${programId}`
         );

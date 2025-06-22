@@ -26,7 +26,7 @@ const ProgramForm = ({
   trialEndDate,
   generationsRemaining,
   lastGenerationDate,
-  triggerAutoSave,
+  calculatedEndDate,
 }) => {
   const handleChange = useCallback(
     (e) => {
@@ -57,8 +57,7 @@ const ProgramForm = ({
           // Just update the gym type without resetting equipment
           setFieldValue('gymType', value);
         }
-        // Trigger auto-save after gym type change
-        if (triggerAutoSave) triggerAutoSave();
+        // Auto-save will be handled by setFieldValue
         return;
       }
 
@@ -67,7 +66,7 @@ const ProgramForm = ({
       // Don't trigger auto-save on every keystroke for text fields
       // Auto-save will be triggered on blur instead
     },
-    [setFieldValue, formData.gymDetails, formData.gymType, triggerAutoSave]
+    [setFieldValue, formData.gymDetails, formData.gymType]
   );
 
   // --- Eligibility Logic ---
@@ -148,14 +147,13 @@ const ProgramForm = ({
         <ProgramEssentials
           formData={formData}
           handleChange={handleChange}
-          triggerAutoSave={triggerAutoSave}
-        />
+          />
         <ProgramScheduling
           formData={formData}
           handleChange={handleChange}
           handleDayOfWeekChange={handleDayOfWeekChange}
-          triggerAutoSave={triggerAutoSave}
-          subscriptionStatus={subscriptionStatus}
+            subscriptionStatus={subscriptionStatus}
+          calculatedEndDate={calculatedEndDate}
         />
       </div>
 
@@ -165,7 +163,6 @@ const ProgramForm = ({
         handleProgramTypeChange={handleProgramTypeChange}
         handleWorkoutFormatChange={handleWorkoutFormatChange}
         equipmentSelector={equipmentSelector}
-        triggerAutoSave={triggerAutoSave}
       />
 
       {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

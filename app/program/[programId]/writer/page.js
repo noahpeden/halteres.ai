@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useParams, useSearchParams } from 'next/navigation';
 import AIProgramWriter from '@/components/AIProgramWriter/AIProgramWriter';
+import { ProgramProvider } from '@/contexts/ProgramContext';
 import ClientMetricsTab from '@/components/ClientMetricsTab';
 import { Edit2, Check, X, ChevronRight, Share2 } from 'lucide-react';
 
@@ -204,10 +205,12 @@ export default function ProgramWriterPage() {
           {/* AI Program Writer (Main Content) */}
           <div className={`flex-grow w-full ${isSidebarCollapsed ? 'lg:w-full' : 'lg:w-2/3'} transition-all duration-300 ease-in-out`}>
             <div className="bg-white rounded-lg shadow h-full w-full">
-              <AIProgramWriter
-                programId={programId}
-                wizardComplete={wizardComplete}
-              />
+              <ProgramProvider programId={programId}>
+                <AIProgramWriter
+                  programId={programId}
+                  wizardComplete={wizardComplete}
+                />
+              </ProgramProvider>
             </div>
           </div>
 

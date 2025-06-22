@@ -7,7 +7,6 @@ import { InfoIcon, ChevronDown } from 'lucide-react';
 export default function ProgramEssentials({
   formData,
   handleChange,
-  triggerAutoSave,
 }) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
@@ -52,7 +51,7 @@ export default function ProgramEssentials({
               handleChange({
                 target: { name: 'trainingMethodology', value: typeId },
               });
-              if (triggerAutoSave) triggerAutoSave();
+              // Auto-save will be triggered by handleChange
             }}
           />
           <span className="text-xs text-gray-500 mb-2">
@@ -93,7 +92,7 @@ export default function ProgramEssentials({
                     }`}
                     onClick={() => {
                       handleProgramTypeSelect(type.value);
-                      if (triggerAutoSave) triggerAutoSave();
+                      // Auto-save will be triggered by handleChange
                     }}
                   >
                     {type.label}
@@ -121,7 +120,7 @@ export default function ProgramEssentials({
             className="textarea textarea-bordered w-full border-base-300 focus:border-primary"
             value={formData.description}
             onChange={handleChange}
-            onBlur={() => triggerAutoSave && triggerAutoSave()}
+            onBlur={() => {}}
             name="description"
             placeholder="Enter a description of your program (e.g., 'Intro to strength training, 4x4 program, etc.)"
             rows="3"
@@ -149,7 +148,7 @@ export default function ProgramEssentials({
             placeholder="Paste your own workout text here (e.g., a specific WOD, a previous program structure)"
             value={getReferenceInputValue()}
             onChange={handleChange}
-            onBlur={() => triggerAutoSave && triggerAutoSave()}
+            onBlur={() => {}}
             rows="3"
           ></textarea>
         </label>

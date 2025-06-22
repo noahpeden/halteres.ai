@@ -33,13 +33,8 @@ async function fetchUserSubscription(supabase) {
 
     if (!user) {
       // No error but no user - not logged in
-      console.log('Pricing page: No authenticated user found - not logged in');
       return { user: null, profile: null };
     }
-
-    console.log(
-      `Pricing page: Found authenticated user ${user.id}, fetching profile...`
-    );
 
     // Now fetch the profile
     const { data: profile, error: profileError } = await supabase
@@ -62,9 +57,6 @@ async function fetchUserSubscription(supabase) {
       };
     }
 
-    console.log(
-      `Pricing page: Successfully fetched profile for user ${user.id}`
-    );
     return { user, profile };
   } catch (error) {
     console.error('Unexpected error in fetchUserSubscription:', error);

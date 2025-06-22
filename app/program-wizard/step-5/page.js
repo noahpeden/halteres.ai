@@ -1,10 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { X } from 'lucide-react';
-import useProgramStore from '../../store/programStore';
 import WizardProgress from '../../components/ProgramWizard/WizardProgress';
 import {
   kgToLbs,
@@ -18,68 +17,30 @@ import {
 
 export default function Step5Page() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const programId = searchParams.get('programId');
-  
-  const formData = useProgramStore((state) => state.formData);
-  const entityName = useProgramStore((state) => state.entityName);
-  const entityType = useProgramStore((state) => state.entityType);
-  const setEntityName = useProgramStore((state) => state.setEntityName);
-  const setEntityType = useProgramStore((state) => state.setEntityType);
-  const updateFormData = useProgramStore((state) => state.updateFormData);
-  const goToPrevious = useProgramStore((state) => state.goToPrevious);
-  const completeWizard = useProgramStore((state) => state.completeWizard);
-  const updateProgramAndReturn = useProgramStore((state) => state.updateProgramAndReturn);
-  const fetchProgramFromDatabase = useProgramStore((state) => state.fetchProgramFromDatabase);
   const { supabase } = useAuth();
+  
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [entityData, setEntityData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [editedData, setEditedData] = useState({});
-  const [useImperial, setUseImperial] = useState(true); // Default to imperial
+  const [useImperial, setUseImperial] = useState(true);
   const [entities, setEntities] = useState([]);
   const [showEntitySelection, setShowEntitySelection] = useState(false);
-  const [selectedEntityId, setSelectedEntityId] = useState(formData.entityId);
-  const [schedulingData, setSchedulingData] = useState(() => {
-    // Convert day names to indices for display
-    const dayNames = [
-      'sunday',
-      'monday',
-      'tuesday',
-      'wednesday',
-      'thursday',
-      'friday',
-      'saturday',
-    ];
-    let daysOfWeekIndices = [];
-
-    if (formData.daysOfWeek && Array.isArray(formData.daysOfWeek)) {
-      if (formData.daysOfWeek.length > 0) {
-        // Check if first element is a string (day name) or number (index)
-        if (typeof formData.daysOfWeek[0] === 'string') {
-          // Convert day names to indices
-          daysOfWeekIndices = formData.daysOfWeek
-            .map((dayName) => dayNames.indexOf(dayName.toLowerCase()))
-            .filter((index) => index !== -1);
-        } else {
-          // Already indices
-          daysOfWeekIndices = formData.daysOfWeek;
-        }
-      }
-    }
-
-    return {
-      programName: formData.name || '',
-      startDate:
-        formData.startDate ||
-        (() => {
-          const tomorrow = new Date();
-          tomorrow.setDate(tomorrow.getDate() + 1);
-          return tomorrow.toISOString().split('T')[0];
-        })(),
-      numberOfWeeks: parseInt(formData.numberOfWeeks) || 4,
-      daysOfWeek: daysOfWeekIndices,
-    };
+  const [selectedEntityId, setSelectedEntityId] = useState(null);
+  const [entityName, setEntityName] = useState('');
+  const [entityType, setEntityType] = useState('CLIENT');
+  const [schedulingData, setSchedulingData] = useState({
+    programName: '',
+    startDate: (() => {
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      return tomorrow.toISOString().split('T')[0];
+    })(),
+    numberOfWeeks: 4,
+    daysOfWeek: [],
   });
 
   // Fetch program data if programId is provided
@@ -87,8 +48,19 @@ export default function Step5Page() {
     async function loadProgram() {
       if (programId && supabase) {
         try {
-          const programData = await fetchProgramFromDatabase(programId, supabase);
-          if (programData) {
+          // Fetch program data directly from Supabase
+          const { data: program, error } = await supabase
+            .from('programs')
+            .select('*')
+            .eq('id', programId)
+            .single();
+
+          if (error) {
+            console.error('Error fetching program:', error);
+            return;
+          }
+
+          if (program) {
             // Update scheduling data with fetched data
             const dayNames = [
               'sunday',
@@ -101,8 +73,9 @@ export default function Step5Page() {
             ];
             
             let daysOfWeekIndices = [];
-            if (programData.daysOfWeek && Array.isArray(programData.daysOfWeek)) {
-              daysOfWeekIndices = programData.daysOfWeek.map((day) => {
+            const programDaysOfWeek = program.calendar_data?.days_of_week || [];
+            if (programDaysOfWeek && Array.isArray(programDaysOfWeek)) {
+              daysOfWeekIndices = programDaysOfWeek.map((day) => {
                 if (typeof day === 'string') {
                   return dayNames.indexOf(day.toLowerCase());
                 }
@@ -111,70 +84,44 @@ export default function Step5Page() {
             }
             
             setSchedulingData({
-              programName: programData.name || '',
-              startDate: programData.startDate || (() => {
+              programName: program.name || '',
+              startDate: program.calendar_data?.start_date || (() => {
                 const tomorrow = new Date();
                 tomorrow.setDate(tomorrow.getDate() + 1);
                 return tomorrow.toISOString().split('T')[0];
               })(),
-              numberOfWeeks: parseInt(programData.numberOfWeeks) || 4,
+              numberOfWeeks: parseInt(program.duration_weeks) || 4,
               daysOfWeek: daysOfWeekIndices,
             });
             
-            if (programData.entityId) {
-              setSelectedEntityId(programData.entityId);
+            if (program.entity_id) {
+              setSelectedEntityId(program.entity_id);
+              
+              // Fetch entity data for display
+              const { data: entity, error: entityError } = await supabase
+                .from('entities')
+                .select('*')
+                .eq('id', program.entity_id)
+                .single();
+                
+              if (!entityError && entity) {
+                setEntityData(entity);
+                setEntityName(entity.name);
+                setEntityType(entity.type);
+              }
             }
           }
         } catch (error) {
           console.error('Error loading program:', error);
+        } finally {
+          setIsLoading(false);
         }
       }
     }
     
     loadProgram();
-  }, [programId, supabase, fetchProgramFromDatabase]);
+  }, [programId, supabase]);
 
-  // Update local entity selection from form data
-  useEffect(() => {
-    if (formData.entityId) {
-      setSelectedEntityId(formData.entityId);
-    }
-  }, [formData.entityId]);
-
-  // Update schedulingData when formData changes
-  useEffect(() => {
-    const dayNames = [
-      'sunday',
-      'monday',
-      'tuesday',
-      'wednesday',
-      'thursday',
-      'friday',
-      'saturday',
-    ];
-
-    // Convert day names to indices for display (handle both string and number formats)
-    let daysOfWeekIndices = [];
-    if (formData.daysOfWeek && Array.isArray(formData.daysOfWeek)) {
-      daysOfWeekIndices = formData.daysOfWeek.map((day) => {
-        if (typeof day === 'string') {
-          return dayNames.indexOf(day.toLowerCase());
-        }
-        return day; // Already a number
-      }).filter((index) => index !== -1 && index >= 0 && index <= 6);
-    }
-
-    setSchedulingData({
-      programName: formData.name || '',
-      startDate: formData.startDate || (() => {
-        const tomorrow = new Date();
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        return tomorrow.toISOString().split('T')[0];
-      })(),
-      numberOfWeeks: parseInt(formData.numberOfWeeks) || 4,
-      daysOfWeek: daysOfWeekIndices,
-    });
-  }, [formData.name, formData.startDate, formData.numberOfWeeks, formData.daysOfWeek]);
 
   // Fetch all entities for selection
   useEffect(() => {
@@ -262,21 +209,69 @@ export default function Step5Page() {
     }));
   };
 
-  const handlePrevious = () => {
-    goToPrevious(5);
+  const handlePrevious = async () => {
+    // Save current state before going back
+    if (programId) {
+      try {
+        await saveCurrentState();
+      } catch (error) {
+        console.error('Error saving before navigation:', error);
+      }
+    }
+
+    router.push(`/program-wizard/step-4?programId=${programId}`);
   };
 
-  const handleEntitySelect = (entityId) => {
+  const saveCurrentState = async () => {
+    if (!programId) return;
+
+    const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const daysOfWeekNames = schedulingData.daysOfWeek.map(index => dayNames[index]);
+    const endDate = calculateEndDate();
+
+    const { error } = await supabase
+      .from('programs')
+      .update({
+        name: schedulingData.programName,
+        entity_id: selectedEntityId,
+        duration_weeks: schedulingData.numberOfWeeks,
+        calendar_data: {
+          start_date: schedulingData.startDate,
+          end_date: endDate,
+          days_of_week: daysOfWeekNames,
+        },
+      })
+      .eq('id', programId);
+
+    if (error) {
+      throw error;
+    }
+  };
+
+  const handleEntitySelect = async (entityId) => {
     setSelectedEntityId(entityId);
     setShowEntitySelection(false);
-    // Update form data with new entity selection
+    
     const selectedEntity = entities.find((e) => e.id === entityId);
     if (selectedEntity) {
-      updateFormData({
-        entityId: entityId,
-      });
       setEntityName(selectedEntity.name);
       setEntityType(selectedEntity.type);
+
+      // Update program in Supabase
+      if (programId) {
+        try {
+          const { error } = await supabase
+            .from('programs')
+            .update({ entity_id: entityId })
+            .eq('id', programId);
+
+          if (error) {
+            console.error('Error updating entity:', error);
+          }
+        } catch (error) {
+          console.error('Error updating entity:', error);
+        }
+      }
     }
   };
 
@@ -289,29 +284,45 @@ export default function Step5Page() {
     window.open('/dashboard/manage/entities', '_blank');
   };
 
-  const handleSchedulingChange = (field, value) => {
+  const handleSchedulingChange = async (field, value) => {
     setSchedulingData((prev) => ({ ...prev, [field]: value }));
-    // Also update form data
-    if (field === 'programName') {
-      updateFormData({ name: value });
-    } else if (field === 'numberOfWeeks') {
-      updateFormData({ numberOfWeeks: String(value) });
-    } else {
-      updateFormData({ [field]: value });
+    
+    // Update program in Supabase
+    if (programId) {
+      try {
+        if (field === 'programName') {
+          await supabase
+            .from('programs')
+            .update({ name: value })
+            .eq('id', programId);
+        } else if (field === 'numberOfWeeks') {
+          await supabase
+            .from('programs')
+            .update({ duration_weeks: value })
+            .eq('id', programId);
+        } else if (field === 'startDate') {
+          const endDate = new Date(value);
+          endDate.setDate(endDate.getDate() + schedulingData.numberOfWeeks * 7 - 1);
+          
+          await supabase
+            .from('programs')
+            .update({ 
+              calendar_data: {
+                ...schedulingData,
+                start_date: value,
+                end_date: endDate.toISOString().split('T')[0],
+              }
+            })
+            .eq('id', programId);
+        }
+      } catch (error) {
+        console.error('Error updating scheduling data:', error);
+      }
     }
   };
 
-  // Save state when scheduling data changes
-  useEffect(() => {
-    updateFormData({
-      name: schedulingData.programName,
-      startDate: schedulingData.startDate,
-      numberOfWeeks: String(schedulingData.numberOfWeeks),
-      // Don't overwrite daysOfWeek here since it's handled in handleToggleDay
-    });
-  }, [schedulingData.programName, schedulingData.startDate, schedulingData.numberOfWeeks, updateFormData]);
 
-  const handleToggleDay = (dayIndex) => {
+  const handleToggleDay = async (dayIndex) => {
     const dayNames = [
       'sunday',
       'monday',
@@ -327,7 +338,7 @@ export default function Step5Page() {
       ? schedulingData.daysOfWeek.filter((d) => d !== dayIndex)
       : [...schedulingData.daysOfWeek, dayIndex];
 
-    // Convert indices to day names for wizard data
+    // Convert indices to day names for database
     const newDaysOfWeekNames = newDaysOfWeekIndices.map(
       (index) => dayNames[index]
     );
@@ -336,7 +347,26 @@ export default function Step5Page() {
       ...prev,
       daysOfWeek: newDaysOfWeekIndices,
     }));
-    updateFormData({ daysOfWeek: newDaysOfWeekNames.map(name => name.charAt(0).toUpperCase() + name.slice(1)) });
+
+    // Update program in Supabase
+    if (programId) {
+      try {
+        const endDate = calculateEndDate();
+        
+        await supabase
+          .from('programs')
+          .update({ 
+            calendar_data: {
+              start_date: schedulingData.startDate,
+              end_date: endDate,
+              days_of_week: newDaysOfWeekNames,
+            }
+          })
+          .eq('id', programId);
+      } catch (error) {
+        console.error('Error updating days of week:', error);
+      }
+    }
   };
 
   // Calculate end date based on start date and duration
@@ -368,50 +398,54 @@ export default function Step5Page() {
       return;
     }
 
+    if (!programId) {
+      alert('No program ID found. Please start from the beginning.');
+      router.push('/dashboard');
+      return;
+    }
+
     setIsSubmitting(true);
     try {
-      // Update form data with final entity selection and scheduling before completing
       const selectedEntity = entities.find((e) => e.id === selectedEntityId);
       
       const dayNames = [
-        'Sunday',
-        'Monday',
-        'Tuesday',
-        'Wednesday',
-        'Thursday',
-        'Friday',
-        'Saturday',
+        'sunday',
+        'monday',
+        'tuesday',
+        'wednesday',
+        'thursday',
+        'friday',
+        'saturday',
       ];
       
       const finalDaysOfWeek = schedulingData.daysOfWeek.map(index => dayNames[index]);
+      const endDate = calculateEndDate();
       
-      const finalFormData = {
-        name: schedulingData.programName,
-        startDate: schedulingData.startDate,
-        numberOfWeeks: String(schedulingData.numberOfWeeks),
-        daysOfWeek: finalDaysOfWeek,
-        entityId: selectedEntityId,
-      };
-      
-      // Update form data and wait for it to be set
-      updateFormData(finalFormData);
-      
-      if (selectedEntity) {
-        setEntityName(selectedEntity.name);
-        setEntityType(selectedEntity.type);
+      // Update program with final data
+      const { error } = await supabase
+        .from('programs')
+        .update({
+          name: schedulingData.programName,
+          entity_id: selectedEntityId,
+          duration_weeks: schedulingData.numberOfWeeks,
+          calendar_data: {
+            start_date: schedulingData.startDate,
+            end_date: endDate,
+            days_of_week: finalDaysOfWeek,
+          },
+        })
+        .eq('id', programId);
+
+      if (error) {
+        throw error;
       }
 
-      // Choose the appropriate action based on whether we're creating or updating
-      if (programId) {
-        // Updating existing program - go directly back to writer
-        await updateProgramAndReturn(finalFormData);
-      } else {
-        // Creating new program - go through the creation process
-        await completeWizard(finalFormData);
-      }
+      // Navigate to the program writer with wizard completion flag
+      router.push(`/program/${programId}/writer?wizardComplete=true`);
     } catch (error) {
       console.error('Error completing wizard:', error);
-      alert('Failed to create program. Please try again.');
+      alert('Failed to complete program setup. Please try again.');
+    } finally {
       setIsSubmitting(false);
     }
   };
@@ -671,7 +705,7 @@ export default function Step5Page() {
             </div>
             <div>
               <span className="font-medium">Training Methodology:</span>{' '}
-              {formData.trainingMethodology}
+              Not available
             </div>
             <div>
               <span className="font-medium">Duration:</span>{' '}
@@ -687,11 +721,7 @@ export default function Step5Page() {
             </div>
             <div>
               <span className="font-medium">Gym Type:</span>{' '}
-              {formData.gymType
-                ? formData.gymType
-                    .replace(/_/g, ' ')
-                    .replace(/\b\w/g, (l) => l.toUpperCase())
-                : 'Not set'}
+              Not available
             </div>
           </div>
         </div>

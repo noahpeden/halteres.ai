@@ -1,17 +1,10 @@
 'use client';
 import { X } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
-import useProgramStore from '../store/programStore';
-import { useEffect } from 'react';
 
 export default function ProgramWizardLayout({ children }) {
   const searchParams = useSearchParams();
   const programId = searchParams.get('programId');
-
-  const setProgramId = useProgramStore((state) => state.setProgramId);
-  useEffect(() => {
-    setProgramId(programId);
-  }, [programId]);
 
   return (
     <div className="min-h-screen bg-base-100">
