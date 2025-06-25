@@ -59,7 +59,14 @@ ${exampleWorkout}`
 }`;
 
   try {
-    // Perform web search for workout information (now using Tavily)
+    // Build a concise query for Tavily (must be under 400 characters)
+    const tavilyQuery = (
+      [searchQuery, goal, focusArea, difficulty, gymType]
+        .filter(Boolean)
+        .join(' ') +
+      (duration ? ` ${duration}min` : '')
+    ).trim();
+
     const tavilyResponse = await fetch('https://api.tavily.com/search', {
       method: 'POST',
       headers: {
@@ -67,7 +74,9 @@ ${exampleWorkout}`
         Authorization: `Bearer ${process.env.TAVILY_API_KEY}`,
       },
       body: JSON.stringify({
-        query: webSearchQuery,
+        query: tavilyQuery,
+        max_results: 10,
+        search_depth: 'advanced',
         include_domains: [
           'crossfit.com',
           'wodwell.com',
@@ -86,7 +95,20 @@ ${exampleWorkout}`
     }
 
     const tavilyData = await tavilyResponse.json();
-    const tavilyResults = tavilyData.results || [];
+
+    if (tavilyData?.error) {
+      throw new Error(
+        `Tavily API error: ${tavilyData.error.message || tavilyData.error}`
+      );
+    }
+
+    const tavilyResults = Array.isArray(tavilyData.results)
+      ? tavilyData.results
+      : [];
+
+    if (tavilyResults.length === 0) {
+      throw new Error('No search results returned from Tavily');
+    }
 
     // Transform Tavily search results into structured workouts using OpenAI
     const openAiResponse = await openAiClient.chat.completions.create({
