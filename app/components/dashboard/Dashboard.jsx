@@ -18,6 +18,7 @@ import CreateEntityModal from './CreateEntityModal';
 import CreateProgramModal from './CreateProgramModal';
 import DeleteProgramModal from './DeleteProgramModal';
 import CollapsibleWorkoutsSection from './CollapsibleWorkoutsSection';
+import TodaysWorkoutsModal from './TodaysWorkoutsModal';
 
 // Custom hooks
 import { useDashboardData } from '@/hooks/useDashboardData';
@@ -82,6 +83,12 @@ export default function Dashboard() {
     createProgram,
     deleteProgram,
   } = useDashboardModals();
+
+  // Local state for today's workouts modal
+  const [showTodaysWorkoutsModal, setShowTodaysWorkoutsModal] = useState(false);
+
+  const openTodaysWorkoutsModal = () => setShowTodaysWorkoutsModal(true);
+  const closeTodaysWorkoutsModal = () => setShowTodaysWorkoutsModal(false);
 
   // Handler functions
   const handleCreateProgram = () => {
@@ -187,7 +194,12 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 sm:p-6">
+          <div
+            onClick={stats.activeWorkouts > 0 ? openTodaysWorkoutsModal : undefined}
+            className={`bg-white rounded-xl shadow-sm border border-slate-200 p-4 sm:p-6 ${
+              stats.activeWorkouts > 0 ? 'cursor-pointer hover:shadow-md transition' : ''
+            }`}
+          >
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-slate-600">
@@ -442,6 +454,12 @@ export default function Dashboard() {
           isDeleting={isDeleting}
           onConfirm={handleConfirmDelete}
           onCancel={closeDeleteProgramModal}
+        />
+
+        {/* Today's Workouts Modal */}
+        <TodaysWorkoutsModal
+          isOpen={showTodaysWorkoutsModal}
+          onClose={closeTodaysWorkoutsModal}
         />
       </div>
     </div>
