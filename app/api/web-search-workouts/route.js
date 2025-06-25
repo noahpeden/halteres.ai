@@ -59,20 +59,42 @@ ${exampleWorkout}`
 }`;
 
   try {
-    // Perform web search for workout information
-    const webSearchResponse = await openAiClient.chat.completions.create({
-      model: 'gpt-4o-search-preview',
-      web_search_options: {},
+    // Perform web search for workout information (now using Tavily)
+    const tavilyResponse = await fetch('https://api.tavily.com/search', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${process.env.TAVILY_API_KEY}`,
+      },
+      body: JSON.stringify({
+        query: webSearchQuery,
+        include_domains: [
+          'crossfit.com',
+          'wodwell.com',
+          'wodprep.com',
+          'strongapp.com',
+          'bodybuilding.com',
+          'fitnessblender.com',
+          'elitefts.com',
+          'muscleandstrength.com',
+        ],
+      }),
+    });
+
+    if (!tavilyResponse.ok) {
+      throw new Error(`Tavily search failed with status ${tavilyResponse.status}`);
+    }
+
+    const tavilyData = await tavilyResponse.json();
+    const tavilyResults = tavilyData.results || [];
+
+    // Transform Tavily search results into structured workouts using OpenAI
+    const openAiResponse = await openAiClient.chat.completions.create({
+      model: 'gpt-4.1',
       messages: [
         {
           role: 'system',
-          content: `You are an expert fitness researcher specializing in finding complete, actionable workouts. 
-
-SEARCH STRATEGY:
-- Prioritize these authoritative sources: crossfit.com/workout, wodwell.com, wodprep.com, crossfit.com/at-home/workouts, crossfitsouthbrooklyn.com/blog/, strongapp.com, strongerbyscience.com, athleanx.com, jefit.com, bodybuilding.com, menshealth.com, womenshealthmag.com, shape.com, self.com, fitnessblender.com, powerlifting.com, elitefts.com, juggernauttraining.com, kabukistrength.com, muscleandstrength.com, tigerfitness.com, muscleandperformance.com, freeletics.com, darebee.com, neilarey.com, calisthenic-workout.com, gmb.io, runnersworld.com, active.com, mapmyrun.com, coolrunning.com, doyogawithme.com, yogajournal.com, alo.com/wellness, beachbodyondemand.com, popsugar.com/fitness, stack.com, vertimax.com, onnit.com/academy, trainingpeaks.com, kettlebellkings.com, roguefitness.com/theindex, concept2.com/training, renaissanceperiodization.com, 3dmusclejourney.com, precisenutrition.com, examine.com
-- Look for complete workout programs, not just exercise descriptions
-- Search for variations of the user's query (synonyms, different formats)
-- Include both beginner and advanced versions when available
+          content: `You are an expert fitness researcher specializing in finding complete, actionable workouts.
 
 REQUIRED OUTPUT FORMAT:
 Return ONLY a valid JSON array. Each workout object must have:
@@ -91,18 +113,18 @@ CRITICAL REQUIREMENTS:
 - Include exact rep schemes, set counts, and rest periods
 - If weights are mentioned, include them
 - Include warm-up and cool-down if provided
-- Do not summarize - include full details
+- Do not summarize – include full details
 - Minimum 3 workouts, maximum 8 workouts
 - Only include workouts that have complete programming details`,
         },
         {
           role: 'user',
-          content: `Find complete workouts for: ${webSearchQuery}`,
+          content: `Here are search results from Tavily:\n${JSON.stringify(tavilyResults.slice(0, 10))}\n\nUsing ONLY the above information (and common fitness knowledge when absolutely necessary), produce the required JSON array of workouts that match the following query:\n${webSearchQuery}`,
         },
       ],
     });
 
-    const webWorkoutsContent = webSearchResponse.choices[0].message.content;
+    const webWorkoutsContent = openAiResponse.choices[0].message.content;
 
     // Parse the response to extract structured workout data
     let workouts = [];
