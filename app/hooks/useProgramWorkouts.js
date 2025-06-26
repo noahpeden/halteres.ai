@@ -173,9 +173,11 @@ export function useProgramWorkouts(programId) {
   const saveGeneratedWorkouts = useCallback(
     async (generatedWorkouts) => {
       if (!programId || !supabase || !generatedWorkouts) return [];
-      
+
       // Ensure generatedWorkouts is an array
-      const workoutsArray = Array.isArray(generatedWorkouts) ? generatedWorkouts : [];
+      const workoutsArray = Array.isArray(generatedWorkouts)
+        ? generatedWorkouts
+        : [];
       if (workoutsArray.length === 0) return [];
 
       try {
@@ -184,7 +186,8 @@ export function useProgramWorkouts(programId) {
           title: workout.title,
           body: workout.body || workout.description,
           tags: workout.tags,
-          scheduled_date: workout.scheduled_date || workout.suggestedDate,
+          scheduled_date:
+            workout.scheduled_date || workout.suggestedDate || workout.date,
           is_reference: false,
         }));
 

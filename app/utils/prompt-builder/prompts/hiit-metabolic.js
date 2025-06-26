@@ -115,10 +115,12 @@ IMPORTANT: Each workout you generate MUST be assigned to one of the above dates.
 ` : formatSchedulingRequirements(suggestedDates, daysPerWeek, selectedDayNames)}
 
 For the program description, include:
-1. A concise overview reflecting the CRITICAL REQUIREMENTS, Goal (HIIT/Metabolic), ACTUAL duration (${numberOfWeeks} weeks), and the focus on high-intensity intervals using specific formats (${formattedWorkoutFormats}).
-2. The periodization approach used (${programType}) and how intensity/volume are managed week-to-week.
-3. Expected outcomes in terms of improved conditioning, work capacity, and potential body composition changes, based *only* on the generated workouts and client requirements.
-4. Recommendations for managing intensity, recovery between sessions, and listening to the body.
+1. A detailed, engaging overview that clearly states the program's primary goals and target audience (e.g., "This ${numberOfWeeks}-week, ${daysPerWeek}-day-per-week program is designed for ${difficulty} trainees seeking to maximize metabolic conditioning and work capacity through high-intensity interval training and structured energy system development...")
+2. The specific periodization approach used and why it's scientifically appropriate for metabolic development (e.g., interval progression for VO2 max improvement, work-to-rest ratio manipulation for energy system targeting, intensity management for optimal adaptation without overtraining)
+3. How the training principles will drive measurable progress (e.g., "progressive overload through increased work capacity", "energy system development through targeted interval work", "metabolic efficiency enhancement", "lactate threshold improvement")
+4. Expected adaptations and outcomes from following the program consistently (e.g., improved cardiovascular fitness, enhanced work capacity, better lactate buffering, increased fat oxidation capacity, improved body composition, elevated EPOC effects)
+5. Integration of HIIT/metabolic methodology and approach (e.g., "high-intensity interval training principles to maximize metabolic stress and cardiovascular adaptations through time-efficient, scientifically-backed protocols")
+6. Brief recommendations for nutrition, recovery, and supplementary training if relevant (e.g., pre/post-workout nutrition for high-intensity training, recovery strategies for frequent intense sessions, hydration protocols, sleep optimization for metabolic recovery)
 
 General HIIT/Metabolic Guidelines (Apply *only if* they DO NOT CONFLICT with CRITICAL REQUIREMENTS or REQUIRED WORKOUT FORMATS):
 - Structure workouts around high-intensity work intervals followed by brief recovery periods.

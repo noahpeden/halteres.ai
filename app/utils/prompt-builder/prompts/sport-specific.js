@@ -119,10 +119,12 @@ IMPORTANT: Each workout you generate MUST be assigned to one of the above dates.
 ` : formatSchedulingRequirements(suggestedDates, daysPerWeek, selectedDayNames)}
 
 For the program description, include:
-1. A concise overview reflecting the CRITICAL REQUIREMENTS, Target Sport (${sport}), Goal (${goal}), ACTUAL duration (${numberOfWeeks} weeks), and the specific athletic qualities being developed (e.g., speed, power).
-2. The periodization approach used (${programType}) and how it aligns with the sport's demands and season (if applicable).
-3. Expected outcomes in terms of improved sport performance metrics, based *only* on the generated workouts and client requirements.
-4. Recommendations for integrating this training with sport-specific practice and recovery strategies.
+1. A detailed, engaging overview that clearly states the program's primary goals and target audience (e.g., "This ${numberOfWeeks}-week, ${daysPerWeek}-day-per-week program is designed for ${difficulty} ${sport || 'athletes'} seeking to enhance sport-specific performance through targeted development of power, speed, agility, and strength...")
+2. The specific periodization approach used and why it's scientifically appropriate for athletic development (e.g., conjugate method for multi-quality development, block periodization for peak performance, undulating periodization for varied stimuli, sport-specific loading patterns)
+3. How the training principles will drive measurable progress (e.g., "specificity principle through sport-relevant movements", "progressive overload in key athletic qualities", "transfer of training to sport performance", "systematic development of limiting factors")
+4. Expected adaptations and outcomes from following the program consistently (e.g., improved power output, enhanced speed and agility, increased sport-specific strength, better movement efficiency, reduced injury risk, performance gains in target sport)
+5. Integration of sport-specific methodology and approach (e.g., "sport-specific training principles to develop the precise athletic qualities required for optimal ${sport || 'athletic'} performance through targeted exercise selection")
+6. Brief recommendations for nutrition, recovery, and supplementary training if relevant (e.g., nutrition for athletic performance, recovery protocols for high-intensity training, integration with sport practice schedules, competition preparation strategies)
 
 General Sport-Specific Guidelines (Apply *only if* they DO NOT CONFLICT with CRITICAL REQUIREMENTS or REQUIRED WORKOUT FORMATS):
 - Select exercises that directly transfer to the movements and demands of the target sport (${sport}).

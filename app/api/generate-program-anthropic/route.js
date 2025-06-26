@@ -1030,10 +1030,16 @@ async function extractSharedData(requestData, supabase) {
   });
 
   // Filter out null values and ensure we have valid day numbers
-  const validDaysOfWeek = selectedDaysOfWeek.filter(
-    (day) => day !== null && day !== undefined
+  let validDaysOfWeek = selectedDaysOfWeek.filter(
+    (day) => day !== null && day !== undefined && typeof day === 'number' && day >= 0 && day <= 6
   );
   logWithTimestamp('Valid days of week after filtering', { validDaysOfWeek });
+  
+  // Fallback if no valid days are found - use Monday, Wednesday, Friday as default
+  if (validDaysOfWeek.length === 0) {
+    logWithTimestamp('No valid days found, using default schedule (Mon, Wed, Fri)');
+    validDaysOfWeek = [1, 3, 5]; // Monday, Wednesday, Friday
+  }
 
   // Generate suggested dates array based on selected days of the week
   const suggestedDates = [];

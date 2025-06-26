@@ -114,9 +114,33 @@ export async function generateProgram({
           .filter(Boolean);
 
         // Convert day names to day numbers for API consistency
-        const daysOfWeekNumbers = formData.daysOfWeek.map(
-          (day) => dayNameToNumber[day]
-        );
+        const daysOfWeekNumbers = formData.daysOfWeek
+          .map((day) => {
+            // Handle different formats of day names
+            if (typeof day === 'number') return day; // Already a number
+            if (!day || typeof day !== 'string') return null; // Invalid day
+            
+            // Try exact match first
+            if (dayNameToNumber[day] !== undefined) {
+              return dayNameToNumber[day];
+            }
+            
+            // Try capitalized version
+            const capitalizedDay = day.charAt(0).toUpperCase() + day.slice(1).toLowerCase();
+            if (dayNameToNumber[capitalizedDay] !== undefined) {
+              return dayNameToNumber[capitalizedDay];
+            }
+            
+            console.warn(`[programActions] Unknown day format: "${day}"`);
+            return null;
+          })
+          .filter(dayNum => dayNum !== null); // Remove invalid days
+        
+        // Fallback if no valid days are found - use Monday, Wednesday, Friday as default
+        if (daysOfWeekNumbers.length === 0) {
+          console.warn('[programActions] No valid days found, using default schedule (Mon, Wed, Fri)');
+          daysOfWeekNumbers.push(1, 3, 5); // Monday, Wednesday, Friday
+        }
 
         // Prepare gym_details with equipment and gym type
         const gymDetails = {
@@ -384,6 +408,7 @@ export async function generateProgram({
                         title: workout.title,
                         body: workout.body,
                         description: workout.body,
+                        scheduled_date: workout.date,
                         suggestedDate: workout.date,
                         date: workout.date,
                         streamingId: `chunk_week${weekNumber}_day${index + 1}_${workoutTracker.currentIndex}_${workoutTracker.sessionId}`,
@@ -459,6 +484,7 @@ export async function generateProgram({
                       title: workout.title,
                       body: workout.body,
                       description: workout.body,
+                      scheduled_date: workout.date,
                       suggestedDate: workout.date,
                       date: workout.date,
                       // Add unique identifier including session to prevent duplicates
@@ -705,6 +731,7 @@ export async function generateProgram({
                 title: workout.title,
                 body: workout.body || workout.description,
                 description: workout.body || workout.description,
+                scheduled_date: workout.date || workout.suggestedDate,
                 suggestedDate: workout.date || workout.suggestedDate,
                 date: workout.date || workout.suggestedDate,
                 // Preserve other potential fields if needed, but is_reference is filtered above

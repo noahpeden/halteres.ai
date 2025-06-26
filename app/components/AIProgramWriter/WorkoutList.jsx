@@ -372,10 +372,14 @@ export default function WorkoutList({
                     }}
                     title="Adjust date"
                   >
-                    {workout.tags?.suggestedDate
-                      ? formatDate(workout.tags.suggestedDate)
+                    {workout.scheduled_date
+                      ? formatDate(workout.scheduled_date)
                       : workout.suggestedDate
                       ? formatDate(workout.suggestedDate)
+                      : workout.date
+                      ? formatDate(workout.date)
+                      : workout.tags?.suggestedDate
+                      ? formatDate(workout.tags.suggestedDate)
                       : 'Not scheduled'}
                   </button>
                 </div>
