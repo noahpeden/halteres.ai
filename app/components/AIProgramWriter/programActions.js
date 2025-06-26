@@ -134,6 +134,14 @@ export async function generateProgram({
 
         // Determine if this is a regeneration based on existing suggestions
         const isReGenerating = suggestions && suggestions.length > 0;
+        
+        // For regeneration, exclude the old generated_description
+        const programOverviewData = isReGenerating 
+          ? { 
+              ...formData.programOverview,
+              generated_description: undefined  // Don't send old generated description
+            }
+          : formData.programOverview;
 
         // Create request body
         const requestBody = JSON.stringify({
@@ -158,7 +166,7 @@ export async function generateProgram({
             days_of_week: daysOfWeekNumbers,
           },
           session_details: formData.sessionDetails,
-          program_overview: formData.programOverview,
+          program_overview: programOverviewData,
           forceRegenerate: isReGenerating, // Add the force regenerate flag
         });
 
@@ -399,13 +407,13 @@ export async function generateProgram({
                           return [...prev, newWorkout];
                         });
                       });
-                      
-                      // Show progress toast
-                      showToastMessage(
-                        `Week ${weekNumber} Day ${index + 1}: ${workout.title}`,
-                        'success'
-                      );
                     });
+                    
+                    // Show week completion toast after all workouts are added
+                    showToastMessage(
+                      `Week ${weekNumber} completed! (${weekWorkouts.length} workouts added)`,
+                      'success'
+                    );
                   } else if (data.type === 'workout_generated') {
                     // Handle individual workout streaming (legacy/single mode)
                     setGenerationStage('finalizing');

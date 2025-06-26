@@ -58,6 +58,11 @@ export default function LoadingButton({ generationStage, loadingDuration, server
   const workoutProgress = isStreamingWorkouts ? 
     `${serverStatus.index + 1}/${serverStatus.total}` : null;
   
+  // Check for chunked week progress
+  const isStreamingChunks = serverStatus && serverStatus.type === 'workout_chunk';
+  const chunkProgress = isStreamingChunks ? 
+    `Week ${serverStatus.week}` : null;
+  
   // Check for week progress
   const weekProgress = serverStatus && serverStatus.weekProgress ? 
     `${serverStatus.weekProgress.current}/${serverStatus.weekProgress.total}` : null;
@@ -77,6 +82,11 @@ export default function LoadingButton({ generationStage, loadingDuration, server
   // Progress calculation
   const getProgressPercentage = () => {
     if (isComplete) return 100;
+    
+    // Check for chunked week progress (most accurate for chunked generation)
+    if (isStreamingChunks && serverStatus.totalGenerated && serverStatus.totalExpected) {
+      return Math.round((serverStatus.totalGenerated / serverStatus.totalExpected) * 100);
+    }
     
     // Check for workout progress first (most accurate)
     if (workoutProgress) {
@@ -184,16 +194,28 @@ export default function LoadingButton({ generationStage, loadingDuration, server
       </div>
 
       {/* Progress indicators */}
-      {(isStreaming || workoutProgress || weekProgress) && !isComplete && (
+      {(isStreaming || workoutProgress || weekProgress || chunkProgress) && !isComplete && (
         <div className="flex flex-col items-center gap-2">
-          {workoutProgress && (
+          {chunkProgress && (
+            <div className="flex items-center gap-2 px-3 py-1 bg-white/60 rounded-full border border-green-200">
+              <span className="text-sm font-medium text-green-700">Generating:</span>
+              <span className="text-sm font-bold text-green-800">{chunkProgress}</span>
+              {serverStatus.totalGenerated && serverStatus.totalExpected && (
+                <span className="text-xs text-green-600">
+                  ({serverStatus.totalGenerated}/{serverStatus.totalExpected} workouts)
+                </span>
+              )}
+            </div>
+          )}
+          
+          {workoutProgress && !chunkProgress && (
             <div className="flex items-center gap-2 px-3 py-1 bg-white/60 rounded-full border border-blue-200">
               <span className="text-sm font-medium text-blue-700">Workout Progress:</span>
               <span className="text-sm font-bold text-blue-800">{workoutProgress}</span>
             </div>
           )}
           
-          {weekProgress && !workoutProgress && (
+          {weekProgress && !workoutProgress && !chunkProgress && (
             <div className="flex items-center gap-2 px-3 py-1 bg-white/60 rounded-full border border-purple-200">
               <span className="text-sm font-medium text-purple-700">Week Progress:</span>
               <span className="text-sm font-bold text-purple-800">{weekProgress}</span>

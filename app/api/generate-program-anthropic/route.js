@@ -988,6 +988,7 @@ async function extractSharedData(requestData, supabase) {
   const focusArea = requestData.focus_area || '';
   const additionalNotes = requestData.description || '';
   const personalization = requestData.personalization || '';
+  const referenceInput = requestData.referenceInput || '';
   const workoutFormats = requestData.workout_format || [];
 
   // Critical parameters - ensure they have fallback values
@@ -1222,8 +1223,25 @@ If client metrics indicate specific limitations, provide appropriate scaling opt
   }
   logWithTimestamp('Injury history check', { hasInjuryHistory });
 
-  // Fetch reference workouts if program ID exists
+  // Build reference content from both database workouts and user input
   let referenceWorkoutsContent = '';
+  
+  // Add user-provided reference input if available
+  if (referenceInput && referenceInput.trim() !== '') {
+    logWithTimestamp('Found user-provided reference input', {
+      length: referenceInput.length
+    });
+    
+    referenceWorkoutsContent += `
+User-Provided Reference Material:
+---
+${referenceInput.trim()}
+---
+
+IMPORTANT: Consider the structure, style, and content of the above user-provided reference material when generating the program. Treat it as a key example of what the user is looking for.`;
+  }
+  
+  // Fetch reference workouts from database if program ID exists
   if (programId) {
     try {
       logWithTimestamp('Fetching reference workouts', { programId });
@@ -1244,9 +1262,9 @@ If client metrics indicate specific limitations, provide appropriate scaling opt
           count: referenceWorkouts.length,
         });
 
-        // Format reference workouts for the prompt
-        referenceWorkoutsContent = `
-Reference Workouts for Inspiration:
+        // Add database reference workouts to the content
+        const dbWorkoutsContent = `
+${referenceWorkoutsContent ? '\n\n' : ''}Reference Workouts for Inspiration:
 ${referenceWorkouts
   .map(
     (workout, index) =>
@@ -1257,8 +1275,10 @@ ${workout.body}
   .join('\n')}
 
 Draw inspiration from these reference workouts when designing this program. Use similar structures, movement patterns, and approaches where appropriate.`;
+        
+        referenceWorkoutsContent += dbWorkoutsContent;
       } else {
-        logWithTimestamp('No reference workouts found');
+        logWithTimestamp('No reference workouts found in database');
       }
     } catch (err) {
       logWithTimestamp('Error processing reference workouts', {
