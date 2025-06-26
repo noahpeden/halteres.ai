@@ -55,6 +55,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
     loading,
     workouts,
     referenceWorkouts,
+    selectedEquipment,
     showEquipmentSelector,
     toggleEquipmentVisibility,
     generationStage,
@@ -90,6 +91,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
   const generationAreaRef = useRef(null);
   const hasScrolledToGeneration = useRef(false);
   const loadingTimer = useRef(null);
+  const abortControllerRef = useRef(null);
 
   // Smart scrolling function for wizard users
   const scrollToGeneration = useCallback(() => {
@@ -158,8 +160,10 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
       missingFields.push('gymType');
     }
 
-    // Optional fields
-    if (!formData?.personalization || formData.personalization.trim() === '') {
+    // Optional fields - check both referenceInput and personalization for previous workouts
+    const hasReferenceInput = formData?.referenceInput && formData.referenceInput.trim() !== '';
+    const hasPersonalization = formData?.personalization && formData.personalization.trim() !== '';
+    if (!hasReferenceInput && !hasPersonalization) {
       missingOptionalFields.push('previousWorkouts');
     }
 
@@ -271,9 +275,9 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
     startGeneration();
 
     try {
-      await generateProgram({
+      const result = await generateProgram({
         programId,
-        formData,
+        formData: { ...formData, equipment: selectedEquipment },
         setIsLoading: () => {},
         setSuggestions: saveGeneratedWorkouts,
         showToastMessage: showToast,
@@ -291,13 +295,22 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
         refetchProfile,
         suggestions: workouts,
         updateWizardData: () => {},
+        abortControllerRef,
       });
-    } finally {
-      updateGenerationStage('complete');
+    } catch (error) {
+      if (error.name === 'AbortError' || error.isUserAbort) {
+        showToast('Generation stopped by user', 'info');
+        updateGenerationStage(null);
+      } else {
+        showToast('Generation failed: ' + error.message, 'error');
+        updateGenerationStage('error');
+      }
+      abortControllerRef.current = null;
     }
   }, [
     programId,
     formData,
+    selectedEquipment,
     showToast,
     refetchProfile,
     workouts,
@@ -401,6 +414,21 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
       programId ? `?programId=${programId}` : ''
     }`;
   }, [programId]);
+
+  const handleStopGeneration = useCallback(() => {
+    if (abortControllerRef.current) {
+      console.log('[AIProgramWriter] Stopping generation...');
+      try {
+        // Provide a reason for the abort to avoid errors in some environments
+        abortControllerRef.current.abort('User requested stop');
+      } catch (e) {
+        // Fallback for older browsers that don't support abort reason
+        abortControllerRef.current.abort();
+      }
+      abortControllerRef.current = null;
+      showToast('Stopping generation...', 'info');
+    }
+  }, [showToast]);
 
   // Form field handlers with database field mapping
   const handleFieldChange = useCallback(async (nameOrEvent, valueOrUndefined) => {
@@ -732,6 +760,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
           generationsRemaining={generationsRemaining}
           lastGenerationDate={lastGenerationDate}
           calculatedEndDate={calculatedEndDate}
+          onStopGeneration={handleStopGeneration}
         />
       </div>
 

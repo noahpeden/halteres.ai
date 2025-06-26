@@ -1,7 +1,8 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { X, StopCircle } from 'lucide-react';
 
-export default function LoadingButton({ generationStage, loadingDuration, serverStatus }) {
+export default function LoadingButton({ generationStage, loadingDuration, serverStatus, onStop }) {
   const [showCompletion, setShowCompletion] = useState(false);
   
   // Handle completion state - show completion for 3 seconds when complete
@@ -228,6 +229,20 @@ export default function LoadingButton({ generationStage, loadingDuration, server
           <p className="text-sm text-green-700 font-medium">Your program is ready!</p>
           <p className="text-xs text-gray-600 mt-1">Scroll down to view your workouts</p>
         </div>
+      )}
+
+      {/* Stop button */}
+      {!isComplete && onStop && (
+        <button
+          onClick={onStop}
+          className="mt-3 px-4 py-2 bg-red-500 hover:bg-red-600 text-white font-medium rounded-lg 
+                     transition-colors duration-200 flex items-center gap-2 shadow-md hover:shadow-lg
+                     active:scale-95 transform"
+          title="Stop generation"
+        >
+          <StopCircle className="w-4 h-4" />
+          <span>Stop Generation</span>
+        </button>
       )}
     </div>
   );

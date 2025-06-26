@@ -160,10 +160,10 @@ CRITICAL REQUIREMENTS:
             currentWorkout.body.trim().length > 0
           ) {
             try {
-              // Ask gpt-4o to classify the body content
+              // Ask gpt-4.1 to classify the body content
               const classificationResponse =
                 await openAiClient.chat.completions.create({
-                  model: 'gpt-4.1',
+                  model: 'gpt-4',
                   messages: [
                     {
                       role: 'user',
@@ -185,7 +185,7 @@ CRITICAL REQUIREMENTS:
                 // If it's a description, generate a workout plan
                 const generationResponse =
                   await openAiClient.chat.completions.create({
-                    model: 'gpt-4.1', // Or potentially a stronger model if generation quality is low
+                    model: 'gpt-4', // Or potentially a stronger model if generation quality is low
                     messages: [
                       {
                         role: 'system',
@@ -248,7 +248,7 @@ CRITICAL REQUIREMENTS:
       } else {
         // If no JSON found, have OpenAI format the response
         const formattingResponse = await openAiClient.chat.completions.create({
-          model: 'gpt-4.1',
+          model: 'gpt-4',
           messages: [
             {
               role: 'system',
@@ -315,10 +315,10 @@ CRITICAL REQUIREMENTS:
               currentWorkout.body.trim().length > 0
             ) {
               try {
-                // Ask gpt-4o to classify the body content
+                // Ask gpt-4.1 to classify the body content
                 const classificationResponse =
                   await openAiClient.chat.completions.create({
-                    model: 'gpt-4.1',
+                    model: 'gpt-4',
                     messages: [
                       {
                         role: 'user',
@@ -340,7 +340,7 @@ CRITICAL REQUIREMENTS:
                   // If it's a description, generate a workout plan
                   const generationResponse =
                     await openAiClient.chat.completions.create({
-                      model: 'gpt-4.1', // Or potentially a stronger model if generation quality is low
+                      model: 'gpt-4', // Or potentially a stronger model if generation quality is low
                       messages: [
                         {
                           role: 'system',

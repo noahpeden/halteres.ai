@@ -172,10 +172,14 @@ export function useProgramWorkouts(programId) {
   // Bulk save workouts (for generated workouts)
   const saveGeneratedWorkouts = useCallback(
     async (generatedWorkouts) => {
-      if (!programId || !supabase || !generatedWorkouts?.length) return [];
+      if (!programId || !supabase || !generatedWorkouts) return [];
+      
+      // Ensure generatedWorkouts is an array
+      const workoutsArray = Array.isArray(generatedWorkouts) ? generatedWorkouts : [];
+      if (workoutsArray.length === 0) return [];
 
       try {
-        const workoutsToInsert = generatedWorkouts.map((workout) => ({
+        const workoutsToInsert = workoutsArray.map((workout) => ({
           program_id: programId,
           title: workout.title,
           body: workout.body || workout.description,

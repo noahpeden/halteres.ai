@@ -27,6 +27,7 @@ const ProgramForm = ({
   generationsRemaining,
   lastGenerationDate,
   calculatedEndDate,
+  onStopGeneration,
 }) => {
   const handleChange = useCallback(
     (e) => {
@@ -203,6 +204,7 @@ const ProgramForm = ({
             generationStage={generationStage}
             loadingDuration={loadingDuration}
             serverStatus={serverStatus}
+            onStop={onStopGeneration}
           />
         </div>
       )}

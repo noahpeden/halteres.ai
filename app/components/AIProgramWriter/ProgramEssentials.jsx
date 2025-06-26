@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import ProgramTypeSelector from '@/components/selectors/ProgramTypeSelector';
 import { programTypes } from '@/components/utils';
 import { InfoIcon, ChevronDown } from 'lucide-react';
@@ -9,21 +9,78 @@ export default function ProgramEssentials({
   handleChange,
 }) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [localDescription, setLocalDescription] = useState(formData.description || '');
+  const [localReferenceInput, setLocalReferenceInput] = useState(getReferenceInputValue());
+  const descriptionTimeoutRef = useRef(null);
+  const referenceTimeoutRef = useRef(null);
 
   const selectedProgramType = programTypes.find(
     (type) => type.value === formData.programType
   );
 
   // Pre-populate reference input with form data
-  const getReferenceInputValue = () => {
+  function getReferenceInputValue() {
     // Use formData.referenceInput or personalization field
     return formData.referenceInput || formData.personalization || '';
-  };
+  }
+
+  // Sync local state with formData when it changes from outside
+  useEffect(() => {
+    setLocalDescription(formData.description || '');
+  }, [formData.description]);
+
+  useEffect(() => {
+    setLocalReferenceInput(getReferenceInputValue());
+  }, [formData.referenceInput, formData.personalization]);
 
   const handleProgramTypeSelect = (value) => {
     handleChange({ target: { name: 'programType', value } });
     setDropdownOpen(false);
   };
+
+  // Debounced handler for description
+  const handleDescriptionChange = useCallback((e) => {
+    const newValue = e.target.value;
+    setLocalDescription(newValue);
+
+    // Clear existing timeout
+    if (descriptionTimeoutRef.current) {
+      clearTimeout(descriptionTimeoutRef.current);
+    }
+
+    // Set new timeout for debounced update
+    descriptionTimeoutRef.current = setTimeout(() => {
+      handleChange({ target: { name: 'description', value: newValue } });
+    }, 500); // 500ms debounce delay
+  }, [handleChange]);
+
+  // Debounced handler for reference input
+  const handleReferenceInputChange = useCallback((e) => {
+    const newValue = e.target.value;
+    setLocalReferenceInput(newValue);
+
+    // Clear existing timeout
+    if (referenceTimeoutRef.current) {
+      clearTimeout(referenceTimeoutRef.current);
+    }
+
+    // Set new timeout for debounced update
+    referenceTimeoutRef.current = setTimeout(() => {
+      handleChange({ target: { name: 'referenceInput', value: newValue } });
+    }, 500); // 500ms debounce delay
+  }, [handleChange]);
+
+  // Cleanup timeouts on unmount
+  useEffect(() => {
+    return () => {
+      if (descriptionTimeoutRef.current) {
+        clearTimeout(descriptionTimeoutRef.current);
+      }
+      if (referenceTimeoutRef.current) {
+        clearTimeout(referenceTimeoutRef.current);
+      }
+    };
+  }, []);
 
   return (
     <section className="bg-base-100 p-5 rounded-lg border border-base-300 shadow-sm h-full flex flex-col">
@@ -118,8 +175,8 @@ export default function ProgramEssentials({
           </div>
           <textarea
             className="textarea textarea-bordered w-full border-base-300 focus:border-primary"
-            value={formData.description}
-            onChange={handleChange}
+            value={localDescription}
+            onChange={handleDescriptionChange}
             onBlur={() => {}}
             name="description"
             placeholder="Enter a description of your program (e.g., 'Intro to strength training, 4x4 program, etc.)"
@@ -146,8 +203,8 @@ export default function ProgramEssentials({
             name="referenceInput"
             className="textarea textarea-bordered w-full border-base-300 focus:border-primary"
             placeholder="Paste your own workout text here (e.g., a specific WOD, a previous program structure)"
-            value={getReferenceInputValue()}
-            onChange={handleChange}
+            value={localReferenceInput}
+            onChange={handleReferenceInputChange}
             onBlur={() => {}}
             rows="3"
           ></textarea>

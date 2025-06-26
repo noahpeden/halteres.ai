@@ -91,7 +91,7 @@ Return your response as a JSON object with:
 IMPORTANT: You must return exactly ${workouts.length} enhanced workouts, one for each original workout.`;
 
     const response = await openai.chat.completions.create({
-      model: 'gpt-4o',
+      model: 'gpt-4.1',
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt },

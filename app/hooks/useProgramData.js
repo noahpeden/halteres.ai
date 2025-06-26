@@ -168,13 +168,24 @@ export function useProgramData(programId) {
   const getFormData = useCallback(() => {
     if (!program) {
       // Return default form data structure when no program is loaded yet
+      // Import gym equipment presets for default gym type
+      const { gymEquipmentPresets } = require('@/components/utils');
+      const defaultGymType = 'Crossfit Box';
+      const defaultEquipment = gymEquipmentPresets[defaultGymType] || [];
+      
+      console.log('getFormData: No program, returning defaults:', {
+        defaultGymType,
+        defaultEquipment,
+        equipmentLength: defaultEquipment.length
+      });
+      
       return {
         name: '',
         description: '',
         entityId: null,
         goal: 'strength',
         difficulty: 'intermediate',
-        equipment: [],
+        equipment: defaultEquipment,
         focusArea: '',
         personalization: '',
         workoutFormats: [],
@@ -182,11 +193,14 @@ export function useProgramData(programId) {
         daysPerWeek: '3',
         daysOfWeek: ['Monday', 'Wednesday', 'Friday'],
         programType: 'linear',
-        gymType: 'Crossfit Box',
+        gymType: defaultGymType,
         startDate: '',
         sessionDetails: {},
         programOverview: {},
-        gymDetails: {},
+        gymDetails: {
+          gym_type: defaultGymType,
+          equipment: defaultEquipment
+        },
         trainingMethodology: '',
         referenceInput: '',
         customWorkoutSections: [],

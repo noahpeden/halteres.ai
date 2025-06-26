@@ -33,6 +33,7 @@ export async function generateProgram({
   refetchProfile,
   suggestions, // Add suggestions to determine if this is a regeneration
   updateWizardData, // Add updateWizardData to sync with wizard store
+  abortControllerRef,
 }) {
   return new Promise(async (resolve, reject) => {
     setIsLoading(true);
@@ -176,6 +177,11 @@ export async function generateProgram({
         // Create a controller to abort the fetch if needed
         const controller = new AbortController();
         const signal = controller.signal;
+        
+        // Store controller in ref if provided
+        if (abortControllerRef) {
+          abortControllerRef.current = controller;
+        }
 
         // Calculate timeout based on program size
         // For large programs (5+ weeks), use a longer timeout
@@ -202,11 +208,14 @@ export async function generateProgram({
           controller.abort();
         }, timeoutDuration);
 
-        const response = await fetch('/api/generate-program', {
+        // Determine if this will be chunked (>2 weeks) for proper Accept header
+        const willBeChunked = numberOfWeeks > 2;
+        
+        const response = await fetch('/api/generate-program-anthropic', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            Accept: 'text/event-stream',
+            Accept: willBeChunked ? 'text/event-stream' : 'application/json',
           },
           body: JSON.stringify(finalRequestBody),
           signal,
@@ -265,7 +274,27 @@ export async function generateProgram({
                   setServerStatus(data);
 
                   // Update UI based on type
-                  if (data.type === 'ai_request') {
+                  if (data.type === 'status') {
+                    // Handle chunked generation status updates
+                    if (data.message) {
+                      showToastMessage(data.message, 'info');
+                      console.log('[Streaming] Status update:', data.message);
+                    }
+                    setGenerationStage('generating');
+                  } else if (data.type === 'warning') {
+                    // Handle chunked generation warnings (e.g., placeholder workouts)
+                    if (data.message) {
+                      showToastMessage(data.message, 'warning');
+                      console.log('[Streaming] Warning:', data.message);
+                    }
+                  } else if (data.type === 'error') {
+                    // Handle chunked generation errors
+                    console.error('[Streaming] Error:', data.error);
+                    showToastMessage(`Generation error: ${data.error}`, 'error');
+                    setGenerationStage('error');
+                    setIsLoading(false);
+                    break; // Exit the streaming loop on error
+                  } else if (data.type === 'ai_request') {
                     setGenerationStage('generating');
                     showAiStream(); // Show the AI streaming container
                   } else if (data.type === 'ai_content_stream') {
@@ -308,8 +337,77 @@ export async function generateProgram({
                       console.log('[Streaming] Setting program description');
                       setGeneratedDescription(data.description);
                     }
+                  } else if (data.type === 'workout_chunk') {
+                    // Handle chunked workout generation (multiple workouts from a week)
+                    setGenerationStage('finalizing');
+                    const weekWorkouts = data.workouts;
+                    const weekNumber = data.week;
+                    const totalGenerated = data.totalGenerated;
+                    const totalExpected = data.totalExpected;
+                    
+                    console.log(
+                      '[Streaming] Week chunk received:',
+                      weekNumber,
+                      'Workouts in week:',
+                      weekWorkouts.length,
+                      'Total generated:',
+                      totalGenerated,
+                      'Expected:',
+                      totalExpected
+                    );
+                    
+                    // Process each workout in the week chunk
+                    weekWorkouts.forEach((workout, index) => {
+                      const workoutKey = `week${weekNumber}_day${index + 1}_${workout.title}_${workoutTracker.sessionId}`;
+                      
+                      // Check if we've already processed this specific workout
+                      if (workoutTracker.processedWorkouts.has(workoutKey)) {
+                        console.warn('[Streaming] Duplicate workout in chunk, skipping:', workoutKey);
+                        return;
+                      }
+                      
+                      // Validate against expected total
+                      if (workoutTracker.currentIndex >= workoutTracker.expectedTotal) {
+                        console.warn('[Streaming] Exceeded expected workout count in chunk, skipping:', workout.title);
+                        return;
+                      }
+                      
+                      const newWorkout = {
+                        title: workout.title,
+                        body: workout.body,
+                        description: workout.body,
+                        suggestedDate: workout.date,
+                        date: workout.date,
+                        streamingId: `chunk_week${weekNumber}_day${index + 1}_${workoutTracker.currentIndex}_${workoutTracker.sessionId}`,
+                        weekNumber: weekNumber,
+                        dayInWeek: index + 1,
+                        trackerIndex: workoutTracker.currentIndex,
+                      };
+                      
+                      // Mark as processed and increment tracker
+                      workoutTracker.processedWorkouts.add(workoutKey);
+                      workoutTracker.currentIndex++;
+                      
+                      // Add to suggestions
+                      flushSync(() => {
+                        setSuggestions((prev) => {
+                          if (prev.length >= workoutTracker.expectedTotal) {
+                            workoutTracker.currentIndex--;
+                            workoutTracker.processedWorkouts.delete(workoutKey);
+                            return prev;
+                          }
+                          return [...prev, newWorkout];
+                        });
+                      });
+                      
+                      // Show progress toast
+                      showToastMessage(
+                        `Week ${weekNumber} Day ${index + 1}: ${workout.title}`,
+                        'success'
+                      );
+                    });
                   } else if (data.type === 'workout_generated') {
-                    // Handle individual workout streaming
+                    // Handle individual workout streaming (legacy/single mode)
                     setGenerationStage('finalizing');
                     const workout = data.workout;
                     const workoutKey = `${data.index}_${workout.title}_${workoutTracker.sessionId}`;
@@ -425,6 +523,36 @@ export async function generateProgram({
                       'Expected:',
                       workoutTracker.expectedTotal
                     );
+                    
+                    // Handle Anthropic chunked complete event with suggestions
+                    if (data.suggestions && Array.isArray(data.suggestions)) {
+                      console.log('[Streaming] Complete event has suggestions:', data.suggestions.length);
+                      
+                      // For chunked generation, setSuggestions is actually saveGeneratedWorkouts
+                      // which saves to database AND updates UI state
+                      const savedWorkouts = await setSuggestions(data.suggestions);
+                      console.log('[Streaming] Saved workouts to database:', savedWorkouts.length);
+                      
+                      // Update form data with program metadata
+                      if (data.title && !programId) {
+                        setFormData((prev) => ({
+                          ...prev,
+                          name: data.title || prev.name,
+                        }));
+                      }
+                      
+                      if (data.description) {
+                        console.log('[Streaming] Setting program description from complete event');
+                        setGeneratedDescription(data.description);
+                      }
+                      
+                      // Show success message
+                      showToastMessage(
+                        `Program complete! Generated ${data.suggestions.length} workouts.`,
+                        'success'
+                      );
+                    }
+                    
                     setIsLoading(false);
                     setGenerationStage('complete');
 
@@ -634,16 +762,34 @@ export async function generateProgram({
         // Track the last error for reporting after all retries fail
         lastError = error;
 
+        // Check if this is a user-initiated abort
+        const isUserAbort = error.name === 'AbortError' && controller.signal.aborted;
+        if (isUserAbort) {
+          // Don't retry user-initiated aborts
+          console.log('Generation aborted by user');
+          setIsLoading(false);
+          setGenerationStage(null);
+          clearInterval(timer);
+          clearTimeout(timeoutId);
+          
+          // Create a more descriptive error for user aborts
+          const userAbortError = new Error('Generation stopped by user');
+          userAbortError.name = 'AbortError';
+          userAbortError.isUserAbort = true;
+          reject(userAbortError);
+          return;
+        }
+
         // Determine if this is a retryable error
         const isNetworkError =
-          error.name === 'TypeError' && error.message.includes('network');
+          error.name === 'TypeError' && error.message && error.message.includes('network');
         const isTimeoutError =
-          error.name === 'AbortError' || error.message.includes('timed out');
+          error.name === 'AbortError' && !isUserAbort;
         const isGatewayError =
-          error.message.includes('504') || error.message.includes('Gateway');
+          error.message && (error.message.includes('504') || error.message.includes('Gateway'));
         const isServiceUnavailable =
-          error.message.includes('503') ||
-          error.message.includes('Service Unavailable');
+          error.message && (error.message.includes('503') ||
+          error.message.includes('Service Unavailable'));
 
         const isRetryableError =
           isNetworkError ||

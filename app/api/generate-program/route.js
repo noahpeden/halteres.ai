@@ -496,8 +496,10 @@ async function generateLargeProgram(
       workoutsPerChunk,
     });
 
-    // Prepare the common prompt elements
-    const commonPromptElements = await preparePromptElements(
+    // Prepare the common prompt elements with timeout
+    logWithTimestamp('About to call preparePromptElements...');
+    
+    const preparePromptPromise = preparePromptElements(
       programId,
       supabase,
       {
@@ -514,6 +516,14 @@ async function generateLargeProgram(
       },
       openai
     );
+    
+    // Add 60-second timeout to prevent hanging
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('preparePromptElements timed out after 60 seconds')), 60000)
+    );
+
+    const commonPromptElements = await Promise.race([preparePromptPromise, timeoutPromise]);
+    logWithTimestamp('preparePromptElements completed successfully');
 
     // Generate each chunk (week) separately
     const allWorkouts = [];
@@ -1416,6 +1426,8 @@ Static stretching for major muscle groups
 
 // Helper function to prepare common prompt elements
 async function preparePromptElements(programId, supabase, params, openai) {
+  logWithTimestamp('preparePromptElements: Starting function');
+  
   const {
     goal,
     difficulty,
@@ -1428,6 +1440,8 @@ async function preparePromptElements(programId, supabase, params, openai) {
     selectedDaysOfWeek,
     referenceInput,
   } = params;
+
+  logWithTimestamp('preparePromptElements: Parameters extracted');
 
   // Get the day names from the day numbers for the prompt
   const dayNames = [
@@ -1442,19 +1456,24 @@ async function preparePromptElements(programId, supabase, params, openai) {
   const selectedDayNames = selectedDaysOfWeek
     .map((dayNum) => dayNames[dayNum])
     .join(', ');
+    
+  logWithTimestamp('preparePromptElements: Day names processed');
 
   // Fetch client metrics if program ID exists
   let clientMetricsData = null;
   if (programId) {
     try {
-      logWithTimestamp('Fetching client metrics', { programId });
+      logWithTimestamp('preparePromptElements: About to fetch client metrics', { programId });
 
       // Get entity_id from the program
+      logWithTimestamp('preparePromptElements: About to query programs table for entity_id');
       const { data: programData, error: programError } = await supabase
         .from('programs')
         .select('entity_id')
         .eq('id', programId)
         .single();
+      
+      logWithTimestamp('preparePromptElements: Programs table query completed');
 
       if (programError) {
         logWithTimestamp('Error fetching program entity_id', {
@@ -1462,11 +1481,14 @@ async function preparePromptElements(programId, supabase, params, openai) {
         });
       } else if (programData && programData.entity_id) {
         // Fetch metrics from entities table
+        logWithTimestamp('preparePromptElements: About to query entities table', { entity_id: programData.entity_id });
         const { data: entityData, error: entityError } = await supabase
           .from('entities')
           .select('*')
           .eq('id', programData.entity_id)
           .single();
+        
+        logWithTimestamp('preparePromptElements: Entities table query completed');
 
         if (entityError) {
           logWithTimestamp('Error fetching client metrics', {
@@ -1488,14 +1510,17 @@ async function preparePromptElements(programId, supabase, params, openai) {
   let referenceWorkoutsData = [];
   if (programId) {
     try {
-      logWithTimestamp('Fetching reference workouts', { programId });
+      logWithTimestamp('preparePromptElements: About to fetch reference workouts', { programId });
 
+      logWithTimestamp('preparePromptElements: About to query program_workouts table');
       const { data: referenceWorkouts, error: referenceError } = await supabase
         .from('program_workouts')
         .select('title, body, tags')
         .eq('program_id', programId)
         .eq('is_reference', true)
         .order('created_at', { ascending: false });
+      
+      logWithTimestamp('preparePromptElements: Program_workouts table query completed');
 
       if (referenceError) {
         logWithTimestamp('Error fetching reference workouts', {
@@ -1524,50 +1549,69 @@ async function preparePromptElements(programId, supabase, params, openai) {
       logWithTimestamp(
         'Starting RAG step for referenceInput (preparePromptElements)'
       );
-      // 1. Generate embedding
-      const embeddingResponse = await openai.embeddings.create({
-        model: 'text-embedding-3-small',
-        input: referenceInput,
-      });
-      const queryEmbedding = embeddingResponse.data[0].embedding;
-      logWithTimestamp(
-        'Generated embedding for referenceInput (preparePromptElements)'
-      );
+      
+      // Add timeout wrapper for the entire RAG operation
+      const ragPromise = (async () => {
+        // 1. Generate embedding
+        logWithTimestamp('About to call OpenAI embeddings...');
+        const embeddingResponse = await openai.embeddings.create({
+          model: 'text-embedding-3-small',
+          input: referenceInput,
+        });
+        const queryEmbedding = embeddingResponse.data[0].embedding;
+        logWithTimestamp(
+          'Generated embedding for referenceInput (preparePromptElements)'
+        );
 
-      // 2. Call Supabase RPC
-      const { data: matchedData, error: rpcError } = await supabase.rpc(
-        'match_workouts_embedding',
-        {
-          query_embedding: queryEmbedding,
-          match_threshold: 0.5, // Adjust threshold as needed
-          match_count: 5, // Limit matches
+        // 2. Call Supabase RPC
+        logWithTimestamp('About to call match_workouts_embedding RPC...');
+        const { data: matchedData, error: rpcError } = await supabase.rpc(
+          'match_workouts_embedding',
+          {
+            query_embedding: queryEmbedding,
+            match_threshold: 0.5, // Adjust threshold as needed
+            match_count: 5, // Limit matches
+          }
+        );
+
+        if (rpcError) {
+          logWithTimestamp(
+            'Error calling match_workouts_embedding RPC (preparePromptElements)',
+            { error: rpcError }
+          );
+          return [];
+        } else if (matchedData && matchedData.length > 0) {
+          const workouts = matchedData.map((w) => ({
+            title: w.title,
+            body: w.body,
+          }));
+          logWithTimestamp(
+            `Found ${workouts.length} RAG-matched workouts (preparePromptElements)`
+          );
+          return workouts;
+        } else {
+          logWithTimestamp(
+            'No RAG-matched workouts found (preparePromptElements).'
+          );
+          return [];
         }
+      })();
+
+      // Add 30-second timeout to prevent hanging
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('RAG operation timed out after 30 seconds')), 30000)
       );
 
-      if (rpcError) {
-        logWithTimestamp(
-          'Error calling match_workouts_embedding RPC (preparePromptElements)',
-          { error: rpcError }
-        );
-        // Log and continue
-      } else if (matchedData && matchedData.length > 0) {
-        ragMatchedWorkouts = matchedData.map((w) => ({
-          title: w.title,
-          body: w.body,
-        })); // Adapt structure if needed
-        logWithTimestamp(
-          `Found ${ragMatchedWorkouts.length} RAG-matched workouts (preparePromptElements)`
-        );
-      } else {
-        logWithTimestamp(
-          'No RAG-matched workouts found (preparePromptElements).'
-        );
-      }
+      ragMatchedWorkouts = await Promise.race([ragPromise, timeoutPromise]);
+      logWithTimestamp('RAG step completed successfully');
+      
     } catch (ragError) {
       logWithTimestamp('Error during RAG step (preparePromptElements)', {
         error: ragError.message,
+        stack: ragError.stack,
       });
-      // Log error but continue
+      // Log error but continue - don't let RAG failure block program generation
+      ragMatchedWorkouts = [];
     }
   }
   // --- End RAG Step ---

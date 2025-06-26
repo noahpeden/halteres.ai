@@ -8,16 +8,45 @@ import {
 } from 'react';
 import { useProgramData } from '@/hooks/useProgramData';
 import { useProgramWorkouts } from '@/hooks/useProgramWorkouts';
+import equipmentList from '@/utils/equipmentList';
 
 const ProgramContext = createContext(null);
+
+// Utility function to normalize equipment data to always use numeric IDs
+function normalizeEquipment(equipment) {
+  if (!Array.isArray(equipment)) return [];
+  
+  return equipment
+    .map(item => {
+      // If item is already a number, return it
+      if (typeof item === 'number') return item;
+      
+      // If item is a string, find the corresponding equipment ID
+      if (typeof item === 'string') {
+        const found = equipmentList.find(eq => eq.label === item);
+        return found ? found.value : null;
+      }
+      
+      return null;
+    })
+    .filter(item => item !== null); // Remove any items that couldn't be mapped
+}
 
 export function ProgramProvider({ children, programId }) {
   // Supabase hooks
   const programData = useProgramData(programId);
   const workoutsData = useProgramWorkouts(programId);
 
+  // Get form data to access equipment defaults
+  const formData = programData.getFormData();
+  
   // Local UI state (not persisted to database)
-  const [selectedEquipment, setSelectedEquipment] = useState([]);
+  // Initialize selectedEquipment from formData's equipment if available
+  const [selectedEquipment, setSelectedEquipment] = useState(() => {
+    const equipment = formData?.equipment || [];
+    console.log('Initializing selectedEquipment with:', equipment);
+    return equipment;
+  });
   const [showEquipmentSelector, setShowEquipmentSelector] = useState(false);
   const [generationStage, setGenerationStage] = useState(null);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -38,13 +67,32 @@ export function ProgramProvider({ children, programId }) {
     type: 'success',
   });
 
-  // Initialize equipment from program data
   useEffect(() => {
-    const formData = programData.getFormData();
-    if (formData?.equipment) {
-      setSelectedEquipment(formData.equipment);
+    if (programData.program) {
+      // If we have program data, use equipment from the database
+      const equipment = programData.program.gym_details?.equipment || [];
+      const normalizedEquipment = normalizeEquipment(equipment);
+      const newEquipment = [...new Set(normalizedEquipment)];
+
+      setSelectedEquipment((prevEquipment) => {
+        if (JSON.stringify(prevEquipment) !== JSON.stringify(newEquipment)) {
+          console.log('Updating selectedEquipment from program data:', newEquipment);
+          return newEquipment;
+        }
+        return prevEquipment;
+      });
+    } else {
+      // If no program data, ensure we use the default equipment from formData
+      const defaultEquipment = formData?.equipment || [];
+      setSelectedEquipment((prevEquipment) => {
+        if (JSON.stringify(prevEquipment) !== JSON.stringify(defaultEquipment)) {
+          console.log('Updating selectedEquipment with default equipment:', defaultEquipment);
+          return defaultEquipment;
+        }
+        return prevEquipment;
+      });
     }
-  }, [programData.program]);
+  }, [programData.program, formData]);
 
   // Equipment management
   const updateEquipment = useCallback((equipment) => {
@@ -109,8 +157,6 @@ export function ProgramProvider({ children, programId }) {
     }
   }, []);
 
-  // Debug logging
-  const formData = programData.getFormData();
 
   // Combined context value
   const contextValue = {
