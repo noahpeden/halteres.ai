@@ -56,7 +56,8 @@ export default function WorkoutModal({
           workout?.body || workout?.description || 'No description provided.',
       };
       const safeInstructions = enhancement || 'No specific instructions.';
-      const safeMethodology = formData?.trainingMethodology || 'General fitness';
+      const safeMethodology =
+        formData?.trainingMethodology || 'General fitness';
       const safeGymEquipment = Array.isArray(formData?.equipment)
         ? formData.equipment.length > 0
           ? formData.equipment
@@ -70,10 +71,7 @@ export default function WorkoutModal({
         gymEquipment: safeGymEquipment,
         injuries: safeInjuries,
       };
-      // Debug log
-      if (process.env.NODE_ENV !== 'production') {
-        console.log('Enhance workout payload:', payload);
-      }
+
       const res = await fetch('/api/enhance-workout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

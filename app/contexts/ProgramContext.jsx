@@ -15,21 +15,21 @@ const ProgramContext = createContext(null);
 // Utility function to normalize equipment data to always use numeric IDs
 function normalizeEquipment(equipment) {
   if (!Array.isArray(equipment)) return [];
-  
+
   return equipment
-    .map(item => {
+    .map((item) => {
       // If item is already a number, return it
       if (typeof item === 'number') return item;
-      
+
       // If item is a string, find the corresponding equipment ID
       if (typeof item === 'string') {
-        const found = equipmentList.find(eq => eq.label === item);
+        const found = equipmentList.find((eq) => eq.label === item);
         return found ? found.value : null;
       }
-      
+
       return null;
     })
-    .filter(item => item !== null); // Remove any items that couldn't be mapped
+    .filter((item) => item !== null); // Remove any items that couldn't be mapped
 }
 
 export function ProgramProvider({ children, programId }) {
@@ -39,12 +39,11 @@ export function ProgramProvider({ children, programId }) {
 
   // Get form data to access equipment defaults
   const formData = programData.getFormData();
-  
+
   // Local UI state (not persisted to database)
   // Initialize selectedEquipment from formData's equipment if available
   const [selectedEquipment, setSelectedEquipment] = useState(() => {
     const equipment = formData?.equipment || [];
-    console.log('Initializing selectedEquipment with:', equipment);
     return equipment;
   });
   const [showEquipmentSelector, setShowEquipmentSelector] = useState(false);
@@ -76,7 +75,6 @@ export function ProgramProvider({ children, programId }) {
 
       setSelectedEquipment((prevEquipment) => {
         if (JSON.stringify(prevEquipment) !== JSON.stringify(newEquipment)) {
-          console.log('Updating selectedEquipment from program data:', newEquipment);
           return newEquipment;
         }
         return prevEquipment;
@@ -85,8 +83,9 @@ export function ProgramProvider({ children, programId }) {
       // If no program data, ensure we use the default equipment from formData
       const defaultEquipment = formData?.equipment || [];
       setSelectedEquipment((prevEquipment) => {
-        if (JSON.stringify(prevEquipment) !== JSON.stringify(defaultEquipment)) {
-          console.log('Updating selectedEquipment with default equipment:', defaultEquipment);
+        if (
+          JSON.stringify(prevEquipment) !== JSON.stringify(defaultEquipment)
+        ) {
           return defaultEquipment;
         }
         return prevEquipment;
@@ -157,7 +156,6 @@ export function ProgramProvider({ children, programId }) {
     }
   }, []);
 
-
   // Combined context value
   const contextValue = {
     // Program data
@@ -204,6 +202,7 @@ export function ProgramProvider({ children, programId }) {
     saveGeneratedWorkouts: workoutsData.saveGeneratedWorkouts,
     toggleWorkoutCompletion: workoutsData.toggleWorkoutCompletion,
     updateWorkoutDate: workoutsData.updateWorkoutDate,
+    clearNonReferenceWorkouts: workoutsData.clearNonReferenceWorkouts,
 
     // Refetch
     refetchProgram: programData.refetch,

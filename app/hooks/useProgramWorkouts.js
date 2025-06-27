@@ -251,18 +251,28 @@ export function useProgramWorkouts(programId) {
         (payload) => {
           if (payload.eventType === 'INSERT') {
             if (payload.new.is_reference) {
-              setReferenceWorkouts((prev) => [...prev, payload.new]);
+              setReferenceWorkouts((prev) => {
+                // Check if workout already exists
+                if (prev.some(w => w.id === payload.new.id)) {
+                  return prev;
+                }
+                return [...prev, payload.new];
+              });
             } else {
-              setWorkouts((prev) =>
-                [...prev, payload.new].sort((a, b) => {
+              setWorkouts((prev) => {
+                // Check if workout already exists
+                if (prev.some(w => w.id === payload.new.id)) {
+                  return prev;
+                }
+                return [...prev, payload.new].sort((a, b) => {
                   if (!a.scheduled_date && !b.scheduled_date) return 0;
                   if (!a.scheduled_date) return 1;
                   if (!b.scheduled_date) return -1;
                   return (
                     new Date(a.scheduled_date) - new Date(b.scheduled_date)
                   );
-                })
-              );
+                });
+              });
             }
           } else if (payload.eventType === 'UPDATE') {
             if (payload.new.is_reference) {
@@ -303,6 +313,11 @@ export function useProgramWorkouts(programId) {
     fetchWorkouts();
   }, [fetchWorkouts]);
 
+  // Clear all non-reference workouts
+  const clearNonReferenceWorkouts = useCallback(() => {
+    setWorkouts([]);
+  }, []);
+
   return {
     workouts,
     referenceWorkouts,
@@ -315,5 +330,6 @@ export function useProgramWorkouts(programId) {
     toggleWorkoutCompletion,
     updateWorkoutDate,
     refetch: fetchWorkouts,
+    clearNonReferenceWorkouts,
   };
 }

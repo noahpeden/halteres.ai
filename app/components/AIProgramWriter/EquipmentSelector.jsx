@@ -7,13 +7,7 @@ import { useCallback } from 'react';
 export default function EquipmentSelector({ isVisible, onToggleVisibility }) {
   const { selectedEquipment, updateEquipment, updateFormFields, formData } =
     useProgram();
-  console.log('EquipmentSelector render:', {
-    selectedEquipment,
-    selectedEquipmentLength: selectedEquipment?.length,
-    gymDetails: formData.gymDetails,
-    gymType: formData.gymType,
-    equipment: formData.equipment
-  });
+
   const isAllEquipmentSelected =
     selectedEquipment.length === equipmentList.length;
 

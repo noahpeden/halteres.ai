@@ -41,27 +41,34 @@ export async function generateProgram({
     showToastMessage('Generating program...');
     setGenerationStage('preparing');
     setServerStatus(null);
-    
+
     // Track the current retry attempt and workout indices
     const currentRetryAttempt = { count: 0 };
     // Calculate expected total using the same logic as the API
-    const calculatedWeeks = parseInt(formData.numberOfWeeks || formData.duration_weeks || 4);
-    const calculatedDaysPerWeek = parseInt(formData.daysPerWeek || formData.days_per_week || formData.daysOfWeek?.length || 3);
+    const calculatedWeeks = parseInt(
+      formData.numberOfWeeks || formData.duration_weeks || 4
+    );
+    const calculatedDaysPerWeek = parseInt(
+      formData.daysPerWeek ||
+        formData.days_per_week ||
+        formData.daysOfWeek?.length ||
+        3
+    );
     const expectedTotal = calculatedWeeks * calculatedDaysPerWeek;
-    
+
     console.log('[Client] Workout calculation:', {
       weeks: calculatedWeeks,
       daysPerWeek: calculatedDaysPerWeek,
       expectedTotal: expectedTotal,
       formDataDaysOfWeekLength: formData.daysOfWeek?.length,
-      formDataDaysPerWeek: formData.daysPerWeek
+      formDataDaysPerWeek: formData.daysPerWeek,
     });
-    
-    const workoutTracker = { 
+
+    const workoutTracker = {
       currentIndex: 0,
       processedWorkouts: new Set(),
       expectedTotal: expectedTotal,
-      sessionId: null
+      sessionId: null,
     };
 
     // Start a timer to track loading duration
@@ -81,12 +88,14 @@ export async function generateProgram({
     // Retry mechanism counter
     let retryCount = 0;
     let lastError = null;
+    let controller = null; // Declare controller outside try block
+    let timeoutId = null; // Declare timeoutId outside try block
 
     while (retryCount <= MAX_RETRIES) {
       try {
         // Update the current retry attempt
         currentRetryAttempt.count = retryCount;
-        
+
         // If this is a retry, show message to user and clear previous partial results
         if (retryCount > 0) {
           showToastMessage(
@@ -100,7 +109,10 @@ export async function generateProgram({
           workoutTracker.currentIndex = 0;
           workoutTracker.processedWorkouts.clear();
           workoutTracker.sessionId = null;
-          console.log('[Retry] Reset workout tracker for retry attempt', retryCount);
+          console.log(
+            '[Retry] Reset workout tracker for retry attempt',
+            retryCount
+          );
           // Add a small delay before retrying
           await delay(RETRY_DELAY);
         }
@@ -119,26 +131,29 @@ export async function generateProgram({
             // Handle different formats of day names
             if (typeof day === 'number') return day; // Already a number
             if (!day || typeof day !== 'string') return null; // Invalid day
-            
+
             // Try exact match first
             if (dayNameToNumber[day] !== undefined) {
               return dayNameToNumber[day];
             }
-            
+
             // Try capitalized version
-            const capitalizedDay = day.charAt(0).toUpperCase() + day.slice(1).toLowerCase();
+            const capitalizedDay =
+              day.charAt(0).toUpperCase() + day.slice(1).toLowerCase();
             if (dayNameToNumber[capitalizedDay] !== undefined) {
               return dayNameToNumber[capitalizedDay];
             }
-            
+
             console.warn(`[programActions] Unknown day format: "${day}"`);
             return null;
           })
-          .filter(dayNum => dayNum !== null); // Remove invalid days
-        
+          .filter((dayNum) => dayNum !== null); // Remove invalid days
+
         // Fallback if no valid days are found - use Monday, Wednesday, Friday as default
         if (daysOfWeekNumbers.length === 0) {
-          console.warn('[programActions] No valid days found, using default schedule (Mon, Wed, Fri)');
+          console.warn(
+            '[programActions] No valid days found, using default schedule (Mon, Wed, Fri)'
+          );
           daysOfWeekNumbers.push(1, 3, 5); // Monday, Wednesday, Friday
         }
 
@@ -158,14 +173,21 @@ export async function generateProgram({
 
         // Determine if this is a regeneration based on existing suggestions
         const isReGenerating = suggestions && suggestions.length > 0;
-        
+
         // For regeneration, exclude the old generated_description
-        const programOverviewData = isReGenerating 
-          ? { 
+        const programOverviewData = isReGenerating
+          ? {
               ...formData.programOverview,
-              generated_description: undefined  // Don't send old generated description
+              generated_description: undefined, // Don't send old generated description
             }
           : formData.programOverview;
+
+        // CRITICAL: Clear existing workouts from UI immediately during regeneration
+        // This prevents the confusing state where old + new workouts appear together
+        if (isReGenerating) {
+          console.log('[Regeneration] Clearing UI workouts immediately to prevent duplication display');
+          setSuggestions([]); // Clear UI immediately for regeneration
+        }
 
         // Create request body
         const requestBody = JSON.stringify({
@@ -207,9 +229,9 @@ export async function generateProgram({
         }
 
         // Create a controller to abort the fetch if needed
-        const controller = new AbortController();
+        controller = new AbortController();
         const signal = controller.signal;
-        
+
         // Store controller in ref if provided
         if (abortControllerRef) {
           abortControllerRef.current = controller;
@@ -220,29 +242,29 @@ export async function generateProgram({
         const numberOfWeeks = parseInt(formData.numberOfWeeks, 10);
         const totalWorkouts = calculatedWeeks * calculatedDaysPerWeek;
         let timeoutDuration;
-        
+
         if (totalWorkouts >= 40) {
-          timeoutDuration = 600000; // 10 minutes for very large programs (8+ weeks, 6+ days)
+          timeoutDuration = 1800000; // 30 minutes for very large programs (8+ weeks, 6+ days)
         } else if (numberOfWeeks >= 5 || totalWorkouts >= 20) {
           timeoutDuration = 450000; // 7.5 minutes for large programs
         } else {
           timeoutDuration = 300000; // 5 minutes for smaller programs
         }
-        
+
         console.log('[Client] Timeout calculation:', {
           numberOfWeeks,
           totalWorkouts,
-          timeoutDuration: timeoutDuration / 1000 + 's'
+          timeoutDuration: timeoutDuration / 1000 + 's',
         });
 
         // Set a timeout
-        const timeoutId = setTimeout(() => {
+        timeoutId = setTimeout(() => {
           controller.abort();
         }, timeoutDuration);
 
         // Determine if this will be chunked (>2 weeks) for proper Accept header
         const willBeChunked = numberOfWeeks > 2;
-        
+
         const response = await fetch('/api/generate-program-anthropic', {
           method: 'POST',
           headers: {
@@ -322,7 +344,10 @@ export async function generateProgram({
                   } else if (data.type === 'error') {
                     // Handle chunked generation errors
                     console.error('[Streaming] Error:', data.error);
-                    showToastMessage(`Generation error: ${data.error}`, 'error');
+                    showToastMessage(
+                      `Generation error: ${data.error}`,
+                      'error'
+                    );
                     setGenerationStage('error');
                     setIsLoading(false);
                     break; // Exit the streaming loop on error
@@ -351,8 +376,10 @@ export async function generateProgram({
                     // Reset workout tracker for new generation
                     workoutTracker.currentIndex = 0;
                     workoutTracker.processedWorkouts.clear();
-                    console.log('[Streaming] Reset workout tracker for new generation');
-                    // Only clear suggestions at the start of a new generation
+                    console.log(
+                      '[Streaming] Reset workout tracker for new generation'
+                    );
+                    // Ensure suggestions are cleared for streaming (should already be cleared above for regeneration)
                     setSuggestions([]); // Clear previous workouts for streaming
                     showToastMessage(
                       `Program created: ${data.title}`,
@@ -376,7 +403,7 @@ export async function generateProgram({
                     const weekNumber = data.week;
                     const totalGenerated = data.totalGenerated;
                     const totalExpected = data.totalExpected;
-                    
+
                     console.log(
                       '[Streaming] Week chunk received:',
                       weekNumber,
@@ -387,23 +414,34 @@ export async function generateProgram({
                       'Expected:',
                       totalExpected
                     );
-                    
+
                     // Process each workout in the week chunk
                     weekWorkouts.forEach((workout, index) => {
-                      const workoutKey = `week${weekNumber}_day${index + 1}_${workout.title}_${workoutTracker.sessionId}`;
-                      
+                      const workoutKey = `week${weekNumber}_day${index + 1}_${
+                        workout.title
+                      }_${workoutTracker.sessionId}`;
+
                       // Check if we've already processed this specific workout
                       if (workoutTracker.processedWorkouts.has(workoutKey)) {
-                        console.warn('[Streaming] Duplicate workout in chunk, skipping:', workoutKey);
+                        console.warn(
+                          '[Streaming] Duplicate workout in chunk, skipping:',
+                          workoutKey
+                        );
                         return;
                       }
-                      
+
                       // Validate against expected total
-                      if (workoutTracker.currentIndex >= workoutTracker.expectedTotal) {
-                        console.warn('[Streaming] Exceeded expected workout count in chunk, skipping:', workout.title);
+                      if (
+                        workoutTracker.currentIndex >=
+                        workoutTracker.expectedTotal
+                      ) {
+                        console.warn(
+                          '[Streaming] Exceeded expected workout count in chunk, skipping:',
+                          workout.title
+                        );
                         return;
                       }
-                      
+
                       const newWorkout = {
                         title: workout.title,
                         body: workout.body,
@@ -411,16 +449,18 @@ export async function generateProgram({
                         scheduled_date: workout.date,
                         suggestedDate: workout.date,
                         date: workout.date,
-                        streamingId: `chunk_week${weekNumber}_day${index + 1}_${workoutTracker.currentIndex}_${workoutTracker.sessionId}`,
+                        streamingId: `chunk_week${weekNumber}_day${index + 1}_${
+                          workoutTracker.currentIndex
+                        }_${workoutTracker.sessionId}`,
                         weekNumber: weekNumber,
                         dayInWeek: index + 1,
                         trackerIndex: workoutTracker.currentIndex,
                       };
-                      
+
                       // Mark as processed and increment tracker
                       workoutTracker.processedWorkouts.add(workoutKey);
                       workoutTracker.currentIndex++;
-                      
+
                       // Add to suggestions
                       flushSync(() => {
                         setSuggestions((prev) => {
@@ -433,7 +473,7 @@ export async function generateProgram({
                         });
                       });
                     });
-                    
+
                     // Show week completion toast after all workouts are added
                     showToastMessage(
                       `Week ${weekNumber} completed! (${weekWorkouts.length} workouts added)`,
@@ -455,7 +495,7 @@ export async function generateProgram({
                       'Key:',
                       workoutKey
                     );
-                    
+
                     // Check if we've already processed this specific workout in this session
                     if (workoutTracker.processedWorkouts.has(workoutKey)) {
                       console.warn(
@@ -464,9 +504,12 @@ export async function generateProgram({
                       );
                       return;
                     }
-                    
+
                     // Validate against expected total to prevent overflow
-                    if (workoutTracker.currentIndex >= workoutTracker.expectedTotal) {
+                    if (
+                      workoutTracker.currentIndex >=
+                      workoutTracker.expectedTotal
+                    ) {
                       console.warn(
                         '[Streaming] WARNING: Exceeded expected workout count',
                         'Current index:',
@@ -496,7 +539,7 @@ export async function generateProgram({
                     // Mark this workout as processed BEFORE the state update
                     workoutTracker.processedWorkouts.add(workoutKey);
                     workoutTracker.currentIndex++;
-                    
+
                     // Use flushSync to force synchronous update
                     flushSync(() => {
                       setSuggestions((prev) => {
@@ -508,7 +551,7 @@ export async function generateProgram({
                           'Tracker index:',
                           workoutTracker.currentIndex
                         );
-                        
+
                         // Double-check we're not exceeding expected workouts in state
                         if (prev.length >= workoutTracker.expectedTotal) {
                           console.warn(
@@ -523,7 +566,7 @@ export async function generateProgram({
                           workoutTracker.processedWorkouts.delete(workoutKey);
                           return prev; // Don't add more workouts
                         }
-                        
+
                         // Simple append approach to avoid index issues
                         const newSuggestions = [...prev, newWorkout];
                         console.log(
@@ -538,9 +581,7 @@ export async function generateProgram({
 
                     // Show a toast for each workout added with corrected numbering
                     showToastMessage(
-                      `Workout ${workoutTracker.currentIndex}/${workoutTracker.expectedTotal}: ${
-                        workout.title
-                      }`,
+                      `Workout ${workoutTracker.currentIndex}/${workoutTracker.expectedTotal}: ${workout.title}`,
                       'success'
                     );
                   } else if (
@@ -557,16 +598,24 @@ export async function generateProgram({
                       'Expected:',
                       workoutTracker.expectedTotal
                     );
-                    
+
                     // Handle Anthropic chunked complete event with suggestions
                     if (data.suggestions && Array.isArray(data.suggestions)) {
-                      console.log('[Streaming] Complete event has suggestions:', data.suggestions.length);
-                      
+                      console.log(
+                        '[Streaming] Complete event has suggestions:',
+                        data.suggestions.length
+                      );
+
                       // For chunked generation, setSuggestions is actually saveGeneratedWorkouts
                       // which saves to database AND updates UI state
-                      const savedWorkouts = await setSuggestions(data.suggestions);
-                      console.log('[Streaming] Saved workouts to database:', savedWorkouts.length);
-                      
+                      const savedWorkouts = await setSuggestions(
+                        data.suggestions
+                      );
+                      console.log(
+                        '[Streaming] Saved workouts to database:',
+                        savedWorkouts.length
+                      );
+
                       // Update form data with program metadata
                       if (data.title && !programId) {
                         setFormData((prev) => ({
@@ -574,19 +623,21 @@ export async function generateProgram({
                           name: data.title || prev.name,
                         }));
                       }
-                      
+
                       if (data.description) {
-                        console.log('[Streaming] Setting program description from complete event');
+                        console.log(
+                          '[Streaming] Setting program description from complete event'
+                        );
                         setGeneratedDescription(data.description);
                       }
-                      
+
                       // Show success message
                       showToastMessage(
                         `Program complete! Generated ${data.suggestions.length} workouts.`,
                         'success'
                       );
                     }
-                    
+
                     setIsLoading(false);
                     setGenerationStage('complete');
 
@@ -611,7 +662,8 @@ export async function generateProgram({
                     }
 
                     // Use tracker workout count for completion message
-                    const workoutCount = data.totalWorkouts || workoutTracker.currentIndex;
+                    const workoutCount =
+                      data.totalWorkouts || workoutTracker.currentIndex;
                     showToastMessage(
                       programId
                         ? `Program complete! Generated ${workoutCount} workouts. You can now add them to your calendar.`
@@ -630,22 +682,32 @@ export async function generateProgram({
                       const wizardUpdateData = {
                         trainingMethodology: formData.trainingMethodology,
                         programType: formData.programType,
-                        gymType: formData.gymType?.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z_]/g, '') || 'crossfit_box',
+                        gymType:
+                          formData.gymType
+                            ?.toLowerCase()
+                            .replace(/\s+/g, '_')
+                            .replace(/[^a-z_]/g, '') || 'crossfit_box',
                         equipment: formData.equipment || [],
                         difficulty: formData.difficulty || 'intermediate',
                         focusArea: formData.focusArea || 'full_body',
-                        workoutDuration: formData.sessionDetails?.duration_minutes || 60,
+                        workoutDuration:
+                          formData.sessionDetails?.duration_minutes || 60,
                         workoutFormats: formData.workoutFormats || [],
                         entityId: formData.entityId,
                         startDate: formData.startDate,
                         numberOfWeeks: parseInt(formData.numberOfWeeks) || 4,
-                        daysOfWeek: (formData.daysOfWeek || []).map(day => day.toLowerCase()),
+                        daysOfWeek: (formData.daysOfWeek || []).map((day) =>
+                          day.toLowerCase()
+                        ),
                         // Mark as having a generated program
                         hasGeneratedProgram: true,
                         programId: programId,
                       };
-                      
-                      console.log('[generateProgram SSE] Updating wizard data:', wizardUpdateData);
+
+                      console.log(
+                        '[generateProgram SSE] Updating wizard data:',
+                        wizardUpdateData
+                      );
                       updateWizardData(wizardUpdateData);
                     }
 
@@ -753,22 +815,32 @@ export async function generateProgram({
                 programDescription: data.description || formData.description,
                 trainingMethodology: formData.trainingMethodology,
                 programType: formData.programType,
-                gymType: formData.gymType?.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z_]/g, '') || 'crossfit_box',
+                gymType:
+                  formData.gymType
+                    ?.toLowerCase()
+                    .replace(/\s+/g, '_')
+                    .replace(/[^a-z_]/g, '') || 'crossfit_box',
                 equipment: formData.equipment || [],
                 difficulty: formData.difficulty || 'intermediate',
                 focusArea: formData.focusArea || 'full_body',
-                workoutDuration: formData.sessionDetails?.duration_minutes || 60,
+                workoutDuration:
+                  formData.sessionDetails?.duration_minutes || 60,
                 workoutFormats: formData.workoutFormats || [],
                 entityId: formData.entityId,
                 startDate: formData.startDate,
                 numberOfWeeks: parseInt(formData.numberOfWeeks) || 4,
-                daysOfWeek: (formData.daysOfWeek || []).map(day => day.toLowerCase()),
+                daysOfWeek: (formData.daysOfWeek || []).map((day) =>
+                  day.toLowerCase()
+                ),
                 // Mark as having a generated program
                 hasGeneratedProgram: true,
                 programId: programId,
               };
-              
-              console.log('[generateProgram] Updating wizard data:', wizardUpdateData);
+
+              console.log(
+                '[generateProgram] Updating wizard data:',
+                wizardUpdateData
+              );
               updateWizardData(wizardUpdateData);
             }
 
@@ -798,7 +870,8 @@ export async function generateProgram({
         lastError = error;
 
         // Check if this is a user-initiated abort
-        const isUserAbort = error.name === 'AbortError' && controller.signal.aborted;
+        const isUserAbort =
+          error.name === 'AbortError' && controller.signal.aborted;
         if (isUserAbort) {
           // Don't retry user-initiated aborts
           console.log('Generation aborted by user');
@@ -806,7 +879,7 @@ export async function generateProgram({
           setGenerationStage(null);
           clearInterval(timer);
           clearTimeout(timeoutId);
-          
+
           // Create a more descriptive error for user aborts
           const userAbortError = new Error('Generation stopped by user');
           userAbortError.name = 'AbortError';
@@ -817,14 +890,17 @@ export async function generateProgram({
 
         // Determine if this is a retryable error
         const isNetworkError =
-          error.name === 'TypeError' && error.message && error.message.includes('network');
-        const isTimeoutError =
-          error.name === 'AbortError' && !isUserAbort;
+          error.name === 'TypeError' &&
+          error.message &&
+          error.message.includes('network');
+        const isTimeoutError = error.name === 'AbortError' && !isUserAbort;
         const isGatewayError =
-          error.message && (error.message.includes('504') || error.message.includes('Gateway'));
+          error.message &&
+          (error.message.includes('504') || error.message.includes('Gateway'));
         const isServiceUnavailable =
-          error.message && (error.message.includes('503') ||
-          error.message.includes('Service Unavailable'));
+          error.message &&
+          (error.message.includes('503') ||
+            error.message.includes('Service Unavailable'));
 
         const isRetryableError =
           isNetworkError ||
@@ -835,6 +911,28 @@ export async function generateProgram({
         // If error is retryable and we have retries left
         if (isRetryableError && retryCount < MAX_RETRIES) {
           retryCount++;
+
+          // Provide specific user feedback for different error types
+          if (isTimeoutError) {
+            showToastMessage(
+              `Program generation timed out. Retrying (${retryCount}/${MAX_RETRIES})...`,
+              'warning'
+            );
+          } else if (isNetworkError) {
+            showToastMessage(
+              `Network error occurred. Retrying (${retryCount}/${MAX_RETRIES})...`,
+              'warning'
+            );
+          } else if (isGatewayError || isServiceUnavailable) {
+            showToastMessage(
+              `Server temporarily unavailable. Retrying (${retryCount}/${MAX_RETRIES})...`,
+              'warning'
+            );
+          }
+
+          console.log(
+            `[Retry] Attempt ${retryCount} due to error: ${error.message}`
+          );
 
           // Don't break the loop - continue to next retry iteration
           continue;
@@ -1057,7 +1155,11 @@ export async function saveProgram({
         programDescription: programData.description,
         trainingMethodology: programData.trainingMethodology,
         programType: programData.programType,
-        gymType: programData.gymType?.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z_]/g, '') || 'crossfit_box',
+        gymType:
+          programData.gymType
+            ?.toLowerCase()
+            .replace(/\s+/g, '_')
+            .replace(/[^a-z_]/g, '') || 'crossfit_box',
         equipment: programData.equipment || [],
         difficulty: programData.difficulty || 'intermediate',
         focusArea: programData.focusArea || 'full_body',
@@ -1066,12 +1168,14 @@ export async function saveProgram({
         entityId: programData.entityId,
         startDate: programData.startDate,
         numberOfWeeks: parseInt(programData.numberOfWeeks) || 4,
-        daysOfWeek: (programData.daysOfWeek || []).map(day => day.toLowerCase()),
+        daysOfWeek: (programData.daysOfWeek || []).map((day) =>
+          day.toLowerCase()
+        ),
         programId: programId,
         // Mark as saved
         hasGeneratedProgram: suggestions && suggestions.length > 0,
       };
-      
+
       console.log('[saveProgram] Updating wizard data:', wizardUpdateData);
       updateWizardData(wizardUpdateData);
     }
@@ -1161,7 +1265,7 @@ export async function autoSaveProgramDetails({
     console.log('Program details auto-saved successfully', {
       gymType: formData.gymType,
       gymDetails: gymDetails,
-      programId: programId
+      programId: programId,
     });
     return true; // Indicate success
   } catch (error) {

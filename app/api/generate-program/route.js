@@ -291,7 +291,27 @@ export async function POST(request) {
         let existingProgress;
         if (forceRegenerate) {
           logWithTimestamp('Force regeneration requested, skipping progress check');
-          sendEvent('status', { message: 'Force regeneration requested. Starting fresh...' });
+          sendEvent('status', { message: 'Force regeneration requested. Clearing existing workouts and starting fresh...' });
+          
+          // CRITICAL: Delete existing workouts immediately for regeneration
+          if (programId) {
+            logWithTimestamp('Deleting existing workouts for regeneration', { programId });
+            const { error: deleteWorkoutsError } = await supabase
+              .from('program_workouts')
+              .delete()
+              .eq('program_id', programId)
+              .eq('is_reference', false);
+
+            if (deleteWorkoutsError) {
+              logWithTimestamp('Error deleting existing workouts during regeneration', {
+                error: deleteWorkoutsError,
+              });
+              // Don't fail the request, but log the error
+            } else {
+              logWithTimestamp('Successfully deleted existing workouts for regeneration');
+            }
+          }
+          
           existingProgress = { hasExisting: false, existingWorkouts: [], completedWeeks: 0, isComplete: false };
         } else {
           sendEvent('status', { message: 'Checking for existing program progress...' });
@@ -901,9 +921,9 @@ async function generateLargeProgram(
     sendEvent('saving', { message: 'Saving workouts to database...' });
     try {
       if (programId && allWorkouts.length > 0) {
-        // Delete existing workouts if we're starting fresh or forcing regeneration
-        if (!existingProgress.hasExisting || forceRegenerate) {
-          logWithTimestamp('Deleting existing workouts for fresh generation', { forceRegenerate });
+        // Only delete existing workouts if we're starting fresh (not during regeneration - already handled above)
+        if (!existingProgress.hasExisting && !forceRegenerate) {
+          logWithTimestamp('Deleting existing workouts for fresh generation (not regeneration)', { forceRegenerate });
           
           // Delete existing program workouts (except reference workouts) before saving new ones
           const { error: deleteWorkoutsError } = await supabase
@@ -920,14 +940,14 @@ async function generateLargeProgram(
           }
         }
 
-        // Prepare workouts for database insertion - only new workouts if we have existing progress and not forcing regeneration
+        // Prepare workouts for database insertion
         let workoutsToInsert;
         if (existingProgress.hasExisting && !forceRegenerate) {
-          // Only insert the newly generated workouts (skip existing ones)
+          // Only insert the newly generated workouts (skip existing ones) - for partial generation continuation
           const existingCount = existingProgress.existingWorkouts.length;
           const newWorkouts = allWorkouts.slice(existingCount);
           
-          logWithTimestamp('Preparing new workouts for insertion', {
+          logWithTimestamp('Preparing new workouts for insertion (partial generation)', {
             totalWorkouts: allWorkouts.length,
             existingCount,
             newWorkoutsCount: newWorkouts.length
@@ -950,7 +970,12 @@ async function generateLargeProgram(
             updated_at: new Date().toISOString(),
           }));
         } else {
-          // Insert all workouts (fresh generation)
+          // Insert all workouts (fresh generation or regeneration - old workouts already deleted)
+          logWithTimestamp('Preparing all workouts for insertion', {
+            totalWorkouts: allWorkouts.length,
+            isRegeneration: forceRegenerate
+          });
+          
           workoutsToInsert = allWorkouts.map((workout, index) => ({
             program_id: programId,
             title: workout.title,

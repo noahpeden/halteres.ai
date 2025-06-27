@@ -54,6 +54,17 @@ export default function ProgramEssentials({
     }, 500); // 500ms debounce delay
   }, [handleChange]);
 
+  // Handle blur for immediate save
+  const handleDescriptionBlur = useCallback(() => {
+    // Clear any pending debounced update
+    if (descriptionTimeoutRef.current) {
+      clearTimeout(descriptionTimeoutRef.current);
+      descriptionTimeoutRef.current = null;
+    }
+    // Save immediately on blur
+    handleChange({ target: { name: 'description', value: localDescription } });
+  }, [handleChange, localDescription]);
+
   // Debounced handler for reference input
   const handleReferenceInputChange = useCallback((e) => {
     const newValue = e.target.value;
@@ -69,6 +80,17 @@ export default function ProgramEssentials({
       handleChange({ target: { name: 'referenceInput', value: newValue } });
     }, 500); // 500ms debounce delay
   }, [handleChange]);
+
+  // Handle blur for immediate save
+  const handleReferenceInputBlur = useCallback(() => {
+    // Clear any pending debounced update
+    if (referenceTimeoutRef.current) {
+      clearTimeout(referenceTimeoutRef.current);
+      referenceTimeoutRef.current = null;
+    }
+    // Save immediately on blur
+    handleChange({ target: { name: 'referenceInput', value: localReferenceInput } });
+  }, [handleChange, localReferenceInput]);
 
   // Cleanup timeouts on unmount
   useEffect(() => {
@@ -177,7 +199,7 @@ export default function ProgramEssentials({
             className="textarea textarea-bordered w-full border-base-300 focus:border-primary"
             value={localDescription}
             onChange={handleDescriptionChange}
-            onBlur={() => {}}
+            onBlur={handleDescriptionBlur}
             name="description"
             placeholder="Enter a description of your program (e.g., 'Intro to strength training, 4x4 program, etc.)"
             rows="3"
@@ -205,7 +227,7 @@ export default function ProgramEssentials({
             placeholder="Paste your own workout text here (e.g., a specific WOD, a previous program structure)"
             value={localReferenceInput}
             onChange={handleReferenceInputChange}
-            onBlur={() => {}}
+            onBlur={handleReferenceInputBlur}
             rows="3"
           ></textarea>
         </label>

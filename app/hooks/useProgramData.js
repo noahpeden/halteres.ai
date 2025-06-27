@@ -172,13 +172,7 @@ export function useProgramData(programId) {
       const { gymEquipmentPresets } = require('@/components/utils');
       const defaultGymType = 'Crossfit Box';
       const defaultEquipment = gymEquipmentPresets[defaultGymType] || [];
-      
-      console.log('getFormData: No program, returning defaults:', {
-        defaultGymType,
-        defaultEquipment,
-        equipmentLength: defaultEquipment.length
-      });
-      
+
       return {
         name: '',
         description: '',
@@ -199,7 +193,7 @@ export function useProgramData(programId) {
         programOverview: {},
         gymDetails: {
           gym_type: defaultGymType,
-          equipment: defaultEquipment
+          equipment: defaultEquipment,
         },
         trainingMethodology: '',
         referenceInput: '',

@@ -21,6 +21,8 @@ export default function WorkoutList({
   generatedDescription,
   setFormData,
   showToastMessage,
+  generationStage, // Add generation stage
+  serverStatus, // Add server status for progress tracking
 }) {
   const [currentWeek, setCurrentWeek] = useState(1);
 
@@ -73,6 +75,41 @@ export default function WorkoutList({
     (group) => group.week === currentWeek
   );
 
+  // Determine generation progress for visual feedback
+  const getWeekGenerationStatus = (weekNumber) => {
+    // If we have workouts for this week, it's complete
+    if (weekGroups.find(w => w.week === weekNumber)?.workouts?.length > 0) {
+      return 'complete';
+    }
+    
+    // If generation failed and we don't have workouts for this week
+    if (generationStage === 'error') {
+      return 'failed';
+    }
+    
+    // If we're not generating, treat as complete (static state)
+    if (!generationStage) {
+      return 'complete';
+    }
+    
+    // If we're currently generating this week
+    if (serverStatus?.currentWeek === weekNumber || 
+        (generationStage === 'generating' && weekNumber === totalWeeks + 1)) {
+      return 'generating';
+    }
+    
+    // If we haven't reached this week yet
+    return 'pending';
+  };
+
+  // Auto-navigate to the latest generated week during generation
+  useEffect(() => {
+    if (generationStage === 'generating' && totalWeeks > 0) {
+      // During generation, always navigate to the latest week
+      setCurrentWeek(totalWeeks);
+    }
+  }, [totalWeeks, generationStage]);
+
   // Reset to week 1 when workouts change or current week becomes invalid
   useEffect(() => {
     if (totalWeeks > 0 && (currentWeek > totalWeeks || currentWeek < 1)) {
@@ -114,6 +151,14 @@ export default function WorkoutList({
           <p className="text-sm text-gray-600">
             {workouts.length} workout{workouts.length !== 1 ? 's' : ''}{' '}
             generated ({totalWeeks} week{totalWeeks !== 1 ? 's' : ''})
+            {generationStage && (
+              <span className="ml-2 text-primary font-medium">
+                {generationStage === 'generating' ? '• Generating...' : 
+                 generationStage === 'preparing' ? '• Preparing...' : 
+                 generationStage === 'retrying' ? '• Retrying...' : 
+                 generationStage === 'error' ? '• Generation failed - partial program saved' : ''}
+              </span>
+            )}
           </p>
         </div>
       </div>
@@ -176,19 +221,32 @@ export default function WorkoutList({
               {/* Show max 7 weeks at a time with ellipsis */}
               {totalWeeks <= 7 ? (
                 // Show all weeks if 7 or fewer
-                weekGroups.map((weekGroup) => (
-                  <button
-                    key={weekGroup.week}
-                    className={`btn btn-sm ${
-                      currentWeek === weekGroup.week
-                        ? 'btn-primary'
-                        : 'btn-outline'
-                    }`}
-                    onClick={() => setCurrentWeek(weekGroup.week)}
-                  >
-                    {weekGroup.week}
-                  </button>
-                ))
+                weekGroups.map((weekGroup) => {
+                  const status = getWeekGenerationStatus(weekGroup.week);
+                  return (
+                    <button
+                      key={weekGroup.week}
+                      className={`btn btn-sm ${
+                        currentWeek === weekGroup.week
+                          ? 'btn-primary'
+                          : status === 'complete'
+                          ? 'btn-outline'
+                          : status === 'generating'
+                          ? 'btn-outline btn-warning'
+                          : status === 'failed'
+                          ? 'btn-outline btn-error'
+                          : 'btn-outline btn-disabled'
+                      }`}
+                      onClick={() => setCurrentWeek(weekGroup.week)}
+                      disabled={status === 'pending'}
+                    >
+                      {status === 'generating' && (
+                        <span className="loading loading-spinner loading-xs mr-1"></span>
+                      )}
+                      {weekGroup.week}
+                    </button>
+                  );
+                })
               ) : (
                 // Show abbreviated week navigation for more than 7 weeks
                 <>
@@ -219,19 +277,32 @@ export default function WorkoutList({
                         );
                       }
                     })
-                    .map((weekGroup) => (
-                      <button
-                        key={weekGroup.week}
-                        className={`btn btn-sm ${
-                          currentWeek === weekGroup.week
-                            ? 'btn-primary'
-                            : 'btn-outline'
-                        }`}
-                        onClick={() => setCurrentWeek(weekGroup.week)}
-                      >
-                        {weekGroup.week}
-                      </button>
-                    ))}
+                    .map((weekGroup) => {
+                      const status = getWeekGenerationStatus(weekGroup.week);
+                      return (
+                        <button
+                          key={weekGroup.week}
+                          className={`btn btn-sm ${
+                            currentWeek === weekGroup.week
+                              ? 'btn-primary'
+                              : status === 'complete'
+                              ? 'btn-outline'
+                              : status === 'generating'
+                              ? 'btn-outline btn-warning'
+                              : status === 'failed'
+                              ? 'btn-outline btn-error'
+                              : 'btn-outline btn-disabled'
+                          }`}
+                          onClick={() => setCurrentWeek(weekGroup.week)}
+                          disabled={status === 'pending'}
+                        >
+                          {status === 'generating' && (
+                            <span className="loading loading-spinner loading-xs mr-1"></span>
+                          )}
+                          {weekGroup.week}
+                        </button>
+                      );
+                    })}
 
                   {currentWeek < totalWeeks - 2 && (
                     <>
@@ -274,11 +345,24 @@ export default function WorkoutList({
 
       {currentWeekData && (
         <div className="mb-6">
-          <h4 className="text-md font-medium mb-2 p-2 bg-base-200 rounded-md">
-            Week {currentWeekData.week}
-            {totalWeeks > 1 && (
-              <span className="text-sm font-normal ml-2 text-gray-600">
-                ({currentWeek} of {totalWeeks})
+          <h4 className="text-md font-medium mb-2 p-2 bg-base-200 rounded-md flex items-center justify-between">
+            <span>
+              Week {currentWeekData.week}
+              {totalWeeks > 1 && (
+                <span className="text-sm font-normal ml-2 text-gray-600">
+                  ({currentWeek} of {totalWeeks})
+                </span>
+              )}
+              {getWeekGenerationStatus(currentWeekData.week) === 'generating' && (
+                <span className="ml-2 text-warning flex items-center">
+                  <span className="loading loading-spinner loading-xs mr-1"></span>
+                  Generating...
+                </span>
+              )}
+            </span>
+            {getWeekGenerationStatus(currentWeekData.week) === 'complete' && (
+              <span className="text-xs bg-success text-success-content px-2 py-1 rounded">
+                ✓ Complete
               </span>
             )}
           </h4>
@@ -407,9 +491,17 @@ export default function WorkoutList({
 
       {!currentWeekData && totalWeeks > 0 && (
         <div className="text-center py-8">
-          <p className="text-gray-500">
-            No workouts found for Week {currentWeek}
-          </p>
+          <div className="text-gray-500">
+            <p>No workouts found for Week {currentWeek}</p>
+            {generationStage === 'error' && (
+              <div className="mt-4 p-4 bg-orange-50 border border-orange-200 rounded-md">
+                <p className="text-orange-700 text-sm">
+                  ⚠️ Generation was interrupted. You can regenerate the program to complete missing weeks, 
+                  or manually add workouts for Week {currentWeek}.
+                </p>
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>

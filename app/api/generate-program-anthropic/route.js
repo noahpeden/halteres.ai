@@ -2,7 +2,7 @@ import { createClient } from '@/utils/supabase/server';
 import { NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 
-export const maxDuration = 300;
+export const maxDuration = 1800; // 30 minutes for large program generation
 export const dynamic = 'force-dynamic';
 
 // Helper function to log with timestamps
@@ -14,8 +14,25 @@ function logWithTimestamp(message, data = null) {
 
 // Helper function to send SSE events
 function sendEvent(controller, encoder, type, data) {
-  const message = `data: ${JSON.stringify({ type, ...data })}\n\n`;
-  controller.enqueue(encoder.encode(message));
+  try {
+    // Check if controller is still valid before sending
+    // Note: checking controller.desiredSize !== null means the controller is still writable
+    if (controller && controller.desiredSize !== null) {
+      const message = `data: ${JSON.stringify({ type, ...data })}\n\n`;
+      controller.enqueue(encoder.encode(message));
+    } else {
+      logWithTimestamp('Controller not writable, skipping event', {
+        type,
+        desiredSize: controller?.desiredSize,
+      });
+    }
+  } catch (error) {
+    logWithTimestamp('Failed to send SSE event - controller may be closed', {
+      type,
+      error: error.message,
+    });
+    // Don't throw here to prevent cascade failures
+  }
 }
 
 export async function POST(request) {
@@ -75,8 +92,19 @@ async function handleChunkedGeneration(requestData, anthropic, supabase) {
         encoder
       ).catch((error) => {
         logWithTimestamp('Chunked generation error', { error: error.message });
-        sendEvent(controller, encoder, 'error', { error: error.message });
-        controller.close();
+        try {
+          sendEvent(controller, encoder, 'error', { error: error.message });
+          if (controller && controller.desiredSize !== null) {
+            controller.close();
+          }
+        } catch (closeError) {
+          logWithTimestamp(
+            'Controller already closed during stream error handling',
+            {
+              error: closeError.message,
+            }
+          );
+        }
       });
     },
   });
@@ -120,7 +148,7 @@ async function generateProgramChunked(
 
     const allWorkouts = [];
     let currentWeek = 1;
-    
+
     // Store program description from first week
     let programDescription = '';
     let programOverview = '';
@@ -150,6 +178,23 @@ async function generateProgramChunked(
         const weekWorkouts = weekResult.workouts || weekResult;
         allWorkouts.push(...weekWorkouts);
 
+        // Save workouts to database immediately after each week
+        try {
+          if (sharedData.programId) {
+            await saveWorkoutsToDatabase(
+              sharedData.programId,
+              weekWorkouts,
+              supabase
+            );
+            logWithTimestamp(`Saved week ${currentWeek} workouts to database`);
+          }
+        } catch (saveError) {
+          logWithTimestamp(`Error saving week ${currentWeek} workouts`, {
+            error: saveError.message,
+          });
+          // Continue generation even if save fails
+        }
+
         // Send the generated workouts for this week
         sendEvent(controller, encoder, 'workout_chunk', {
           week: currentWeek,
@@ -172,6 +217,24 @@ async function generateProgramChunked(
           error: weekError.message,
         });
 
+        // Save any workouts we've generated so far before handling the error
+        if (allWorkouts.length > 0) {
+          try {
+            await saveWorkoutsToDatabase(
+              sharedData.programId,
+              allWorkouts,
+              supabase
+            );
+            logWithTimestamp(
+              `Saved ${allWorkouts.length} workouts before week ${currentWeek} error`
+            );
+          } catch (saveError) {
+            logWithTimestamp('Error saving workouts during failure recovery', {
+              error: saveError.message,
+            });
+          }
+        }
+
         // Generate placeholder workouts for failed week
         const placeholderWorkouts = generatePlaceholderWeek(
           currentWeek,
@@ -180,7 +243,7 @@ async function generateProgramChunked(
         allWorkouts.push(...placeholderWorkouts);
 
         sendEvent(controller, encoder, 'warning', {
-          message: `Week ${currentWeek} failed to generate, using placeholders`,
+          message: `Week ${currentWeek} failed to generate, using placeholders. Previous weeks have been saved.`,
           week: currentWeek,
         });
 
@@ -192,22 +255,44 @@ async function generateProgramChunked(
     sendEvent(controller, encoder, 'complete', {
       message: 'Program generated successfully with Anthropic (chunked)',
       title: `Training Program for ${sharedData.goal}`,
-      description: programDescription || `${numberOfWeeks}-week program, ${daysPerWeek} days per week`,
-      overview: programOverview || `A comprehensive ${numberOfWeeks}-week ${
-        sharedData.difficulty
-      } training program focused on ${sharedData.focusArea || sharedData.goal}`,
+      description:
+        programDescription ||
+        `${numberOfWeeks}-week program, ${daysPerWeek} days per week`,
+      overview:
+        programOverview ||
+        `A comprehensive ${numberOfWeeks}-week ${
+          sharedData.difficulty
+        } training program focused on ${
+          sharedData.focusArea || sharedData.goal
+        }`,
       suggestions: allWorkouts,
       model: 'anthropic-chunked',
       totalWorkouts: allWorkouts.length,
     });
 
-    controller.close();
+    try {
+      if (controller && controller.desiredSize !== null) {
+        controller.close();
+      }
+    } catch (closeError) {
+      logWithTimestamp('Controller already closed during completion', {
+        error: closeError.message,
+      });
+    }
   } catch (error) {
     logWithTimestamp('Fatal error in chunked generation', {
       error: error.message,
     });
-    sendEvent(controller, encoder, 'error', { error: error.message });
-    controller.close();
+    try {
+      sendEvent(controller, encoder, 'error', { error: error.message });
+      if (controller && controller.desiredSize !== null) {
+        controller.close();
+      }
+    } catch (closeError) {
+      logWithTimestamp('Controller already closed during error handling', {
+        error: closeError.message,
+      });
+    }
   }
 }
 
@@ -233,7 +318,6 @@ async function generateWeekWorkouts(
     programType,
     equipment,
     gymType,
-    startDate,
     selectedDaysOfWeek,
     clientMetricsContent,
     referenceWorkoutsContent,
@@ -258,7 +342,9 @@ async function generateWeekWorkouts(
       : '';
 
   // Build focused prompt for this week only
-  const weekPrompt = `Generate workouts for WEEK ${weekNumber} ONLY of a ${numberOfWeeks}-week training program.${includeDescription ? `
+  const weekPrompt = `Generate workouts for WEEK ${weekNumber} ONLY of a ${numberOfWeeks}-week training program.${
+    includeDescription
+      ? `
 
 ADDITIONAL REQUIREMENT: Since this is Week 1, also generate a comprehensive program description and overview that explains:
 1. A detailed, engaging overview that clearly states the program's primary goals and target audience (e.g., "This ${numberOfWeeks}-week, ${daysPerWeek}-day-per-week program is designed for ${difficulty} ${goal} trainees aiming to improve...")
@@ -266,7 +352,9 @@ ADDITIONAL REQUIREMENT: Since this is Week 1, also generate a comprehensive prog
 3. How the training principles will drive measurable progress (e.g., "linear progression", "progressive overload", "structured accessory work")
 4. Expected adaptations and outcomes from following the program consistently
 5. Integration of training methodology and approach
-6. Brief recommendations for nutrition, recovery, and supplementary training if relevant` : ''}
+6. Brief recommendations for nutrition, recovery, and supplementary training if relevant`
+      : ''
+  }
 
 Program Details:
 Goal: ${goal}
@@ -309,9 +397,13 @@ ${
 CRITICAL: Generate EXACTLY ${daysPerWeek} workouts for week ${weekNumber} ONLY.
 
 Your response MUST be in this exact JSON format:
-{${includeDescription ? `
+{${
+    includeDescription
+      ? `
   "programDescription": "Comprehensive program description explaining goals, methodology, and expected outcomes",
-  "programOverview": "Brief overview statement about the program approach and benefits",` : ''}
+  "programOverview": "Brief overview statement about the program approach and benefits",`
+      : ''
+  }
   "workouts": [
     {
       "title": "Week ${weekNumber}, Day 1: [Focus Area]",
@@ -377,7 +469,7 @@ Format each workout body with this structure:
 
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
-      max_tokens: 4000, // Smaller since we're only generating one week
+      max_tokens: 12000, // Increased for detailed workouts
       temperature: 0.7,
       system: systemPrompt,
       messages: [
@@ -414,27 +506,57 @@ Format each workout body with this structure:
     try {
       // Check if the response is wrapped in markdown code blocks
       let jsonContent = responseContent;
-      if (responseContent.startsWith('```json')) {
-        // Extract JSON from markdown code block
-        const jsonMatch = responseContent.match(/```json\s*\n([\s\S]*?)\n```/);
-        if (jsonMatch && jsonMatch[1]) {
-          jsonContent = jsonMatch[1];
-          logWithTimestamp(`Week ${weekNumber} extracted JSON from markdown`);
-        } else {
-          // Fallback: try to remove just the opening and closing ```
-          jsonContent = responseContent
-            .replace(/^```json\s*\n/, '')
-            .replace(/\n```\s*$/, '');
-          logWithTimestamp(`Week ${weekNumber} stripped markdown markers`);
-        }
-      } else if (responseContent.startsWith('```')) {
-        // Generic code block without json specification
-        jsonContent = responseContent
-          .replace(/^```\s*\n/, '')
-          .replace(/\n```\s*$/, '');
+
+      // More robust markdown stripping with multiple strategies
+      if (
+        responseContent.includes('```json') ||
+        responseContent.includes('```')
+      ) {
         logWithTimestamp(
-          `Week ${weekNumber} stripped generic markdown markers`
+          `Week ${weekNumber} contains markdown markers, attempting to extract`
         );
+
+        // Strategy 1: Extract content between ```json and ``` markers
+        const jsonBlockMatch = responseContent.match(
+          /```(?:json)?\s*\n?([\s\S]*?)(?:\n```|$)/
+        );
+        if (jsonBlockMatch && jsonBlockMatch[1]) {
+          jsonContent = jsonBlockMatch[1].trim();
+          logWithTimestamp(
+            `Week ${weekNumber} extracted JSON from markdown block`
+          );
+        } else {
+          // Strategy 2: More aggressive stripping with multiple patterns
+          jsonContent = responseContent
+            .replace(/^[\s\S]*?```(?:json)?\s*\n?/, '') // Remove everything before first ```
+            .replace(/\n?```[\s\S]*$/, '') // Remove ``` and everything after
+            .replace(/^```[a-z]*\s*\n?/, '') // Remove any remaining opening ```
+            .replace(/\n?```\s*$/, '') // Remove any remaining closing ```
+            .trim();
+          logWithTimestamp(
+            `Week ${weekNumber} stripped markdown markers with aggressive fallback`
+          );
+        }
+
+        // Strategy 3: Additional cleanup for any remaining markdown artifacts
+        while (jsonContent.startsWith('```')) {
+          jsonContent = jsonContent.replace(/^```[a-z]*\s*\n?/, '').trim();
+        }
+        while (jsonContent.endsWith('```')) {
+          jsonContent = jsonContent.replace(/\n?```\s*$/, '').trim();
+        }
+
+        // Strategy 4: Remove any leading/trailing non-JSON text
+        const jsonStartMatch = jsonContent.match(/^[^{]*?({.*)/s);
+        if (jsonStartMatch) {
+          jsonContent = jsonStartMatch[1];
+        }
+
+        logWithTimestamp(
+          `Week ${weekNumber} final cleaned content length: ${jsonContent.length}`
+        );
+      } else {
+        logWithTimestamp(`Week ${weekNumber} no markdown markers detected`);
       }
 
       parsedContent = JSON.parse(jsonContent);
@@ -447,6 +569,184 @@ Format each workout body with this structure:
         error: parseError.message,
         preview: responseContent.substring(0, 200) + '...',
       });
+
+      // Try to extract partial JSON if possible
+      let partialWorkouts = [];
+      try {
+        // First, try to fix the JSON by closing unterminated strings and objects
+        let fixedContent = responseContent;
+
+        // Remove any remaining markdown if it still exists
+        if (fixedContent.includes('```')) {
+          const jsonBlockMatch = fixedContent.match(
+            /```(?:json)?\s*\n?([\s\S]*?)(?:\n```|$)/
+          );
+          if (jsonBlockMatch && jsonBlockMatch[1]) {
+            fixedContent = jsonBlockMatch[1].trim();
+          } else {
+            fixedContent = fixedContent
+              .replace(/^```(?:json)?\s*\n?/, '')
+              .replace(/\n?```\s*$/, '')
+              .trim();
+          }
+        }
+
+        // Advanced JSON repair strategy
+        logWithTimestamp(
+          `Attempting to fix malformed JSON for week ${weekNumber}`
+        );
+
+        // Strategy 1: Fix unterminated strings and objects
+        let repairAttempts = [];
+
+        // Attempt 1: Basic string and object closure
+        let attempt1 = fixedContent;
+
+        // Check for unterminated strings (ending with unescaped quote)
+        if (attempt1.match(/[^\\]"\s*$/)) {
+          // Already ends with a quote, might need to close object/array
+        } else if (attempt1.match(/[^\\]"[^"]*$/)) {
+          // Has an open string, close it
+          attempt1 += '"';
+        }
+
+        // Count braces and brackets to determine what to close
+        const openBraces = (attempt1.match(/{/g) || []).length;
+        const closeBraces = (attempt1.match(/}/g) || []).length;
+        const openBrackets = (attempt1.match(/\[/g) || []).length;
+        const closeBrackets = (attempt1.match(/\]/g) || []).length;
+
+        // Close missing braces and brackets
+        for (let i = 0; i < openBrackets - closeBrackets; i++) {
+          attempt1 += ']';
+        }
+        for (let i = 0; i < openBraces - closeBraces; i++) {
+          attempt1 += '}';
+        }
+
+        repairAttempts.push({ name: 'basic_closure', content: attempt1 });
+
+        // Attempt 2: More aggressive repair - find last complete workout and rebuild
+        let attempt2 = fixedContent;
+
+        // Find the last complete workout object
+        const workoutMatches = [
+          ...attempt2.matchAll(/\{\s*"title"[^}]*?"body"[^}]*?\}/g),
+        ];
+        if (workoutMatches.length > 0) {
+          const lastCompleteWorkout = workoutMatches[workoutMatches.length - 1];
+          const cutoffPosition =
+            lastCompleteWorkout.index + lastCompleteWorkout[0].length;
+
+          // Reconstruct JSON with complete workouts only
+          const completeWorkouts = workoutMatches
+            .map((match) => match[0])
+            .join(',\n    ');
+          attempt2 = `{\n  "workouts": [\n    ${completeWorkouts}\n  ]\n}`;
+          repairAttempts.push({
+            name: 'complete_workouts_only',
+            content: attempt2,
+          });
+        }
+
+        // Attempt 3: Extract using regex patterns for individual components
+        const titlePattern = /"title"\s*:\s*"([^"]*)"/g;
+        const bodyPattern = /"body"\s*:\s*"((?:[^"\\]|\\.)*)"(?=\s*[,}])/g;
+        const datePattern = /"date"\s*:\s*"([^"]*)"/g;
+
+        const titles = [...fixedContent.matchAll(titlePattern)].map(
+          (m) => m[1]
+        );
+        const bodies = [...fixedContent.matchAll(bodyPattern)].map((m) => m[1]);
+        const dates = [...fixedContent.matchAll(datePattern)].map((m) => m[1]);
+
+        if (titles.length > 0) {
+          const reconstructedWorkouts = titles.map((title, i) => {
+            return {
+              title: title,
+              body:
+                bodies[i] || 'Workout details incomplete due to parsing error',
+              date: dates[i] || new Date().toISOString().split('T')[0],
+            };
+          });
+
+          const attempt3 = JSON.stringify(
+            { workouts: reconstructedWorkouts },
+            null,
+            2
+          );
+          repairAttempts.push({
+            name: 'regex_reconstruction',
+            content: attempt3,
+          });
+        }
+
+        // Try each repair attempt
+        for (const attempt of repairAttempts) {
+          try {
+            const parsed = JSON.parse(attempt.content);
+            if (
+              parsed.workouts &&
+              Array.isArray(parsed.workouts) &&
+              parsed.workouts.length > 0
+            ) {
+              partialWorkouts = parsed.workouts;
+              logWithTimestamp(
+                `Successfully repaired JSON using ${attempt.name} for week ${weekNumber}`,
+                {
+                  workoutsFound: partialWorkouts.length,
+                }
+              );
+              break;
+            }
+          } catch (attemptError) {
+            logWithTimestamp(
+              `Repair attempt ${attempt.name} failed for week ${weekNumber}: ${attemptError.message}`
+            );
+          }
+        }
+
+        // If fixing didn't work, try to extract individual workout objects
+        if (partialWorkouts.length === 0) {
+          // Look for workout objects with proper structure
+          const workoutPattern =
+            /\{\s*"title"\s*:\s*"[^"]*"\s*,\s*"body"\s*:\s*"(?:[^"\\]|\\.)*"(?:\s*,\s*"date"\s*:\s*"[^"]*")?\s*\}/g;
+          const workoutMatches = responseContent.match(workoutPattern);
+
+          if (workoutMatches) {
+            partialWorkouts = workoutMatches
+              .map((match) => {
+                try {
+                  return JSON.parse(match);
+                } catch (parseErr) {
+                  logWithTimestamp(
+                    `Failed to parse individual workout: ${parseErr.message}`,
+                    {
+                      workout: match.substring(0, 100) + '...',
+                    }
+                  );
+                  return null;
+                }
+              })
+              .filter(Boolean);
+          }
+        }
+      } catch (extractError) {
+        logWithTimestamp(
+          `Failed to extract partial workouts for week ${weekNumber}`,
+          {
+            error: extractError.message,
+          }
+        );
+      }
+
+      if (partialWorkouts.length > 0) {
+        logWithTimestamp(
+          `Recovered ${partialWorkouts.length} partial workouts for week ${weekNumber}`
+        );
+        return { workouts: partialWorkouts };
+      }
+
       throw new Error(
         `Failed to parse AI response for week ${weekNumber}: ${parseError.message}`
       );
@@ -499,14 +799,15 @@ Format each workout body with this structure:
 
     // Return workouts with optional program description for first week
     const result = {
-      workouts: formattedWorkouts
+      workouts: formattedWorkouts,
     };
-    
+
     if (includeDescription && parsedContent.programDescription) {
       result.programDescription = parsedContent.programDescription;
-      result.programOverview = parsedContent.programOverview || parsedContent.programDescription;
+      result.programOverview =
+        parsedContent.programOverview || parsedContent.programDescription;
       logWithTimestamp(`Week ${weekNumber} program description included`, {
-        descriptionLength: parsedContent.programDescription.length
+        descriptionLength: parsedContent.programDescription.length,
       });
     }
 
@@ -550,10 +851,97 @@ function generatePlaceholderWeek(weekNumber, sharedData) {
   return placeholders;
 }
 
+// Save workouts to database
+async function saveWorkoutsToDatabase(programId, workouts, supabase) {
+  if (!programId || !workouts || workouts.length === 0) {
+    return;
+  }
+
+  try {
+    // Prepare workouts for database insertion
+    const workoutsToInsert = workouts.map((workout) => ({
+      program_id: programId,
+      title: workout.title || 'Untitled Workout',
+      body: workout.body || workout.description || 'No description available',
+      scheduled_date:
+        workout.date ||
+        workout.suggestedDate ||
+        new Date().toISOString().split('T')[0],
+      is_reference: false,
+      tags: {
+        suggestedDate: workout.date || workout.suggestedDate,
+        generatedBy: 'anthropic-chunked',
+        ...workout.tags,
+      },
+    }));
+
+    const { error } = await supabase
+      .from('program_workouts')
+      .insert(workoutsToInsert);
+
+    if (error) {
+      throw error;
+    }
+
+    logWithTimestamp(
+      `Successfully saved ${workouts.length} workouts to database`
+    );
+  } catch (error) {
+    logWithTimestamp('Database save error', { error: error.message });
+    throw error;
+  }
+}
+
 // Handle single generation for small programs (≤2 weeks)
 async function handleSingleGeneration(requestData, anthropic, supabase) {
   logWithTimestamp('Starting single generation');
 
+  // Set up streaming response for single generation too
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream({
+    start(controller) {
+      generateProgramSingle(
+        requestData,
+        anthropic,
+        supabase,
+        controller,
+        encoder
+      ).catch((error) => {
+        logWithTimestamp('Single generation error', { error: error.message });
+        try {
+          sendEvent(controller, encoder, 'error', { error: error.message });
+          if (controller && controller.desiredSize !== null) {
+            controller.close();
+          }
+        } catch (closeError) {
+          logWithTimestamp(
+            'Controller already closed during single generation error handling',
+            {
+              error: closeError.message,
+            }
+          );
+        }
+      });
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      Connection: 'keep-alive',
+    },
+  });
+}
+
+// Main single generation logic (now with streaming support)
+async function generateProgramSingle(
+  requestData,
+  anthropic,
+  supabase,
+  controller,
+  encoder
+) {
   try {
     // Extract shared data (reuse the same helper)
     const sharedData = await extractSharedData(requestData, supabase);
@@ -569,7 +957,6 @@ async function handleSingleGeneration(requestData, anthropic, supabase) {
       programType,
       equipment,
       gymType,
-      startDate,
       selectedDaysOfWeek,
       clientMetricsContent,
       referenceWorkoutsContent,
@@ -666,18 +1053,7 @@ For the program description, include:
 
 Format each workout with the following sections:
 1. A clear, descriptive title that includes the day/week and focus (e.g., Lower Body Strength")
-2. Warm-up section with specific movements (include duration, reps, and brief explanations)
-3. Strength Work - detailed with:
-   - Clear exercise format (Sets x Reps, EMOM, etc.)
-   - Specific movements, sets, reps, and rest periods
-   - Exact weights for RX (men and women) and scaling options
-   - Loading percentages when appropriate (e.g., "75% of 1RM")
-4. Conditioning Work - detailed with:
-   - Clear exercise format (AMRAP, For Time, etc.)
-   - Specific movements, sets, reps, and rest periods
-   - Exact weights for RX (men and women) and scaling options
-   - Target time domains or goal times when applicable
-5. Stimulus and Strategy section:
+2. Stimulus and Strategy section:
    - Start with a clear statement of the primary training stimulus (e.g., "Strength focus on barbell back squat, initiating progressive overload")
    - Explain the intended adaptations for both strength and conditioning portions
    - Describe how this session fits into the weekly progression and primes the body
@@ -685,6 +1061,17 @@ Format each workout with the following sections:
    - Include rest period recommendations between different sections
    - Give tactical advice (e.g., "Control tempo, don't rush leg press/kettlebell work – focus on muscle burn")
    - Add bullet points for different workout components (Strength, Accessory/Hypertrophy, Rest periods)${scalingInstructions}
+3. Warm-up section with specific movements (include duration, reps, and brief explanations)
+4. Strength Work - detailed with:
+   - Clear exercise format (Sets x Reps, EMOM, etc.)
+   - Specific movements, sets, reps, and rest periods
+   - Exact weights for RX (men and women) and scaling options
+   - Loading percentages when appropriate (e.g., "75% of 1RM")
+5. Conditioning Work - detailed with:
+   - Clear exercise format (AMRAP, For Time, etc.)
+   - Specific movements, sets, reps, and rest periods
+   - Exact weights for RX (men and women) and scaling options
+   - Target time domains or goal times when applicable
 ${coachingCueNumber}. Coaching Cues:
    - 3-5 specific technical cues for the most complex movements in the workout
    - Form tips to maximize efficiency and safety
@@ -778,7 +1165,7 @@ IMPORTANT: Each workout MUST be assigned to one of the above dates. These dates 
 
       const response = await anthropic.messages.create({
         model: 'claude-sonnet-4-20250514',
-        max_tokens: 8000,
+        max_tokens: 12000, // Increased for detailed workouts
         temperature: 0.7,
         system: systemPrompt,
         messages: [
@@ -942,18 +1329,55 @@ IMPORTANT: Each workout MUST be assigned to one of the above dates. These dates 
         title: programTitle,
       });
 
-      // Return the generated program data with consistent format
-      return NextResponse.json(
-        {
-          message: 'Program generated successfully with Anthropic',
-          title: programTitle,
-          description: programDescription,
-          overview: parsedContent.overview || 'No overview provided',
-          suggestions: workouts,
-          model: 'anthropic',
-        },
-        { status: 200 }
-      );
+      // Since this is a single generation (1-2 weeks), we need to stream events to match the frontend expectations
+      // Send program metadata first
+      sendEvent(controller, encoder, 'program_metadata', {
+        title: programTitle,
+        description: programDescription,
+        overview: parsedContent.overview || 'No overview provided'
+      });
+      
+      // Send individual workout events to match chunked generation behavior
+      for (let i = 0; i < workouts.length; i++) {
+        const workout = workouts[i];
+        sendEvent(controller, encoder, 'workout_generated', {
+          workout: {
+            title: workout.title,
+            body: workout.body,
+            date: workout.date
+          },
+          index: i,
+          total: workouts.length,
+          message: `Generated workout ${i + 1} of ${workouts.length}`
+        });
+        
+        // Small delay to make streaming visible
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      }
+      
+      // Send completion event with suggestions
+      sendEvent(controller, encoder, 'complete', {
+        success: true,
+        message: `Program complete! Generated ${workouts.length} workouts.`,
+        totalWorkouts: workouts.length,
+        suggestions: workouts,
+        title: programTitle,
+        description: programDescription,
+        overview: parsedContent.overview || 'No overview provided'
+      });
+      
+      logWithTimestamp('Single generation completed, events sent');
+      
+      // Close the controller
+      try {
+        if (controller && controller.desiredSize !== null) {
+          controller.close();
+        }
+      } catch (closeError) {
+        logWithTimestamp('Controller already closed during single generation completion', {
+          error: closeError.message,
+        });
+      }
     } catch (anthropicError) {
       logWithTimestamp('Anthropic API error caught', {
         error: anthropicError.message,
@@ -961,10 +1385,10 @@ IMPORTANT: Each workout MUST be assigned to one of the above dates. These dates 
         code: anthropicError.code,
         stack: anthropicError.stack,
       });
-      return NextResponse.json(
-        { error: 'Anthropic API error: ' + anthropicError.message },
-        { status: 500 }
-      );
+      sendEvent(controller, encoder, 'error', { error: 'Anthropic API error: ' + anthropicError.message });
+      if (controller && controller.desiredSize !== null) {
+        controller.close();
+      }
     }
   } catch (error) {
     logWithTimestamp('Error in single generation', {
@@ -972,10 +1396,10 @@ IMPORTANT: Each workout MUST be assigned to one of the above dates. These dates 
       name: error.name,
       stack: error.stack,
     });
-    return NextResponse.json(
-      { error: 'Failed to generate program: ' + error.message },
-      { status: 500 }
-    );
+    sendEvent(controller, encoder, 'error', { error: 'Failed to generate program: ' + error.message });
+    if (controller && controller.desiredSize !== null) {
+      controller.close();
+    }
   }
 }
 
@@ -1031,13 +1455,20 @@ async function extractSharedData(requestData, supabase) {
 
   // Filter out null values and ensure we have valid day numbers
   let validDaysOfWeek = selectedDaysOfWeek.filter(
-    (day) => day !== null && day !== undefined && typeof day === 'number' && day >= 0 && day <= 6
+    (day) =>
+      day !== null &&
+      day !== undefined &&
+      typeof day === 'number' &&
+      day >= 0 &&
+      day <= 6
   );
   logWithTimestamp('Valid days of week after filtering', { validDaysOfWeek });
-  
+
   // Fallback if no valid days are found - use Monday, Wednesday, Friday as default
   if (validDaysOfWeek.length === 0) {
-    logWithTimestamp('No valid days found, using default schedule (Mon, Wed, Fri)');
+    logWithTimestamp(
+      'No valid days found, using default schedule (Mon, Wed, Fri)'
+    );
     validDaysOfWeek = [1, 3, 5]; // Monday, Wednesday, Friday
   }
 
@@ -1231,13 +1662,13 @@ If client metrics indicate specific limitations, provide appropriate scaling opt
 
   // Build reference content from both database workouts and user input
   let referenceWorkoutsContent = '';
-  
+
   // Add user-provided reference input if available
   if (referenceInput && referenceInput.trim() !== '') {
     logWithTimestamp('Found user-provided reference input', {
-      length: referenceInput.length
+      length: referenceInput.length,
     });
-    
+
     referenceWorkoutsContent += `
 User-Provided Reference Material:
 ---
@@ -1246,7 +1677,7 @@ ${referenceInput.trim()}
 
 IMPORTANT: Consider the structure, style, and content of the above user-provided reference material when generating the program. Treat it as a key example of what the user is looking for.`;
   }
-  
+
   // Fetch reference workouts from database if program ID exists
   if (programId) {
     try {
@@ -1281,7 +1712,7 @@ ${workout.body}
   .join('\n')}
 
 Draw inspiration from these reference workouts when designing this program. Use similar structures, movement patterns, and approaches where appropriate.`;
-        
+
         referenceWorkoutsContent += dbWorkoutsContent;
       } else {
         logWithTimestamp('No reference workouts found in database');

@@ -76,13 +76,16 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
     saveGeneratedWorkouts,
     toggleWorkoutCompletion,
     updateWorkoutDate,
+    clearNonReferenceWorkouts,
   } = useProgram();
 
   // Local state for UI-specific features
   const [loadingDuration, setLoadingDuration] = useState(0);
   const [serverStatus, setServerStatus] = useState(null);
-  const [isReferenceWorkoutModalOpen, setReferenceWorkoutModalOpen] = useState(false);
-  const [isEnhancedReferenceModalOpen, setIsEnhancedReferenceModalOpen] = useState(false);
+  const [isReferenceWorkoutModalOpen, setReferenceWorkoutModalOpen] =
+    useState(false);
+  const [isEnhancedReferenceModalOpen, setIsEnhancedReferenceModalOpen] =
+    useState(false);
   const [hasCustomWorkoutFormat, setHasCustomWorkoutFormat] = useState(false);
   const [customSectionName, setCustomSectionName] = useState('');
   const [customSectionDuration, setCustomSectionDuration] = useState('');
@@ -161,8 +164,10 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
     }
 
     // Optional fields - check both referenceInput and personalization for previous workouts
-    const hasReferenceInput = formData?.referenceInput && formData.referenceInput.trim() !== '';
-    const hasPersonalization = formData?.personalization && formData.personalization.trim() !== '';
+    const hasReferenceInput =
+      formData?.referenceInput && formData.referenceInput.trim() !== '';
+    const hasPersonalization =
+      formData?.personalization && formData.personalization.trim() !== '';
     if (!hasReferenceInput && !hasPersonalization) {
       missingOptionalFields.push('previousWorkouts');
     }
@@ -244,13 +249,13 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
           ? 'Re-generate Program Workouts?'
           : 'Generate Program Workouts?',
         message: isReGenerating
-          ? 'This will replace the currently generated workouts for this program with new ones based on the current settings. Are you sure?'
+          ? 'This will replace all currently generated workouts for this program with new ones based on the current settings. The old workouts will be permanently deleted. Are you sure?'
           : 'Ready to generate the initial set of workouts for this program based on your settings?',
         confirmText: isReGenerating
           ? 'Re-generate Workouts'
           : 'Generate Workouts',
         validation: validation,
-      }
+      },
     });
   }, [
     subscriptionStatus,
@@ -272,6 +277,12 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
       return;
     }
 
+    // If regenerating, clear workouts from UI immediately
+    const isReGenerating = workouts && workouts.length > 0;
+    if (isReGenerating) {
+      clearNonReferenceWorkouts();
+    }
+
     startGeneration();
 
     try {
@@ -283,7 +294,8 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
         showToastMessage: showToast,
         setGenerationStage: updateGenerationStage,
         setFormData: updateFromFormData,
-        setGeneratedDescription: (desc) => updateFormField('program_overview', { generated_description: desc }),
+        setGeneratedDescription: (desc) =>
+          updateFormField('program_overview', { generated_description: desc }),
         setLoadingTimer: (timer) => (loadingTimer.current = timer),
         setServerStatus: setServerStatus,
         setLoadingDuration: setLoadingDuration,
@@ -320,6 +332,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
     updateFromFormData,
     updateFormField,
     closeModal,
+    clearNonReferenceWorkouts,
   ]);
 
   const handleSaveProgram = useCallback(async () => {
@@ -336,43 +349,55 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
     }
   }, [programId, formData, updateFromFormData, showToast]);
 
-  const handleDeleteWorkout = useCallback(async (workoutId, e) => {
-    if (e) e.stopPropagation();
-    const success = await deleteWorkout(workoutId);
-    if (success) {
-      showToast('Workout deleted successfully', 'success');
-    } else {
-      showToast('Failed to delete workout', 'error');
-    }
-  }, [deleteWorkout, showToast]);
+  const handleDeleteWorkout = useCallback(
+    async (workoutId, e) => {
+      if (e) e.stopPropagation();
+      const success = await deleteWorkout(workoutId);
+      if (success) {
+        showToast('Workout deleted successfully', 'success');
+      } else {
+        showToast('Failed to delete workout', 'error');
+      }
+    },
+    [deleteWorkout, showToast]
+  );
 
-  const handleEditWorkout = useCallback((workout) => {
-    openModal('editModal', { workout });
-  }, [openModal]);
+  const handleEditWorkout = useCallback(
+    (workout) => {
+      openModal('editModal', { workout });
+    },
+    [openModal]
+  );
 
-  const handleSaveEditedWorkout = useCallback(async (editedWorkout) => {
-    const success = await updateWorkout(editedWorkout.id, editedWorkout);
-    if (success) {
-      closeModal('editModal');
-      showToast('Workout updated successfully', 'success');
-    } else {
-      showToast('Failed to update workout', 'error');
-    }
-  }, [updateWorkout, closeModal, showToast]);
+  const handleSaveEditedWorkout = useCallback(
+    async (editedWorkout) => {
+      const success = await updateWorkout(editedWorkout.id, editedWorkout);
+      if (success) {
+        closeModal('editModal');
+        showToast('Workout updated successfully', 'success');
+      } else {
+        showToast('Failed to update workout', 'error');
+      }
+    },
+    [updateWorkout, closeModal, showToast]
+  );
 
-  const handleMarkComplete = useCallback(async (workout) => {
-    const success = await toggleWorkoutCompletion(workout.id);
-    if (success) {
-      showToast(
-        workout.completed
-          ? `Workout "${workout.title || 'Untitled'}" marked as incomplete`
-          : `Workout "${workout.title || 'Untitled'}" marked as complete`,
-        'success'
-      );
-    } else {
-      showToast('Failed to update workout status', 'error');
-    }
-  }, [toggleWorkoutCompletion, showToast]);
+  const handleMarkComplete = useCallback(
+    async (workout) => {
+      const success = await toggleWorkoutCompletion(workout.id);
+      if (success) {
+        showToast(
+          workout.completed
+            ? `Workout "${workout.title || 'Untitled'}" marked as incomplete`
+            : `Workout "${workout.title || 'Untitled'}" marked as complete`,
+          'success'
+        );
+      } else {
+        showToast('Failed to update workout status', 'error');
+      }
+    },
+    [toggleWorkoutCompletion, showToast]
+  );
 
   const handleDatePickerSave = useCallback(async () => {
     const { workout, date } = modals.datePickerModal;
@@ -398,7 +423,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
       calendar_data: {
         ...formData.calendar_data,
         start_date: newStartDate,
-      }
+      },
     });
 
     if (success) {
@@ -407,7 +432,13 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
     } else {
       showToast('Failed to reschedule program', 'error');
     }
-  }, [modals.rescheduleModal, formData, updateFormFields, closeModal, showToast]);
+  }, [
+    modals.rescheduleModal,
+    formData,
+    updateFormFields,
+    closeModal,
+    showToast,
+  ]);
 
   const handleBackToWizard = useCallback(() => {
     window.location.href = `/program-wizard/step-1${
@@ -417,7 +448,6 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
 
   const handleStopGeneration = useCallback(() => {
     if (abortControllerRef.current) {
-      console.log('[AIProgramWriter] Stopping generation...');
       try {
         // Provide a reason for the abort to avoid errors in some environments
         abortControllerRef.current.abort('User requested stop');
@@ -431,143 +461,164 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
   }, [showToast]);
 
   // Form field handlers with database field mapping
-  const handleFieldChange = useCallback(async (nameOrEvent, valueOrUndefined) => {
-    let name, value;
-    
-    // Handle different call patterns:
-    // 1. handleFieldChange(event) - from real form events
-    // 2. handleFieldChange('fieldName', 'value') - from direct calls
-    // 3. handleFieldChange({ target: { name, value } }) - from synthetic events
-    
-    if (typeof nameOrEvent === 'string') {
-      // Direct call: handleFieldChange('fieldName', 'value')
-      name = nameOrEvent;
-      value = valueOrUndefined;
-    } else if (nameOrEvent && nameOrEvent.target) {
-      // Event object or synthetic event: handleFieldChange(event)
-      name = nameOrEvent.target.name;
-      value = nameOrEvent.target.value;
-    } else {
-      console.warn('handleFieldChange called with invalid arguments:', nameOrEvent, valueOrUndefined);
-      return;
-    }
-    
-    // Map form field names to database columns
-    const fieldMapping = {
-      // Direct mappings
-      'description': 'description',
-      'trainingMethodology': 'training_methodology',
-      'referenceInput': 'reference_input',
-      'name': 'name',
-      'goal': 'goal',
-      'difficulty': 'difficulty',
-      'focusArea': 'focus_area',
-      
-      // Nested mappings handled separately
-      'programType': async (val) => {
-        await updateFormFields({
-          periodization: {
-            ...formData.periodization,
-            program_type: val,
-          }
-        });
-      },
-      'numberOfWeeks': async (val) => {
-        await updateFormFields({
-          duration_weeks: parseInt(val) || 4,
-        });
-      },
-      'startDate': async (val) => {
-        await updateFormFields({
-          calendar_data: {
-            ...formData.calendar_data,
-            start_date: val,
-          }
-        });
-      },
-      'gymType': async (val) => {
-        await updateFormFields({
-          gym_details: {
-            ...formData.gym_details,
-            gym_type: val.toLowerCase().replace(/\s+/g, '_'),
-          }
-        });
-      },
-      'equipment': async (val) => {
-        await updateFormFields({
-          gym_details: {
-            ...formData.gym_details,
-            equipment: val,
-          }
-        });
-      },
-      'gymDetails': async (val) => {
-        await updateFormFields({
-          gym_details: val,
-        });
-      },
-      'personalization': async (val) => {
-        await updateFormFields({
-          program_overview: {
-            ...formData.program_overview,
-            personalization: val,
-          }
-        });
-      },
-      'workoutFormats': async (val) => {
-        await updateFormFields({
-          workout_format: {
-            formats: Array.isArray(val) ? val : []
-          }
-        });
-      },
-      'sessionDetails': async (val) => {
-        await updateFormFields({
-          session_details: val,
-        });
-      },
-    };
-    
-    // Handle nested fields
-    if (typeof fieldMapping[name] === 'function') {
-      await fieldMapping[name](value);
-    } else if (fieldMapping[name]) {
-      // Direct field mapping
-      await updateFormField(fieldMapping[name], value);
-    } else {
-      // Field not mapped - this might cause issues
-      console.warn(`Field '${name}' not mapped in handleFieldChange. Consider adding explicit mapping.`);
-      await updateFormField(name, value);
-    }
-  }, [updateFormField, updateFormFields, formData]);
+  const handleFieldChange = useCallback(
+    async (nameOrEvent, valueOrUndefined) => {
+      let name, value;
 
-  const handleProgramTypeChange = useCallback(async (e) => {
-    await updateFormFields({
-      periodization: {
-        ...formData.periodization,
-        program_type: e.target.value,
-      }
-    });
-  }, [updateFormFields, formData]);
+      // Handle different call patterns:
+      // 1. handleFieldChange(event) - from real form events
+      // 2. handleFieldChange('fieldName', 'value') - from direct calls
+      // 3. handleFieldChange({ target: { name, value } }) - from synthetic events
 
-  const handleWorkoutFormatChange = useCallback(async (formats) => {
-    await updateFormFields({
-      workout_format: {
-        formats: Array.isArray(formats) ? formats : []
+      if (typeof nameOrEvent === 'string') {
+        // Direct call: handleFieldChange('fieldName', 'value')
+        name = nameOrEvent;
+        value = valueOrUndefined;
+      } else if (nameOrEvent && nameOrEvent.target) {
+        // Event object or synthetic event: handleFieldChange(event)
+        name = nameOrEvent.target.name;
+        value = nameOrEvent.target.value;
+      } else {
+        console.warn(
+          'handleFieldChange called with invalid arguments:',
+          nameOrEvent,
+          valueOrUndefined
+        );
+        return;
       }
-    });
-  }, [updateFormFields]);
 
-  const handleDayOfWeekChange = useCallback((day) => {
-    const newDaysOfWeek = handleDayOfWeekChangeUtil(day, formData?.daysOfWeek || []);
-    updateFormFields({
-      calendar_data: {
-        start_date: formData?.startDate || '',
-        days_per_week: newDaysOfWeek.length,
-        days_of_week: newDaysOfWeek,
+      // Map form field names to database columns
+      const fieldMapping = {
+        // Direct mappings
+        description: 'description',
+        trainingMethodology: 'training_methodology',
+        referenceInput: 'reference_input',
+        name: 'name',
+        goal: 'goal',
+        difficulty: 'difficulty',
+        focusArea: 'focus_area',
+
+        // Nested mappings handled separately
+        programType: async (val) => {
+          await updateFormFields({
+            periodization: {
+              ...formData.periodization,
+              program_type: val,
+            },
+          });
+        },
+        numberOfWeeks: async (val) => {
+          await updateFormFields({
+            duration_weeks: parseInt(val) || 4,
+          });
+        },
+        startDate: async (val) => {
+          await updateFormFields({
+            calendar_data: {
+              ...formData.calendar_data,
+              start_date: val,
+            },
+          });
+        },
+        gymType: async (val) => {
+          await updateFormFields({
+            gym_details: {
+              ...formData.gym_details,
+              gym_type: val.toLowerCase().replace(/\s+/g, '_'),
+            },
+          });
+        },
+        equipment: async (val) => {
+          await updateFormFields({
+            gym_details: {
+              ...formData.gym_details,
+              equipment: val,
+            },
+          });
+        },
+        gymDetails: async (val) => {
+          await updateFormFields({
+            gym_details: val,
+          });
+        },
+        personalization: async (val) => {
+          await updateFormFields({
+            program_overview: {
+              ...formData.program_overview,
+              personalization: val,
+            },
+          });
+        },
+        workoutFormats: async (val) => {
+          await updateFormFields({
+            workout_format: {
+              formats: Array.isArray(val) ? val : [],
+            },
+          });
+        },
+        sessionDetails: async (val) => {
+          await updateFormFields({
+            session_details: val,
+          });
+        },
+      };
+
+      // Handle nested fields
+      if (typeof fieldMapping[name] === 'function') {
+        await fieldMapping[name](value);
+      } else if (fieldMapping[name]) {
+        // Direct field mapping
+        await updateFormField(fieldMapping[name], value);
+      } else {
+        // Field not mapped - this might cause issues
+        console.warn(
+          `Field '${name}' not mapped in handleFieldChange. Consider adding explicit mapping.`
+        );
+        await updateFormField(name, value);
       }
-    });
-  }, [formData, updateFormFields]);
+    },
+    [updateFormField, updateFormFields, formData]
+  );
+
+  const handleProgramTypeChange = useCallback(
+    async (e) => {
+      await updateFormFields({
+        periodization: {
+          ...formData.periodization,
+          program_type: e.target.value,
+        },
+      });
+    },
+    [updateFormFields, formData]
+  );
+
+  const handleWorkoutFormatChange = useCallback(
+    async (formats) => {
+      await updateFormFields({
+        workout_format: {
+          formats: Array.isArray(formats) ? formats : [],
+        },
+      });
+    },
+    [updateFormFields]
+  );
+
+  const handleDayOfWeekChange = useCallback(
+    (day) => {
+      const newDaysOfWeek = handleDayOfWeekChangeUtil(
+        day,
+        formData?.daysOfWeek || []
+      );
+      updateFormFields({
+        calendar_data: {
+          start_date: formData?.startDate || '',
+          days_per_week: newDaysOfWeek.length,
+          days_of_week: newDaysOfWeek,
+        },
+      });
+    },
+    [formData, updateFormFields]
+  );
 
   // Custom sections
   const addCustomSection = useCallback(() => {
@@ -586,8 +637,11 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
     updateFormFields({
       session_details: {
         ...formData.session_details,
-        custom_sections: [...(formData.customWorkoutSections || []), newSection],
-      }
+        custom_sections: [
+          ...(formData.customWorkoutSections || []),
+          newSection,
+        ],
+      },
     });
 
     setCustomSectionName('');
@@ -602,53 +656,62 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
     showToast,
   ]);
 
-  const removeCustomSection = useCallback((index) => {
-    const customSections = formData?.customWorkoutSections || [];
-    updateFormFields({
-      session_details: {
-        ...formData.session_details,
-        custom_sections: customSections.filter((_, i) => i !== index),
-      }
-    });
-  }, [formData, updateFormFields]);
+  const removeCustomSection = useCallback(
+    (index) => {
+      const customSections = formData?.customWorkoutSections || [];
+      updateFormFields({
+        session_details: {
+          ...formData.session_details,
+          custom_sections: customSections.filter((_, i) => i !== index),
+        },
+      });
+    },
+    [formData, updateFormFields]
+  );
 
   // Reference workouts handlers
-  const handleReferenceWorkoutsSelected = useCallback(async (workouts) => {
-    if (!programId) return;
+  const handleReferenceWorkoutsSelected = useCallback(
+    async (workouts) => {
+      if (!programId) return;
 
-    for (const workout of workouts) {
-      await addWorkout({
+      for (const workout of workouts) {
+        await addWorkout({
+          title: workout.title,
+          body: workout.body,
+          tags: workout.tags,
+          is_reference: true,
+        });
+      }
+
+      setReferenceWorkoutModalOpen(false);
+      setIsEnhancedReferenceModalOpen(false);
+      showToast('Reference workouts added successfully!', 'success');
+    },
+    [programId, addWorkout, showToast]
+  );
+
+  const handleSaveEnhancedWorkout = useCallback(
+    async (workout) => {
+      if (!workout.id) {
+        showToast('Cannot update workout: missing id', 'error');
+        return false;
+      }
+
+      const success = await updateWorkout(workout.id, {
         title: workout.title,
-        body: workout.body,
-        tags: workout.tags,
-        is_reference: true,
+        body: workout.body || workout.description,
+        scheduled_date: workout.scheduled_date || workout.suggestedDate || null,
       });
-    }
 
-    setReferenceWorkoutModalOpen(false);
-    setIsEnhancedReferenceModalOpen(false);
-    showToast('Reference workouts added successfully!', 'success');
-  }, [programId, addWorkout, showToast]);
-
-  const handleSaveEnhancedWorkout = useCallback(async (workout) => {
-    if (!workout.id) {
-      showToast('Cannot update workout: missing id', 'error');
-      return false;
-    }
-
-    const success = await updateWorkout(workout.id, {
-      title: workout.title,
-      body: workout.body || workout.description,
-      scheduled_date: workout.scheduled_date || workout.suggestedDate || null,
-    });
-
-    if (success) {
-      showToast('Workout updated!', 'success');
-    } else {
-      showToast('Error saving enhanced workout', 'error');
-    }
-    return success;
-  }, [updateWorkout, showToast]);
+      if (success) {
+        showToast('Workout updated!', 'success');
+      } else {
+        showToast('Error saving enhanced workout', 'error');
+      }
+      return success;
+    },
+    [updateWorkout, showToast]
+  );
 
   if (loading && !formData) {
     return (
@@ -661,11 +724,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
   return (
     <div className="bg-white rounded-lg shadow-md p-3 sm:p-4">
       {toast.show && (
-        <Toast
-          message={toast.message}
-          type={toast.type}
-          onClose={() => {}}
-        />
+        <Toast message={toast.message} type={toast.type} onClose={() => {}} />
       )}
 
       {/* Wizard Review Banner */}
@@ -734,7 +793,8 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
           handleProgramTypeChange={handleProgramTypeChange}
           formData={{
             ...(formData || {}),
-            onOpenReferenceWorkoutModal: () => setIsEnhancedReferenceModalOpen(true),
+            onOpenReferenceWorkoutModal: () =>
+              setIsEnhancedReferenceModalOpen(true),
           }}
           isLoading={isGenerating}
           suggestions={workouts}
@@ -799,9 +859,13 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
             onEditWorkout={handleEditWorkout}
             onMarkComplete={handleMarkComplete}
             isLoading={loading}
-            generatedDescription={program?.program_overview?.generated_description}
+            generatedDescription={
+              program?.program_overview?.generated_description
+            }
             setFormData={(data) => updateFromFormData(data)}
             showToastMessage={showToast}
+            generationStage={generationStage}
+            serverStatus={serverStatus}
           />
         </div>
       )}
@@ -824,7 +888,9 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
           isOpen={modals.datePickerModal.isOpen}
           workout={modals.datePickerModal.workout}
           selectedDate={modals.datePickerModal.date}
-          setSelectedDate={(date) => openModal('datePickerModal', { ...modals.datePickerModal, date })}
+          setSelectedDate={(date) =>
+            openModal('datePickerModal', { ...modals.datePickerModal, date })
+          }
           onClose={() => closeModal('datePickerModal')}
           onSave={handleDatePickerSave}
           startDate={formData?.startDate}
@@ -839,7 +905,9 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
           currentEndDate={formData?.endDate}
           onClose={() => closeModal('rescheduleModal')}
           onSave={handleRescheduleProgram}
-          setNewStartDate={(date) => openModal('rescheduleModal', { newStartDate: date })}
+          setNewStartDate={(date) =>
+            openModal('rescheduleModal', { newStartDate: date })
+          }
           newStartDate={modals.rescheduleModal.newStartDate}
         />
       )}
@@ -878,7 +946,6 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
         selectedWorkouts={referenceWorkouts}
         programId={programId}
       />
-
     </div>
   );
 }
