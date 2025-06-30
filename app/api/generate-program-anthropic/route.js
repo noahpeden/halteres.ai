@@ -1043,12 +1043,12 @@ ${personalization ? `Personalization: ${personalization}` : ''}
 ${clientMetricsContent ? `${clientMetricsContent}` : ''}
 ${referenceWorkoutsContent ? `${referenceWorkoutsContent}` : ''}
 
-For the program description, include:
-1. A detailed, engaging overview that clearly states the program's primary goals and target audience (e.g., "This 2-week, 5-day-per-week program is designed for intermediate powerlifters aiming to improve their deadlift and squat numbers while maintaining full-body functionality")
+ADDITIONAL REQUIREMENT: Generate a comprehensive program description and overview that explains:
+1. A detailed, engaging overview that clearly states the program's primary goals and target audience (e.g., "This ${numberOfWeeks}-week, ${daysPerWeek}-day-per-week program is designed for ${difficulty} ${goal} trainees aiming to improve...")
 2. The specific periodization approach used and why it's scientifically appropriate for the goals
 3. How the training principles will drive measurable progress (e.g., "linear progression", "progressive overload", "structured accessory work")
 4. Expected adaptations and outcomes from following the program consistently
-5. Integration of training methodology (e.g., "CrossFit principles to develop maximal strength and movement proficiency")
+5. Integration of training methodology and approach
 6. Brief recommendations for nutrition, recovery, and supplementary training if relevant
 
 Format each workout with the following sections:
