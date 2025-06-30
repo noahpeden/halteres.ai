@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
 
-export default function TodayWorkouts() {
+export default function ThisWeeksWorkouts() {
   const { supabase, user } = useAuth();
   const [workouts, setWorkouts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -19,7 +19,7 @@ export default function TodayWorkouts() {
   }, [user]);
 
   useEffect(() => {
-    async function fetchTodayWorkouts() {
+    async function fetchThisWeeksWorkouts() {
       if (!user) {
         setIsLoading(false);
         return;
@@ -27,8 +27,18 @@ export default function TodayWorkouts() {
 
       setIsLoading(true);
       try {
-        // Get today's date in ISO format (YYYY-MM-DD)
-        const today = new Date().toISOString().split('T')[0];
+        // Get this week's date range
+        const today = new Date();
+        const startOfWeek = new Date(today);
+        startOfWeek.setDate(today.getDate() - today.getDay()); // Start of week (Sunday)
+        startOfWeek.setHours(0, 0, 0, 0);
+        
+        const endOfWeek = new Date(startOfWeek);
+        endOfWeek.setDate(startOfWeek.getDate() + 6); // End of week (Saturday)
+        endOfWeek.setHours(23, 59, 59, 999);
+
+        const startOfWeekStr = startOfWeek.toISOString().split('T')[0];
+        const endOfWeekStr = endOfWeek.toISOString().split('T')[0];
 
         // Get user entities first
         const { data: entitiesData, error: entitiesError } = await supabase
@@ -79,8 +89,8 @@ export default function TodayWorkouts() {
           return;
         }
 
-        // Filter workouts for today using same date priority as WorkoutList.jsx
-        const todayWorkouts = (allWorkouts || []).filter((workout) => {
+        // Filter workouts for this week using same date priority as WorkoutList.jsx
+        const thisWeeksWorkouts = (allWorkouts || []).filter((workout) => {
           // Match WorkoutList.jsx date priority: scheduled_date, suggestedDate, date, tags.suggestedDate
           const scheduledDate = workout.scheduled_date;
           const suggestedDate = workout.suggestedDate;
@@ -132,28 +142,80 @@ export default function TodayWorkouts() {
           if (!finalDate) return false;
 
           const workoutDateStr = finalDate.toISOString().split('T')[0];
-          return workoutDateStr === today;
+          return workoutDateStr >= startOfWeekStr && workoutDateStr <= endOfWeekStr;
         });
 
         // Format the workouts for display
-        const formattedWorkouts = todayWorkouts
+        const formattedWorkouts = thisWeeksWorkouts
           .filter((workout) => workout.title) // Filter out any invalid entries
-          .map((workout) => ({
-            id: workout.id,
-            scheduleId: workout.id, // Using the same ID for consistency with the previous implementation
-            programId: workout.program_id,
-            programName: workout.programs?.name || 'Unknown Program',
-            entityName: workout.entities?.name || 'Unknown Client/Class',
-            entityType: workout.entities?.type || 'CLIENT',
-            title: workout.title || 'Untitled Workout',
-            body: workout.body || '',
-            type: workout.workout_type || 'custom',
-            difficulty: workout.difficulty || 'intermediate',
-            tags: workout.tags || {},
-            notes: '',
-            scheduled_date: workout.scheduled_date,
-            completed: workout.completed || false,
-          }));
+          .map((workout) => {
+            // Get the final date for display
+            const scheduledDate = workout.scheduled_date;
+            const suggestedDate = workout.suggestedDate;
+            const workoutDate = workout.date;
+            const tagDate = workout.tags?.suggestedDate || workout.tags?.scheduled_date || workout.tags?.date;
+
+            let finalDate = null;
+            
+            if (scheduledDate) {
+              try {
+                finalDate = new Date(scheduledDate);
+                if (isNaN(finalDate.getTime())) finalDate = null;
+              } catch (e) {
+                /* invalid date */
+              }
+            }
+
+            if (!finalDate && suggestedDate) {
+              try {
+                finalDate = new Date(suggestedDate);
+                if (isNaN(finalDate.getTime())) finalDate = null;
+              } catch (e) {
+                /* invalid date */
+              }
+            }
+
+            if (!finalDate && workoutDate) {
+              try {
+                finalDate = new Date(workoutDate);
+                if (isNaN(finalDate.getTime())) finalDate = null;
+              } catch (e) {
+                /* invalid date */
+              }
+            }
+
+            if (!finalDate && tagDate) {
+              try {
+                finalDate = new Date(tagDate);
+                if (isNaN(finalDate.getTime())) finalDate = null;
+              } catch (e) {
+                /* invalid date */
+              }
+            }
+
+            return {
+              id: workout.id,
+              scheduleId: workout.id,
+              programId: workout.program_id,
+              programName: workout.programs?.name || 'Unknown Program',
+              entityName: workout.entities?.name || 'Unknown Client/Class',
+              entityType: workout.entities?.type || 'CLIENT',
+              title: workout.title || 'Untitled Workout',
+              body: workout.body || '',
+              type: workout.workout_type || 'custom',
+              difficulty: workout.difficulty || 'intermediate',
+              tags: workout.tags || {},
+              notes: '',
+              scheduled_date: finalDate ? finalDate.toISOString() : workout.scheduled_date,
+              completed: workout.completed || false,
+              displayDate: finalDate ? finalDate.toLocaleDateString('en-US', { 
+                weekday: 'short', 
+                month: 'short', 
+                day: 'numeric' 
+              }) : 'No Date',
+            };
+          })
+          .sort((a, b) => new Date(a.scheduled_date) - new Date(b.scheduled_date));
 
         setWorkouts(formattedWorkouts);
 
@@ -164,7 +226,7 @@ export default function TodayWorkouts() {
         });
         setCompletionStates(initialCompletionStates);
       } catch (error) {
-        console.error("Error fetching today's workouts:", error);
+        console.error("Error fetching this week's workouts:", error);
         setWorkouts([]); // Ensure we set workouts to empty array on error
       } finally {
         setIsLoading(false);
@@ -172,7 +234,7 @@ export default function TodayWorkouts() {
     }
 
     if (authReady) {
-      fetchTodayWorkouts();
+      fetchThisWeeksWorkouts();
     } else {
       setIsLoading(true);
     }
@@ -241,9 +303,9 @@ export default function TodayWorkouts() {
   if (workouts.length === 0) {
     return (
       <div className="text-center p-6 bg-white rounded-lg shadow">
-        <h3 className="text-lg font-medium mb-2">No Workouts Today</h3>
+        <h3 className="text-lg font-medium mb-2">No Workouts This Week</h3>
         <p className="text-gray-600">
-          You don't have any workouts scheduled for today.
+          You don't have any workouts scheduled for this week.
         </p>
       </div>
     );
@@ -251,6 +313,13 @@ export default function TodayWorkouts() {
 
   return (
     <div>
+      <div className="mb-4">
+        <h2 className="text-xl font-semibold mb-2">This Week's Workouts</h2>
+        <p className="text-gray-600 text-sm">
+          {workouts.length} workout{workouts.length !== 1 ? 's' : ''} scheduled
+        </p>
+      </div>
+      
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {workouts.map((workout) => (
           <div
@@ -260,9 +329,13 @@ export default function TodayWorkouts() {
             }`}
           >
             <div className="card-body">
-              <div className="flex justify-between items-start">
-                <h3 className="card-title">{workout.title}</h3>
-                <span className="badge badge-primary">{workout.type}</span>
+              <div className="flex justify-between items-start mb-2">
+                <h3 className="card-title text-sm">{workout.title}</h3>
+                <span className="badge badge-primary text-xs">{workout.type}</span>
+              </div>
+
+              <div className="text-xs text-gray-500 mb-2">
+                {workout.displayDate}
               </div>
 
               <div className="flex flex-wrap gap-1 text-gray-600 text-sm mb-2">
@@ -274,19 +347,19 @@ export default function TodayWorkouts() {
                 </span>
               </div>
 
-              <div className="text-sm mb-4 overflow-hidden max-h-28">
-                {workout.body.substring(0, 150)}
-                {workout.body.length > 150 ? '...' : ''}
+              <div className="text-sm mb-4 overflow-hidden max-h-20">
+                {workout.body.substring(0, 100)}
+                {workout.body.length > 100 ? '...' : ''}
               </div>
 
               <div className="flex flex-wrap gap-2 mb-2">
                 {workout.difficulty && (
-                  <span className="badge badge-secondary">
+                  <span className="badge badge-secondary text-xs">
                     {workout.difficulty}
                   </span>
                 )}
                 <span
-                  className={`badge ${
+                  className={`badge text-xs ${
                     completionStates[workout.id]
                       ? 'badge-success'
                       : 'badge-outline'
@@ -309,7 +382,7 @@ export default function TodayWorkouts() {
                   ) : completionStates[workout.id] ? (
                     'Completed ✓'
                   ) : (
-                    'Mark as Completed'
+                    'Mark Complete'
                   )}
                 </button>
                 <Link

@@ -18,6 +18,8 @@ import CreateEntityModal from './CreateEntityModal';
 import CreateProgramModal from './CreateProgramModal';
 import DeleteProgramModal from './DeleteProgramModal';
 import CollapsibleWorkoutsSection from './CollapsibleWorkoutsSection';
+import ThisWeeksWorkouts from '../ThisWeeksWorkouts';
+import TodayWorkouts from '../TodayWorkouts';
 
 // Custom hooks
 import { useDashboardData } from '@/hooks/useDashboardData';
@@ -26,6 +28,8 @@ import { useDashboardModals } from '@/hooks/useDashboardModals';
 export default function Dashboard() {
   const [filterEntityId, setFilterEntityId] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [showThisWeeksWorkouts, setShowThisWeeksWorkouts] = useState(false);
+  const [showTodaysWorkouts, setShowTodaysWorkouts] = useState(false);
 
   // Custom hooks for data and modal management
   const {
@@ -187,7 +191,10 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 sm:p-6">
+          <div 
+            className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 sm:p-6 cursor-pointer hover:shadow-md transition-shadow duration-200"
+            onClick={() => setShowTodaysWorkouts(true)}
+          >
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-slate-600">
@@ -203,7 +210,10 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 sm:p-6">
+          <div 
+            className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 sm:p-6 cursor-pointer hover:shadow-md transition-shadow duration-200"
+            onClick={() => setShowThisWeeksWorkouts(true)}
+          >
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-slate-600">This Week</p>
@@ -443,6 +453,50 @@ export default function Dashboard() {
           onConfirm={handleConfirmDelete}
           onCancel={closeDeleteProgramModal}
         />
+
+        {/* Today's Workouts Modal */}
+        {showTodaysWorkouts && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl shadow-xl max-w-6xl w-full max-h-[90vh] overflow-hidden">
+              <div className="flex items-center justify-between p-6 border-b border-slate-200">
+                <h2 className="text-xl font-semibold text-slate-900">Today's Workouts</h2>
+                <button
+                  onClick={() => setShowTodaysWorkouts(false)}
+                  className="text-slate-400 hover:text-slate-600 transition-colors"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+                <TodayWorkouts />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* This Week's Workouts Modal */}
+        {showThisWeeksWorkouts && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl shadow-xl max-w-6xl w-full max-h-[90vh] overflow-hidden">
+              <div className="flex items-center justify-between p-6 border-b border-slate-200">
+                <h2 className="text-xl font-semibold text-slate-900">This Week's Workouts</h2>
+                <button
+                  onClick={() => setShowThisWeeksWorkouts(false)}
+                  className="text-slate-400 hover:text-slate-600 transition-colors"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+                <ThisWeeksWorkouts />
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

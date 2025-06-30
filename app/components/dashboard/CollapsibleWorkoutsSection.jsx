@@ -190,60 +190,106 @@ function EnhancedUpcomingWorkouts() {
 
         if (allWorkouts && allWorkouts.length > 0) {
           const upcomingWorkouts = allWorkouts.filter((workout) => {
+            // Match WorkoutList.jsx date priority: scheduled_date, suggestedDate, date, tags.suggestedDate
             const scheduledDate = workout.scheduled_date;
-            const tagDate =
-              workout.tags?.scheduled_date ||
-              workout.tags?.suggestedDate ||
-              workout.tags?.date;
+            const suggestedDate = workout.suggestedDate;
+            const workoutDate = workout.date;
+            const tagDate = workout.tags?.suggestedDate || workout.tags?.scheduled_date || workout.tags?.date;
 
-            let workoutDate = null;
+            let finalDate = null;
+            
+            // Try scheduled_date first (primary field in database)
             if (scheduledDate) {
               try {
-                workoutDate = new Date(scheduledDate);
-                if (isNaN(workoutDate.getTime())) workoutDate = null;
+                finalDate = new Date(scheduledDate);
+                if (isNaN(finalDate.getTime())) finalDate = null;
               } catch (e) {
                 /* invalid date */
               }
             }
 
-            if (!workoutDate && tagDate) {
+            // Try suggestedDate second (from WorkoutList pattern)
+            if (!finalDate && suggestedDate) {
               try {
-                workoutDate = new Date(tagDate);
-                if (isNaN(workoutDate.getTime())) workoutDate = null;
+                finalDate = new Date(suggestedDate);
+                if (isNaN(finalDate.getTime())) finalDate = null;
               } catch (e) {
                 /* invalid date */
               }
             }
 
-            if (!workoutDate) return false;
+            // Try date third
+            if (!finalDate && workoutDate) {
+              try {
+                finalDate = new Date(workoutDate);
+                if (isNaN(finalDate.getTime())) finalDate = null;
+              } catch (e) {
+                /* invalid date */
+              }
+            }
 
-            const workoutDateStr = workoutDate.toISOString().split('T')[0];
+            // Try tags last
+            if (!finalDate && tagDate) {
+              try {
+                finalDate = new Date(tagDate);
+                if (isNaN(finalDate.getTime())) finalDate = null;
+              } catch (e) {
+                /* invalid date */
+              }
+            }
+
+            if (!finalDate) return false;
+
+            const workoutDateStr = finalDate.toISOString().split('T')[0];
             return workoutDateStr >= todayStr && workoutDateStr < nextWeekStr;
           });
 
           const formattedWorkouts = upcomingWorkouts
             .filter((workout) => workout.title)
             .map((workout) => {
+              // Use same date priority as WorkoutList.jsx
               const scheduledDate = workout.scheduled_date;
-              const tagDate =
-                workout.tags?.scheduled_date ||
-                workout.tags?.suggestedDate ||
-                workout.tags?.date;
+              const suggestedDate = workout.suggestedDate;
+              const workoutDate = workout.date;
+              const tagDate = workout.tags?.suggestedDate || workout.tags?.scheduled_date || workout.tags?.date;
 
-              let workoutDate = null;
+              let finalDate = null;
+              
+              // Try scheduled_date first
               if (scheduledDate) {
                 try {
                   const date = new Date(scheduledDate);
-                  if (!isNaN(date.getTime())) workoutDate = date;
+                  if (!isNaN(date.getTime())) finalDate = date;
                 } catch (e) {
                   /* invalid date */
                 }
               }
 
-              if (!workoutDate && tagDate) {
+              // Try suggestedDate second
+              if (!finalDate && suggestedDate) {
+                try {
+                  const date = new Date(suggestedDate);
+                  if (!isNaN(date.getTime())) finalDate = date;
+                } catch (e) {
+                  /* invalid date */
+                }
+              }
+
+              // Try date third
+              if (!finalDate && workoutDate) {
+                try {
+                  const date = new Date(workoutDate);
+                  if (!isNaN(date.getTime())) finalDate = date;
+                } catch (e) {
+                  /* invalid date */
+                }
+              }
+
+              // Try tags last
+              if (!finalDate && tagDate) {
                 try {
                   const date = new Date(tagDate);
-                  if (!isNaN(date.getTime())) workoutDate = date;
+                  if (!isNaN(date.getTime())) finalDate = date;
                 } catch (e) {
                   /* invalid date */
                 }
@@ -259,7 +305,7 @@ function EnhancedUpcomingWorkouts() {
                 body: workout.body || '',
                 type: workout.workout_type || 'custom',
                 difficulty: workout.difficulty || 'intermediate',
-                scheduled_date: workoutDate ? workoutDate.toISOString() : null,
+                scheduled_date: finalDate ? finalDate.toISOString() : null,
                 completed: workout.completed || false,
               };
             })
