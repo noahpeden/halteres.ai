@@ -64,8 +64,6 @@ export default function TodayWorkouts() {
           return;
         }
 
-        console.log('Fetched workouts scheduled for today:', allWorkouts);
-
         // Format the workouts for display
         const formattedWorkouts = (allWorkouts || [])
           .filter((workout) => workout.title) // Filter out any invalid entries

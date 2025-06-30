@@ -127,12 +127,12 @@ IMPORTANT: Each workout you generate MUST be assigned to one of the above dates.
 ` : formatSchedulingRequirements(suggestedDates, daysPerWeek, selectedDayNames)}
 
 For the program description, include:
-1. A concise overview reflecting the CRITICAL REQUIREMENTS, Goal, ACTUAL duration (${numberOfWeeks} weeks), and the structure utilizing ONLY the specified minimal equipment and formats (${
-    formattedWorkoutFormats || 'Bodyweight/Band Circuits'
-  }).
-2. The periodization approach used (${programType}) and how it ensures progress with limited equipment.
-3. Expected outcomes in terms of fitness improvements (strength, endurance, mobility) achievable with minimal equipment, based *only* on the generated workouts and client requirements.
-4. Recommendations for maximizing results with limited gear, focus points for bodyweight movements, and potential progressions.
+1. A detailed, engaging overview that clearly states the program's primary goals and target audience (e.g., "This ${numberOfWeeks}-week, ${daysPerWeek}-day-per-week program is designed for ${difficulty} trainees seeking effective fitness development through minimal equipment training that maximizes results with limited resources...")
+2. The specific periodization approach used and why it's scientifically appropriate for minimal equipment training (e.g., bodyweight progression principles, volume manipulation for overload, time under tension progression, movement complexity advancement, density progression methods)
+3. How the training principles will drive measurable progress (e.g., "progressive overload through exercise progressions", "movement mastery through repetitive practice", "strength development with limited resistance", "conditioning enhancement through circuit training")
+4. Expected adaptations and outcomes from following the program consistently (e.g., improved bodyweight strength, enhanced muscular endurance, better movement control, increased cardiovascular fitness, functional strength development, improved body composition)
+5. Integration of minimal equipment methodology and approach (e.g., "minimal equipment training principles maximizing fitness development through creative exercise progressions and efficient movement patterns")
+6. Brief recommendations for nutrition, recovery, and supplementary training if relevant (e.g., nutrition for bodyweight training, recovery strategies for high-volume training, equipment care and safety, space-efficient workout setup, progression tracking with limited equipment)
 
 General Minimal Equipment Guidelines (Apply *only if* they DO NOT CONFLICT with CRITICAL REQUIREMENTS or REQUIRED WORKOUT FORMATS):
 - Focus on compound bodyweight movements (squats, lunges, push-ups, planks, rows if possible).

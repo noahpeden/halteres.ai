@@ -1,13 +1,15 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function CreatingProgramPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const existingProgramId = searchParams.get('programId');
   const { supabase } = useAuth();
-  const [status, setStatus] = useState('Creating your program...');
+  const [status, setStatus] = useState('Setting up your program...');
   const [error, setError] = useState(null);
   const hasCreated = useRef(false);
 
@@ -15,98 +17,25 @@ export default function CreatingProgramPage() {
     // Prevent multiple executions
     if (hasCreated.current) return;
     
-    async function createAndRedirect() {
+    async function redirectToWriter() {
       hasCreated.current = true; // Mark as started immediately
       
-      const wizardData = sessionStorage.getItem('programWizardData');
-      if (!wizardData) {
-        setError('No wizard data found');
+      if (!existingProgramId) {
+        setError('No program ID found. Please start from the beginning.');
         router.push('/dashboard');
         return;
       }
-      
-      // Clear session data immediately to prevent reuse
-      sessionStorage.removeItem('programWizardData');
 
       try {
-        const data = JSON.parse(wizardData);
+        setStatus('Preparing program writer...');
         
-        // Validate required data
-        if (!data.startDate || !data.numberOfWeeks) {
-          throw new Error('Missing required scheduling data');
-        }
-        
-        // Calculate end date with validation
-        const startDate = new Date(data.startDate);
-        if (isNaN(startDate.getTime())) {
-          throw new Error('Invalid start date');
-        }
-        
-        const endDate = new Date(startDate);
-        endDate.setDate(endDate.getDate() + (parseInt(data.numberOfWeeks) * 7) - 1);
-        
-        setStatus('Setting up your program structure...');
-        
-        // Format dates properly
-        const formattedStartDate = typeof data.startDate === 'string' 
-          ? data.startDate 
-          : startDate.toISOString().split('T')[0];
-        const formattedEndDate = endDate.toISOString().split('T')[0];
-        
-        console.log('Creating program with dates:', {
-          startDate: formattedStartDate,
-          endDate: formattedEndDate,
-          numberOfWeeks: data.numberOfWeeks
-        });
-        
-        // Create the program with all wizard data
-        const createResponse = await fetch('/api/CreateProgram', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name: data.programName || 'New Program',
-            entity_id: data.entityId,
-            duration_weeks: parseInt(data.numberOfWeeks) || 4,
-            start_date: formattedStartDate,
-            end_date: formattedEndDate,
-            days_of_week: data.daysOfWeek || ['monday', 'wednesday', 'friday'],
-            description: data.programDescription,
-            training_methodology: data.trainingMethodology,
-            difficulty: data.difficulty,
-            focus_area: data.focusArea,
-            gym_type: data.gymType,
-            equipment: data.equipment || [],
-            workout_formats: data.workoutFormats || [],
-            reference_input: data.referenceInput,
-            program_type: data.programType,
-            workout_duration: data.workoutDuration,
-          }),
-        });
-
-        if (!createResponse.ok) {
-          const errorData = await createResponse.json();
-          throw new Error(errorData.error || 'Failed to create program');
-        }
-
-        const result = await createResponse.json();
-        const program = result.data[0];
-
-        setStatus('Preparing AI generation...');
-        
-        // Update wizard data with program ID
-        const wizardDataForWriter = {
-          ...data,
-          programId: program.id
-        };
-        sessionStorage.setItem('programWizardData', JSON.stringify(wizardDataForWriter));
-
         // Small delay for UX
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, 1000));
         
         // Redirect to the program writer
-        router.push(`/program/${program.id}/writer?wizardComplete=true`);
+        router.push(`/program/${existingProgramId}/writer?wizardComplete=true`);
       } catch (error) {
-        console.error('Error creating program:', error);
+        console.error('Error navigating to writer:', error);
         setError(error.message);
         
         // Redirect to dashboard after showing error
@@ -116,8 +45,8 @@ export default function CreatingProgramPage() {
       }
     }
 
-    createAndRedirect();
-  }, [router, supabase]);
+    redirectToWriter();
+  }, [router, existingProgramId]);
 
   return (
     <div className="min-h-screen bg-base-100 flex items-center justify-center">

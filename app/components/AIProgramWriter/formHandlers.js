@@ -125,28 +125,26 @@ export function updateFormDataFromProgram(program, formData) {
 
   // Gym type mapping from snake_case to title case
   const gymTypeMapping = {
-    'crossfit_box': 'Crossfit Box',
-    'commercial_gym': 'Commercial Gym',
-    'home_gym': 'Home Gym',
-    'minimal_equipment': 'Minimal Equipment',
-    'outdoor_space': 'Outdoor Space',
-    'powerlifting_gym': 'Powerlifting Gym',
-    'olympic_weightlifting_gym': 'Olympic Weightlifting Gym',
-    'bodyweight_only': 'Bodyweight Only',
-    'studio_gym': 'Studio Gym',
-    'university_gym': 'University Gym',
-    'hotel_gym': 'Hotel Gym',
-    'apartment_gym': 'Apartment Gym',
-    'boxing_mma_gym': 'Boxing/MMA Gym',
-    'triathlon_training_facility': 'Triathlon Training Facility',
-    'multi_sport_complex': 'Multi-Sport Complex'
+    crossfit_box: 'Crossfit Box',
+    commercial_gym: 'Commercial Gym',
+    home_gym: 'Home Gym',
+    minimal_equipment: 'Minimal Equipment',
+    outdoor_space: 'Outdoor Space',
+    powerlifting_gym: 'Powerlifting Gym',
+    olympic_weightlifting_gym: 'Olympic Weightlifting Gym',
+    bodyweight_only: 'Bodyweight Only',
+    studio_gym: 'Studio Gym',
+    university_gym: 'University Gym',
+    hotel_gym: 'Hotel Gym',
+    apartment_gym: 'Apartment Gym',
+    boxing_mma_gym: 'Boxing/MMA Gym',
+    triathlon_training_facility: 'Triathlon Training Facility',
+    multi_sport_complex: 'Multi-Sport Complex',
   };
 
   // Update gym type if available
   if (program.gym_type) {
-    console.log('Loading gym type from program.gym_type:', program.gym_type);
     const mappedGymType = gymTypeMapping[program.gym_type] || program.gym_type;
-    console.log('Mapped gym type to:', mappedGymType);
     updatedData.gymType = mappedGymType;
   }
 
@@ -161,9 +159,9 @@ export function updateFormDataFromProgram(program, formData) {
 
     // Also update gymType if available in gym_details
     if (program.gym_details.gym_type) {
-      console.log('Loading gym type from program.gym_details.gym_type:', program.gym_details.gym_type);
-      const mappedGymType = gymTypeMapping[program.gym_details.gym_type] || program.gym_details.gym_type;
-      console.log('Mapped gym_details gym type to:', mappedGymType);
+      const mappedGymType =
+        gymTypeMapping[program.gym_details.gym_type] ||
+        program.gym_details.gym_type;
       updatedData.gymType = mappedGymType;
     }
 
@@ -186,14 +184,9 @@ export function updateFormDataFromProgram(program, formData) {
     }
   }
 
-  // Update periodization if available
-  if (program.periodization && typeof program.periodization === 'object') {
-    updatedData.periodization = program.periodization;
-
-    // Also update programType if available in periodization
-    if (program.periodization.program_type) {
-      updatedData.programType = program.periodization.program_type;
-    }
+  // Update programType from periodization if available
+  if (program.periodization?.program_type) {
+    updatedData.programType = program.periodization.program_type;
   }
 
   // Update session details if available
@@ -217,12 +210,7 @@ export const handleFormChange = (e, setFormData) => {
     setFormData((prev) => ({ ...prev, [name]: checked }));
   } else if (
     // Handle JSON fields (if any)
-    [
-      'sessionDetails',
-      'programOverview',
-      'gymDetails',
-      'periodization',
-    ].includes(name)
+    ['sessionDetails', 'programOverview', 'gymDetails'].includes(name)
   ) {
     try {
       const parsedValue = value ? JSON.parse(value) : {};
@@ -345,12 +333,12 @@ export const handleWorkoutFormatChange = (newFormats, setFormData) => {
 export const handleDayOfWeekChangeUtil = (day, currentDaysOfWeek) => {
   // Ensure we have a valid array and normalize casing
   const daysArray = Array.isArray(currentDaysOfWeek) ? currentDaysOfWeek : [];
-  
+
   // Check if day exists (case-insensitive)
-  const existingIndex = daysArray.findIndex(d => 
-    typeof d === 'string' && d.toLowerCase() === day.toLowerCase()
+  const existingIndex = daysArray.findIndex(
+    (d) => typeof d === 'string' && d.toLowerCase() === day.toLowerCase()
   );
-  
+
   if (existingIndex !== -1) {
     // Only allow removing if there will still be at least one day selected
     if (daysArray.length > 1) {

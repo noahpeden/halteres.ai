@@ -178,7 +178,8 @@ export default function AIWorkoutReferencer({ programId }) {
         );
       } else {
         setErrorMessage(
-          error.message || 'An unexpected error occurred while searching workouts'
+          error.message ||
+            'An unexpected error occurred while searching workouts'
         );
       }
     } finally {
@@ -215,8 +216,6 @@ export default function AIWorkoutReferencer({ programId }) {
           errorData.error || 'Failed to add workout to the program'
         );
       }
-
-      console.log('Workout added to program successfully:', workout.title);
 
       setSuccessMessage(
         `"${workout.title}" was added as ${
@@ -466,8 +465,8 @@ export default function AIWorkoutReferencer({ programId }) {
               )}
             </button>
             <div className="text-xs text-gray-500 mt-1">
-              Uses AI agents to find workouts online. May take up to 60
-              seconds. Try specific search terms for better results.
+              Uses AI agents to find workouts online. May take up to 60 seconds.
+              Try specific search terms for better results.
             </div>
           </div>
 
@@ -560,7 +559,6 @@ export default function AIWorkoutReferencer({ programId }) {
           )}
         </div>
       )}
-
     </div>
   );
 }

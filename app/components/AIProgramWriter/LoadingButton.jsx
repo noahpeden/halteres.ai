@@ -1,9 +1,45 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { X, StopCircle } from 'lucide-react';
 
-export default function LoadingButton({ generationStage, loadingDuration, serverStatus }) {
+export default function LoadingButton({
+  generationStage,
+  loadingDuration,
+  serverStatus,
+  onStop,
+}) {
   const [showCompletion, setShowCompletion] = useState(false);
-  
+  const [persistentWorkoutCount, setPersistentWorkoutCount] = useState({
+    generated: 0,
+    total: 0,
+  });
+  const [currentWeek, setCurrentWeek] = useState(null);
+
+  // Update persistent workout count and week when we get chunk progress
+  useEffect(() => {
+    if (serverStatus && serverStatus.type === 'workout_chunk') {
+      setPersistentWorkoutCount({
+        generated: serverStatus.totalGenerated || 0,
+        total: serverStatus.totalExpected || 0,
+      });
+      setCurrentWeek(serverStatus.week);
+    } else if (serverStatus && serverStatus.type === 'workout_generated') {
+      // For individual workout streaming, update counts
+      setPersistentWorkoutCount({
+        generated: (serverStatus.index || 0) + 1,
+        total: serverStatus.total || 0,
+      });
+    }
+  }, [serverStatus]);
+
+  // Reset state when generation starts
+  useEffect(() => {
+    if (generationStage === 'preparing') {
+      setPersistentWorkoutCount({ generated: 0, total: 0 });
+      setCurrentWeek(null);
+    }
+  }, [generationStage]);
+
   // Handle completion state - show completion for 3 seconds when complete
   useEffect(() => {
     if (generationStage === 'complete') {
@@ -22,17 +58,17 @@ export default function LoadingButton({ generationStage, loadingDuration, server
   if (generationStage === 'complete' && !showCompletion) {
     return null;
   }
-  
+
   // Use streaming message if available, otherwise fall back to generation stage
   const getDisplayMessage = () => {
     if (generationStage === 'complete') {
       return 'Program generated successfully!';
     }
-    
+
     if (serverStatus && serverStatus.message) {
       return serverStatus.message;
     }
-    
+
     // Fallback to generation stage messages
     switch (generationStage) {
       case 'preparing':
@@ -53,13 +89,22 @@ export default function LoadingButton({ generationStage, loadingDuration, server
   };
 
   // Check if we're streaming workouts
-  const isStreamingWorkouts = serverStatus && serverStatus.type === 'workout_generated';
-  const workoutProgress = isStreamingWorkouts ? 
-    `${serverStatus.index + 1}/${serverStatus.total}` : null;
-  
+  const isStreamingWorkouts =
+    serverStatus && serverStatus.type === 'workout_generated';
+  const workoutProgress = isStreamingWorkouts
+    ? `${serverStatus.index + 1}/${serverStatus.total}`
+    : null;
+
+  // Check for chunked week progress
+  const isStreamingChunks =
+    serverStatus && serverStatus.type === 'workout_chunk';
+  const chunkProgress = isStreamingChunks ? `Week ${serverStatus.week}` : null;
+
   // Check for week progress
-  const weekProgress = serverStatus && serverStatus.weekProgress ? 
-    `${serverStatus.weekProgress.current}/${serverStatus.weekProgress.total}` : null;
+  const weekProgress =
+    serverStatus && serverStatus.weekProgress
+      ? `${serverStatus.weekProgress.current}/${serverStatus.weekProgress.total}`
+      : null;
 
   const message = getDisplayMessage();
   const isRetrying = generationStage === 'retrying';
@@ -67,22 +112,33 @@ export default function LoadingButton({ generationStage, loadingDuration, server
   const isComplete = generationStage === 'complete';
 
   // Show streaming indicator for AI-related events
-  const showStreamingIndicator = isStreaming && [
-    'ai_request', 
-    'ai_response_received', 
-    'parsing'
-  ].includes(serverStatus.type);
+  const showStreamingIndicator =
+    isStreaming &&
+    ['ai_request', 'ai_response_received', 'parsing'].includes(
+      serverStatus.type
+    );
 
   // Progress calculation
   const getProgressPercentage = () => {
     if (isComplete) return 100;
-    
+
+    // Check for chunked week progress (most accurate for chunked generation)
+    if (
+      isStreamingChunks &&
+      serverStatus.totalGenerated &&
+      serverStatus.totalExpected
+    ) {
+      return Math.round(
+        (serverStatus.totalGenerated / serverStatus.totalExpected) * 100
+      );
+    }
+
     // Check for workout progress first (most accurate)
     if (workoutProgress) {
       const [current, total] = workoutProgress.split('/').map(Number);
       return Math.round((current / total) * 100);
     }
-    
+
     // Check for structured week progress data (most accurate for week-based progress)
     if (serverStatus && serverStatus.weekProgress) {
       const { current, total, completed } = serverStatus.weekProgress;
@@ -93,44 +149,52 @@ export default function LoadingButton({ generationStage, loadingDuration, server
         return completed ? baseProgress : Math.max(baseProgress - 5, 10);
       }
     }
-    
+
     // Check for week-based progress in server messages (fallback)
     if (serverStatus && serverStatus.message) {
       const message = serverStatus.message;
-      
+
       // Parse "Completed X of Y weeks" pattern
       const completedMatch = message.match(/Completed (\d+) of (\d+) weeks/);
       if (completedMatch) {
         const [, completed, total] = completedMatch;
         return Math.round((parseInt(completed) / parseInt(total)) * 100);
       }
-      
+
       // Parse "Processing batch: weeks X-Y..." or "Generating weeks X-Y of Z..." pattern
       const batchMatch = message.match(/weeks (\d+)-(\d+).*of (\d+)/);
       if (batchMatch) {
         const [, startWeek, , total] = batchMatch;
         // Use the start of the current batch as progress indicator
-        const progress = Math.round(((parseInt(startWeek) - 1) / parseInt(total)) * 100);
+        const progress = Math.round(
+          ((parseInt(startWeek) - 1) / parseInt(total)) * 100
+        );
         return Math.max(progress, 10); // Ensure minimum 10% when generating
       }
-      
+
       // Parse "Processing batch: weeks X-Y..." without total
       const simpleBatchMatch = message.match(/weeks (\d+)-(\d+)/);
       if (simpleBatchMatch) {
         const [, startWeek] = simpleBatchMatch;
         // Estimate progress based on current week (assume reasonable program length)
-        const estimatedProgress = Math.round((parseInt(startWeek) / 6) * 80) + 10; // Cap at 90%
+        const estimatedProgress =
+          Math.round((parseInt(startWeek) / 6) * 80) + 10; // Cap at 90%
         return Math.min(estimatedProgress, 90);
       }
     }
-    
+
     // Base progress on stage as fallback
     switch (generationStage) {
-      case 'preparing': return 10;
-      case 'generating': return 30;
-      case 'processing': return 70;
-      case 'finalizing': return 90;
-      default: return 0;
+      case 'preparing':
+        return 10;
+      case 'generating':
+        return 30;
+      case 'processing':
+        return 70;
+      case 'finalizing':
+        return 90;
+      default:
+        return 0;
     }
   };
 
@@ -142,8 +206,18 @@ export default function LoadingButton({ generationStage, loadingDuration, server
       <div className="flex items-center gap-3">
         {isComplete ? (
           <div className="w-8 h-8 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center">
-            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            <svg
+              className="w-5 h-5 text-white"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M5 13l4 4L19 7"
+              />
             </svg>
           </div>
         ) : (
@@ -167,10 +241,10 @@ export default function LoadingButton({ generationStage, loadingDuration, server
           <span className="text-sm text-gray-600">{progressPercentage}%</span>
         </div>
         <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
-          <div 
+          <div
             className={`h-2 rounded-full transition-all duration-500 ease-out ${
-              isComplete 
-                ? 'bg-gradient-to-r from-green-500 to-emerald-500' 
+              isComplete
+                ? 'bg-gradient-to-r from-green-500 to-emerald-500'
                 : 'bg-gradient-to-r from-blue-500 to-indigo-500'
             }`}
             style={{ width: `${progressPercentage}%` }}
@@ -183,40 +257,85 @@ export default function LoadingButton({ generationStage, loadingDuration, server
       </div>
 
       {/* Progress indicators */}
-      {(isStreaming || workoutProgress || weekProgress) && !isComplete && (
-        <div className="flex flex-col items-center gap-2">
-          {workoutProgress && (
-            <div className="flex items-center gap-2 px-3 py-1 bg-white/60 rounded-full border border-blue-200">
-              <span className="text-sm font-medium text-blue-700">Workout Progress:</span>
-              <span className="text-sm font-bold text-blue-800">{workoutProgress}</span>
-            </div>
-          )}
-          
-          {weekProgress && !workoutProgress && (
-            <div className="flex items-center gap-2 px-3 py-1 bg-white/60 rounded-full border border-purple-200">
-              <span className="text-sm font-medium text-purple-700">Week Progress:</span>
-              <span className="text-sm font-bold text-purple-800">{weekProgress}</span>
-            </div>
-          )}
-          
-          {showStreamingIndicator && (
-            <div className="flex items-center gap-2 text-xs text-gray-600">
-              <div className="flex gap-1">
-                <div className="w-1 h-1 bg-green-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                <div className="w-1 h-1 bg-green-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                <div className="w-1 h-1 bg-green-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+      {(isStreaming || workoutProgress || weekProgress || chunkProgress) &&
+        !isComplete && (
+          <div className="flex flex-col items-center gap-2">
+            {chunkProgress && (
+              <div className="flex items-center gap-2 px-3 py-1 bg-white/60 rounded-full border border-green-200">
+                <span className="text-sm font-medium text-green-700">
+                  Generating:
+                </span>
+                <span className="text-sm font-bold text-green-800">
+                  {chunkProgress}
+                </span>
+                {serverStatus.totalGenerated && serverStatus.totalExpected && (
+                  <span className="text-xs text-green-600">
+                    ({serverStatus.totalGenerated}/{serverStatus.totalExpected}{' '}
+                    workouts)
+                  </span>
+                )}
               </div>
-              <span>Live AI generation</span>
-            </div>
-          )}
-        </div>
-      )}
+            )}
+
+            {workoutProgress && !chunkProgress && (
+              <div className="flex items-center gap-2 px-3 py-1 bg-white/60 rounded-full border border-blue-200">
+                <span className="text-sm font-medium text-blue-700">
+                  Workout Progress:
+                </span>
+                <span className="text-sm font-bold text-blue-800">
+                  {workoutProgress}
+                </span>
+              </div>
+            )}
+
+            {weekProgress && !workoutProgress && !chunkProgress && (
+              <div className="flex items-center gap-2 px-3 py-1 bg-white/60 rounded-full border border-purple-200">
+                <span className="text-sm font-medium text-purple-700">
+                  Week Progress:
+                </span>
+                <span className="text-sm font-bold text-purple-800">
+                  {weekProgress}
+                </span>
+              </div>
+            )}
+
+            {showStreamingIndicator && (
+              <div className="flex items-center gap-2 text-xs text-gray-600">
+                <div className="flex gap-1">
+                  <div
+                    className="w-1 h-1 bg-green-500 rounded-full animate-bounce"
+                    style={{ animationDelay: '0ms' }}
+                  ></div>
+                  <div
+                    className="w-1 h-1 bg-green-500 rounded-full animate-bounce"
+                    style={{ animationDelay: '150ms' }}
+                  ></div>
+                  <div
+                    className="w-1 h-1 bg-green-500 rounded-full animate-bounce"
+                    style={{ animationDelay: '300ms' }}
+                  ></div>
+                </div>
+                <span>Live AI generation</span>
+              </div>
+            )}
+          </div>
+        )}
 
       {/* Retry warning */}
       {isRetrying && (
         <div className="flex items-center gap-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg">
-          <svg className="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+          <svg
+            className="w-4 h-4 text-amber-500"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
+            />
           </svg>
           <span className="text-sm text-amber-700">Reconnecting...</span>
         </div>
@@ -225,10 +344,28 @@ export default function LoadingButton({ generationStage, loadingDuration, server
       {/* Completion message */}
       {isComplete && (
         <div className="text-center">
-          <p className="text-sm text-green-700 font-medium">Your program is ready!</p>
-          <p className="text-xs text-gray-600 mt-1">Scroll down to view your workouts</p>
+          <p className="text-sm text-green-700 font-medium">
+            Your program is ready!
+          </p>
+          <p className="text-xs text-gray-600 mt-1">
+            Scroll down to view your workouts
+          </p>
         </div>
       )}
+
+      {/* Stop button
+      {!isComplete && onStop && (
+        <button
+          onClick={onStop}
+          className="mt-3 px-4 py-2 bg-red-500 hover:bg-red-600 text-white font-medium rounded-lg 
+                     transition-colors duration-200 flex items-center gap-2 shadow-md hover:shadow-lg
+                     active:scale-95 transform"
+          title="Stop generation"
+        >
+          <StopCircle className="w-4 h-4" />
+          <span>Stop Generation</span>
+        </button>
+      )} */}
     </div>
   );
 }

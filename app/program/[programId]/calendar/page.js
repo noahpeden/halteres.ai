@@ -71,8 +71,7 @@ export default function ProgramCalendarPage(props) {
           table: 'program_workouts',
           filter: `program_id=eq.${programId}`,
         },
-        (payload) => {
-          console.log('Workout change detected, refreshing calendar');
+        () => {
           setRefreshRequired(true);
         }
       )
@@ -88,8 +87,7 @@ export default function ProgramCalendarPage(props) {
           table: 'workout_schedule',
           filter: `program_id=eq.${programId}`,
         },
-        (payload) => {
-          console.log('Schedule change detected, refreshing calendar');
+        () => {
           setRefreshRequired(true);
         }
       )

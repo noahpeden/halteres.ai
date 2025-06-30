@@ -1,17 +1,59 @@
 'use client';
 
-import { useEquipment } from '../../contexts/EquipmentContext';
+import { useProgram } from '@/contexts/ProgramContext';
+import equipmentList from '@/utils/equipmentList';
+import { useCallback } from 'react';
 
-export default function EquipmentSelector({
-  isVisible,
-  onToggleVisibility,
-}) {
-  const {
-    selectedEquipment,
-    equipmentList,
-    isAllEquipmentSelected,
-    handleEquipmentToggle,
-  } = useEquipment();
+export default function EquipmentSelector({ isVisible, onToggleVisibility }) {
+  const { selectedEquipment, updateEquipment, updateFormFields, formData } =
+    useProgram();
+
+  const isAllEquipmentSelected =
+    selectedEquipment.length === equipmentList.length;
+
+  const handleEquipmentToggle = useCallback(
+    async (equipmentValue) => {
+      const value = equipmentValue === '-1' ? -1 : parseInt(equipmentValue);
+
+      if (value === -1) {
+        // Toggle all equipment
+        const newEquipment = isAllEquipmentSelected
+          ? []
+          : equipmentList.map((item) => item.value);
+        updateEquipment(newEquipment);
+
+        // Update in database - preserve existing gym_details
+        await updateFormFields({
+          gym_details: {
+            ...formData.gymDetails,
+            equipment: newEquipment,
+          },
+        });
+      } else {
+        const isSelected = selectedEquipment.includes(value);
+        const newEquipment = isSelected
+          ? selectedEquipment.filter((item) => item !== value)
+          : [...selectedEquipment, value];
+
+        updateEquipment(newEquipment);
+
+        // Update in database - preserve existing gym_details
+        await updateFormFields({
+          gym_details: {
+            ...formData.gymDetails,
+            equipment: newEquipment,
+          },
+        });
+      }
+    },
+    [
+      selectedEquipment,
+      isAllEquipmentSelected,
+      updateEquipment,
+      updateFormFields,
+    ]
+  );
+
   return (
     <div>
       <button

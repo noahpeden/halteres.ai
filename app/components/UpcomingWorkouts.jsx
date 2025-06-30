@@ -119,10 +119,6 @@ export default function UpcomingWorkouts() {
         const todayStr = todayStart.toISOString().split('T')[0];
         const nextWeekStr = nextWeek.toISOString().split('T')[0];
 
-        console.log(
-          `Looking for workouts between ${todayStr} and ${nextWeekStr}`
-        );
-
         // 1. Get the entity IDs for the current user
         const { data: entitiesData, error: entitiesError } = await supabase
           .from('entities')
@@ -137,7 +133,6 @@ export default function UpcomingWorkouts() {
         const userEntityIds = entitiesData.map((entity) => entity.id);
 
         if (userEntityIds.length === 0) {
-          console.log('User has no entities, no workouts to fetch.');
           setWorkouts([]);
           setIsLoading(false);
           return;
@@ -218,10 +213,8 @@ export default function UpcomingWorkouts() {
             return workoutDateStr >= todayStr && workoutDateStr < nextWeekStr;
           });
 
-          console.log(`Found ${upcomingWorkouts.length} upcoming workouts`);
           processWorkouts(upcomingWorkouts);
         } else {
-          console.log('No workouts found');
           setWorkouts([]);
         }
       } catch (error) {

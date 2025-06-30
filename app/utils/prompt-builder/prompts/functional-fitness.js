@@ -115,10 +115,12 @@ IMPORTANT: Each workout you generate MUST be assigned to one of the above dates.
 ` : formatSchedulingRequirements(suggestedDates, daysPerWeek, selectedDayNames)}
 
 For the program description, include:
-1. A concise overview reflecting the CRITICAL REQUIREMENTS, Goal (Functional Fitness), ACTUAL duration (${numberOfWeeks} weeks), and the emphasis on movement patterns relevant to daily life.
-2. The periodization approach used (${programType}) and how it develops well-rounded functional capacity.
-3. Expected outcomes in terms of improved movement quality, strength, and conditioning for everyday activities, based *only* on the generated workouts and client requirements.
-4. Recommendations for applying this fitness to daily tasks and maintaining functional health.
+1. A detailed, engaging overview that clearly states the program's primary goals and target audience (e.g., "This ${numberOfWeeks}-week, ${daysPerWeek}-day-per-week program is designed for ${difficulty} trainees seeking to improve functional movement capacity and real-world strength through fundamental human movement patterns...")
+2. The specific periodization approach used and why it's scientifically appropriate for functional development (e.g., movement-based progression for motor learning, load progression for strength adaptation, skill acquisition through repetitive practice of functional patterns)
+3. How the training principles will drive measurable progress (e.g., "progressive overload in functional movements", "movement quality enhancement", "strength development in fundamental patterns", "transfer to daily activities")
+4. Expected adaptations and outcomes from following the program consistently (e.g., improved movement efficiency, enhanced strength in daily activities, better balance and coordination, reduced injury risk, increased functional capacity)
+5. Integration of functional fitness methodology and approach (e.g., "functional movement principles focusing on real-world movement patterns and practical strength development for daily life enhancement")
+6. Brief recommendations for nutrition, recovery, and supplementary training if relevant (e.g., nutrition for active lifestyle support, recovery strategies for functional training, movement practice integration into daily routines)
 
 General Functional Fitness Guidelines (Apply *only if* they DO NOT CONFLICT with CRITICAL REQUIREMENTS or REQUIRED WORKOUT FORMATS):
 - Emphasize fundamental human movement patterns (squat, hinge, push, pull, carry, rotation).

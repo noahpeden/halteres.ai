@@ -58,15 +58,17 @@ export async function middleware(req) {
   ];
 
   // Check if this is a public sharing route
-  // Pattern: /program/{programId}/workouts/{workoutId} or /program/{programId}/share
-  const isPublicWorkoutRoute = /^\/program\/[^\/]+\/workouts\/[^\/]+$/.test(pathname);
+  // Pattern: /program/{programId}/workout/{workoutId} or /program/{programId}/share
+  const isPublicWorkoutRoute = /^\/program\/[^\/]+\/workout\/[^\/]+$/.test(
+    pathname
+  );
   const isPublicProgramRoute = /^\/program\/[^\/]+\/share$/.test(pathname);
   const isPublicRoute = isPublicWorkoutRoute || isPublicProgramRoute;
-  
-  const isProtectedRoute = protectedRoutes.some((route) =>
-    pathname.startsWith(route)
-  ) && !isPublicRoute; // Exclude public routes from protection
-  
+
+  const isProtectedRoute =
+    protectedRoutes.some((route) => pathname.startsWith(route)) &&
+    !isPublicRoute; // Exclude public routes from protection
+
   const isGenerationRoute = generationActionRoutes.some((route) =>
     pathname.startsWith(route)
   );

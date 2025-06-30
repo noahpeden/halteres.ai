@@ -16,7 +16,10 @@ export const calculateEndDate = (startDate, numberOfWeeks, daysOfWeek) => {
 
   const weeksToAdd = parseInt(numberOfWeeks, 10);
   if (isNaN(weeksToAdd) || weeksToAdd <= 0) {
-    console.warn('Invalid numberOfWeeks provided to calculateEndDate:', numberOfWeeks);
+    console.warn(
+      'Invalid numberOfWeeks provided to calculateEndDate:',
+      numberOfWeeks
+    );
     return null;
   }
 
@@ -25,30 +28,29 @@ export const calculateEndDate = (startDate, numberOfWeeks, daysOfWeek) => {
   const selectedDayNumbers = daysOfWeek
     .map((day) => {
       // Capitalize first letter to match dayNameToNumber mapping
-      const capitalizedDay = typeof day === 'string' 
-        ? day.charAt(0).toUpperCase() + day.slice(1).toLowerCase()
-        : day;
+      const capitalizedDay =
+        typeof day === 'string'
+          ? day.charAt(0).toUpperCase() + day.slice(1).toLowerCase()
+          : day;
       const dayNumber = dayNameToNumber[capitalizedDay];
       if (dayNumber === undefined) {
-        console.warn('Invalid day name in calculateEndDate:', day, 'capitalized:', capitalizedDay);
+        console.warn(
+          'Invalid day name in calculateEndDate:',
+          day,
+          'capitalized:',
+          capitalizedDay
+        );
         return null;
       }
       return dayNumber;
     })
-    .filter(num => num !== null)
+    .filter((num) => num !== null)
     .sort((a, b) => a - b);
 
   if (selectedDayNumbers.length === 0) {
     console.error('No valid days found in daysOfWeek:', daysOfWeek);
     return null;
   }
-
-  console.log('Debug calculateEndDate:', {
-    startDate,
-    numberOfWeeks,
-    daysOfWeek,
-    selectedDayNumbers
-  });
 
   // Calculate the end date by adding full weeks
   const endDate = new Date(start);
@@ -84,7 +86,7 @@ export const calculateEndDate = (startDate, numberOfWeeks, daysOfWeek) => {
       startDate,
       numberOfWeeks,
       daysOfWeek,
-      endDate: endDate.toString()
+      endDate: endDate.toString(),
     });
     return null;
   }

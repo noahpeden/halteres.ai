@@ -11,7 +11,7 @@ import equipmentList from '@/utils/equipmentList';
 
 const ProgramForm = ({
   formData,
-  dispatch,
+  setFieldValue,
   handleWorkoutFormatChange,
   handleDayOfWeekChange,
   isLoading,
@@ -26,7 +26,8 @@ const ProgramForm = ({
   trialEndDate,
   generationsRemaining,
   lastGenerationDate,
-  triggerAutoSave,
+  calculatedEndDate,
+  onStopGeneration,
 }) => {
   const handleChange = useCallback(
     (e) => {
@@ -46,46 +47,27 @@ const ProgramForm = ({
             })
             .filter(Boolean);
           // Update gymType, equipment, and gymDetails.equipment
-          dispatch({
-            type: 'SET_FIELD_VALUE',
-            payload: { field: 'gymType', value },
-          });
-          dispatch({
-            type: 'SET_FIELD_VALUE',
-            payload: { field: 'equipment', value: preset },
-          });
-          dispatch({
-            type: 'SET_FIELD_VALUE',
-            payload: {
-              field: 'gymDetails',
-              value: {
-                ...formData.gymDetails,
-                gym_type: value,
-                equipment: equipmentNames,
-              },
-            },
+          setFieldValue('gymType', value);
+          setFieldValue('equipment', preset);
+          setFieldValue('gymDetails', {
+            ...formData.gymDetails,
+            gym_type: value,
+            equipment: equipmentNames,
           });
         } else {
           // Just update the gym type without resetting equipment
-          dispatch({
-            type: 'SET_FIELD_VALUE',
-            payload: { field: 'gymType', value },
-          });
+          setFieldValue('gymType', value);
         }
-        // Trigger auto-save after gym type change
-        if (triggerAutoSave) triggerAutoSave();
+        // Auto-save will be handled by setFieldValue
         return;
       }
 
-      dispatch({
-        type: 'SET_FIELD_VALUE',
-        payload: { field: name, value: updateValue },
-      });
+      setFieldValue(name, updateValue);
 
       // Don't trigger auto-save on every keystroke for text fields
       // Auto-save will be triggered on blur instead
     },
-    [dispatch, formData.gymDetails, formData.gymType, triggerAutoSave]
+    [setFieldValue, formData.gymDetails, formData.gymType]
   );
 
   // --- Eligibility Logic ---
@@ -166,14 +148,13 @@ const ProgramForm = ({
         <ProgramEssentials
           formData={formData}
           handleChange={handleChange}
-          triggerAutoSave={triggerAutoSave}
-        />
+          />
         <ProgramScheduling
           formData={formData}
           handleChange={handleChange}
           handleDayOfWeekChange={handleDayOfWeekChange}
-          triggerAutoSave={triggerAutoSave}
-          subscriptionStatus={subscriptionStatus}
+            subscriptionStatus={subscriptionStatus}
+          calculatedEndDate={calculatedEndDate}
         />
       </div>
 
@@ -183,7 +164,6 @@ const ProgramForm = ({
         handleProgramTypeChange={handleProgramTypeChange}
         handleWorkoutFormatChange={handleWorkoutFormatChange}
         equipmentSelector={equipmentSelector}
-        triggerAutoSave={triggerAutoSave}
       />
 
       {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -224,6 +204,7 @@ const ProgramForm = ({
             generationStage={generationStage}
             loadingDuration={loadingDuration}
             serverStatus={serverStatus}
+            onStop={onStopGeneration}
           />
         </div>
       )}

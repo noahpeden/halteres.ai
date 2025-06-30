@@ -56,6 +56,7 @@ const gymTypes = [
   { value: 'Boxing/MMA Gym', label: 'Boxing/MMA Gym' },
   { value: 'Triathlon Training Facility', label: 'Triathlon Training Facility' },
   { value: 'Multi-Sport Complex', label: 'Multi-Sport Complex' },
+  { value: 'Other', label: 'Other' },
 ];
 
 // Equipment presets based on gym type

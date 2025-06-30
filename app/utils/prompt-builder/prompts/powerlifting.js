@@ -115,10 +115,12 @@ IMPORTANT: Each workout you generate MUST be assigned to one of the above dates.
 ` : formatSchedulingRequirements(suggestedDates, daysPerWeek, selectedDayNames)}
 
 For the program description, include:
-1. A concise overview reflecting the CRITICAL REQUIREMENTS, Goal (Powerlifting), ACTUAL duration (${numberOfWeeks} weeks), and focus on the three main lifts.
-2. The periodization approach used (${programType}) and how it facilitates strength gains in the SBD lifts.
-3. Expected outcomes in terms of 1RM improvements, based *only* on the generated workouts and client requirements.
-4. Recommendations for meet preparation (if relevant), attempt selection, and recovery specific to powerlifting.
+1. A detailed, engaging overview that clearly states the program's primary goals and target audience (e.g., "This ${numberOfWeeks}-week, ${daysPerWeek}-day-per-week program is designed for ${difficulty} powerlifters seeking to maximize strength in the squat, bench press, and deadlift through systematic progression...")
+2. The specific periodization approach used and why it's scientifically appropriate for strength development (e.g., linear progression for neural adaptations, block periodization for peak strength, intensity manipulation for maximal force production)
+3. How the training principles will drive measurable progress (e.g., "progressive overload through systematic load increases", "specificity principle through competition lift focus", "strategic accessory work for weakness correction")
+4. Expected adaptations and outcomes from following the program consistently (e.g., neural efficiency improvements, maximal strength gains, technical proficiency in competition lifts, improved force production capacity)
+5. Integration of powerlifting methodology and approach (e.g., "powerlifting principles to develop maximal strength through heavy compound movements and competition-specific training")
+6. Brief recommendations for nutrition, recovery, and supplementary training if relevant (e.g., strength-focused nutrition, recovery protocols, meet preparation strategies, mobility work for lifting efficiency)
 
 General Powerlifting Guidelines (Apply *only if* they DO NOT CONFLICT with CRITICAL REQUIREMENTS):
 - Prioritize the main lifts (Squat, Bench, Deadlift) with appropriate frequency and volume.

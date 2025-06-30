@@ -46,7 +46,6 @@ export default function ProfilePage() {
           .select('*')
           .eq('id', user.id)
           .single();
-        console.log('Profile data:', data);
 
         if (error) throw error;
 
@@ -72,7 +71,7 @@ export default function ProfilePage() {
 
             if (response.ok) {
               const stripeData = await response.json();
-              console.log('Stripe subscription data:', stripeData);
+
               if (stripeData.cancel_at_period_end) {
                 setIsSubscriptionCanceled(true);
               }

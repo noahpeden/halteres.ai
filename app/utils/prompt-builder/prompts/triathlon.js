@@ -157,10 +157,12 @@ IMPORTANT: Each workout you generate MUST be assigned to one of the above dates.
 ` : formatSchedulingRequirements(suggestedDates, daysPerWeek, selectedDayNames)}
 
 For the program description, include:
-1. A concise overview reflecting the CRITICAL REQUIREMENTS, Goal, ACTUAL duration (${numberOfWeeks} weeks), and ACTUAL workout types used.
-2. The periodization approach used and why it's appropriate for triathlon training.
-3. Expected outcomes based on the generated workouts and athlete level.
-4. Nutrition, recovery, and race strategy recommendations specific to triathlon.
+1. A detailed, engaging overview that clearly states the program's primary goals and target audience (e.g., "This ${numberOfWeeks}-week, ${daysPerWeek}-day-per-week program is designed for ${difficulty} triathletes seeking to optimize performance across swim, bike, and run disciplines through systematic training progression...")
+2. The specific periodization approach used and why it's scientifically appropriate for triathlon development (e.g., concurrent training model for multi-sport adaptation, periodized volume progression, intensity distribution for aerobic base building, sport-specific skill development phases)
+3. How the training principles will drive measurable progress (e.g., "progressive volume increases for aerobic capacity", "sport-specific skill development", "energy system targeting", "race-specific preparation", "transition training for efficiency")
+4. Expected adaptations and outcomes from following the program consistently (e.g., improved swim technique and endurance, enhanced cycling power and efficiency, increased running speed and stamina, better race transitions, optimized pacing strategies)
+5. Integration of triathlon methodology and approach (e.g., "triathlon-specific training principles balancing three disciplines while optimizing adaptation through structured periodization and race simulation")
+6. Brief recommendations for nutrition, recovery, and supplementary training if relevant (e.g., multi-sport nutrition strategies, recovery protocols for high training loads, equipment recommendations, race day preparation, tapering strategies)
 
 EQUIPMENT USAGE GUIDELINES:
 - Swimming: Focus on technique, endurance, and speed work appropriate for available facilities

@@ -160,10 +160,12 @@ IMPORTANT: Each workout you generate MUST be assigned to one of the above dates.
 ` : formatSchedulingRequirements(suggestedDates, daysPerWeek, selectedDayNames)}
 
 For the program description, include:
-1. A concise overview reflecting the CRITICAL REQUIREMENTS, Goal, ACTUAL duration (${numberOfWeeks} weeks), and ACTUAL workout types used.
-2. The periodization approach used and why it's appropriate for Ironman distance preparation.
-3. Expected outcomes based on the generated workouts and ultra-endurance adaptations.
-4. Comprehensive nutrition, hydration, recovery, and race strategy recommendations specific to Ironman racing.
+1. A detailed, engaging overview that clearly states the program's primary goals and target audience (e.g., "This ${numberOfWeeks}-week, ${daysPerWeek}-day-per-week program is designed for ${difficulty} Ironman athletes seeking to complete the ultimate endurance challenge through systematic ultra-distance preparation across swim, bike, and run...")
+2. The specific periodization approach used and why it's scientifically appropriate for Ironman preparation (e.g., macrocycle periodization for ultra-endurance, aerobic base building phases, intensity distribution for fatigue resistance, progressive volume loading, race-specific preparation blocks)
+3. How the training principles will drive measurable progress (e.g., "aerobic capacity development for sustained effort", "metabolic efficiency enhancement", "muscular endurance progression", "mental resilience building", "race-specific fueling practice")
+4. Expected adaptations and outcomes from following the program consistently (e.g., enhanced aerobic capacity, improved fat oxidation efficiency, increased muscular endurance, better pacing control, optimized race nutrition tolerance, mental fortitude for ultra-distance racing)
+5. Integration of Ironman methodology and approach (e.g., "ultra-endurance training principles emphasizing aerobic development, metabolic efficiency, and race-specific preparation for the 140.6-mile challenge")
+6. Brief recommendations for nutrition, recovery, and supplementary training if relevant (e.g., ultra-distance fueling strategies, heat acclimatization, recovery protocols for high-volume training, equipment selection, race simulation practices, mental preparation techniques)
 
 IRONMAN-SPECIFIC TRAINING PRINCIPLES:
 - Emphasize aerobic base development and fat adaptation
