@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { useProgramWizard } from '../../contexts/ProgramWizardContext';
+import { X } from 'lucide-react';
 import WizardProgress from '../../components/ProgramWizard/WizardProgress';
 import {
   kgToLbs,
@@ -15,59 +16,112 @@ import {
 } from '@/utils/unitConversions';
 
 export default function Step5Page() {
-  const { wizardData, goToPrevious, completeWizard, updateWizardData } =
-    useProgramWizard();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const programId = searchParams.get('programId');
   const { supabase } = useAuth();
+  
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [entityData, setEntityData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [editedData, setEditedData] = useState({});
-  const [useImperial, setUseImperial] = useState(true); // Default to imperial
+  const [useImperial, setUseImperial] = useState(true);
   const [entities, setEntities] = useState([]);
   const [showEntitySelection, setShowEntitySelection] = useState(false);
-  const [selectedEntityId, setSelectedEntityId] = useState(wizardData.entityId);
-  const [schedulingData, setSchedulingData] = useState(() => {
-    // Convert day names to indices for display
-    const dayNames = [
-      'sunday',
-      'monday',
-      'tuesday',
-      'wednesday',
-      'thursday',
-      'friday',
-      'saturday',
-    ];
-    let daysOfWeekIndices = [];
+  const [selectedEntityId, setSelectedEntityId] = useState(null);
+  const [entityName, setEntityName] = useState('');
+  const [entityType, setEntityType] = useState('CLIENT');
+  const [schedulingData, setSchedulingData] = useState({
+    programName: '',
+    startDate: (() => {
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      return tomorrow.toISOString().split('T')[0];
+    })(),
+    numberOfWeeks: 4,
+    daysOfWeek: [],
+  });
 
-    if (wizardData.daysOfWeek && Array.isArray(wizardData.daysOfWeek)) {
-      if (wizardData.daysOfWeek.length > 0) {
-        // Check if first element is a string (day name) or number (index)
-        if (typeof wizardData.daysOfWeek[0] === 'string') {
-          // Convert day names to indices
-          daysOfWeekIndices = wizardData.daysOfWeek
-            .map((dayName) => dayNames.indexOf(dayName.toLowerCase()))
-            .filter((index) => index !== -1);
-        } else {
-          // Already indices
-          daysOfWeekIndices = wizardData.daysOfWeek;
+  // Fetch program data if programId is provided
+  useEffect(() => {
+    async function loadProgram() {
+      if (programId && supabase) {
+        try {
+          // Fetch program data directly from Supabase
+          const { data: program, error } = await supabase
+            .from('programs')
+            .select('*')
+            .eq('id', programId)
+            .single();
+
+          if (error) {
+            console.error('Error fetching program:', error);
+            return;
+          }
+
+          if (program) {
+            // Update scheduling data with fetched data
+            const dayNames = [
+              'sunday',
+              'monday',
+              'tuesday',
+              'wednesday',
+              'thursday',
+              'friday',
+              'saturday',
+            ];
+            
+            let daysOfWeekIndices = [];
+            const programDaysOfWeek = program.calendar_data?.days_of_week || [];
+            if (programDaysOfWeek && Array.isArray(programDaysOfWeek)) {
+              daysOfWeekIndices = programDaysOfWeek.map((day) => {
+                if (typeof day === 'string') {
+                  return dayNames.indexOf(day.toLowerCase());
+                }
+                return day;
+              }).filter((index) => index !== -1 && index >= 0 && index <= 6);
+            }
+            
+            setSchedulingData({
+              programName: program.name || '',
+              startDate: program.calendar_data?.start_date || (() => {
+                const tomorrow = new Date();
+                tomorrow.setDate(tomorrow.getDate() + 1);
+                return tomorrow.toISOString().split('T')[0];
+              })(),
+              numberOfWeeks: parseInt(program.duration_weeks) || 4,
+              daysOfWeek: daysOfWeekIndices,
+            });
+            
+            if (program.entity_id) {
+              setSelectedEntityId(program.entity_id);
+              
+              // Fetch entity data for display
+              const { data: entity, error: entityError } = await supabase
+                .from('entities')
+                .select('*')
+                .eq('id', program.entity_id)
+                .single();
+                
+              if (!entityError && entity) {
+                setEntityData(entity);
+                setEntityName(entity.name);
+                setEntityType(entity.type);
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Error loading program:', error);
+        } finally {
+          setIsLoading(false);
         }
       }
     }
+    
+    loadProgram();
+  }, [programId, supabase]);
 
-    return {
-      programName: wizardData.programName || '',
-      startDate:
-        wizardData.startDate ||
-        (() => {
-          const tomorrow = new Date();
-          tomorrow.setDate(tomorrow.getDate() + 1);
-          return tomorrow.toISOString().split('T')[0];
-        })(),
-      numberOfWeeks: wizardData.numberOfWeeks || 4,
-      daysOfWeek: daysOfWeekIndices,
-    };
-  });
 
   // Fetch all entities for selection
   useEffect(() => {
@@ -155,21 +209,69 @@ export default function Step5Page() {
     }));
   };
 
-  const handlePrevious = () => {
-    goToPrevious(5);
+  const handlePrevious = async () => {
+    // Save current state before going back
+    if (programId) {
+      try {
+        await saveCurrentState();
+      } catch (error) {
+        console.error('Error saving before navigation:', error);
+      }
+    }
+
+    router.push(`/program-wizard/step-4?programId=${programId}`);
   };
 
-  const handleEntitySelect = (entityId) => {
+  const saveCurrentState = async () => {
+    if (!programId) return;
+
+    const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const daysOfWeekNames = schedulingData.daysOfWeek.map(index => dayNames[index]);
+    const endDate = calculateEndDate();
+
+    const { error } = await supabase
+      .from('programs')
+      .update({
+        name: schedulingData.programName,
+        entity_id: selectedEntityId,
+        duration_weeks: schedulingData.numberOfWeeks,
+        calendar_data: {
+          start_date: schedulingData.startDate,
+          end_date: endDate,
+          days_of_week: daysOfWeekNames,
+        },
+      })
+      .eq('id', programId);
+
+    if (error) {
+      throw error;
+    }
+  };
+
+  const handleEntitySelect = async (entityId) => {
     setSelectedEntityId(entityId);
     setShowEntitySelection(false);
-    // Update wizard data with new entity selection
+    
     const selectedEntity = entities.find((e) => e.id === entityId);
     if (selectedEntity) {
-      updateWizardData({
-        entityId: entityId,
-        entityName: selectedEntity.name,
-        entityType: selectedEntity.type,
-      });
+      setEntityName(selectedEntity.name);
+      setEntityType(selectedEntity.type);
+
+      // Update program in Supabase
+      if (programId) {
+        try {
+          const { error } = await supabase
+            .from('programs')
+            .update({ entity_id: entityId })
+            .eq('id', programId);
+
+          if (error) {
+            console.error('Error updating entity:', error);
+          }
+        } catch (error) {
+          console.error('Error updating entity:', error);
+        }
+      }
     }
   };
 
@@ -182,13 +284,45 @@ export default function Step5Page() {
     window.open('/dashboard/manage/entities', '_blank');
   };
 
-  const handleSchedulingChange = (field, value) => {
+  const handleSchedulingChange = async (field, value) => {
     setSchedulingData((prev) => ({ ...prev, [field]: value }));
-    // Also update wizard data
-    updateWizardData({ [field]: value });
+    
+    // Update program in Supabase
+    if (programId) {
+      try {
+        if (field === 'programName') {
+          await supabase
+            .from('programs')
+            .update({ name: value })
+            .eq('id', programId);
+        } else if (field === 'numberOfWeeks') {
+          await supabase
+            .from('programs')
+            .update({ duration_weeks: value })
+            .eq('id', programId);
+        } else if (field === 'startDate') {
+          const endDate = new Date(value);
+          endDate.setDate(endDate.getDate() + schedulingData.numberOfWeeks * 7 - 1);
+          
+          await supabase
+            .from('programs')
+            .update({ 
+              calendar_data: {
+                ...schedulingData,
+                start_date: value,
+                end_date: endDate.toISOString().split('T')[0],
+              }
+            })
+            .eq('id', programId);
+        }
+      } catch (error) {
+        console.error('Error updating scheduling data:', error);
+      }
+    }
   };
 
-  const handleToggleDay = (dayIndex) => {
+
+  const handleToggleDay = async (dayIndex) => {
     const dayNames = [
       'sunday',
       'monday',
@@ -204,7 +338,7 @@ export default function Step5Page() {
       ? schedulingData.daysOfWeek.filter((d) => d !== dayIndex)
       : [...schedulingData.daysOfWeek, dayIndex];
 
-    // Convert indices to day names for wizard data
+    // Convert indices to day names for database
     const newDaysOfWeekNames = newDaysOfWeekIndices.map(
       (index) => dayNames[index]
     );
@@ -213,7 +347,26 @@ export default function Step5Page() {
       ...prev,
       daysOfWeek: newDaysOfWeekIndices,
     }));
-    updateWizardData({ daysOfWeek: newDaysOfWeekNames });
+
+    // Update program in Supabase
+    if (programId) {
+      try {
+        const endDate = calculateEndDate();
+        
+        await supabase
+          .from('programs')
+          .update({ 
+            calendar_data: {
+              start_date: schedulingData.startDate,
+              end_date: endDate,
+              days_of_week: newDaysOfWeekNames,
+            }
+          })
+          .eq('id', programId);
+      } catch (error) {
+        console.error('Error updating days of week:', error);
+      }
+    }
   };
 
   // Calculate end date based on start date and duration
@@ -245,24 +398,54 @@ export default function Step5Page() {
       return;
     }
 
+    if (!programId) {
+      alert('No program ID found. Please start from the beginning.');
+      router.push('/dashboard');
+      return;
+    }
+
     setIsSubmitting(true);
     try {
-      // Update wizard data with final entity selection and scheduling before completing
       const selectedEntity = entities.find((e) => e.id === selectedEntityId);
-      const finalWizardData = {
-        ...schedulingData,
-        entityId: selectedEntityId,
-        entityName: selectedEntity?.name,
-        entityType: selectedEntity?.type,
-      };
+      
+      const dayNames = [
+        'sunday',
+        'monday',
+        'tuesday',
+        'wednesday',
+        'thursday',
+        'friday',
+        'saturday',
+      ];
+      
+      const finalDaysOfWeek = schedulingData.daysOfWeek.map(index => dayNames[index]);
+      const endDate = calculateEndDate();
+      
+      // Update program with final data
+      const { error } = await supabase
+        .from('programs')
+        .update({
+          name: schedulingData.programName,
+          entity_id: selectedEntityId,
+          duration_weeks: schedulingData.numberOfWeeks,
+          calendar_data: {
+            start_date: schedulingData.startDate,
+            end_date: endDate,
+            days_of_week: finalDaysOfWeek,
+          },
+        })
+        .eq('id', programId);
 
-      updateWizardData(finalWizardData);
+      if (error) {
+        throw error;
+      }
 
-      // This will create the program and redirect to the writer
-      await completeWizard();
+      // Navigate to the program writer with wizard completion flag
+      router.push(`/program/${programId}/writer?wizardComplete=true`);
     } catch (error) {
       console.error('Error completing wizard:', error);
-      alert('Failed to create program. Please try again.');
+      alert('Failed to complete program setup. Please try again.');
+    } finally {
       setIsSubmitting(false);
     }
   };
@@ -272,11 +455,24 @@ export default function Step5Page() {
   const entityTypeText = currentEntity?.type === 'CLASS' ? 'class' : 'client';
   const entityTypeTextCap =
     currentEntity?.type === 'CLASS' ? 'Class' : 'Client';
-  const entityName =
-    currentEntity?.name || wizardData.entityName || 'Selected entity';
+  const displayEntityName =
+    currentEntity?.name || entityName || 'Selected entity';
 
   return (
-    <div>
+    <div className="relative">
+      {/* Exit button when there's a programId */}
+      {programId && (
+        <button
+          onClick={() =>
+            (window.location.href = `/program/${programId}/writer`)
+          }
+          className="absolute top-4 right-4 btn btn-ghost btn-circle z-10"
+          title="Exit wizard and go to program writer"
+        >
+          <X className="w-6 h-6" />
+        </button>
+      )}
+
       <WizardProgress currentStep={5} />
 
       <div className="bg-base-200 rounded-lg p-6">
@@ -286,7 +482,7 @@ export default function Step5Page() {
           </h2>
           <p className="text-base-content/70">
             {selectedEntityId
-              ? `Review and update ${entityName}'s metrics before creating the program`
+              ? `Review and update ${displayEntityName}'s metrics before creating the program`
               : 'Select a client or class to create the program for'}
           </p>
         </div>
@@ -509,7 +705,7 @@ export default function Step5Page() {
             </div>
             <div>
               <span className="font-medium">Training Methodology:</span>{' '}
-              {wizardData.trainingMethodology}
+              Not available
             </div>
             <div>
               <span className="font-medium">Duration:</span>{' '}
@@ -525,11 +721,7 @@ export default function Step5Page() {
             </div>
             <div>
               <span className="font-medium">Gym Type:</span>{' '}
-              {wizardData.gymType
-                ? wizardData.gymType
-                    .replace(/_/g, ' ')
-                    .replace(/\b\w/g, (l) => l.toUpperCase())
-                : 'Not set'}
+              Not available
             </div>
           </div>
         </div>
@@ -557,7 +749,7 @@ export default function Step5Page() {
                   About {entityTypeText} metrics
                 </div>
                 <div className="text-sm">
-                  {wizardData.entityType === 'CLASS'
+                  {entityType === 'CLASS'
                     ? 'Class metrics represent general information about the group. Individual variations may apply during training.'
                     : 'These metrics help create a more personalized program. You can update them now or after program creation.'}
                 </div>
@@ -1046,7 +1238,10 @@ export default function Step5Page() {
             className={`btn btn-primary px-6 ${isSubmitting ? 'loading' : ''}`}
             disabled={isSubmitting}
           >
-            {isSubmitting ? 'Creating Program...' : 'Create Program'}
+            {isSubmitting 
+              ? (programId ? 'Updating Program...' : 'Creating Program...') 
+              : (programId ? 'Update Program' : 'Create Program')
+            }
             {!isSubmitting && (
               <svg
                 className="w-4 h-4 ml-2"

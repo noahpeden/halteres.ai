@@ -33,13 +33,8 @@ async function fetchUserSubscription(supabase) {
 
     if (!user) {
       // No error but no user - not logged in
-      console.log('Pricing page: No authenticated user found - not logged in');
       return { user: null, profile: null };
     }
-
-    console.log(
-      `Pricing page: Found authenticated user ${user.id}, fetching profile...`
-    );
 
     // Now fetch the profile
     const { data: profile, error: profileError } = await supabase
@@ -62,9 +57,6 @@ async function fetchUserSubscription(supabase) {
       };
     }
 
-    console.log(
-      `Pricing page: Successfully fetched profile for user ${user.id}`
-    );
     return { user, profile };
   } catch (error) {
     console.error('Unexpected error in fetchUserSubscription:', error);
@@ -212,6 +204,34 @@ export default async function PricingPage({ searchParams }) {
                 />
               </svg>
               <span>{displayError}</span>
+            </div>
+          </div>
+        )}
+
+        {user && profile?.subscription_status === 'active' && (
+          <div className="alert alert-info shadow-lg mb-8 max-w-2xl mx-auto">
+            <div>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                className="stroke-current flex-shrink-0 w-6 h-6"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              <div>
+                <h3 className="font-bold">
+                  You're currently on the {profile.subscription_plan} plan
+                </h3>
+                <div className="text-xs">
+                  Select a different plan below to switch, or manage your subscription.
+                </div>
+              </div>
             </div>
           </div>
         )}

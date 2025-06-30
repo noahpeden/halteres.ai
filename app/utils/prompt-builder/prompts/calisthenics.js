@@ -117,10 +117,12 @@ IMPORTANT: Each workout you generate MUST be assigned to one of the above dates.
 ` : formatSchedulingRequirements(suggestedDates, daysPerWeek, selectedDayNames)}
 
 For the program description, include:
-1. A concise overview reflecting the CRITICAL REQUIREMENTS, Goal (Calisthenics), ACTUAL duration (${numberOfWeeks} weeks), difficulty, and focus on bodyweight skills and strength progressions.
-2. The periodization approach used (${programType}) and how it facilitates progressive overload with bodyweight exercises.
-3. Expected outcomes in terms of improved bodyweight strength, skill mastery (if applicable), and body control, based *only* on the generated workouts and client requirements.
-4. Recommendations for mastering progressions, managing recovery, and incorporating flexibility/mobility work.
+1. A detailed, engaging overview that clearly states the program's primary goals and target audience (e.g., "This ${numberOfWeeks}-week, ${daysPerWeek}-day-per-week program is designed for ${difficulty} trainees seeking to master bodyweight movement skills and develop functional strength through progressive calisthenics training...")
+2. The specific periodization approach used and why it's scientifically appropriate for bodyweight skill development (e.g., skill acquisition through motor learning principles, progressive overload via exercise progressions, movement complexity advancement for neural adaptations)
+3. How the training principles will drive measurable progress (e.g., "progressive overload through exercise progressions", "skill acquisition through deliberate practice", "strength development in fundamental movement patterns", "body control enhancement")
+4. Expected adaptations and outcomes from following the program consistently (e.g., increased bodyweight strength, improved movement control and coordination, mastery of target skills, enhanced relative strength, better body awareness)
+5. Integration of calisthenics methodology and approach (e.g., "bodyweight training principles focusing on progressive skill development and functional strength through natural human movement patterns")
+6. Brief recommendations for nutrition, recovery, and supplementary training if relevant (e.g., nutrition for bodyweight training demands, recovery strategies for skill practice, mobility work for movement quality, progression tracking methods)
 
 General Calisthenics Guidelines (Apply *only if* they DO NOT CONFLICT with CRITICAL REQUIREMENTS or REQUIRED WORKOUT STRUCTURE):
 - Prioritize mastering fundamental bodyweight movements (push-ups, pull-ups, squats, lunges, planks).

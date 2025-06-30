@@ -140,12 +140,12 @@ IMPORTANT: Each workout you generate MUST be assigned to one of the above dates.
 ` : formatSchedulingRequirements(suggestedDates, daysPerWeek, selectedDayNames)}
 
 For the program description, include:
-1. A concise overview reflecting the CRITICAL REQUIREMENTS, Goal (balanced fitness), ACTUAL duration (${numberOfWeeks} weeks), and the structure incorporating strength, cardio, and mobility using available equipment and formats (${
-    formattedWorkoutFormats || 'Balanced Mix'
-  }).
-2. The periodization approach used (${programType}) and how it promotes well-rounded fitness development.
-3. Expected outcomes in terms of improved strength, cardiovascular health, flexibility, and overall well-being, based *only* on the generated workouts and client requirements.
-4. Recommendations for maintaining balance, listening to the body, and adjusting intensity.
+1. A detailed, engaging overview that clearly states the program's primary goals and target audience (e.g., "This ${numberOfWeeks}-week, ${daysPerWeek}-day-per-week program is designed for ${difficulty} trainees seeking comprehensive fitness development through balanced strength, cardiovascular, and mobility training...")
+2. The specific periodization approach used and why it's scientifically appropriate for balanced fitness development (e.g., concurrent training model for multiple fitness components, undulating periodization for varied stimuli, progressive overload across all domains)
+3. How the training principles will drive measurable progress (e.g., "progressive overload in strength work", "cardiovascular capacity improvement", "mobility enhancement through structured flexibility work", "balanced development across all fitness components")
+4. Expected adaptations and outcomes from following the program consistently (e.g., increased muscular strength and endurance, improved cardiovascular fitness, enhanced flexibility and mobility, better overall health markers, balanced physical development)
+5. Integration of balanced fitness methodology and approach (e.g., "holistic fitness principles combining strength training, cardiovascular exercise, and mobility work for comprehensive health and wellness")
+6. Brief recommendations for nutrition, recovery, and supplementary training if relevant (e.g., balanced nutrition for varied training demands, recovery strategies for multiple training modalities, lifestyle integration for sustainable fitness)
 
 General Balanced Fitness Guidelines (Apply *only if* they DO NOT CONFLICT with CRITICAL REQUIREMENTS or REQUIRED WORKOUT FORMATS):
 - Integrate strength training sessions (2-3 times per week) using compound and isolation exercises with available equipment.

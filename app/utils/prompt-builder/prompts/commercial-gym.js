@@ -112,10 +112,12 @@ IMPORTANT: Each workout you generate MUST be assigned to one of the above dates.
 ` : formatSchedulingRequirements(suggestedDates, daysPerWeek, selectedDayNames)}
 
 For the program description, include:
-1. A concise overview reflecting the CRITICAL REQUIREMENTS, Goal, ACTUAL duration (${numberOfWeeks} weeks), difficulty, and the general structure using standard gym equipment and formats (${formattedWorkoutFormats}).
-2. The periodization approach used (${programType}) and how it ensures consistent progress.
-3. Expected outcomes in terms of strength gains, fitness improvements, and potential body composition changes, based *only* on the generated workouts and client requirements.
-4. Recommendations for using gym equipment effectively, proper form, and basic nutrition/recovery.
+1. A detailed, engaging overview that clearly states the program's primary goals and target audience (e.g., "This ${numberOfWeeks}-week, ${daysPerWeek}-day-per-week program is designed for ${difficulty} trainees seeking comprehensive fitness development through systematic gym-based training utilizing commercial gym equipment...")
+2. The specific periodization approach used and why it's scientifically appropriate for general fitness development (e.g., linear progression for consistent adaptation, undulating periodization for varied stimuli, block periodization for targeted fitness qualities, systematic overload progression)
+3. How the training principles will drive measurable progress (e.g., "progressive overload through systematic load increases", "exercise variety for comprehensive development", "balanced training across all movement patterns", "structured progression for continuous adaptation")
+4. Expected adaptations and outcomes from following the program consistently (e.g., increased muscular strength and size, improved cardiovascular fitness, enhanced movement quality, better body composition, improved overall health markers)
+5. Integration of general gym training methodology and approach (e.g., "evidence-based gym training principles combining strength, hypertrophy, and conditioning work for comprehensive fitness development")
+6. Brief recommendations for nutrition, recovery, and supplementary training if relevant (e.g., balanced nutrition for training demands, recovery strategies for consistent training, proper gym etiquette and safety, progression tracking methods)
 
 General Gym Guidelines (Apply *only if* they DO NOT CONFLICT with CRITICAL REQUIREMENTS or REQUIRED WORKOUT FORMATS):
 - Utilize a mix of compound exercises (barbell/dumbbell presses, squats, rows) and isolation movements (machines, cables, dumbbells).

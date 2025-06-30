@@ -152,53 +152,50 @@ export function useDashboardModals() {
       // Get the selected entity to include its name and type
       const selectedEntity = entities.find(e => e.id === selectedEntityId);
       
+      // Always create program immediately in Supabase
+      const endDate = calculateEndDate();
+      
+      const response = await fetch('/api/CreateProgram', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: programName,
+          entity_id: selectedEntityId,
+          duration_weeks: programDuration,
+          start_date: startDate,
+          end_date: endDate,
+          days_of_week: daysOfWeekStrings,
+          // Initialize with empty values for wizard to fill later
+          description: '',
+          training_methodology: '',
+          difficulty: 'intermediate',
+          focus_area: '',
+          gym_type: 'crossfit_box',
+          equipment: [],
+          workout_formats: [],
+          reference_input: '',
+          personalization: '',
+          program_type: 'linear',
+          session_details: {},
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to create program');
+      }
+
+      const result = await response.json();
+      const program = result.data[0];
+      
+      // Close the modal
+      closeCreateProgramModal();
+      
+      // Navigate based on method
       if (method === 'wizard') {
-        // Store program creation data in sessionStorage for the wizard
-        const wizardData = {
-          programName,
-          entityId: selectedEntityId,
-          entityName: selectedEntity?.name || '',
-          entityType: selectedEntity?.type || 'CLIENT',
-          startDate,
-          numberOfWeeks: programDuration,
-          daysOfWeek: daysOfWeekStrings,
-        };
-        
-        sessionStorage.setItem('programWizardData', JSON.stringify(wizardData));
-        
-        // Close the modal
-        closeCreateProgramModal();
-        
-        // Navigate to step 1 of the programming wizard
-        router.push('/program-wizard/step-1');
+        // Navigate to step 1 of the programming wizard with program ID
+        router.push(`/program-wizard/step-1?programId=${program.id}`);
       } else {
-        // Direct method - create program and go straight to writer
-        const endDate = calculateEndDate();
-        
-        const response = await fetch('/api/CreateProgram', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name: programName,
-            entity_id: selectedEntityId,
-            duration_weeks: programDuration,
-            start_date: startDate,
-            end_date: endDate,
-            days_of_week: daysOfWeekStrings,
-          }),
-        });
-
-        if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.message || 'Failed to create program');
-        }
-
-        const result = await response.json();
-        const program = result.data[0];
-        
-        // Close the modal
-        closeCreateProgramModal();
-        
         // Navigate directly to the program writer
         router.push(`/program/${program.id}/writer`);
       }

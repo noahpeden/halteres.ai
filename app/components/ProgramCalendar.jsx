@@ -11,7 +11,7 @@ import enUS from 'date-fns/locale/en-US';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import { parseISO, isValid } from 'date-fns';
 
-// Import the simpler version of WorkoutModal that doesn't rely on ProgramWriterContext
+// Import the simpler version of WorkoutModal
 import CalendarWorkoutModal from './CalendarWorkoutModal';
 import EditWorkoutModal from './AIProgramWriter/EditWorkoutModal';
 import Toast from './Toast';
@@ -119,10 +119,6 @@ export default function ProgramCalendar({
           (w) => w.scheduled_date
         );
         setWorkouts(validWorkouts);
-        console.log(
-          'Fetched valid workoutsData (using scheduled_date):',
-          validWorkouts
-        );
 
         // Removed fetch for workout_schedule
       } catch (error) {
@@ -145,7 +141,6 @@ export default function ProgramCalendar({
           filter: `program_id=eq.${programId}`,
         },
         (payload) => {
-          console.log('Realtime program_workouts change detected', payload);
           fetchData(); // Refetch data on any change
         }
       )
@@ -160,8 +155,6 @@ export default function ProgramCalendar({
 
   // Transform fetched workouts into events for the calendar
   useEffect(() => {
-    console.log('Mapping Effect Triggered. Workouts:', workouts);
-
     if (!workouts || !workouts.length) {
       setMyEvents([]);
       return;
@@ -172,7 +165,6 @@ export default function ProgramCalendar({
       .map(mapWorkoutToEvent)
       .filter((event) => event !== null); // Filter out nulls (workouts without dates)
 
-    console.log('Mapped eventsData:', eventsData);
     setMyEvents(eventsData);
     // Depend only on workouts state now
   }, [workouts]);
@@ -228,7 +220,6 @@ export default function ProgramCalendar({
       // Prevent moving if the date hasn't changed
       // Compare formatted dates (yyyy-MM-dd)
       if (originalFormattedDate === newFormattedDate) {
-        console.log("Date hasn't changed, not updating.");
         return;
       }
 
@@ -273,7 +264,6 @@ export default function ProgramCalendar({
   // Placeholder for resizing logic - likely needs adapting if used
   const resizeEvent = useCallback(
     ({ event, start, end }) => {
-      console.log('Resize Event (Not Implemented):');
       setMyEvents((prev) => [...prev]); // Revert UI change
       // TODO: Decide if/how resizing affects program_workouts data
     },
@@ -282,7 +272,6 @@ export default function ProgramCalendar({
 
   // --- Event Click Handler ---
   const handleSelectEvent = useCallback((event) => {
-    console.log('Selected Workout Event Resource:', event.resource); // Log the original workout
     if (event.resource) {
       setSelectedWorkoutForModal(event.resource); // Pass the full workout data
       setIsModalOpen(true);
@@ -407,8 +396,6 @@ export default function ProgramCalendar({
     (newView) => setCurrentView(newView),
     [setCurrentView]
   );
-
-  // console.log('Rendering Calendar with myEvents:', myEvents);
 
   return (
     <div className="bg-white rounded-lg shadow-md p-4 relative">

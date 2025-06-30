@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useStripeContext } from '../contexts/StripeContext'; // Adjust path if needed
 import { useRouter } from 'next/navigation'; // Use App Router's router
-import { CheckCircle, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import { CheckCircle, AlertCircle, ChevronDown, ChevronUp, Settings } from 'lucide-react';
 
 function calculateRemainingTrialDays(trialEndDateStr) {
   if (!trialEndDateStr) return 0;
@@ -71,6 +71,32 @@ export default function PricingClient({ user, profile, plans }) {
       setError(err.message || 'An unexpected error occurred.');
     } finally {
       setLoadingPriceId(null);
+    }
+  };
+
+  const handleManageSubscription = async () => {
+    setError(null);
+    
+    try {
+      const res = await fetch('/api/billing-portal', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const { url, error: apiError } = await res.json();
+
+      if (!res.ok || apiError) {
+        throw new Error(apiError || 'Failed to create billing portal session.');
+      }
+
+      if (url) {
+        window.location.href = url;
+      }
+    } catch (err) {
+      console.error('Billing portal error:', err);
+      setError(err.message || 'Failed to open billing portal.');
     }
   };
 
@@ -156,9 +182,17 @@ export default function PricingClient({ user, profile, plans }) {
                   </ul>
                   <div className="card-actions justify-center">
                     {isCurrentPlan ? (
-                      <button className="btn btn-outline btn-disabled w-full">
-                        Current Plan
-                      </button>
+                      <div className="w-full space-y-2">
+                        <button className="btn btn-outline btn-disabled w-full">
+                          Current Plan
+                        </button>
+                        <button
+                          onClick={handleManageSubscription}
+                          className="btn btn-ghost btn-sm w-full"
+                        >
+                          Change or Cancel Plan
+                        </button>
+                      </div>
                     ) : (
                       <button
                         onClick={() => handleSubscribe(plan.priceId)}
@@ -173,9 +207,13 @@ export default function PricingClient({ user, profile, plans }) {
                       >
                         {isLoading
                           ? 'Processing...'
-                          : isTrialing
-                          ? 'Upgrade Now'
-                          : 'Choose Plan'}
+                          : user
+                          ? isActive
+                            ? 'Switch to This Plan'
+                            : isTrialing
+                            ? 'Upgrade Now'
+                            : 'Choose Plan'
+                          : 'Get Started'}
                       </button>
                     )}
                   </div>
@@ -186,168 +224,43 @@ export default function PricingClient({ user, profile, plans }) {
         </div>
       </div>
 
-      {/* Personal Plans Accordion */}
-      <div className="mt-12 border-t-2 pt-8">
-        <button
-          onClick={() => setPersonalPlansOpen(!personalPlansOpen)}
-          className="w-full flex justify-between items-center text-xl font-bold mb-4 bg-base-200 p-4 rounded-lg"
-        >
-          <span>Personal Plans</span>
-          {personalPlansOpen ? (
-            <ChevronUp className="w-6 h-6" />
-          ) : (
-            <ChevronDown className="w-6 h-6" />
-          )}
-        </button>
-
-        {personalPlansOpen && (
-          <div className="space-y-8">
-            {/* One-Time Purchase */}
-            <div className="mb-10 text-center">
-              <h2 className="text-xl font-bold mb-6">One-Time Purchase</h2>
-              <div className="max-w-md mx-auto">
-                <div className="card shadow-xl border-2 border-base-200 bg-base-100">
-                  <div className="card-body">
-                    <h2 className="card-title text-2xl mb-4">Personal Pack</h2>
-                    <p className="text-4xl font-bold mb-1">
-                      $50
-                      <span className="text-lg font-normal text-gray-500">
-                        one-time
-                      </span>
-                    </p>
-                    <ul className="space-y-2 mb-6 mt-4 text-left">
-                      <li className="flex items-center">
-                        <CheckCircle className="h-5 w-5 mr-2 text-green-500 flex-shrink-0" />
-                        <span>10 AI-generated workouts</span>
-                      </li>
-                      <li className="flex items-center">
-                        <CheckCircle className="h-5 w-5 mr-2 text-green-500 flex-shrink-0" />
-                        <span>No subscription required</span>
-                      </li>
-                      <li className="flex items-center">
-                        <CheckCircle className="h-5 w-5 mr-2 text-green-500 flex-shrink-0" />
-                        <span>Use anytime</span>
-                      </li>
-                    </ul>
-                    <div className="card-actions justify-center">
-                      <button
-                        onClick={() =>
-                          handleSubscribe(
-                            process.env
-                              .NEXT_PUBLIC_STRIPE_PRICE_ID_PERSONAL_ONE_TIME,
-                            true
-                          )
-                        }
-                        className={`btn btn-outline w-full ${
-                          loadingPriceId ===
-                          process.env
-                            .NEXT_PUBLIC_STRIPE_PRICE_ID_PERSONAL_ONE_TIME
-                            ? 'loading'
-                            : ''
-                        }`}
-                        disabled={
-                          loadingPriceId ===
-                          process.env
-                            .NEXT_PUBLIC_STRIPE_PRICE_ID_PERSONAL_ONE_TIME
-                        }
-                      >
-                        {loadingPriceId ===
-                        process.env
-                          .NEXT_PUBLIC_STRIPE_PRICE_ID_PERSONAL_ONE_TIME
-                          ? 'Processing...'
-                          : 'Buy Now'}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Personal Monthly Plan */}
-            <div className="mb-10 text-center">
-              <h2 className="text-xl font-bold mb-6">Monthly Subscription</h2>
-              <div className="max-w-md mx-auto">
-                <div className="card shadow-xl border-2 border-base-200 bg-base-100">
-                  <div className="card-body">
-                    {currentPlanLookupKey === 'personal_plan_monthly' && (
-                      <div className="badge badge-primary badge-outline absolute top-4 right-4">
-                        Current Plan
-                      </div>
-                    )}
-                    <h2 className="card-title text-2xl mb-4">Personal</h2>
-                    <p className="text-4xl font-bold mb-1">
-                      $50
-                      <span className="text-lg font-normal text-gray-500">
-                        / month
-                      </span>
-                    </p>
-                    <ul className="space-y-2 mb-6 mt-4 text-left">
-                      <li className="flex items-center">
-                        <CheckCircle className="h-5 w-5 mr-2 text-green-500 flex-shrink-0" />
-                        <span>10 workouts per month</span>
-                      </li>
-                      <li className="flex items-center">
-                        <CheckCircle className="h-5 w-5 mr-2 text-green-500 flex-shrink-0" />
-                        <span>Full Feature Access</span>
-                      </li>
-                      <li className="flex items-center">
-                        <CheckCircle className="h-5 w-5 mr-2 text-green-500 flex-shrink-0" />
-                        <span>Cancel Anytime</span>
-                      </li>
-                    </ul>
-                    <div className="card-actions justify-center">
-                      {currentPlanLookupKey === 'personal_plan_monthly' ? (
-                        <button className="btn btn-outline btn-disabled w-full">
-                          Current Plan
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() =>
-                            handleSubscribe(
-                              process.env
-                                .NEXT_PUBLIC_STRIPE_PRICE_ID_PERSONAL_MONTHLY
-                            )
-                          }
-                          className={`btn btn-outline w-full ${
-                            loadingPriceId ===
-                            process.env
-                              .NEXT_PUBLIC_STRIPE_PRICE_ID_PERSONAL_MONTHLY
-                              ? 'loading'
-                              : ''
-                          }`}
-                          disabled={
-                            loadingPriceId ===
-                              process.env
-                                .NEXT_PUBLIC_STRIPE_PRICE_ID_PERSONAL_MONTHLY ||
-                            (isTrialing && remainingDays <= 0)
-                          }
-                        >
-                          {loadingPriceId ===
-                          process.env
-                            .NEXT_PUBLIC_STRIPE_PRICE_ID_PERSONAL_MONTHLY
-                            ? 'Processing...'
-                            : isTrialing
-                            ? 'Upgrade Now'
-                            : 'Choose Plan'}
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-
       {user && (
         <div className="mt-8 text-center">
           <div className="card bg-base-200 max-w-md mx-auto">
             <div className="card-body">
               <h2 className="card-title">Your Account</h2>
-              <p>Generations Remaining: {generationsLeft}</p>
-              {profile?.subscription_status && (
-                <p>Subscription Status: {profile.subscription_status}</p>
+              {isActive && (
+                <div className="space-y-2">
+                  <p className="text-lg font-semibold">
+                    Current Plan: {profile?.subscription_plan || 'Unknown'}
+                  </p>
+                  <p className="text-sm text-base-content/70">
+                    Status: <span className="badge badge-success">Active</span>
+                  </p>
+                </div>
+              )}
+              {isTrialing && (
+                <div className="space-y-2">
+                  <p className="text-lg font-semibold">Trial Account</p>
+                  <p className="text-sm text-base-content/70">
+                    {remainingDays} days remaining | {generationsLeft} generations left
+                  </p>
+                </div>
+              )}
+              {!isActive && !isTrialing && (
+                <p className="text-sm text-base-content/70">
+                  No active subscription
+                </p>
+              )}
+              
+              {isActive && (
+                <button
+                  onClick={handleManageSubscription}
+                  className="btn btn-outline btn-sm mt-4"
+                >
+                  <Settings className="w-4 h-4 mr-2" />
+                  Manage Subscription
+                </button>
               )}
             </div>
           </div>

@@ -116,10 +116,12 @@ IMPORTANT: Each workout you generate MUST be assigned to one of the above dates.
 ` : formatSchedulingRequirements(suggestedDates, daysPerWeek, selectedDayNames)}
 
 For the program description, include:
-1. A concise overview reflecting the CRITICAL REQUIREMENTS, Goal (Bodybuilding/Hypertrophy), ACTUAL duration (${numberOfWeeks} weeks), the specific training split used (${formattedWorkoutFormats}), and any focus areas.
-2. The periodization approach used (${programType}) and how it maximizes muscle growth (e.g., volume accumulation, intensification phases).
-3. Expected outcomes in terms of muscle gain and physique changes, based *only* on the generated workouts and client requirements.
-4. Recommendations for nutrition (protein intake, calorie surplus/deficit based on goal), rest, and posing practice (if relevant).
+1. A detailed, engaging overview that clearly states the program's primary goals and target audience (e.g., "This ${numberOfWeeks}-week, ${daysPerWeek}-day-per-week program is designed for ${difficulty} bodybuilders aiming to maximize muscle hypertrophy and physique development through systematic volume progression...")
+2. The specific periodization approach used and why it's scientifically appropriate for muscle growth (e.g., linear progression for hypertrophy, volume accumulation phases, intensity manipulation for maximal muscle protein synthesis)
+3. How the training principles will drive measurable progress (e.g., "progressive overload through systematic volume increases", "time under tension manipulation", "strategic exercise selection for balanced development")
+4. Expected adaptations and outcomes from following the program consistently (e.g., muscle fiber hypertrophy, strength gains in key movements, improved mind-muscle connection, physique improvements)
+5. Integration of bodybuilding methodology and approach (e.g., "bodybuilding principles to develop maximal muscle mass through controlled movements and strategic muscle group targeting")
+6. Brief recommendations for nutrition, recovery, and supplementary training if relevant (e.g., protein timing, sleep optimization, posing practice, cardio integration)
 
 General Bodybuilding Guidelines (Apply *only if* they DO NOT CONFLICT with CRITICAL REQUIREMENTS or REQUIRED WORKOUT STRUCTURE):
 - Structure the program around the specified training split (${formattedWorkoutFormats}).

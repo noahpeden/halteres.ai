@@ -1,18 +1,23 @@
 'use client';
-import { useState } from 'react';
-import { difficulties, gymTypes, focusAreas } from '../utils';
+import { useState, useCallback } from 'react';
+import {
+  difficulties,
+  gymTypes,
+  focusAreas,
+  gymEquipmentPresets,
+} from '../utils';
 import WorkoutFormatSelector from '@/components/selectors/WorkoutFormatSelector';
-import { useEquipment } from '@/contexts/EquipmentContext';
+import { useProgram } from '@/contexts/ProgramContext';
 import { ChevronDown } from 'lucide-react';
+import equipmentList from '@/utils/equipmentList';
 
 export default function ProgramDetails({
   formData,
   handleChange,
   handleWorkoutFormatChange,
   equipmentSelector,
-  triggerAutoSave,
 }) {
-  const { updateGymType } = useEquipment();
+  const { updateFormFields, updateEquipment } = useProgram();
   const [openDropdowns, setOpenDropdowns] = useState({
     gymType: false,
     difficulty: false,
@@ -43,27 +48,101 @@ export default function ProgramDetails({
     }));
   };
 
-  const handleGymTypeSelect = (value) => {
-    handleChange({ target: { name: 'gymType', value } });
-    closeDropdown('gymType');
-    
-    // Update EquipmentContext with the gym type
-    updateGymType(value);
-    
-    if (triggerAutoSave) triggerAutoSave();
-  };
+  const handleGymTypeSelect = useCallback(
+    async (value) => {
+      // Only update equipment if the gym type actually changed
+      if (value !== formData.gymType) {
+        handleChange({ target: { name: 'gymType', value } });
+        closeDropdown('gymType');
 
-  const handleDifficultySelect = (value) => {
-    handleChange({ target: { name: 'difficulty', value } });
-    closeDropdown('difficulty');
-    if (triggerAutoSave) triggerAutoSave();
-  };
+        const newEquipment = gymEquipmentPresets[value] || [];
+        
+        // Update local equipment state
+        if (updateEquipment) {
+          updateEquipment(newEquipment);
+        }
 
-  const handleFocusAreaSelect = (value) => {
-    handleChange({ target: { name: 'focusArea', value } });
-    closeDropdown('focusArea');
-    if (triggerAutoSave) triggerAutoSave();
-  };
+        // Map equipment IDs to labels for database
+        const equipmentLabels = newEquipment
+          .map((id) => {
+            const equipment = equipmentList.find((item) => item.value === id);
+            return equipment ? equipment.label : null;
+          })
+          .filter(Boolean);
+
+        // Update in database
+        await updateFormFields({
+          gym_details: {
+            ...formData.gym_details,
+            gym_type: value,
+            equipment: equipmentLabels,
+          },
+        });
+      } else {
+        closeDropdown('gymType');
+      }
+    },
+    [handleChange, updateFormFields, formData.gym_details, formData.gymType, updateEquipment]
+  );
+
+  const handleDifficultySelect = useCallback(
+    async (value) => {
+      handleChange({ target: { name: 'difficulty', value } });
+      closeDropdown('difficulty');
+
+      // Update in database
+      await updateFormFields({ difficulty: value });
+    },
+    [handleChange, updateFormFields]
+  );
+
+  const handleFocusAreaSelect = useCallback(
+    async (value) => {
+      handleChange({ target: { name: 'focusArea', value } });
+      closeDropdown('focusArea');
+
+      // Update in database
+      await updateFormFields({ focus_area: value });
+    },
+    [handleChange, updateFormFields]
+  );
+
+  const handleSessionDurationChange = useCallback(
+    async (e) => {
+      const value = e.target.value;
+      handleChange({
+        target: {
+          name: 'sessionDetails',
+          value: {
+            ...formData.sessionDetails,
+            duration_minutes: value === '' ? null : parseInt(value, 10),
+          },
+        },
+      });
+    },
+    [handleChange, formData.sessionDetails]
+  );
+
+  const handleSessionDurationBlur = useCallback(async () => {
+    // Update in database
+    await updateFormFields({
+      session_details: formData.sessionDetails,
+    });
+  }, [formData.sessionDetails, updateFormFields]);
+
+  const handleWorkoutFormatChangeWithDB = useCallback(
+    async (formats) => {
+      handleWorkoutFormatChange(formats);
+
+      // Update in database
+      await updateFormFields({
+        workout_format: {
+          formats: Array.isArray(formats) ? formats : [],
+        },
+      });
+    },
+    [handleWorkoutFormatChange, updateFormFields]
+  );
 
   return (
     <section className="bg-base-100 p-3 sm:p-4 md:p-5 rounded-lg border border-base-300 shadow-sm w-full">
@@ -220,19 +299,8 @@ export default function ProgramDetails({
               className="input input-bordered w-full border-base-300 focus:border-primary"
               placeholder="e.g., 60"
               value={formData.sessionDetails?.duration_minutes || ''}
-              onChange={(e) => {
-                const value = e.target.value;
-                handleChange({
-                  target: {
-                    name: 'sessionDetails',
-                    value: {
-                      ...formData.sessionDetails,
-                      duration_minutes: value === '' ? null : parseInt(value, 10),
-                    },
-                  },
-                });
-              }}
-              onBlur={() => triggerAutoSave && triggerAutoSave()}
+              onChange={handleSessionDurationChange}
+              onBlur={handleSessionDurationBlur}
             />
             <div className="label">
               <span className="text-xs">
@@ -269,10 +337,7 @@ export default function ProgramDetails({
           </span>
           <WorkoutFormatSelector
             selectedFormats={formData.workoutFormats}
-            onChange={(formats) => {
-              handleWorkoutFormatChange(formats);
-              if (triggerAutoSave) triggerAutoSave();
-            }}
+            onChange={handleWorkoutFormatChangeWithDB}
           />
           <span className="text-xs text-gray-500 mt-1">
             Choose the types of workouts you want to see in your program. These

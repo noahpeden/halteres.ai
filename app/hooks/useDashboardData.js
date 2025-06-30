@@ -63,8 +63,6 @@ export function useDashboardData() {
         if (workoutsError) {
           console.error('Error fetching workouts:', workoutsError);
         } else {
-          console.log(`Retrieved ${allWorkouts?.length || 0} total workouts`);
-
           // Filter for today's workouts
           const todaysWorkouts = (allWorkouts || []).filter((workout) => {
             // Check both scheduled_date and tags fields
@@ -146,10 +144,6 @@ export function useDashboardData() {
             // Check if workout is in the future (after today but before or on next week)
             return workoutDate > todayStr && workoutDate <= nextWeekStr;
           });
-
-          console.log(
-            `Found ${todaysWorkouts.length} workouts for today and ${upcomingWorkouts.length} upcoming workouts`
-          );
 
           setStats({
             totalPrograms: programsData?.length || 0,

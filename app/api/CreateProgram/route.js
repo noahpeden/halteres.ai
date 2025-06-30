@@ -88,7 +88,7 @@ export async function POST(req) {
         },
         // Save periodization type
         periodization: {
-          type: program_type || 'linear',
+          program_type: program_type || 'linear',
         },
         // Save gym and equipment details in JSON column
         gym_details: {
