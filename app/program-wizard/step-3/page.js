@@ -298,7 +298,29 @@ export default function Step3Page() {
       }
 
       const data = await response.json();
-      setSearchResults(data.workouts || []);
+      
+      // Handle the new Tavily response format
+      if (data.workouts && data.workouts.length > 0) {
+        const firstWorkout = data.workouts[0];
+        
+        // Check if the body contains a JSON array string
+        if (firstWorkout.body && typeof firstWorkout.body === 'string' && firstWorkout.body.trim().startsWith('[')) {
+          try {
+            // Parse the JSON array from the body
+            const parsedWorkouts = JSON.parse(firstWorkout.body);
+            setSearchResults(parsedWorkouts);
+          } catch (parseError) {
+            console.error('Error parsing workouts from body:', parseError);
+            // Fallback to original format
+            setSearchResults(data.workouts || []);
+          }
+        } else {
+          // Use the workouts as-is if not in the new format
+          setSearchResults(data.workouts || []);
+        }
+      } else {
+        setSearchResults([]);
+      }
     } catch (error) {
       console.error('Error searching workouts:', error);
       setErrorMessage('Failed to search for workouts. Please try again.');
