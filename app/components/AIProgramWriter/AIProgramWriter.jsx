@@ -77,6 +77,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
     toggleWorkoutCompletion,
     updateWorkoutDate,
     clearNonReferenceWorkouts,
+    refetchWorkouts,
   } = useProgram();
 
   // Local state for UI-specific features
@@ -90,6 +91,22 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
   const [customSectionName, setCustomSectionName] = useState('');
   const [customSectionDuration, setCustomSectionDuration] = useState('');
   const [customSectionDescription, setCustomSectionDescription] = useState('');
+  
+  // Local state for streaming workouts (UI-only, not saved to DB yet)
+  const [streamingWorkouts, setStreamingWorkouts] = useState([]);
+  
+  // Combined workouts for display (database workouts + streaming workouts)
+  const displayWorkouts = useMemo(() => {
+    // During generation, show streaming workouts; after completion, show database workouts
+    if (isGenerating && streamingWorkouts.length > 0) {
+      return streamingWorkouts;
+    }
+    // Also check generation stage for more precise control
+    if (generationStage && ['generating', 'streaming', 'processing'].includes(generationStage) && streamingWorkouts.length > 0) {
+      return streamingWorkouts;
+    }
+    return workouts;
+  }, [workouts, streamingWorkouts, isGenerating, generationStage]);
 
   const generationAreaRef = useRef(null);
   const hasScrolledToGeneration = useRef(false);
@@ -267,6 +284,15 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
     openModal,
   ]);
 
+  // Functions to manage streaming workouts
+  const addStreamingWorkout = useCallback((workout) => {
+    setStreamingWorkouts(prev => [...prev, workout]);
+  }, []);
+
+  const clearStreamingWorkouts = useCallback(() => {
+    setStreamingWorkouts([]);
+  }, []);
+
   const handleConfirmGenerate = useCallback(async () => {
     closeModal('confirmationModal');
     if (!programId) {
@@ -283,6 +309,9 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
       clearNonReferenceWorkouts();
     }
 
+    // Clear any previous streaming workouts
+    clearStreamingWorkouts();
+
     startGeneration();
 
     try {
@@ -291,6 +320,8 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
         formData: { ...formData, equipment: selectedEquipment },
         setIsLoading: () => {},
         setSuggestions: saveGeneratedWorkouts,
+        addStreamingWorkout: addStreamingWorkout, // For streaming individual workouts without saving to DB
+        clearStreamingWorkouts: clearStreamingWorkouts,
         showToastMessage: showToast,
         setGenerationStage: updateGenerationStage,
         setFormData: updateFromFormData,
@@ -305,6 +336,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
         triggerProgramRefreshAction: () => {},
         setPreventFetch: () => {},
         refetchProfile,
+        refetchWorkouts: refetchWorkouts,
         suggestions: workouts,
         updateWizardData: () => {},
         abortControllerRef,
@@ -833,10 +865,10 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
         showToastMessage={showToast}
       />
 
-      {workouts.length > 0 && (
+      {displayWorkouts.length > 0 && (
         <div ref={generationAreaRef} className="scroll-mt-20 mt-4 sm:mt-6">
           <WorkoutList
-            workouts={workouts}
+            workouts={displayWorkouts}
             daysPerWeek={formData?.daysPerWeek}
             formatDate={formatDate}
             onViewDetails={(workout) => {

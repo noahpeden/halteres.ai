@@ -8,6 +8,48 @@ import {
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
+
+// Simple markdown parser for workout content
+const parseMarkdownToHTML = (markdown) => {
+  if (!markdown) return '';
+  
+  let html = markdown
+    // Headers (## Header -> <h3>, ### Header -> <h4>)
+    .replace(/^### (.*$)/gim, '<h4 class="text-base font-semibold mt-4 mb-2 text-gray-800">$1</h4>')
+    .replace(/^## (.*$)/gim, '<h3 class="text-lg font-semibold mt-5 mb-3 text-gray-900 border-b border-gray-200 pb-1">$1</h3>')
+    // Bold text (**text** or __text__)
+    .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-gray-900">$1</strong>')
+    .replace(/__(.*?)__/g, '<strong class="font-semibold text-gray-900">$1</strong>')
+    // Italic text (*text* or _text_)
+    .replace(/\*(.*?)\*/g, '<em class="italic">$1</em>')
+    .replace(/_(.*?)_/g, '<em class="italic">$1</em>')
+    // Bullet points (- item or * item)
+    .replace(/^[\s]*[-\*\+]\s+(.*$)/gim, '<li class="ml-4 mb-1">$1</li>')
+    // Numbered lists (1. item, 2. item, etc.)
+    .replace(/^[\s]*\d+\.\s+(.*$)/gim, '<li class="ml-4 mb-1 list-decimal">$1</li>')
+    // Gender symbols with better styling
+    .replace(/♀/g, '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-pink-100 text-pink-800">♀</span>')
+    .replace(/♂/g, '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">♂</span>')
+    // Convert line breaks to <br> but preserve structure
+    .replace(/\n/g, '<br>');
+
+  // Wrap consecutive <li> elements in <ul> tags
+  html = html.replace(/(<li[^>]*>.*?<\/li>)(\s*<br>\s*<li[^>]*>.*?<\/li>)*/g, (match) => {
+    const listItems = match.replace(/<br>\s*/g, '');
+    return `<ul class="list-disc ml-4 space-y-1 my-2">${listItems}</ul>`;
+  });
+
+  // Clean up excessive <br> tags around headers and lists
+  html = html
+    .replace(/<br>\s*(<h[234][^>]*>)/g, '$1')
+    .replace(/(<\/h[234]>)\s*<br>/g, '$1')
+    .replace(/<br>\s*(<ul[^>]*>)/g, '$1')
+    .replace(/(<\/ul>)\s*<br>/g, '$1')
+    // Clean up multiple consecutive <br> tags
+    .replace(/(<br>\s*){3,}/g, '<br><br>');
+
+  return html;
+};
 export default function WorkoutList({
   workouts,
   daysPerWeek,
@@ -26,13 +68,14 @@ export default function WorkoutList({
 }) {
   const [currentWeek, setCurrentWeek] = useState(1);
 
-  if (!workouts || workouts.length === 0) {
+  // Don't render if no workouts AND not currently generating
+  if (!workouts || (workouts.length === 0 && !generationStage)) {
     return null;
   }
 
   // Group workouts by week for display - simple index-based grouping
   const groupWorkoutsByWeek = () => {
-    if (!workouts.length) return [];
+    if (!workouts || !workouts.length) return [];
 
     // Sort workouts by date first, then by index to maintain proper order
     const sortedWorkouts = [...workouts].sort((a, b) => {
@@ -156,6 +199,8 @@ export default function WorkoutList({
                 {generationStage === 'generating' ? '• Generating...' : 
                  generationStage === 'preparing' ? '• Preparing...' : 
                  generationStage === 'retrying' ? '• Retrying...' : 
+                 generationStage === 'streaming' ? '• Streaming content...' :
+                 generationStage?.startsWith('streaming_week_') ? `• Streaming ${generationStage.replace('streaming_week_', 'week ')} content...` :
                  generationStage === 'error' ? '• Generation failed - partial program saved' : ''}
               </span>
             )}
@@ -170,9 +215,12 @@ export default function WorkoutList({
               Program Description
             </div>
             <div className="collapse-content">
-              <div className="p-2 bg-white rounded-md">
-                <p className="whitespace-pre-line">{generatedDescription}</p>
-              </div>
+              <div 
+                className="p-2 bg-white rounded-md text-sm"
+                dangerouslySetInnerHTML={{
+                  __html: parseMarkdownToHTML(generatedDescription)
+                }}
+              />
             </div>
           </div>
         </div>
@@ -393,6 +441,11 @@ export default function WorkoutList({
                           Completed
                         </span>
                       )}
+                      {workout.isStreaming && (
+                        <span className="text-xs font-medium px-2 py-1 bg-blue-100 text-blue-700 rounded animate-pulse">
+                          Generating...
+                        </span>
+                      )}
                     </div>
                     <h4 className="font-semibold break-words">
                       {workout.title ||
@@ -467,11 +520,16 @@ export default function WorkoutList({
                       : 'Not scheduled'}
                   </button>
                 </div>
-                <div className="whitespace-pre-line overflow-auto max-h-60 sm:max-h-80 text-sm mb-3 flex-grow">
-                  {workout.body ||
-                    workout.description ||
-                    'No description available'}
-                </div>
+                <div 
+                  className="overflow-auto max-h-60 sm:max-h-80 text-sm mb-3 flex-grow"
+                  dangerouslySetInnerHTML={{
+                    __html: parseMarkdownToHTML(
+                      workout.body ||
+                      workout.description ||
+                      'No description available'
+                    )
+                  }}
+                />
                 <div className="flex justify-end items-center mt-auto">
                   <button
                     className="btn btn-sm text-white btn-primary w-full sm:w-auto"
@@ -485,6 +543,27 @@ export default function WorkoutList({
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {!currentWeekData && totalWeeks === 0 && generationStage && (
+        <div className="text-center py-8">
+          <div className="text-gray-500">
+            <p>🤖 Generating workouts...</p>
+            <p className="text-sm mt-2">Workouts will appear here as they're generated</p>
+            {generationStage && (
+              <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-md">
+                <p className="text-blue-700 text-sm">
+                  {generationStage === 'generating' ? '• Generating...' : 
+                   generationStage === 'preparing' ? '• Preparing...' : 
+                   generationStage === 'retrying' ? '• Retrying...' : 
+                   generationStage === 'streaming' ? '• Streaming content...' :
+                   generationStage?.startsWith('streaming_week_') ? `• Streaming ${generationStage.replace('streaming_week_', 'week ')} content...` :
+                   '• Processing...'}
+                </p>
+              </div>
+            )}
           </div>
         </div>
       )}

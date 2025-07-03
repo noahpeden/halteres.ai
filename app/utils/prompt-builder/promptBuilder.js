@@ -89,7 +89,7 @@ export default function promptBuilder(context, trainingType) {
     ...context,
     // If client metrics is provided as an object, convert to string format for the prompt
     clientMetrics:
-      context.clientMetrics || formatClientMetrics(context.clientMetricsData),
+      context.clientMetrics || formatClientMetrics(context.clientMetricsData, context.useImperial),
     // If reference workouts is provided as an array, convert to string format for the prompt
     referenceWorkouts:
       context.referenceWorkouts ||
@@ -194,20 +194,44 @@ IMPORTANT PERIODIZATION REQUIREMENT: The periodization model above MUST be stric
 /**
  * Formats client metrics data into a string format for the prompt
  * @param {Object} clientMetricsData - Raw client metrics data
+ * @param {boolean} useImperial - Whether to display weights in imperial units (lbs) or metric (kg)
  * @returns {string} Formatted client metrics string or empty string if no data
  */
-function formatClientMetrics(clientMetricsData) {
+export function formatClientMetrics(clientMetricsData, useImperial = false) {
   if (!clientMetricsData) return '';
+
+  // Helper function to format weights based on unit preference
+  const formatWeight = (kg, unit = useImperial ? 'lbs' : 'kg') => {
+    if (!kg) return '';
+    if (useImperial) {
+      return `${Math.round(kg * 2.20462)} lbs`;
+    }
+    return `${Math.round(kg)} kg`;
+  };
+
+  // Helper function to format height based on unit preference
+  const formatHeight = (cm) => {
+    if (!cm) return '';
+    if (useImperial) {
+      const totalInches = cm / 2.54;
+      const feet = Math.floor(totalInches / 12);
+      const inches = Math.round(totalInches % 12);
+      return `${feet}'${inches}" (${cm} cm)`;
+    }
+    return `${cm} cm`;
+  };
+
+  const weightUnit = useImperial ? 'lbs' : 'kg';
 
   return `
 Client Metrics:
 ${clientMetricsData.gender ? `Gender: ${clientMetricsData.gender}` : ''}
 ${clientMetricsData.age ? `Age: ${clientMetricsData.age} years` : ''}
 ${
-  clientMetricsData.height_cm ? `Height: ${clientMetricsData.height_cm} cm` : ''
+  clientMetricsData.height_cm ? `Height: ${formatHeight(clientMetricsData.height_cm)}` : ''
 }
 ${
-  clientMetricsData.weight_kg ? `Weight: ${clientMetricsData.weight_kg} kg` : ''
+  clientMetricsData.weight_kg ? `Weight: ${formatWeight(clientMetricsData.weight_kg)}` : ''
 }
 ${
   clientMetricsData.years_of_experience 
@@ -221,17 +245,17 @@ ${
 }
 ${
   clientMetricsData.bench_1rm
-    ? `Bench Press 1RM: ${clientMetricsData.bench_1rm} kg`
+    ? `Bench Press 1RM: ${formatWeight(clientMetricsData.bench_1rm)}`
     : ''
 }
 ${
   clientMetricsData.squat_1rm
-    ? `Squat 1RM: ${clientMetricsData.squat_1rm} kg`
+    ? `Squat 1RM: ${formatWeight(clientMetricsData.squat_1rm)}`
     : ''
 }
 ${
   clientMetricsData.deadlift_1rm
-    ? `Deadlift 1RM: ${clientMetricsData.deadlift_1rm} kg`
+    ? `Deadlift 1RM: ${formatWeight(clientMetricsData.deadlift_1rm)}`
     : ''
 }
 ${
@@ -252,10 +276,12 @@ ${
     : ''
 }
 
+CRITICAL WEIGHT UNIT REQUIREMENT: All weights in the generated workouts MUST be provided in ${weightUnit.toUpperCase()} units to match the client's preference. 
 When calculating RX weights, scale them appropriately based on the client's strength metrics (bench, squat, deadlift) if available.
 For other movements, estimate appropriate weights based on the client's metrics, gender, age, and strength levels.
 Consider the client's training experience level (${clientMetricsData.years_of_experience || 'unspecified'} years, ${clientMetricsData.workout_experience_type || 'general'}) when programming intensity and complexity.
-If client metrics indicate specific limitations, provide appropriate scaling options.`;
+If client metrics indicate specific limitations, provide appropriate scaling options.
+IMPORTANT: Always express ALL workout weights in ${weightUnit} (${useImperial ? 'pounds' : 'kilograms'}) throughout the entire program to maintain consistency with the client's unit preference.`;
 }
 
 /**
