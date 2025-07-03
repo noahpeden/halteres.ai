@@ -1,6 +1,7 @@
 import { createClient } from '@/utils/supabase/server';
 import { NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
+import { formatClientMetrics } from '@/utils/prompt-builder/promptBuilder.js';
 
 export const maxDuration = 800; // Maximum for Vercel Pro plan (800 seconds)
 export const dynamic = 'force-dynamic';
@@ -10,6 +11,21 @@ function logWithTimestamp(message, data = null) {
   const timestamp = new Date().toISOString();
   console.log(`[${timestamp}] ${message}`);
   if (data) console.log(JSON.stringify(data, null, 2));
+}
+
+// Helper function to generate gender-specific weight instructions
+function getGenderWeightInstructions(clientGender) {
+  const normalizedGender = clientGender?.toLowerCase();
+
+  if (normalizedGender === 'male' || normalizedGender === 'm') {
+    return '♂ [RX weights for this client]';
+  } else if (normalizedGender === 'female' || normalizedGender === 'f') {
+    return '♀ [RX weights for this client]';
+  } else {
+    // If gender is unknown, other, or not specified, show both
+    return `♀ [Women's RX weights] 
+♂ [Men's RX weights]`;
+  }
 }
 
 // Helper function to send SSE events
@@ -50,19 +66,14 @@ export async function POST(request) {
     const requestData = await request.json();
     logWithTimestamp('Request data received', requestData);
 
-    // Check if this should be a chunked generation
+    // Use chunked generation for all programs (simplified approach)
     const numberOfWeeks = parseInt(
       requestData.duration_weeks || requestData.numberOfWeeks || 4
     );
-    const shouldChunk = numberOfWeeks > 2;
 
-    logWithTimestamp('Chunking decision', { numberOfWeeks, shouldChunk });
+    logWithTimestamp('Using unified chunked generation', { numberOfWeeks });
 
-    if (shouldChunk) {
-      return await handleChunkedGeneration(requestData, anthropic, supabase);
-    } else {
-      return await handleSingleGeneration(requestData, anthropic, supabase);
-    }
+    return await handleChunkedGeneration(requestData, anthropic, supabase);
   } catch (error) {
     logWithTimestamp('Unhandled error in API route', {
       error: error.message,
@@ -241,18 +252,20 @@ async function generateProgramChunked(
     try {
       if (sharedData.programId && allWorkouts.length > 0) {
         sendEvent(controller, encoder, 'status', {
-          message: 'Saving workouts to database...'
+          message: 'Saving workouts to database...',
         });
-        
+
         await saveWorkoutsToDatabase(
           sharedData.programId,
           allWorkouts,
           supabase
         );
-        logWithTimestamp(`Saved all ${allWorkouts.length} workouts to database`);
-        
+        logWithTimestamp(
+          `Saved all ${allWorkouts.length} workouts to database`
+        );
+
         sendEvent(controller, encoder, 'status', {
-          message: 'Workouts saved successfully!'
+          message: 'Workouts saved successfully!',
         });
       }
     } catch (saveError) {
@@ -260,7 +273,7 @@ async function generateProgramChunked(
         error: saveError.message,
       });
       sendEvent(controller, encoder, 'error', {
-        error: 'Failed to save workouts to database: ' + saveError.message
+        error: 'Failed to save workouts to database: ' + saveError.message,
       });
       if (controller && controller.desiredSize !== null) {
         controller.close();
@@ -342,6 +355,9 @@ async function generateWeekWorkouts(
     referenceWorkoutsContent,
     hasInjuryHistory,
     suggestedDates,
+    useImperial,
+    trainingMethodology,
+    clientGender,
   } = sharedData;
 
   // Calculate dates for this week
@@ -365,19 +381,32 @@ async function generateWeekWorkouts(
     includeDescription
       ? `
 
-ADDITIONAL REQUIREMENT: Since this is Week 1, also generate a comprehensive program description and overview that explains:
-1. A detailed, engaging overview that clearly states the program's primary goals and target audience (e.g., "This ${numberOfWeeks}-week, ${daysPerWeek}-day-per-week program is designed for ${difficulty} ${goal} trainees aiming to improve...")
-2. The specific periodization approach used and why it's scientifically appropriate for the goals
-3. How the training principles will drive measurable progress (e.g., "linear progression", "progressive overload", "structured accessory work")
-4. Expected adaptations and outcomes from following the program consistently
-5. Integration of training methodology and approach
-6. Brief recommendations for nutrition, recovery, and supplementary training if relevant`
+🔥 CRITICAL PROGRAM DESCRIPTION REQUIREMENT 🔥
+Since this is Week 1, you MUST also generate a comprehensive, detailed program description and overview that thoroughly explains:
+
+1. **Detailed Program Overview**: A compelling, engaging overview that clearly states the program's primary goals, target audience, and unique value proposition (e.g., "This ${numberOfWeeks}-week, ${daysPerWeek}-day-per-week program is specifically designed for ${difficulty} ${goal} trainees seeking to achieve measurable improvements in...")
+
+2. **Scientific Periodization Rationale**: Explain the specific periodization approach used (linear, undulating, block, etc.) and provide scientific justification for why this approach is optimal for the stated goals. Include how training variables (volume, intensity, frequency) will be manipulated over time.
+
+3. **Progressive Training Methodology**: Detail how the training principles will drive measurable progress through specific mechanisms such as "progressive overload", "specificity adaptations", "structured volume progression", "planned deload phases", etc. Be specific about how each week builds upon the previous.
+
+4. **Expected Physiological Adaptations**: Describe the specific adaptations trainees can expect (strength gains, muscle hypertrophy, cardiovascular improvements, movement quality, etc.) and realistic timelines for seeing these changes.
+
+5. **Training Methodology Integration**: Explain how the chosen training methodology is seamlessly integrated throughout the program structure and why this approach is superior for the goals.
+
+6. **Holistic Performance Recommendations**: Provide actionable guidance for nutrition strategies, recovery protocols, sleep optimization, and any supplementary training that will enhance program outcomes.
+
+7. **Success Metrics & Tracking**: Suggest specific ways trainees can measure and track their progress throughout the program.
+
+This description should be substantial, informative, and demonstrate deep expertise in exercise science and program design. Make it engaging and motivational while being scientifically sound.`
       : ''
   }
 
 Program Details:
 Goal: ${goal}
 Difficulty: ${difficulty}
+Training Methodology: ${trainingMethodology || 'General Fitness'}
+Periodization Type: ${programType || 'Linear'}
 Days Per Week: ${daysPerWeek} days
 Selected Training Days: ${selectedDaysOfWeek
     .map(
@@ -413,6 +442,12 @@ ${
   referenceWorkoutsContent ? `${referenceWorkoutsContent}` : ''
 }${previousWeeksContext}
 
+CRITICAL PERIODIZATION REQUIREMENT: This week MUST follow ${programType} periodization principles:
+- Linear: Week ${weekNumber} should show appropriate progression from previous weeks
+- Undulating: Vary intensity/volume appropriately for week ${weekNumber} in the cycle
+- Block: Ensure week ${weekNumber} fits the current training block focus
+- Conjugate: Include appropriate method variation for simultaneous quality development
+
 CRITICAL: Generate EXACTLY ${daysPerWeek} workouts for week ${weekNumber} ONLY.
 
 Your response MUST be in this exact JSON format:
@@ -447,24 +482,13 @@ Each workout should include:
 - Detailed Stimulus and Strategy section with primary focus statement, progression context, and bulleted tactical guidance
 - Scaling options${hasInjuryHistory ? ', injury considerations' : ''}
 - Coaching cues (3-5 specific technical cues)
-- Cool-down (specific movements and durations).
+- Cool-down (specific movements and durations)
+
+CRITICAL WEIGHT UNIT REQUIREMENT: ALL weights in the workout MUST be expressed in ${
+    useImperial ? 'POUNDS (lbs)' : 'KILOGRAMS (kg)'
+  } to match the client's unit preference. This includes RX weights for men and women, scaling options, and all exercise prescriptions.
 
 Format each workout body with this structure:
-## Warm-up
-[Detailed warm-up with specific movements, sets, reps, durations]
-
-## Strength Work
-[Exercise]: [Sets] x [Reps] @ [percentage/weight]
-♀ [Women's RX weights] 
-♂ [Men's RX weights]
-- Rest [X-Y] minutes between sets
-
-## Conditioning Work
-[Format: AMRAP, For Time, etc.]
-[Complete workout with movements, reps, weights]
-♀ [Women's RX weights]
-♂ [Men's RX weights]
-
 ## Stimulus and Strategy  
 [Primary training focus statement]
 [Session context and progression fit]
@@ -472,13 +496,28 @@ Format each workout body with this structure:
 - Conditioning/Accessory: [Specific approach with tempo/pacing cues]  
 - Rest [X] minutes after [strength work], [Y] seconds between [accessory rounds]
 
+## Warm-up
+[Detailed warm-up with specific movements, sets, reps, durations]
+
+## Strength Work
+[Exercise]: [Sets] x [Reps] @ [percentage/weight]
+${getGenderWeightInstructions(clientGender)}
+- Rest [X-Y] minutes between sets
+
+## Conditioning Work
+[Format: AMRAP, For Time, etc.]
+[Complete workout with movements, reps, weights]
+${getGenderWeightInstructions(clientGender)}
+
 ## Coaching Cues
 [3-5 specific technical cues for key movements]
 
 ## Cool-down
 [Specific cool-down movements and durations]`;
 
-  const systemPrompt = `You are an expert strength and conditioning coach. Generate professional workouts for the specified week only. CRITICAL: You MUST ONLY include exercises that use the EXACT equipment specified. CRITICAL: Generate EXACTLY ${daysPerWeek} workouts for week ${weekNumber} only. Follow sound exercise science with appropriate progression. Provide responses EXACTLY in the JSON format specified.`;
+  const systemPrompt = `You are an expert strength and conditioning coach. Generate professional workouts for the specified week only. CRITICAL: You MUST ONLY include exercises that use the EXACT equipment specified. CRITICAL: Generate EXACTLY ${daysPerWeek} workouts for week ${weekNumber} only. CRITICAL: ALL weights MUST be expressed in ${
+    useImperial ? 'POUNDS (lbs)' : 'KILOGRAMS (kg)'
+  } throughout all workouts. Follow sound exercise science with appropriate progression. Provide responses EXACTLY in the JSON format specified.`;
 
   try {
     logWithTimestamp(`About to call Anthropic API for week ${weekNumber}`, {
@@ -507,17 +546,17 @@ Format each workout body with this structure:
 
     // Handle streaming response
     let responseContent = '';
-    
+
     logWithTimestamp(`Starting to stream response for week ${weekNumber}`);
-    
+
     // Send streaming start event
     if (controller && encoder) {
       sendEvent(controller, encoder, 'stream_start', {
         week: weekNumber,
-        message: `Streaming week ${weekNumber} content...`
+        message: `Streaming week ${weekNumber} content...`,
       });
     }
-    
+
     try {
       for await (const chunk of response) {
         if (chunk.type === 'content_block_start') {
@@ -525,32 +564,32 @@ Format each workout body with this structure:
         } else if (chunk.type === 'content_block_delta') {
           const text = chunk.delta?.text || '';
           responseContent += text;
-          
+
           // Send incremental content updates
           if (controller && encoder && text.length > 0) {
             sendEvent(controller, encoder, 'stream_chunk', {
               week: weekNumber,
               chunk: text,
-              totalLength: responseContent.length
+              totalLength: responseContent.length,
             });
           }
         } else if (chunk.type === 'content_block_stop') {
           logWithTimestamp(`Stream completed for week ${weekNumber}`, {
-            totalLength: responseContent.length
+            totalLength: responseContent.length,
           });
         }
       }
     } catch (streamError) {
       logWithTimestamp(`Error streaming response for week ${weekNumber}`, {
-        error: streamError.message
+        error: streamError.message,
       });
       throw streamError;
     }
-    
+
     if (!responseContent) {
       throw new Error('No content received from streaming response');
     }
-    
+
     logWithTimestamp(`Week ${weekNumber} response content extracted`, {
       length: responseContent.length,
     });
@@ -945,581 +984,9 @@ async function saveWorkoutsToDatabase(programId, workouts, supabase) {
   }
 }
 
-// Handle single generation for small programs (≤2 weeks)
-async function handleSingleGeneration(requestData, anthropic, supabase) {
-  logWithTimestamp('Starting single generation');
+// Note: Single generation functions removed - now using unified chunked generation for all program lengths
 
-  // Set up streaming response for single generation too
-  const encoder = new TextEncoder();
-  const stream = new ReadableStream({
-    start(controller) {
-      generateProgramSingle(
-        requestData,
-        anthropic,
-        supabase,
-        controller,
-        encoder
-      ).catch((error) => {
-        logWithTimestamp('Single generation error', { error: error.message });
-        try {
-          sendEvent(controller, encoder, 'error', { error: error.message });
-          if (controller && controller.desiredSize !== null) {
-            controller.close();
-          }
-        } catch (closeError) {
-          logWithTimestamp(
-            'Controller already closed during single generation error handling',
-            {
-              error: closeError.message,
-            }
-          );
-        }
-      });
-    },
-  });
-
-  return new Response(stream, {
-    headers: {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
-      Connection: 'keep-alive',
-    },
-  });
-}
-
-// Main single generation logic (now with streaming support)
-async function generateProgramSingle(
-  requestData,
-  anthropic,
-  supabase,
-  controller,
-  encoder
-) {
-  try {
-    // Extract shared data (reuse the same helper)
-    const sharedData = await extractSharedData(requestData, supabase);
-    const {
-      goal,
-      difficulty,
-      focusArea,
-      additionalNotes,
-      personalization,
-      workoutFormats,
-      numberOfWeeks,
-      daysPerWeek,
-      programType,
-      equipment,
-      gymType,
-      selectedDaysOfWeek,
-      clientMetricsContent,
-      referenceWorkoutsContent,
-      hasInjuryHistory,
-      suggestedDates,
-    } = sharedData;
-
-    const totalWorkouts = numberOfWeeks * daysPerWeek;
-
-    // Get the day names from the day numbers for the prompt
-    const dayNames = [
-      'Sunday',
-      'Monday',
-      'Tuesday',
-      'Wednesday',
-      'Thursday',
-      'Friday',
-      'Saturday',
-    ];
-    const selectedDayNames = selectedDaysOfWeek
-      .map((dayNum) => dayNames[dayNum])
-      .join(', ');
-
-    // Conditionally build scaling options sections
-    const includeScaling = ['Beginner', 'Intermediate'].includes(difficulty);
-    let scalingInstructions = '';
-    let scalingBodyStructure = '';
-    let coachingCueNumber = 7; // Default if scaling is included
-    let cooldownNumber = 8; // Default if scaling is included
-
-    if (includeScaling) {
-      scalingInstructions = `
-6. Scaling Options:
-   - Intermediate level scaling with specific weights and movement modifications
-   - Beginner level scaling with specific weights and movement modifications
-   ${
-     hasInjuryHistory
-       ? '- Injury considerations with alternative movements'
-       : ''
-   }`;
-
-      scalingBodyStructure = `
-## Scaling Options
-### Intermediate Option
-[Detailed intermediate scaling with specific weights and modifications]
-
-### Beginner Option
-[Detailed beginner scaling with specific weights and modifications]
-${
-  hasInjuryHistory
-    ? `
-### Injury Considerations
-[Modifications for common limitations]`
-    : ''
-}`;
-    } else {
-      // Adjust numbering if scaling is omitted
-      coachingCueNumber = 6;
-      cooldownNumber = 7;
-    }
-
-    // Build the prompt for single generation
-    const prompt = `Generate a ${numberOfWeeks}-week training program with the following parameters:
-
-Goal: ${goal}
-Difficulty: ${difficulty}
-Days Per Week: ${daysPerWeek} days
-Selected Training Days: ${selectedDayNames}
-Total Length: ${numberOfWeeks} weeks
-${focusArea ? `Focus Area: ${focusArea}` : ''}
-${
-  equipment && equipment.length > 0
-    ? `Available Equipment: ${equipment.join(', ')}`
-    : ''
-}
-${
-  workoutFormats && workoutFormats.length > 0
-    ? `Workout Formats to Include: ${workoutFormats.join(', ')}`
-    : ''
-}
-${gymType ? `Gym Type: ${gymType}` : ''}
-${additionalNotes ? `Additional Notes: ${additionalNotes}` : ''}
-${personalization ? `Personalization: ${personalization}` : ''}
-${clientMetricsContent ? `${clientMetricsContent}` : ''}
-${referenceWorkoutsContent ? `${referenceWorkoutsContent}` : ''}
-
-ADDITIONAL REQUIREMENT: Generate a comprehensive program description and overview that explains:
-1. A detailed, engaging overview that clearly states the program's primary goals and target audience (e.g., "This ${numberOfWeeks}-week, ${daysPerWeek}-day-per-week program is designed for ${difficulty} ${goal} trainees aiming to improve...")
-2. The specific periodization approach used and why it's scientifically appropriate for the goals
-3. How the training principles will drive measurable progress (e.g., "linear progression", "progressive overload", "structured accessory work")
-4. Expected adaptations and outcomes from following the program consistently
-5. Integration of training methodology and approach
-6. Brief recommendations for nutrition, recovery, and supplementary training if relevant
-
-Format each workout with the following sections:
-1. A clear, descriptive title that includes the day/week and focus (e.g., Lower Body Strength")
-2. Stimulus and Strategy section:
-   - Start with a clear statement of the primary training stimulus (e.g., "Strength focus on barbell back squat, initiating progressive overload")
-   - Explain the intended adaptations for both strength and conditioning portions
-   - Describe how this session fits into the weekly progression and primes the body
-   - Provide specific pacing strategies and approach recommendations
-   - Include rest period recommendations between different sections
-   - Give tactical advice (e.g., "Control tempo, don't rush leg press/kettlebell work – focus on muscle burn")
-   - Add bullet points for different workout components (Strength, Accessory/Hypertrophy, Rest periods)${scalingInstructions}
-3. Warm-up section with specific movements (include duration, reps, and brief explanations)
-4. Strength Work - detailed with:
-   - Clear exercise format (Sets x Reps, EMOM, etc.)
-   - Specific movements, sets, reps, and rest periods
-   - Exact weights for RX (men and women) and scaling options
-   - Loading percentages when appropriate (e.g., "75% of 1RM")
-5. Conditioning Work - detailed with:
-   - Clear exercise format (AMRAP, For Time, etc.)
-   - Specific movements, sets, reps, and rest periods
-   - Exact weights for RX (men and women) and scaling options
-   - Target time domains or goal times when applicable
-${coachingCueNumber}. Coaching Cues:
-   - 3-5 specific technical cues for the most complex movements in the workout
-   - Form tips to maximize efficiency and safety
-   - Common errors to avoid
-${cooldownNumber}. Cool-down/mobility section with specific movements and durations
-
-The program should follow logical progression based on the selected program type (${programType}).
-Ensure proper periodization, recovery, and exercise variation throughout the program.
-
-IMPORTANT: The workouts must be scheduled on specific dates according to the user's selected training days. DO NOT create workouts on days other than the ones specified.
-
-Your response MUST be in this exact JSON format:
-{
-  "title": "Training Program for ${goal}",
-  "description": "A comprehensive ${numberOfWeeks}-week ${difficulty} training program focused on ${
-      focusArea || goal
-    } that includes detailed weekly progression, nutrition guidance, and recovery recommendations",
-  "overview": "A detailed explanation of the program methodology, periodization approach, expected outcomes, and supplementary recommendations",
-  "workouts": [
-    {
-      "title": "Week X, Day Y: [Focus Area]",
-      "body": "Detailed workout description including all required sections",
-      "date": "YYYY-MM-DD"
-    },
-    ...more workouts
-  ]
-}
-
-For each workout's "body" field, use this structure:
-\`\`\`
-## Warm-up
-[Detailed warm-up protocol with specific movements, sets, reps]
-
-## Main Workout
-[Format: For Time, AMRAP, etc.]
-[Complete workout with movements, reps, weights]
-
-♀ [Women's RX weight details]
-♂ [Men's RX weight details]
-
-## Stimulus and Strategy
-[Primary training focus and stimulus statement (e.g., "Strength focus on barbell back squat, initiating progressive overload (linear: moderate volume, moderate intensity). Hypertrophy and accessory work for quad and glute development.")]
-[How this session fits into weekly progression and what it primes/develops]
-[Specific strategy guidance with bullet points:]
-- Strength: [Specific technical and pacing cues for strength work]
-- Accessory/Hypertrophy: [Specific approach for accessory work with tempo/focus cues]
-- Rest [X-Y] minutes after [main lift], [X-Y] seconds after [accessory work]${scalingBodyStructure}
-
-## Coaching Cues
-[3-5 specific technical cues for key movements]
-
-## Cool-down
-[Detailed cool-down protocol]
-\`\`\`
-
-The "workouts" array should contain exactly ${totalWorkouts} workouts, organized in a progressive sequence.
-
-Use the following dates for each workout:
-${suggestedDates
-  .map(
-    (date, index) =>
-      'Workout ' +
-      (index + 1) +
-      ': ' +
-      date +
-      ' (Week ' +
-      (Math.floor(index / parseInt(daysPerWeek)) + 1) +
-      ', Day ' +
-      ((index % parseInt(daysPerWeek)) + 1) +
-      ')'
-  )
-  .join('\\n')}
-
-IMPORTANT: Each workout MUST be assigned to one of the above dates. These dates strictly follow the user's selected training days of the week.`;
-
-    logWithTimestamp('Single generation prompt prepared', {
-      promptLength: prompt.length,
-    });
-
-    // Updated system prompt
-    const systemPrompt =
-      "You are an expert strength and conditioning coach who specializes in creating effective, periodized training programs. Create professional, CrossFit-style workouts with precise stimulus explanations, detailed scaling options, and specific coaching cues. Each workout should include clear RX weights (for men and women), proper warm-up and cool-down protocols, and actionable strategy recommendations. CRITICAL EQUIPMENT CONSTRAINT: You MUST ONLY include exercises that use the EXACT equipment specified in the prompt. Do NOT recommend or include ANY exercises that require equipment not explicitly listed as available. CRITICAL SCHEDULING CONSTRAINT: You MUST assign each workout EXACTLY to the dates provided in the suggestedDates list, which are aligned with the user's selected days of the week. Follow sound exercise science principles with appropriate progression, variation, and specificity. Provide responses EXACTLY in the JSON format specified in the prompt.";
-
-    // Call Anthropic with required response format
-    try {
-      logWithTimestamp('About to call Anthropic API for single generation', {
-        model: 'claude-sonnet-4-20250514',
-        promptLength: prompt.length,
-        systemPromptLength: systemPrompt.length,
-      });
-
-      const response = await anthropic.messages.create({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 12000, // Increased for detailed workouts
-        temperature: 0.7,
-        system: systemPrompt,
-        messages: [
-          {
-            role: 'user',
-            content: [
-              {
-                type: 'text',
-                text: prompt,
-              },
-            ],
-          },
-        ],
-        stream: true, // Enable streaming
-      });
-
-      // Handle streaming response
-      let responseContent = '';
-      
-      logWithTimestamp('Starting to stream response for single generation');
-      
-      // Send streaming start event
-      sendEvent(controller, encoder, 'stream_start', {
-        message: 'Streaming program content...'
-      });
-      
-      try {
-        for await (const chunk of response) {
-          if (chunk.type === 'content_block_start') {
-            logWithTimestamp('Stream started for single generation');
-          } else if (chunk.type === 'content_block_delta') {
-            const text = chunk.delta?.text || '';
-            responseContent += text;
-            
-            // Send incremental content updates
-            if (text.length > 0) {
-              sendEvent(controller, encoder, 'stream_chunk', {
-                chunk: text,
-                totalLength: responseContent.length
-              });
-            }
-          } else if (chunk.type === 'content_block_stop') {
-            logWithTimestamp('Stream completed for single generation', {
-              totalLength: responseContent.length
-            });
-          }
-        }
-      } catch (streamError) {
-        logWithTimestamp('Error streaming response', {
-          error: streamError.message
-        });
-        sendEvent(controller, encoder, 'error', { error: 'Streaming error: ' + streamError.message });
-        if (controller && controller.desiredSize !== null) {
-          controller.close();
-        }
-        return;
-      }
-      
-      if (!responseContent) {
-        logWithTimestamp('No content received from streaming response');
-        sendEvent(controller, encoder, 'error', { error: 'No content received from API' });
-        if (controller && controller.desiredSize !== null) {
-          controller.close();
-        }
-        return;
-      }
-      
-      logWithTimestamp('Response content extracted', {
-        length: responseContent.length,
-        preview: responseContent.substring(0, 200) + '...',
-      });
-
-      let parsedContent;
-      try {
-        logWithTimestamp('About to parse JSON response');
-
-        // Check if the response is wrapped in markdown code blocks
-        let jsonContent = responseContent;
-        if (responseContent.startsWith('```json')) {
-          // Extract JSON from markdown code block
-          const jsonMatch = responseContent.match(
-            /```json\s*\n([\s\S]*?)\n```/
-          );
-          if (jsonMatch && jsonMatch[1]) {
-            jsonContent = jsonMatch[1];
-            logWithTimestamp('Extracted JSON from markdown');
-          } else {
-            // Fallback: try to remove just the opening and closing ```
-            jsonContent = responseContent
-              .replace(/^```json\s*\n/, '')
-              .replace(/\n```\s*$/, '');
-            logWithTimestamp('Stripped markdown markers');
-          }
-        } else if (responseContent.startsWith('```')) {
-          // Generic code block without json specification
-          jsonContent = responseContent
-            .replace(/^```\s*\n/, '')
-            .replace(/\n```\s*$/, '');
-          logWithTimestamp('Stripped generic markdown markers');
-        }
-
-        parsedContent = JSON.parse(jsonContent);
-        logWithTimestamp('Successfully parsed JSON response', {
-          hasWorkouts: !!parsedContent.workouts,
-          workoutsLength: parsedContent.workouts?.length,
-        });
-      } catch (parseError) {
-        logWithTimestamp('Failed to parse JSON response', {
-          error: parseError.message,
-          preview: responseContent.substring(0, 200) + '...',
-        });
-        return NextResponse.json(
-          {
-            error: 'Failed to parse AI response',
-            rawResponse: responseContent,
-          },
-          { status: 500 }
-        );
-      }
-
-      // Normalize response format to workouts array
-      logWithTimestamp('About to normalize response format');
-      let workouts;
-      let programTitle = '';
-      let programDescription = '';
-
-      if (parsedContent.workouts && Array.isArray(parsedContent.workouts)) {
-        logWithTimestamp('Found expected format with workouts array');
-        workouts = parsedContent.workouts;
-        programTitle = parsedContent.title || `Training Program for ${goal}`;
-        programDescription =
-          parsedContent.description ||
-          `${numberOfWeeks}-week program, ${daysPerWeek} days per week`;
-      } else if (Array.isArray(parsedContent)) {
-        // Legacy format - just an array
-        logWithTimestamp('Found legacy array format');
-        workouts = parsedContent;
-      } else if (
-        parsedContent.training_program &&
-        Array.isArray(parsedContent.training_program)
-      ) {
-        logWithTimestamp('Found training_program array format');
-        workouts = parsedContent.training_program;
-      } else {
-        // Look for any array property as a fallback
-        logWithTimestamp('Looking for array properties in response');
-        const arrayProps = Object.keys(parsedContent).filter((key) =>
-          Array.isArray(parsedContent[key])
-        );
-
-        if (arrayProps.length > 0) {
-          logWithTimestamp('Found array property in response', {
-            property: arrayProps[0],
-            length: parsedContent[arrayProps[0]].length,
-          });
-          workouts = parsedContent[arrayProps[0]];
-        } else if (parsedContent.title && parsedContent.description) {
-          // If we got a single workout instead of an array
-          logWithTimestamp('Found single workout in response');
-          workouts = [parsedContent];
-        } else {
-          logWithTimestamp('Unable to find workouts in response', {
-            responseKeys: Object.keys(parsedContent),
-          });
-          return NextResponse.json(
-            { error: 'Invalid response format: could not find workouts array' },
-            { status: 500 }
-          );
-        }
-      }
-
-      logWithTimestamp('Normalized workouts array', { count: workouts.length });
-
-      // Ensure each workout has the correct fields (title, body, date)
-      logWithTimestamp('About to map workouts to ensure correct fields');
-      workouts = workouts.map((workout, index) => {
-        const mappedWorkout = {
-          title: workout.title || `Workout ${index + 1}`,
-          body:
-            workout.body || workout.description || 'No description provided',
-          date:
-            workout.date ||
-            workout.suggestedDate ||
-            suggestedDates[index] ||
-            new Date().toISOString().split('T')[0],
-        };
-
-        if (index === 0) {
-          logWithTimestamp('Sample mapped workout', mappedWorkout);
-        }
-
-        return mappedWorkout;
-      });
-
-      logWithTimestamp('About to return successful response', {
-        workoutCount: workouts.length,
-        title: programTitle,
-      });
-
-      // Since this is a single generation (1-2 weeks), we need to stream events to match the frontend expectations
-      // Send program metadata first
-      sendEvent(controller, encoder, 'program_metadata', {
-        title: programTitle,
-        description: programDescription,
-        overview: parsedContent.overview || 'No overview provided'
-      });
-      
-      // Send individual workout events to match chunked generation behavior
-      for (let i = 0; i < workouts.length; i++) {
-        const workout = workouts[i];
-        sendEvent(controller, encoder, 'workout_generated', {
-          workout: {
-            title: workout.title,
-            body: workout.body,
-            date: workout.date
-          },
-          index: i,
-          total: workouts.length,
-          message: `Generated workout ${i + 1} of ${workouts.length}`
-        });
-        
-        // Small delay to make streaming visible
-        await new Promise((resolve) => setTimeout(resolve, 50));
-      }
-      
-      // Save all workouts to database
-      try {
-        if (programId && workouts.length > 0) {
-          sendEvent(controller, encoder, 'status', {
-            message: 'Saving workouts to database...'
-          });
-          
-          await saveWorkoutsToDatabase(programId, workouts, supabase);
-          logWithTimestamp(`Saved all ${workouts.length} workouts to database (single generation)`);
-          
-          sendEvent(controller, encoder, 'status', {
-            message: 'Workouts saved successfully!'
-          });
-        }
-      } catch (saveError) {
-        logWithTimestamp('Error saving workouts to database (single generation)', {
-          error: saveError.message,
-        });
-        sendEvent(controller, encoder, 'error', {
-          error: 'Failed to save workouts to database: ' + saveError.message
-        });
-        if (controller && controller.desiredSize !== null) {
-          controller.close();
-        }
-        return;
-      }
-      
-      // Send completion event with suggestions
-      sendEvent(controller, encoder, 'complete', {
-        success: true,
-        message: `Program complete! Generated ${workouts.length} workouts.`,
-        totalWorkouts: workouts.length,
-        suggestions: workouts,
-        title: programTitle,
-        description: programDescription,
-        overview: parsedContent.overview || 'No overview provided'
-      });
-      
-      logWithTimestamp('Single generation completed, events sent');
-      
-      // Close the controller
-      try {
-        if (controller && controller.desiredSize !== null) {
-          controller.close();
-        }
-      } catch (closeError) {
-        logWithTimestamp('Controller already closed during single generation completion', {
-          error: closeError.message,
-        });
-      }
-    } catch (anthropicError) {
-      logWithTimestamp('Anthropic API error caught', {
-        error: anthropicError.message,
-        name: anthropicError.name,
-        code: anthropicError.code,
-        stack: anthropicError.stack,
-      });
-      sendEvent(controller, encoder, 'error', { error: 'Anthropic API error: ' + anthropicError.message });
-      if (controller && controller.desiredSize !== null) {
-        controller.close();
-      }
-    }
-  } catch (error) {
-    logWithTimestamp('Error in single generation', {
-      error: error.message,
-      name: error.name,
-      stack: error.stack,
-    });
-    sendEvent(controller, encoder, 'error', { error: 'Failed to generate program: ' + error.message });
-    if (controller && controller.desiredSize !== null) {
-      controller.close();
-    }
-  }
-}
-
-// Extract shared data used by both single and chunked generation
+// Extract shared data used by chunked generation
 async function extractSharedData(requestData, supabase) {
   // Extract parameters with defaults
   const programId = requestData.programId;
@@ -1530,6 +997,7 @@ async function extractSharedData(requestData, supabase) {
   const personalization = requestData.personalization || '';
   const referenceInput = requestData.referenceInput || '';
   const workoutFormats = requestData.workout_format || [];
+  const trainingMethodology = requestData.trainingMethodology || '';
 
   // Critical parameters - ensure they have fallback values
   const numberOfWeeks = parseInt(
@@ -1684,6 +1152,12 @@ async function extractSharedData(requestData, supabase) {
   // Fetch client metrics if program ID exists
   let clientMetricsContent = '';
   let entityData;
+  let clientGender = '';
+  // Determine unit preference - default to Imperial (true) if not specified in request
+  const useImperial =
+    requestData.useImperial !== undefined ? requestData.useImperial : true;
+  logWithTimestamp('Unit preference determined', { useImperial });
+
   if (programId) {
     try {
       logWithTimestamp('Fetching client metrics', { programId });
@@ -1713,36 +1187,14 @@ async function extractSharedData(requestData, supabase) {
           });
         } else if (entityResult) {
           entityData = entityResult;
-          logWithTimestamp('Found client metrics', { entityData });
+          clientGender = entityData.gender || '';
+          logWithTimestamp('Found client metrics', {
+            entityData,
+            clientGender,
+          });
 
-          // Format client metrics for the prompt
-          clientMetricsContent = `
-Client Metrics:
-${entityData.gender ? `Gender: ${entityData.gender}` : ''}
-${entityData.height_cm ? `Height: ${entityData.height_cm} cm` : ''}
-${entityData.weight_kg ? `Weight: ${entityData.weight_kg} kg` : ''}
-${entityData.bench_1rm ? `Bench Press 1RM: ${entityData.bench_1rm} kg` : ''}
-${entityData.squat_1rm ? `Squat 1RM: ${entityData.squat_1rm} kg` : ''}
-${entityData.deadlift_1rm ? `Deadlift 1RM: ${entityData.deadlift_1rm} kg` : ''}
-${entityData.mile_time ? `Mile Time: ${entityData.mile_time}` : ''}
-${
-  entityData.recovery_score
-    ? `Recovery Score: ${entityData.recovery_score}/10`
-    : ''
-}
-${
-  entityData.injury_history
-    ? `Injury History: ${
-        typeof entityData.injury_history === 'object'
-          ? JSON.stringify(entityData.injury_history)
-          : entityData.injury_history
-      }`
-    : ''
-}
-
-When calculating RX weights, scale them appropriately based on the client's strength metrics (bench, squat, deadlift) if available.
-For other movements, estimate appropriate weights based on the client's metrics, gender, and strength levels.
-If client metrics indicate specific limitations, provide appropriate scaling options.`;
+          // Use the imported formatClientMetrics function with unit preference
+          clientMetricsContent = formatClientMetrics(entityData, useImperial);
         }
       }
     } catch (err) {
@@ -1860,5 +1312,8 @@ Draw inspiration from these reference workouts when designing this program. Use 
     referenceWorkoutsContent,
     hasInjuryHistory,
     totalWorkouts,
+    useImperial,
+    trainingMethodology,
+    clientGender,
   };
 }

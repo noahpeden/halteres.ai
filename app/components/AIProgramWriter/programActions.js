@@ -59,14 +59,6 @@ export async function generateProgram({
     );
     const expectedTotal = calculatedWeeks * calculatedDaysPerWeek;
 
-    console.log('[Client] Workout calculation:', {
-      weeks: calculatedWeeks,
-      daysPerWeek: calculatedDaysPerWeek,
-      expectedTotal: expectedTotal,
-      formDataDaysOfWeekLength: formData.daysOfWeek?.length,
-      formDataDaysPerWeek: formData.daysPerWeek,
-    });
-
     const workoutTracker = {
       currentIndex: 0,
       processedWorkouts: new Set(),
@@ -112,10 +104,6 @@ export async function generateProgram({
           workoutTracker.currentIndex = 0;
           workoutTracker.processedWorkouts.clear();
           workoutTracker.sessionId = null;
-          console.log(
-            '[Retry] Reset workout tracker for retry attempt',
-            retryCount
-          );
           // Add a small delay before retrying
           await delay(RETRY_DELAY);
         }
@@ -147,16 +135,12 @@ export async function generateProgram({
               return dayNameToNumber[capitalizedDay];
             }
 
-            console.warn(`[programActions] Unknown day format: "${day}"`);
             return null;
           })
           .filter((dayNum) => dayNum !== null); // Remove invalid days
 
         // Fallback if no valid days are found - use Monday, Wednesday, Friday as default
         if (daysOfWeekNumbers.length === 0) {
-          console.warn(
-            '[programActions] No valid days found, using default schedule (Mon, Wed, Fri)'
-          );
           daysOfWeekNumbers.push(1, 3, 5); // Monday, Wednesday, Friday
         }
 
@@ -188,9 +172,6 @@ export async function generateProgram({
         // CRITICAL: Clear existing workouts from UI immediately during regeneration
         // This prevents the confusing state where old + new workouts appear together
         if (isReGenerating) {
-          console.log(
-            '[Regeneration] Clearing UI workouts immediately to prevent duplication display'
-          );
           setSuggestions([]); // Clear UI immediately for regeneration
         }
 
@@ -255,12 +236,6 @@ export async function generateProgram({
         } else {
           timeoutDuration = 300000; // 5 minutes for smaller programs
         }
-
-        console.log('[Client] Timeout calculation:', {
-          numberOfWeeks,
-          totalWorkouts,
-          timeoutDuration: timeoutDuration / 1000 + 's',
-        });
 
         // Set a timeout
         timeoutId = setTimeout(() => {
@@ -329,7 +304,6 @@ export async function generateProgram({
               if (message.trim() && message.startsWith('data: ')) {
                 try {
                   const data = JSON.parse(message.substring(6));
-                  console.log(`[Streaming ${sessionId}] Received event:`, data);
                   setServerStatus(data);
 
                   // Update UI based on type
@@ -337,12 +311,10 @@ export async function generateProgram({
                     // Handle chunked generation status updates
                     if (data.message) {
                       showToastMessage(data.message, 'info');
-                      console.log('[Streaming] Status update:', data.message);
                     }
                     setGenerationStage('generating');
                   } else if (data.type === 'stream_start') {
                     // Handle start of streaming
-                    console.log('[Streaming] Stream started:', data.message);
                     if (data.week) {
                       setGenerationStage(`streaming_week_${data.week}`);
                       showToastMessage(
@@ -359,19 +331,12 @@ export async function generateProgram({
                   } else if (data.type === 'stream_chunk') {
                     // Handle streaming chunks - could be used to show live progress
                     if (data.totalLength && data.totalLength % 1000 === 0) {
-                      // Log progress every 1000 characters
-                      console.log(
-                        '[Streaming] Progress:',
-                        data.totalLength,
-                        'characters'
-                      );
                     }
                     // Could update UI with streaming progress here if needed
                   } else if (data.type === 'warning') {
                     // Handle chunked generation warnings (e.g., placeholder workouts)
                     if (data.message) {
                       showToastMessage(data.message, 'warning');
-                      console.log('[Streaming] Warning:', data.message);
                     }
                   } else if (data.type === 'error') {
                     // Handle chunked generation errors
@@ -743,10 +708,6 @@ export async function generateProgram({
                         programId: programId,
                       };
 
-                      console.log(
-                        '[generateProgram SSE] Updating wizard data:',
-                        wizardUpdateData
-                      );
                       updateWizardData(wizardUpdateData);
                     }
 
@@ -754,9 +715,6 @@ export async function generateProgram({
                     if (refetchProfile) {
                       // Delay refetchProfile to allow auto-save to complete
                       setTimeout(() => {
-                        console.log(
-                          '[generateProgram SSE] Calling refetchProfile...'
-                        );
                         refetchProfile();
                       }, 5000); // 5 second delay
                     }
@@ -876,10 +834,6 @@ export async function generateProgram({
                 programId: programId,
               };
 
-              console.log(
-                '[generateProgram] Updating wizard data:',
-                wizardUpdateData
-              );
               updateWizardData(wizardUpdateData);
             }
 
@@ -887,7 +841,6 @@ export async function generateProgram({
             if (refetchProfile) {
               // Delay refetchProfile to allow auto-save to complete
               setTimeout(() => {
-                console.log('[generateProgram JSON] Calling refetchProfile...');
                 refetchProfile();
               }, 5000); // 2 second delay
             }
@@ -968,10 +921,6 @@ export async function generateProgram({
               'warning'
             );
           }
-
-          console.log(
-            `[Retry] Attempt ${retryCount} due to error: ${error.message}`
-          );
 
           // Don't break the loop - continue to next retry iteration
           continue;
@@ -1215,7 +1164,6 @@ export async function saveProgram({
         hasGeneratedProgram: suggestions && suggestions.length > 0,
       };
 
-      console.log('[saveProgram] Updating wizard data:', wizardUpdateData);
       updateWizardData(wizardUpdateData);
     }
   } catch (error) {
@@ -1301,11 +1249,6 @@ export async function autoSaveProgramDetails({
 
     if (error) throw error;
 
-    console.log('Program details auto-saved successfully', {
-      gymType: formData.gymType,
-      gymDetails: gymDetails,
-      programId: programId,
-    });
     return true; // Indicate success
   } catch (error) {
     console.error('Error auto-saving program details:', error);
@@ -1324,7 +1267,6 @@ export async function createProgramRecord({
   supabase,
   showToastMessage,
 }) {
-  console.log('Creating initial program record...');
   try {
     // Prepare minimal data for the initial insert
     // We will update this with more details later after generation/saving
@@ -1369,7 +1311,6 @@ export async function createProgramRecord({
 
     if (data && data.id) {
       showToastMessage('Initial program record created.', 'info');
-      console.log('New program record created with ID:', data.id);
       return data.id; // Return the new program ID
     } else {
       throw new Error('Failed to retrieve ID after program creation.');
@@ -1401,12 +1342,8 @@ export async function handleAutoAssignDates({
     return;
   }
 
-  // Log the input days
-  console.log('Input days of week:', formData.daysOfWeek);
-
   // Use the new start date if provided, otherwise use the current start date
   const startDateToUse = newStartDate || formData.startDate;
-  console.log('Start date:', startDateToUse);
 
   setIsLoading(true);
 
@@ -1429,8 +1366,6 @@ export async function handleAutoAssignDates({
       throw new Error('No valid days selected');
     }
 
-    console.log('Selected day numbers:', selectedDayNumbers);
-
     // Adjust start date to the first selected day of the week if needed
     const startDate = new Date(startDateToUse);
     const startDayOfWeek = startDate.getDay();
@@ -1451,10 +1386,6 @@ export async function handleAutoAssignDates({
       }
       // Adjust the start date
       startDate.setDate(startDate.getDate() + daysToAdd);
-      console.log(
-        'Adjusted start date to next available day:',
-        startDate.toISOString().split('T')[0]
-      );
     }
 
     const workoutsToSchedule = suggestions.filter((w) => !w.is_reference);
@@ -1512,24 +1443,6 @@ export async function handleAutoAssignDates({
     ) {
       const dayOfWeek = currentDate.getDay();
 
-      // Add debug logging
-      console.log(
-        'Checking date:',
-        currentDate.toISOString().split('T')[0],
-        'Day of week:',
-        dayOfWeek,
-        'Day name:',
-        Object.keys(dayNameToNumber).find(
-          (key) => dayNameToNumber[key] === dayOfWeek
-        ),
-        'Selected days:',
-        selectedDayNumbers,
-        'Is selected:',
-        selectedDayNumbers.includes(dayOfWeek),
-        'Days this week:',
-        daysThisWeek
-      );
-
       if (selectedDayNumbers.includes(dayOfWeek)) {
         // Only add the date if we haven't hit our days per week limit
         if (daysThisWeek < daysPerWeek) {
@@ -1549,8 +1462,6 @@ export async function handleAutoAssignDates({
         daysThisWeek = 0;
       }
     }
-
-    console.log('Final workout dates:', workoutDates);
 
     // Create workout entries
     const workoutsToCreate = [];
@@ -1714,7 +1625,7 @@ export async function handleDatePickerSave({
         .eq('id', workoutId)
         .select()
         .single();
-      console.log('Update workout response:', data, updateError);
+
       if (updateError) throw updateError;
       newWorkoutId = workoutId;
 
@@ -1755,7 +1666,7 @@ export async function handleDatePickerSave({
         })
         .select()
         .single();
-      console.log('Insert workout response:', newWorkout, workoutError);
+
       if (workoutError) throw workoutError;
       newWorkoutId = newWorkout.id;
 
