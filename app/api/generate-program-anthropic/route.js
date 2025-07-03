@@ -180,24 +180,8 @@ async function generateProgramChunked(
         const weekWorkouts = weekResult.workouts || weekResult;
         allWorkouts.push(...weekWorkouts);
 
-        // Save workouts to database immediately after each week
-        try {
-          if (sharedData.programId) {
-            await saveWorkoutsToDatabase(
-              sharedData.programId,
-              weekWorkouts,
-              supabase
-            );
-            logWithTimestamp(`Saved week ${currentWeek} workouts to database`);
-          }
-        } catch (saveError) {
-          logWithTimestamp(`Error saving week ${currentWeek} workouts`, {
-            error: saveError.message,
-          });
-          // Continue generation even if save fails
-        }
-
-        // Send the generated workouts for this week
+        // Stream the generated workouts for this week directly to UI
+        // Don't save to database yet - we'll save everything at the end
         sendEvent(controller, encoder, 'workout_chunk', {
           week: currentWeek,
           workouts: weekWorkouts,
@@ -251,6 +235,37 @@ async function generateProgramChunked(
 
         currentWeek++;
       }
+    }
+
+    // Save all workouts to database in one operation at the end
+    try {
+      if (sharedData.programId && allWorkouts.length > 0) {
+        sendEvent(controller, encoder, 'status', {
+          message: 'Saving workouts to database...'
+        });
+        
+        await saveWorkoutsToDatabase(
+          sharedData.programId,
+          allWorkouts,
+          supabase
+        );
+        logWithTimestamp(`Saved all ${allWorkouts.length} workouts to database`);
+        
+        sendEvent(controller, encoder, 'status', {
+          message: 'Workouts saved successfully!'
+        });
+      }
+    } catch (saveError) {
+      logWithTimestamp('Error saving all workouts to database', {
+        error: saveError.message,
+      });
+      sendEvent(controller, encoder, 'error', {
+        error: 'Failed to save workouts to database: ' + saveError.message
+      });
+      if (controller && controller.desiredSize !== null) {
+        controller.close();
+      }
+      return;
     }
 
     // Send completion
@@ -1427,6 +1442,33 @@ IMPORTANT: Each workout MUST be assigned to one of the above dates. These dates 
         
         // Small delay to make streaming visible
         await new Promise((resolve) => setTimeout(resolve, 50));
+      }
+      
+      // Save all workouts to database
+      try {
+        if (programId && workouts.length > 0) {
+          sendEvent(controller, encoder, 'status', {
+            message: 'Saving workouts to database...'
+          });
+          
+          await saveWorkoutsToDatabase(programId, workouts, supabase);
+          logWithTimestamp(`Saved all ${workouts.length} workouts to database (single generation)`);
+          
+          sendEvent(controller, encoder, 'status', {
+            message: 'Workouts saved successfully!'
+          });
+        }
+      } catch (saveError) {
+        logWithTimestamp('Error saving workouts to database (single generation)', {
+          error: saveError.message,
+        });
+        sendEvent(controller, encoder, 'error', {
+          error: 'Failed to save workouts to database: ' + saveError.message
+        });
+        if (controller && controller.desiredSize !== null) {
+          controller.close();
+        }
+        return;
       }
       
       // Send completion event with suggestions

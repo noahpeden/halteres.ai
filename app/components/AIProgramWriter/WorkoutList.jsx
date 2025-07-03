@@ -26,13 +26,14 @@ export default function WorkoutList({
 }) {
   const [currentWeek, setCurrentWeek] = useState(1);
 
-  if (!workouts || workouts.length === 0) {
+  // Don't render if no workouts AND not currently generating
+  if (!workouts || (workouts.length === 0 && !generationStage)) {
     return null;
   }
 
   // Group workouts by week for display - simple index-based grouping
   const groupWorkoutsByWeek = () => {
-    if (!workouts.length) return [];
+    if (!workouts || !workouts.length) return [];
 
     // Sort workouts by date first, then by index to maintain proper order
     const sortedWorkouts = [...workouts].sort((a, b) => {
@@ -395,6 +396,11 @@ export default function WorkoutList({
                           Completed
                         </span>
                       )}
+                      {workout.isStreaming && (
+                        <span className="text-xs font-medium px-2 py-1 bg-blue-100 text-blue-700 rounded animate-pulse">
+                          Generating...
+                        </span>
+                      )}
                     </div>
                     <h4 className="font-semibold break-words">
                       {workout.title ||
@@ -487,6 +493,27 @@ export default function WorkoutList({
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {!currentWeekData && totalWeeks === 0 && generationStage && (
+        <div className="text-center py-8">
+          <div className="text-gray-500">
+            <p>🤖 Generating workouts...</p>
+            <p className="text-sm mt-2">Workouts will appear here as they're generated</p>
+            {generationStage && (
+              <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-md">
+                <p className="text-blue-700 text-sm">
+                  {generationStage === 'generating' ? '• Generating...' : 
+                   generationStage === 'preparing' ? '• Preparing...' : 
+                   generationStage === 'retrying' ? '• Retrying...' : 
+                   generationStage === 'streaming' ? '• Streaming content...' :
+                   generationStage?.startsWith('streaming_week_') ? `• Streaming ${generationStage.replace('streaming_week_', 'week ')} content...` :
+                   '• Processing...'}
+                </p>
+              </div>
+            )}
           </div>
         </div>
       )}

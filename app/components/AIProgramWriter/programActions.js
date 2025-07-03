@@ -18,6 +18,8 @@ export async function generateProgram({
   formData,
   setIsLoading,
   setSuggestions,
+  addStreamingWorkout, // For streaming individual workouts
+  clearStreamingWorkouts, // For clearing streaming workouts
   showToastMessage,
   setGenerationStage,
   setServerStatus,
@@ -31,6 +33,7 @@ export async function generateProgram({
   triggerProgramRefreshAction,
   setPreventFetch,
   refetchProfile,
+  refetchWorkouts, // For manually refetching workouts
   suggestions, // Add suggestions to determine if this is a regeneration
   updateWizardData, // Add updateWizardData to sync with wizard store
   abortControllerRef,
@@ -185,7 +188,9 @@ export async function generateProgram({
         // CRITICAL: Clear existing workouts from UI immediately during regeneration
         // This prevents the confusing state where old + new workouts appear together
         if (isReGenerating) {
-          console.log('[Regeneration] Clearing UI workouts immediately to prevent duplication display');
+          console.log(
+            '[Regeneration] Clearing UI workouts immediately to prevent duplication display'
+          );
           setSuggestions([]); // Clear UI immediately for regeneration
         }
 
@@ -340,16 +345,26 @@ export async function generateProgram({
                     console.log('[Streaming] Stream started:', data.message);
                     if (data.week) {
                       setGenerationStage(`streaming_week_${data.week}`);
-                      showToastMessage(`Streaming week ${data.week} content...`, 'info');
+                      showToastMessage(
+                        `Streaming week ${data.week} content...`,
+                        'info'
+                      );
                     } else {
                       setGenerationStage('streaming');
-                      showToastMessage(data.message || 'Streaming content...', 'info');
+                      showToastMessage(
+                        data.message || 'Streaming content...',
+                        'info'
+                      );
                     }
                   } else if (data.type === 'stream_chunk') {
                     // Handle streaming chunks - could be used to show live progress
                     if (data.totalLength && data.totalLength % 1000 === 0) {
                       // Log progress every 1000 characters
-                      console.log('[Streaming] Progress:', data.totalLength, 'characters');
+                      console.log(
+                        '[Streaming] Progress:',
+                        data.totalLength,
+                        'characters'
+                      );
                     }
                     // Could update UI with streaming progress here if needed
                   } else if (data.type === 'warning') {
@@ -396,8 +411,14 @@ export async function generateProgram({
                     console.log(
                       '[Streaming] Reset workout tracker for new generation'
                     );
-                    // Ensure suggestions are cleared for streaming (should already be cleared above for regeneration)
-                    setSuggestions([]); // Clear previous workouts for streaming
+
+                    // Clear any existing streaming workouts
+                    if (
+                      clearStreamingWorkouts &&
+                      typeof clearStreamingWorkouts === 'function'
+                    ) {
+                      clearStreamingWorkouts();
+                    }
                     showToastMessage(
                       `Program created: ${data.title}`,
                       'success'
@@ -432,7 +453,7 @@ export async function generateProgram({
                       totalExpected
                     );
 
-                    // Process each workout in the week chunk
+                    // Process each workout in the week chunk and add to UI immediately
                     weekWorkouts.forEach((workout, index) => {
                       const workoutKey = `week${weekNumber}_day${index + 1}_${
                         workout.title
@@ -463,39 +484,46 @@ export async function generateProgram({
                         title: workout.title,
                         body: workout.body,
                         description: workout.body,
-                        scheduled_date: workout.date,
-                        suggestedDate: workout.date,
-                        date: workout.date,
+                        scheduled_date: workout.scheduled_date || workout.date,
+                        suggestedDate: workout.scheduled_date || workout.date,
+                        date: workout.scheduled_date || workout.date,
                         streamingId: `chunk_week${weekNumber}_day${index + 1}_${
                           workoutTracker.currentIndex
                         }_${workoutTracker.sessionId}`,
                         weekNumber: weekNumber,
                         dayInWeek: index + 1,
                         trackerIndex: workoutTracker.currentIndex,
+                        // Mark as streaming (not saved to DB yet)
+                        isStreaming: true,
+                        is_reference: false,
+                        completed: false,
                       };
 
                       // Mark as processed and increment tracker
                       workoutTracker.processedWorkouts.add(workoutKey);
                       workoutTracker.currentIndex++;
 
-                      // Add to suggestions
-                      flushSync(() => {
-                        setSuggestions((prev) => {
-                          if (prev.length >= workoutTracker.expectedTotal) {
-                            workoutTracker.currentIndex--;
-                            workoutTracker.processedWorkouts.delete(workoutKey);
-                            return prev;
-                          }
-                          return [...prev, newWorkout];
-                        });
-                      });
+                      // Add to UI state immediately using streaming function
+                      if (
+                        addStreamingWorkout &&
+                        typeof addStreamingWorkout === 'function'
+                      ) {
+                        addStreamingWorkout(newWorkout);
+                      }
                     });
 
-                    // Show week completion toast after all workouts are added
+                    // Show week completion toast
                     showToastMessage(
-                      `Week ${weekNumber} completed! (${weekWorkouts.length} workouts added)`,
+                      `Week ${weekNumber} generated! (${weekWorkouts.length} workouts)`,
                       'success'
                     );
+
+                    console.log('[Streaming] Week chunk processed:', {
+                      week: weekNumber,
+                      workouts: weekWorkouts.length,
+                      totalSoFar: workoutTracker.currentIndex,
+                      expected: workoutTracker.expectedTotal,
+                    });
                   } else if (data.type === 'workout_generated') {
                     // Handle individual workout streaming (legacy/single mode)
                     setGenerationStage('finalizing');
@@ -539,7 +567,7 @@ export async function generateProgram({
                       return;
                     }
 
-                    // Add workout to suggestions incrementally - force immediate render
+                    // Add workout to streaming state incrementally
                     const newWorkout = {
                       title: workout.title,
                       body: workout.body,
@@ -551,50 +579,22 @@ export async function generateProgram({
                       streamingId: `workout_${data.index}_${workoutTracker.currentIndex}_${workoutTracker.sessionId}`,
                       originalIndex: data.index, // Track original server index
                       trackerIndex: workoutTracker.currentIndex, // Track our local index
+                      isStreaming: true,
+                      is_reference: false,
+                      completed: false,
                     };
 
                     // Mark this workout as processed BEFORE the state update
                     workoutTracker.processedWorkouts.add(workoutKey);
                     workoutTracker.currentIndex++;
 
-                    // Use flushSync to force synchronous update
-                    flushSync(() => {
-                      setSuggestions((prev) => {
-                        console.log(
-                          '[Streaming] Previous suggestions count:',
-                          prev.length,
-                          'Expected total:',
-                          workoutTracker.expectedTotal,
-                          'Tracker index:',
-                          workoutTracker.currentIndex
-                        );
-
-                        // Double-check we're not exceeding expected workouts in state
-                        if (prev.length >= workoutTracker.expectedTotal) {
-                          console.warn(
-                            '[Streaming] WARNING: State already has',
-                            prev.length,
-                            'workouts, expected only',
-                            workoutTracker.expectedTotal,
-                            '- reverting tracker and skipping'
-                          );
-                          // Revert tracker changes since we're not adding this workout
-                          workoutTracker.currentIndex--;
-                          workoutTracker.processedWorkouts.delete(workoutKey);
-                          return prev; // Don't add more workouts
-                        }
-
-                        // Simple append approach to avoid index issues
-                        const newSuggestions = [...prev, newWorkout];
-                        console.log(
-                          '[Streaming] Updated suggestions, total count:',
-                          newSuggestions.length,
-                          'Tracker index:',
-                          workoutTracker.currentIndex
-                        );
-                        return newSuggestions;
-                      });
-                    });
+                    // Add to streaming state
+                    if (
+                      addStreamingWorkout &&
+                      typeof addStreamingWorkout === 'function'
+                    ) {
+                      addStreamingWorkout(newWorkout);
+                    }
 
                     // Show a toast for each workout added with corrected numbering
                     showToastMessage(
@@ -616,44 +616,69 @@ export async function generateProgram({
                       workoutTracker.expectedTotal
                     );
 
-                    // Handle Anthropic chunked complete event with suggestions
-                    if (data.suggestions && Array.isArray(data.suggestions)) {
-                      console.log(
-                        '[Streaming] Complete event has suggestions:',
-                        data.suggestions.length
-                      );
+                    // Handle Anthropic chunked complete event
+                    console.log('[Streaming] Complete event received');
 
-                      // For chunked generation, setSuggestions is actually saveGeneratedWorkouts
-                      // which saves to database AND updates UI state
-                      const savedWorkouts = await setSuggestions(
-                        data.suggestions
-                      );
-                      console.log(
-                        '[Streaming] Saved workouts to database:',
-                        savedWorkouts.length
-                      );
-
-                      // Update form data with program metadata
-                      if (data.title && !programId) {
-                        setFormData((prev) => ({
-                          ...prev,
-                          name: data.title || prev.name,
-                        }));
-                      }
-
-                      if (data.description) {
-                        console.log(
-                          '[Streaming] Setting program description from complete event'
-                        );
-                        setGeneratedDescription(data.description);
-                      }
-
-                      // Show success message
-                      showToastMessage(
-                        `Program complete! Generated ${data.suggestions.length} workouts.`,
-                        'success'
-                      );
+                    // Update form data with program metadata
+                    if (data.title && !programId) {
+                      setFormData((prev) => ({
+                        ...prev,
+                        name: data.title || prev.name,
+                      }));
                     }
+
+                    if (data.description) {
+                      console.log(
+                        '[Streaming] Setting program description from complete event'
+                      );
+                      setGeneratedDescription(data.description);
+                    }
+
+                    // Handle final completion - workouts are already saved to database by the API
+                    // For single generation, there might be suggestions to handle
+                    if (
+                      data.suggestions &&
+                      Array.isArray(data.suggestions) &&
+                      data.suggestions.length > 0
+                    ) {
+                      console.log(
+                        '[Streaming] Complete event has suggestions (single generation mode)'
+                      );
+                      // For single generation mode that hasn't streamed individual workouts,
+                      // we might need to save these suggestions. But since the API already saved them,
+                      // we just trigger a refetch.
+                    }
+
+                    // Clear streaming workouts and trigger refetch to load from database
+                    if (
+                      clearStreamingWorkouts &&
+                      typeof clearStreamingWorkouts === 'function'
+                    ) {
+                      console.log(
+                        '[Streaming] Clearing streaming workouts after completion'
+                      );
+                      clearStreamingWorkouts();
+                    }
+
+                    if (
+                      refetchWorkouts &&
+                      typeof refetchWorkouts === 'function'
+                    ) {
+                      console.log('[Streaming] Final refetch after completion');
+                      setTimeout(() => {
+                        refetchWorkouts();
+                      }, 500); // Give database save time to complete
+                    }
+
+                    // Show success message
+                    const workoutCount =
+                      data.totalWorkouts ||
+                      data.suggestions?.length ||
+                      'multiple';
+                    showToastMessage(
+                      `Program complete! Generated ${workoutCount} workouts.`,
+                      'success'
+                    );
 
                     setIsLoading(false);
                     setGenerationStage('complete');
@@ -678,9 +703,6 @@ export async function generateProgram({
                       }, 5000); // Reduced to 5 seconds
                     }
 
-                    // Use tracker workout count for completion message
-                    const workoutCount =
-                      data.totalWorkouts || workoutTracker.currentIndex;
                     showToastMessage(
                       programId
                         ? `Program complete! Generated ${workoutCount} workouts. You can now add them to your calendar.`
