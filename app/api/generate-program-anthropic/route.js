@@ -165,7 +165,9 @@ async function generateProgramChunked(
           sharedData,
           allWorkouts,
           anthropic,
-          currentWeek === 1 // Request program description for first week only
+          currentWeek === 1, // Request program description for first week only
+          controller,
+          encoder
         );
 
         // Extract program description from first week if provided
@@ -302,7 +304,9 @@ async function generateWeekWorkouts(
   sharedData,
   existingWorkouts,
   anthropic,
-  includeDescription = false
+  includeDescription = false,
+  controller = null,
+  encoder = null
 ) {
   logWithTimestamp(`Generating week ${weekNumber}`, { weekNumber });
 
@@ -483,21 +487,55 @@ Format each workout body with this structure:
           ],
         },
       ],
+      stream: true, // Enable streaming
     });
 
-    logWithTimestamp(
-      `Received response from Anthropic for week ${weekNumber}`,
-      {
-        hasContent: !!response.content,
-        contentLength: response.content?.length,
-      }
-    );
-
-    if (!response.content || !response.content[0]) {
-      throw new Error('Invalid response format from Anthropic');
+    // Handle streaming response
+    let responseContent = '';
+    
+    logWithTimestamp(`Starting to stream response for week ${weekNumber}`);
+    
+    // Send streaming start event
+    if (controller && encoder) {
+      sendEvent(controller, encoder, 'stream_start', {
+        week: weekNumber,
+        message: `Streaming week ${weekNumber} content...`
+      });
     }
-
-    const responseContent = response.content[0].text;
+    
+    try {
+      for await (const chunk of response) {
+        if (chunk.type === 'content_block_start') {
+          logWithTimestamp(`Stream started for week ${weekNumber}`);
+        } else if (chunk.type === 'content_block_delta') {
+          const text = chunk.delta?.text || '';
+          responseContent += text;
+          
+          // Send incremental content updates
+          if (controller && encoder && text.length > 0) {
+            sendEvent(controller, encoder, 'stream_chunk', {
+              week: weekNumber,
+              chunk: text,
+              totalLength: responseContent.length
+            });
+          }
+        } else if (chunk.type === 'content_block_stop') {
+          logWithTimestamp(`Stream completed for week ${weekNumber}`, {
+            totalLength: responseContent.length
+          });
+        }
+      }
+    } catch (streamError) {
+      logWithTimestamp(`Error streaming response for week ${weekNumber}`, {
+        error: streamError.message
+      });
+      throw streamError;
+    }
+    
+    if (!responseContent) {
+      throw new Error('No content received from streaming response');
+    }
+    
     logWithTimestamp(`Week ${weekNumber} response content extracted`, {
       length: responseContent.length,
     });
@@ -1179,24 +1217,60 @@ IMPORTANT: Each workout MUST be assigned to one of the above dates. These dates 
             ],
           },
         ],
+        stream: true, // Enable streaming
       });
 
-      logWithTimestamp('Received response from Anthropic', {
-        hasContent: !!response.content,
-        contentLength: response.content?.length,
+      // Handle streaming response
+      let responseContent = '';
+      
+      logWithTimestamp('Starting to stream response for single generation');
+      
+      // Send streaming start event
+      sendEvent(controller, encoder, 'stream_start', {
+        message: 'Streaming program content...'
       });
-
-      if (!response.content || !response.content[0]) {
-        logWithTimestamp('Invalid response format from Anthropic', response);
-        return NextResponse.json(
-          { error: 'Failed to generate a valid program: Invalid API response' },
-          { status: 500 }
-        );
+      
+      try {
+        for await (const chunk of response) {
+          if (chunk.type === 'content_block_start') {
+            logWithTimestamp('Stream started for single generation');
+          } else if (chunk.type === 'content_block_delta') {
+            const text = chunk.delta?.text || '';
+            responseContent += text;
+            
+            // Send incremental content updates
+            if (text.length > 0) {
+              sendEvent(controller, encoder, 'stream_chunk', {
+                chunk: text,
+                totalLength: responseContent.length
+              });
+            }
+          } else if (chunk.type === 'content_block_stop') {
+            logWithTimestamp('Stream completed for single generation', {
+              totalLength: responseContent.length
+            });
+          }
+        }
+      } catch (streamError) {
+        logWithTimestamp('Error streaming response', {
+          error: streamError.message
+        });
+        sendEvent(controller, encoder, 'error', { error: 'Streaming error: ' + streamError.message });
+        if (controller && controller.desiredSize !== null) {
+          controller.close();
+        }
+        return;
       }
-
-      // Parse the response
-      logWithTimestamp('About to extract response content');
-      const responseContent = response.content[0].text;
+      
+      if (!responseContent) {
+        logWithTimestamp('No content received from streaming response');
+        sendEvent(controller, encoder, 'error', { error: 'No content received from API' });
+        if (controller && controller.desiredSize !== null) {
+          controller.close();
+        }
+        return;
+      }
+      
       logWithTimestamp('Response content extracted', {
         length: responseContent.length,
         preview: responseContent.substring(0, 200) + '...',

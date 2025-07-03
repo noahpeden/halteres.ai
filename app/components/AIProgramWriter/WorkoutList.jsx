@@ -156,6 +156,8 @@ export default function WorkoutList({
                 {generationStage === 'generating' ? '• Generating...' : 
                  generationStage === 'preparing' ? '• Preparing...' : 
                  generationStage === 'retrying' ? '• Retrying...' : 
+                 generationStage === 'streaming' ? '• Streaming content...' :
+                 generationStage?.startsWith('streaming_week_') ? `• Streaming ${generationStage.replace('streaming_week_', 'week ')} content...` :
                  generationStage === 'error' ? '• Generation failed - partial program saved' : ''}
               </span>
             )}

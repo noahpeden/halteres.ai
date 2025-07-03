@@ -335,6 +335,23 @@ export async function generateProgram({
                       console.log('[Streaming] Status update:', data.message);
                     }
                     setGenerationStage('generating');
+                  } else if (data.type === 'stream_start') {
+                    // Handle start of streaming
+                    console.log('[Streaming] Stream started:', data.message);
+                    if (data.week) {
+                      setGenerationStage(`streaming_week_${data.week}`);
+                      showToastMessage(`Streaming week ${data.week} content...`, 'info');
+                    } else {
+                      setGenerationStage('streaming');
+                      showToastMessage(data.message || 'Streaming content...', 'info');
+                    }
+                  } else if (data.type === 'stream_chunk') {
+                    // Handle streaming chunks - could be used to show live progress
+                    if (data.totalLength && data.totalLength % 1000 === 0) {
+                      // Log progress every 1000 characters
+                      console.log('[Streaming] Progress:', data.totalLength, 'characters');
+                    }
+                    // Could update UI with streaming progress here if needed
                   } else if (data.type === 'warning') {
                     // Handle chunked generation warnings (e.g., placeholder workouts)
                     if (data.message) {
