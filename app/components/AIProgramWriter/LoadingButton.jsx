@@ -69,21 +69,27 @@ export default function LoadingButton({
       return serverStatus.message;
     }
 
-    // Fallback to generation stage messages
+    // Enhanced fallback to generation stage messages
     switch (generationStage) {
       case 'preparing':
         return 'Initializing AI system...';
       case 'generating':
-        return 'Creating your workouts...';
+        return currentWeek ? `Generating week ${currentWeek}...` : 'Creating your workouts...';
+      case 'streaming':
+        return 'Streaming AI response...';
       case 'longRunning':
         return `Crafting complex program (${loadingDuration}s)...`;
       case 'processing':
-        return 'Optimizing workout structure...';
+        return 'Processing workout data...';
       case 'finalizing':
-        return 'Polishing final details...';
+        return 'Saving workouts...';
       case 'retrying':
         return 'Reconnecting to AI...';
       default:
+        if (generationStage?.startsWith('streaming_week_')) {
+          const weekNum = generationStage.replace('streaming_week_', '');
+          return `Streaming week ${weekNum} content...`;
+        }
         return 'Loading...';
     }
   };
@@ -114,7 +120,7 @@ export default function LoadingButton({
   // Show streaming indicator for AI-related events
   const showStreamingIndicator =
     isStreaming &&
-    ['ai_request', 'ai_response_received', 'parsing'].includes(
+    ['ai_request', 'ai_response_received', 'parsing', 'stream_start', 'stream_chunk'].includes(
       serverStatus.type
     );
 
@@ -122,79 +128,94 @@ export default function LoadingButton({
   const getProgressPercentage = () => {
     if (isComplete) return 100;
 
+    // Use persistent workout count for most accurate progress
+    if (persistentWorkoutCount.total > 0) {
+      const progress = Math.round(
+        (persistentWorkoutCount.generated / persistentWorkoutCount.total) * 100
+      );
+      return Math.min(progress, 95); // Cap at 95% until complete
+    }
+
     // Check for chunked week progress (most accurate for chunked generation)
     if (
       isStreamingChunks &&
       serverStatus.totalGenerated &&
       serverStatus.totalExpected
     ) {
-      return Math.round(
+      const progress = Math.round(
         (serverStatus.totalGenerated / serverStatus.totalExpected) * 100
       );
+      return Math.min(progress, 95); // Cap at 95% until complete
     }
 
     // Check for workout progress first (most accurate)
     if (workoutProgress) {
       const [current, total] = workoutProgress.split('/').map(Number);
-      return Math.round((current / total) * 100);
+      const progress = Math.round((current / total) * 100);
+      return Math.min(progress, 95); // Cap at 95% until complete
     }
 
-    // Check for structured week progress data (most accurate for week-based progress)
-    if (serverStatus && serverStatus.weekProgress) {
-      const { current, total, completed } = serverStatus.weekProgress;
-      if (current && total) {
-        const baseProgress = Math.round((current / total) * 100);
-        // If this is a completion event, use full progress
-        // If it's a processing event, use slightly less to show we're working on it
-        return completed ? baseProgress : Math.max(baseProgress - 5, 10);
-      }
-    }
-
-    // Check for week-based progress in server messages (fallback)
+    // Parse server messages for week-based progress
     if (serverStatus && serverStatus.message) {
       const message = serverStatus.message;
+
+      // Parse "Generating week X of Y..." pattern
+      const generatingMatch = message.match(/Generating week (\d+) of (\d+)/);
+      if (generatingMatch) {
+        const [, current, total] = generatingMatch;
+        const weekProgress = (parseInt(current) - 1) / parseInt(total); // Start of week
+        return Math.round(weekProgress * 85) + 10; // 10-95% range
+      }
 
       // Parse "Completed X of Y weeks" pattern
       const completedMatch = message.match(/Completed (\d+) of (\d+) weeks/);
       if (completedMatch) {
         const [, completed, total] = completedMatch;
-        return Math.round((parseInt(completed) / parseInt(total)) * 100);
+        const progress = Math.round((parseInt(completed) / parseInt(total)) * 85) + 10;
+        return Math.min(progress, 95);
       }
 
-      // Parse "Processing batch: weeks X-Y..." or "Generating weeks X-Y of Z..." pattern
-      const batchMatch = message.match(/weeks (\d+)-(\d+).*of (\d+)/);
-      if (batchMatch) {
-        const [, startWeek, , total] = batchMatch;
-        // Use the start of the current batch as progress indicator
-        const progress = Math.round(
-          ((parseInt(startWeek) - 1) / parseInt(total)) * 100
-        );
-        return Math.max(progress, 10); // Ensure minimum 10% when generating
+      // Parse "Saving workouts to database..." pattern
+      if (message.includes('Saving workouts')) {
+        return 95;
       }
 
-      // Parse "Processing batch: weeks X-Y..." without total
-      const simpleBatchMatch = message.match(/weeks (\d+)-(\d+)/);
-      if (simpleBatchMatch) {
-        const [, startWeek] = simpleBatchMatch;
-        // Estimate progress based on current week (assume reasonable program length)
-        const estimatedProgress =
-          Math.round((parseInt(startWeek) / 6) * 80) + 10; // Cap at 90%
-        return Math.min(estimatedProgress, 90);
+      // Parse "Workouts saved successfully!" pattern
+      if (message.includes('saved successfully')) {
+        return 98;
       }
     }
 
-    // Base progress on stage as fallback
+    // Base progress on generation stage
     switch (generationStage) {
       case 'preparing':
-        return 10;
+        return 5;
       case 'generating':
-        return 30;
+        // If we have current week info, calculate based on that
+        if (currentWeek && persistentWorkoutCount.total === 0) {
+          // Estimate total weeks from current week (rough estimate)
+          const estimatedWeeks = Math.max(currentWeek, 3);
+          const weekProgress = (currentWeek - 0.5) / estimatedWeeks; // Mid-week progress
+          return Math.round(weekProgress * 70) + 15; // 15-85% range
+        }
+        return 25;
+      case 'streaming':
+        return Math.max(30, currentWeek ? Math.min(currentWeek * 20, 80) : 30);
       case 'processing':
-        return 70;
+        return 85;
       case 'finalizing':
-        return 90;
+        return 95;
       default:
-        return 0;
+        if (generationStage?.startsWith('streaming_week_')) {
+          const weekNum = parseInt(generationStage.replace('streaming_week_', ''));
+          if (weekNum && weekNum > 0) {
+            // Estimate progress based on week number
+            const estimatedWeeks = Math.max(weekNum, 3);
+            const weekProgress = (weekNum - 0.5) / estimatedWeeks;
+            return Math.round(weekProgress * 70) + 15; // 15-85% range
+          }
+        }
+        return 10;
     }
   };
 
@@ -263,17 +284,27 @@ export default function LoadingButton({
             {chunkProgress && (
               <div className="flex items-center gap-2 px-3 py-1 bg-white/60 rounded-full border border-green-200">
                 <span className="text-sm font-medium text-green-700">
-                  Generating:
+                  Generated:
                 </span>
                 <span className="text-sm font-bold text-green-800">
                   {chunkProgress}
                 </span>
-                {serverStatus.totalGenerated && serverStatus.totalExpected && (
+                {persistentWorkoutCount.total > 0 && (
                   <span className="text-xs text-green-600">
-                    ({serverStatus.totalGenerated}/{serverStatus.totalExpected}{' '}
-                    workouts)
+                    ({persistentWorkoutCount.generated}/{persistentWorkoutCount.total} workouts)
                   </span>
                 )}
+              </div>
+            )}
+
+            {!chunkProgress && persistentWorkoutCount.total > 0 && (
+              <div className="flex items-center gap-2 px-3 py-1 bg-white/60 rounded-full border border-blue-200">
+                <span className="text-sm font-medium text-blue-700">
+                  Progress:
+                </span>
+                <span className="text-sm font-bold text-blue-800">
+                  {persistentWorkoutCount.generated}/{persistentWorkoutCount.total} workouts
+                </span>
               </div>
             )}
 
