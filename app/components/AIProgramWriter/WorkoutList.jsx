@@ -215,9 +215,12 @@ export default function WorkoutList({
               Program Description
             </div>
             <div className="collapse-content">
-              <div className="p-2 bg-white rounded-md">
-                <p className="whitespace-pre-line">{generatedDescription}</p>
-              </div>
+              <div 
+                className="p-2 bg-white rounded-md text-sm"
+                dangerouslySetInnerHTML={{
+                  __html: parseMarkdownToHTML(generatedDescription)
+                }}
+              />
             </div>
           </div>
         </div>
