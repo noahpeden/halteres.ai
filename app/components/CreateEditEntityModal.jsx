@@ -37,6 +37,7 @@ const CreateEditEntityModal = ({
   const [heightInches, setHeightInches] = useState(0);
 
   const isEditingClient = entityToEdit?.type === 'CLIENT';
+  const isClientType = type === 'CLIENT';
 
   // Initialize form state when modal opens or entity changes
   useEffect(() => {
@@ -143,8 +144,8 @@ const CreateEditEntityModal = ({
 
     let dataToSubmit = { name, type };
 
-    // If editing a client, include metrics converted back to standard units (kg, cm)
-    if (isEditingClient) {
+    // If creating or editing a client, include metrics converted back to standard units (kg, cm)
+    if (isClientType) {
       const metricsToSave = {
         bench_1rm: useImperial ? lbsToKg(metrics.bench_1rm) : metrics.bench_1rm,
         deadlift_1rm: useImperial
@@ -240,8 +241,8 @@ const CreateEditEntityModal = ({
             </div>
           </div>
 
-          {/* Conditionally Render Metrics Section for Editing Clients */}
-          {isEditingClient && (
+          {/* Conditionally Render Metrics Section for Creating/Editing Clients */}
+          {isClientType && (
             <div className="mt-6 border-t pt-4">
               <div className="flex justify-between items-center mb-4">
                 <h4 className="text-md font-semibold">Client Metrics</h4>
