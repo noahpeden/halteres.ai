@@ -34,15 +34,31 @@ export async function createEntityAction(formData) {
   }
 
   try {
+    // Prepare entity data
+    const entityData = {
+      name: formData.name,
+      type: formData.type,
+      user_id: user.id,
+    };
+
+    // If creating a client with metrics, include them
+    if (formData.type === 'CLIENT' && formData.metrics) {
+      Object.assign(entityData, {
+        bench_1rm: formData.metrics.bench_1rm,
+        deadlift_1rm: formData.metrics.deadlift_1rm,
+        squat_1rm: formData.metrics.squat_1rm,
+        mile_time: formData.metrics.mile_time,
+        gender: formData.metrics.gender,
+        height_cm: formData.metrics.height_cm,
+        weight_kg: formData.metrics.weight_kg,
+        recovery_score: formData.metrics.recovery_score,
+        injury_history: formData.metrics.injury_history,
+      });
+    }
+
     const { data, error } = await supabase
       .from('entities')
-      .insert([
-        {
-          name: formData.name,
-          type: formData.type,
-          user_id: user.id,
-        },
-      ])
+      .insert([entityData])
       .select()
       .single();
 
@@ -159,35 +175,28 @@ export async function deleteEntityAction(entityId) {
   }
 
   try {
-    // 1. Check for associated programs (important security/data integrity check)
-    const { count, error: checkError } = await supabase
-      .from('programs')
-      .select('*', { count: 'exact', head: true })
-      .eq('entity_id', entityId)
-      .eq('user_id', user.id);
+    // Soft delete the entity by setting deleted_at timestamp
+    const { data, error: deleteError } = await supabase
+      .from('entities')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', entityId)
+      .eq('user_id', user.id)
+      .is('deleted_at', null) // Ensure we're not deleting an already deleted entity
+      .select()
+      .single();
 
-    if (checkError)
-      throw new Error(
-        `Failed to check for associated programs: ${checkError.message}`
-      );
-
-    if (count && count > 0) {
-      return {
-        success: false,
-        error: `Cannot delete entity because it has ${count} associated program(s). Please delete or reassign the programs first.`,
-      };
+    if (deleteError) {
+      // Check if the error is because the entity doesn't exist or is already deleted
+      if (deleteError.code === 'PGRST116') {
+        return {
+          success: false,
+          error: 'Entity not found or already deleted.',
+        };
+      }
+      throw deleteError;
     }
 
-    // 2. Delete the entity
-    const { error: deleteError } = await supabase
-      .from('entities')
-      .delete()
-      .eq('id', entityId)
-      .eq('user_id', user.id);
-
-    if (deleteError) throw deleteError;
-
-    return { success: true };
+    return { success: true, data };
   } catch (error) {
     console.error('Delete Entity Error:', error);
     return {

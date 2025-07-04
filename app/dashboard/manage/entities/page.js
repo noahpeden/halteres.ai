@@ -12,7 +12,7 @@ import {
   createEntityAction,
   updateEntityAction,
   deleteEntityAction,
-} from '@/actions/entityActions.js';
+} from '@/actions/entityActions';
 
 // Remove interface definition
 // interface Entity { ... }
@@ -45,6 +45,7 @@ export default function ManageEntitiesPage() {
           // Select all columns now to include metrics for the edit modal
           .select('*')
           .eq('user_id', user.id)
+          .is('deleted_at', null) // Filter out soft-deleted entities
           .order('created_at', { ascending: false });
 
         if (fetchError) throw fetchError;
@@ -241,11 +242,13 @@ export default function ManageEntitiesPage() {
           setError('');
         }}
         onConfirm={handleDelete}
-        title={`Delete ${selectedEntity?.type}?`}
-        message={`Are you sure you want to delete ${selectedEntity?.type.toLowerCase()} '${
-          selectedEntity?.name
-        }'? This action cannot be undone.`}
-        confirmText="Delete"
+        content={{
+          title: `Delete ${selectedEntity?.type}?`,
+          message: `Are you sure you want to delete ${selectedEntity?.type?.toLowerCase()} '${
+            selectedEntity?.name
+          }'? This action cannot be undone.`,
+          confirmText: "Delete"
+        }}
         isConfirming={isPendingDelete}
       />
 
