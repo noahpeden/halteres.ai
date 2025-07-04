@@ -24,7 +24,7 @@ export async function POST(req) {
   );
 
   try {
-    const { priceId, isOneTime } = await req.json();
+    const { priceId } = await req.json();
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
 
     if (!priceId) {
@@ -61,7 +61,29 @@ export async function POST(req) {
       });
     }
 
-    // 2. Fetch user profile to get/create stripe_customer_id
+    // 2. Check for existing active subscription
+    const { data: existingProfile, error: checkError } = await supabase
+      .from('profiles')
+      .select('subscription_status, stripe_subscription_id')
+      .eq('id', user.id)
+      .single();
+
+    if (!checkError && existingProfile) {
+      // Block subscription creation if user already has active subscription
+      if (existingProfile.subscription_status === 'active') {
+        return new NextResponse(
+          JSON.stringify({ 
+            error: 'You already have an active subscription. Please manage your subscription from your profile page.' 
+          }),
+          {
+            status: 400,
+            headers: { 'Content-Type': 'application/json' },
+          }
+        );
+      }
+    }
+
+    // 3. Fetch user profile to get/create stripe_customer_id
     // Use service role key for backend operations
     const supabaseAdmin = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -106,7 +128,7 @@ export async function POST(req) {
 
     let stripeCustomerId = profile?.stripe_customer_id;
 
-    // 3. Create Stripe customer if needed
+    // 4. Create Stripe customer if needed
     if (!stripeCustomerId) {
       if (!user.email) {
         return new NextResponse(
@@ -161,11 +183,11 @@ export async function POST(req) {
       }
     }
 
-    // 4. Create Stripe Checkout Session
+    // 5. Create Stripe Checkout Session
     try {
       const sessionConfig = {
         payment_method_types: ['card'],
-        mode: isOneTime ? 'payment' : 'subscription',
+        mode: 'subscription',
         customer: stripeCustomerId,
         line_items: [
           {
@@ -174,12 +196,11 @@ export async function POST(req) {
           },
         ],
         allow_promotion_codes: true,
-        success_url: `${siteUrl}/dashboard?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
+        success_url: `${siteUrl}/pricing?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${siteUrl}/pricing?checkout=cancelled`,
         client_reference_id: user.id, // Link Supabase user ID
         metadata: {
           supabaseUserId: user.id,
-          isOneTime: isOneTime ? 'true' : 'false',
         },
       };
 

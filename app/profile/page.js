@@ -75,8 +75,12 @@ export default function ProfilePage() {
               if (stripeData.cancel_at_period_end) {
                 setIsSubscriptionCanceled(true);
               }
+            } else {
+              // Log but don't show error to user - fallback to DB state
+              console.error('Failed to check Stripe subscription status:', response.status);
             }
           } catch (stripeError) {
+            // Log but don't show error to user - fallback to DB state
             console.error('Error checking Stripe subscription:', stripeError);
           }
         }

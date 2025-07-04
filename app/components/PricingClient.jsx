@@ -19,9 +19,9 @@ export default function PricingClient({ user, profile, plans }) {
   const router = useRouter();
   const [loadingPriceId, setLoadingPriceId] = useState(null);
   const [error, setError] = useState(null);
-  const [personalPlansOpen, setPersonalPlansOpen] = useState(false);
+  const [successMessage, setSuccessMessage] = useState(null);
 
-  const handleSubscribe = async (priceId, isOneTime = false) => {
+  const handleSubscribe = async (priceId) => {
     setError(null);
 
     if (!user) {
@@ -39,13 +39,16 @@ export default function PricingClient({ user, profile, plans }) {
         },
         body: JSON.stringify({
           priceId,
-          isOneTime,
         }),
       });
 
       const { sessionId, error: apiError } = await res.json();
 
       if (!res.ok || apiError) {
+        // Check if it's a user-friendly error message
+        if (res.status === 400 && apiError) {
+          throw new Error(apiError);
+        }
         throw new Error(apiError || 'Failed to create checkout session.');
       }
 
@@ -112,15 +115,15 @@ export default function PricingClient({ user, profile, plans }) {
     : 0;
   const generationsLeft = profile?.generations_remaining ?? 0;
 
-  // Filter plans to separate personal and professional plans
-  const professionalPlans = plans.filter(
-    (plan) => plan.lookupKey !== 'personal_plan_monthly'
-  );
+  // Use all plans (no personal plan filtering needed anymore)
+  const professionalPlans = plans;
 
   // Refresh the page after a short delay if redirected from a successful checkout
   useEffect(() => {
     const query = new URLSearchParams(window.location.search);
     if (query.get('checkout') === 'success') {
+      // Show a processing message
+      setSuccessMessage('Processing your subscription... This page will refresh automatically.');
       // Give the webhook a moment to process before refreshing
       setTimeout(() => {
         window.location.href = '/pricing?refresh=true';
@@ -130,6 +133,15 @@ export default function PricingClient({ user, profile, plans }) {
 
   return (
     <div className="space-y-8">
+      {successMessage && (
+        <div className="col-span-full alert alert-success shadow-lg">
+          <div>
+            <CheckCircle className="w-6 h-6" />
+            <span>{successMessage}</span>
+          </div>
+        </div>
+      )}
+      
       {error && (
         <div className="col-span-full alert alert-error shadow-lg">
           <div>
@@ -202,7 +214,7 @@ export default function PricingClient({ user, profile, plans }) {
                             : 'btn-outline'
                         } w-full ${isLoading ? 'loading' : ''}`}
                         disabled={
-                          isLoading || (isTrialing && remainingDays <= 0)
+                          isLoading || (isTrialing && generationsLeft <= 0)
                         }
                       >
                         {isLoading

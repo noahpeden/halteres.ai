@@ -33,10 +33,12 @@ async function updateSubscriptionStatus(
   currentPeriodEnd,
   userIdFromMetadata,
   priceId = null,
-  cancelAtPeriodEnd = false
+  cancelAtPeriodEnd = false,
+  retryCount = 0
 ) {
+  const maxRetries = 3;
   console.log(
-    `Webhook: Updating subscription for Stripe Customer ${stripeCustomerId}, Subscription ${subscriptionId}, Status: ${status}, Plan: ${plan}`
+    `Webhook: Updating subscription for Stripe Customer ${stripeCustomerId}, Subscription ${subscriptionId}, Status: ${status}, Plan: ${plan}${retryCount > 0 ? ` (Retry ${retryCount}/${maxRetries})` : ''}`
   );
 
   // Construct the update payload carefully, avoid undefined values if possible
@@ -99,6 +101,27 @@ async function updateSubscriptionStatus(
       `Webhook Error: Failed to update profile for user ${userId} (Stripe Customer ${stripeCustomerId})`,
       updateError
     );
+    
+    // Retry logic for transient errors
+    if (retryCount < maxRetries && 
+        (updateError.code === 'PGRST301' || // Connection error
+         updateError.code === '40001' || // Serialization error
+         updateError.message?.includes('timeout'))) {
+      console.log(`Webhook: Retrying update for user ${userId} in 1 second...`);
+      await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
+      return updateSubscriptionStatus(
+        stripeCustomerId,
+        subscriptionId,
+        status,
+        plan,
+        currentPeriodEnd,
+        userIdFromMetadata,
+        priceId,
+        cancelAtPeriodEnd,
+        retryCount + 1
+      );
+    }
+    
     return { error: `Webhook handler error: ${updateError.message}` };
   }
 
@@ -148,94 +171,8 @@ export async function POST(req) {
       switch (event.type) {
         case 'checkout.session.completed':
           const checkoutSession = event.data.object;
-
-          // Handle one-time purchases separately
-          if (
-            checkoutSession.mode === 'payment' &&
-            checkoutSession.payment_status === 'paid'
-          ) {
-            console.log(
-              `Webhook Info: Processing one-time payment for session ${checkoutSession.id}`
-            );
-
-            // Extract customer and user info
-            customerId = checkoutSession.customer;
-            userIdFromMetadata =
-              checkoutSession.client_reference_id ??
-              checkoutSession.metadata?.supabaseUserId;
-
-            // Check if this is a personal pack - use lookup key or price ID instead of just amount
-            const lineItems = await stripe.checkout.sessions.listLineItems(
-              checkoutSession.id
-            );
-            const isPriceMatch = lineItems.data.some(
-              (item) =>
-                item.price.id ===
-                  process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_PERSONAL_ONE_TIME ||
-                item.price.lookup_key === 'standard_personal_one_time'
-            );
-
-            const isPersonalPack =
-              checkoutSession.metadata?.isOneTime === 'true' && isPriceMatch;
-
-            if (isPersonalPack && userIdFromMetadata) {
-              console.log(
-                `Webhook: Processing Personal Pack purchase for user ${userIdFromMetadata}`
-              );
-
-              try {
-                // First get the current generations_remaining
-                const { data: userProfile, error: profileError } =
-                  await supabaseAdmin
-                    .from('profiles')
-                    .select('generations_remaining')
-                    .eq('id', userIdFromMetadata)
-                    .single();
-
-                if (profileError) {
-                  console.error(
-                    `Webhook Error: Failed to fetch profile for user ${userIdFromMetadata}:`,
-                    profileError
-                  );
-                  break;
-                }
-
-                // Calculate new generations count (current + 10)
-                const currentGenerations =
-                  userProfile.generations_remaining || 0;
-                const newGenerations = currentGenerations + 10;
-
-                // Update the profile with new generations count
-                const { error: updateError } = await supabaseAdmin
-                  .from('profiles')
-                  .update({
-                    generations_remaining: newGenerations,
-                    stripe_customer_id: customerId, // Ensure customer ID is saved
-                  })
-                  .eq('id', userIdFromMetadata);
-
-                if (updateError) {
-                  console.error(
-                    `Webhook Error: Failed to update generations for user ${userIdFromMetadata}:`,
-                    updateError
-                  );
-                } else {
-                  console.log(
-                    `Webhook: Successfully added 10 generations to user ${userIdFromMetadata}. New total: ${newGenerations}`
-                  );
-                }
-              } catch (error) {
-                console.error(
-                  'Webhook Error: Failed to process Personal Pack purchase:',
-                  error
-                );
-              }
-
-              break; // Exit early as we've handled the one-time purchase
-            }
-          }
-
-          // Continue with subscription handling (existing code)
+          
+          // Only handle subscription checkouts
           const checkoutSubscriptionId = checkoutSession.subscription;
           if (
             checkoutSession.mode === 'subscription' &&
@@ -321,54 +258,6 @@ export async function POST(req) {
           requiresUpdate = true;
           planToUpdate = mapLookupKeyToPlan(lookupKey);
           statusToUpdate = 'active';
-
-          // Check if this is the personal plan with monthly limit
-          if (lookupKey === 'standard_personal_monthly') {
-            console.log(
-              `Webhook: Processing invoice payment for Personal Plan subscription ${subscription}`
-            );
-
-            try {
-              // Find the user ID associated with this customer
-              const { data: customerProfiles, error: customerError } =
-                await supabaseAdmin
-                  .from('profiles')
-                  .select('id')
-                  .eq('stripe_customer_id', customerId)
-                  .limit(1);
-
-              if (customerError || !customerProfiles?.length) {
-                console.error(
-                  `Webhook Error: Failed to find user for Stripe customer ${customerId}:`,
-                  customerError
-                );
-              } else {
-                const userId = customerProfiles[0].id;
-
-                // Reset generations_remaining to 10 for new billing cycle
-                const { error: updateError } = await supabaseAdmin
-                  .from('profiles')
-                  .update({ generations_remaining: 10 })
-                  .eq('id', userId);
-
-                if (updateError) {
-                  console.error(
-                    `Webhook Error: Failed to reset generations for Personal Plan user ${userId}:`,
-                    updateError
-                  );
-                } else {
-                  console.log(
-                    `Webhook: Successfully reset generations to 10 for Personal Plan user ${userId}`
-                  );
-                }
-              }
-            } catch (error) {
-              console.error(
-                'Webhook Error: Failed to process Personal Plan invoice payment:',
-                error
-              );
-            }
-          }
           break;
 
         case 'invoice.payment_failed':
@@ -526,7 +415,6 @@ function mapLookupKeyToPlan(lookupKey) {
     standard_monthly: 'monthly',
     standard_quarterly: 'quarterly',
     standard_annual: 'annual',
-    standard_personal_monthly: 'personal',
   };
 
   return planMap[lookupKey] || null;
