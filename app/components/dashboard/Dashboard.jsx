@@ -24,12 +24,16 @@ import TodayWorkouts from '../TodayWorkouts';
 // Custom hooks
 import { useDashboardData } from '@/hooks/useDashboardData';
 import { useDashboardModals } from '@/hooks/useDashboardModals';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function Dashboard() {
   const [filterEntityId, setFilterEntityId] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [showThisWeeksWorkouts, setShowThisWeeksWorkouts] = useState(false);
   const [showTodaysWorkouts, setShowTodaysWorkouts] = useState(false);
+
+  // Get subscription status for program duration limits
+  const { subscriptionStatus } = useAuth();
 
   // Custom hooks for data and modal management
   const {
@@ -438,6 +442,7 @@ export default function Dashboard() {
           startDate={startDate}
           programDuration={programDuration}
           daysOfWeek={daysOfWeek}
+          subscriptionStatus={subscriptionStatus}
           onProgramNameChange={setProgramName}
           onStartDateChange={setStartDate}
           onProgramDurationChange={setProgramDuration}

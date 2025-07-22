@@ -11,6 +11,7 @@ export default function CreateProgramModal({
   startDate,
   programDuration,
   daysOfWeek,
+  subscriptionStatus,
   onProgramNameChange,
   onStartDateChange,
   onProgramDurationChange,
@@ -23,6 +24,12 @@ export default function CreateProgramModal({
   const [selectedMethod, setSelectedMethod] = useState(null);
   // State for dropdown visibility
   const [isDurationDropdownOpen, setIsDurationDropdownOpen] = useState(false);
+
+  // Duration options based on subscription status
+  const freeWeekOptions = [1, 2];
+  const premiumWeekOptions = [1, 2, 3, 4, 5, 6, 7, 8];
+  const isPremium = subscriptionStatus === 'active';
+  const weekOptions = isPremium ? premiumWeekOptions : freeWeekOptions;
 
   // Calculate end date based on start date and duration
   const calculateEndDate = () => {
@@ -176,12 +183,17 @@ export default function CreateProgramModal({
                     }
                     required
                   >
-                    {Array.from({ length: 8 }, (_, i) => i + 1).map((num) => (
+                    {weekOptions.map((num) => (
                       <option key={num} value={num}>
                         {num} {num === 1 ? 'week' : 'weeks'}
                       </option>
                     ))}
                   </select>
+                  {!isPremium && (
+                    <div className="text-xs text-gray-500 mt-1">
+                      Free trial limited to 2 weeks. <a href="/pricing" className="text-primary hover:underline">Upgrade</a> for longer programs.
+                    </div>
+                  )}
                 </div>
 
                 <div className="w-full mb-4">

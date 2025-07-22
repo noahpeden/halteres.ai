@@ -50,39 +50,35 @@ export default function ProgramDetails({
 
   const handleGymTypeSelect = useCallback(
     async (value) => {
-      // Only update equipment if the gym type actually changed
-      if (value !== formData.gymType) {
-        handleChange({ target: { name: 'gymType', value } });
-        closeDropdown('gymType');
+      handleChange({ target: { name: 'gymType', value } });
+      closeDropdown('gymType');
 
-        const newEquipment = gymEquipmentPresets[value] || [];
-        
-        // Update local equipment state
-        if (updateEquipment) {
-          updateEquipment(newEquipment);
-        }
-
-        // Map equipment IDs to labels for database
-        const equipmentLabels = newEquipment
-          .map((id) => {
-            const equipment = equipmentList.find((item) => item.value === id);
-            return equipment ? equipment.label : null;
-          })
-          .filter(Boolean);
-
-        // Update in database
-        await updateFormFields({
-          gym_details: {
-            ...formData.gym_details,
-            gym_type: value,
-            equipment: equipmentLabels,
-          },
-        });
-      } else {
-        closeDropdown('gymType');
+      const newEquipment = gymEquipmentPresets[value] || [];
+      
+      // Always update equipment when gym type is selected, regardless of if it changed
+      // This fixes the CrossFit Box bug where equipment wasn't being set
+      if (updateEquipment) {
+        updateEquipment(newEquipment);
       }
+
+      // Map equipment IDs to labels for database
+      const equipmentLabels = newEquipment
+        .map((id) => {
+          const equipment = equipmentList.find((item) => item.value === id);
+          return equipment ? equipment.label : null;
+        })
+        .filter(Boolean);
+
+      // Update in database
+      await updateFormFields({
+        gym_details: {
+          ...formData.gym_details,
+          gym_type: value,
+          equipment: equipmentLabels,
+        },
+      });
     },
-    [handleChange, updateFormFields, formData.gym_details, formData.gymType, updateEquipment]
+    [handleChange, updateFormFields, formData.gym_details, updateEquipment]
   );
 
   const handleDifficultySelect = useCallback(
