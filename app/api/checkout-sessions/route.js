@@ -195,6 +195,12 @@ export async function POST(req) {
             quantity: 1,
           },
         ],
+        // Attach user metadata directly on the subscription for reliable webhook linkage
+        subscription_data: {
+          metadata: {
+            supabaseUserId: user.id,
+          },
+        },
         allow_promotion_codes: true,
         success_url: `${siteUrl}/pricing?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${siteUrl}/pricing?checkout=cancelled`,

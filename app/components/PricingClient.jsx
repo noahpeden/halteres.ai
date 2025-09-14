@@ -193,16 +193,18 @@ export default function PricingClient({ user, profile, plans }) {
                     ))}
                   </ul>
                   <div className="card-actions justify-center">
-                    {isCurrentPlan ? (
+                    {isActive ? (
                       <div className="w-full space-y-2">
-                        <button className="btn btn-outline btn-disabled w-full">
-                          Current Plan
-                        </button>
+                        {isCurrentPlan && (
+                          <button className="btn btn-outline btn-disabled w-full">
+                            Current Plan
+                          </button>
+                        )}
                         <button
                           onClick={handleManageSubscription}
-                          className="btn btn-ghost btn-sm w-full"
+                          className="btn btn-ghost w-full"
                         >
-                          Change or Cancel Plan
+                          Manage in Billing Portal
                         </button>
                       </div>
                     ) : (
@@ -220,9 +222,7 @@ export default function PricingClient({ user, profile, plans }) {
                         {isLoading
                           ? 'Processing...'
                           : user
-                          ? isActive
-                            ? 'Switch to This Plan'
-                            : isTrialing
+                          ? isTrialing
                             ? 'Upgrade Now'
                             : 'Choose Plan'
                           : 'Get Started'}
