@@ -34,33 +34,8 @@ const ProgramForm = ({
       const { name, value, type, checked } = e.target;
       const updateValue = type === 'checkbox' ? checked : value;
 
-      if (name === 'gymType') {
-        // Only reset equipment if the gym type actually changed
-        if (value !== formData.gymType) {
-          // Get the preset for the new gym type
-          const preset = gymEquipmentPresets[value] || [];
-          // Map preset IDs to equipment labels
-          const equipmentNames = preset
-            .map((id) => {
-              const equipment = equipmentList.find((item) => item.value === id);
-              return equipment ? equipment.label : null;
-            })
-            .filter(Boolean);
-          // Update gymType, equipment, and gymDetails.equipment
-          setFieldValue('gymType', value);
-          setFieldValue('equipment', preset);
-          setFieldValue('gymDetails', {
-            ...formData.gymDetails,
-            gym_type: value,
-            equipment: equipmentNames,
-          });
-        } else {
-          // Just update the gym type without resetting equipment
-          setFieldValue('gymType', value);
-        }
-        // Auto-save will be handled by setFieldValue
-        return;
-      }
+      // Gym type changes are handled by ProgramDetails component
+      // to prevent conflicts and ensure proper equipment preset handling
 
       setFieldValue(name, updateValue);
 

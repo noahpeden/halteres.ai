@@ -713,7 +713,9 @@ export async function generateProgram({
 
                     // Call refetchProfile if provided
                     if (refetchProfile) {
-                      // Delay refetchProfile to allow auto-save to complete
+                      // Immediate refetch to update trial banner
+                      refetchProfile();
+                      // Also refetch after delay to ensure database is fully updated
                       setTimeout(() => {
                         refetchProfile();
                       }, 5000); // 5 second delay
