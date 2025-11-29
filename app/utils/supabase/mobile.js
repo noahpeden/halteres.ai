@@ -1,5 +1,6 @@
-const { createServerClient } = require('@supabase/ssr');
-const { cookies } = require('next/headers');
+import { createServerClient } from '@supabase/ssr';
+import { createClient } from '@supabase/supabase-js';
+import { cookies } from 'next/headers';
 
 /**
  * Creates a Supabase client that supports both cookie and bearer token auth
@@ -15,8 +16,6 @@ async function createMobileCompatibleClient(request) {
 
     // For bearer token auth, we need to use createClient from @supabase/supabase-js
     // because @supabase/ssr's getSession() doesn't work with bearer tokens
-    const { createClient } = require('@supabase/supabase-js');
-    
     const client = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
@@ -114,7 +113,7 @@ async function handleCors(request) {
   return null;
 }
 
-module.exports = {
+export {
   createMobileCompatibleClient,
   corsHeaders,
   handleCors
