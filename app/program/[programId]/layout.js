@@ -1,7 +1,8 @@
 'use client';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { use, useState } from 'react';
+import { use, useState, useEffect } from 'react';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import {
   LayoutDashboard,
   CalendarDays,
@@ -16,6 +17,40 @@ export default function ProgramLayout({ children, params }) {
   const pathname = usePathname();
   const [hoveredTooltip, setHoveredTooltip] = useState(null);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
+  const [entityType, setEntityType] = useState(null);
+
+  useEffect(() => {
+    async function fetchEntityType() {
+      if (!programId) return;
+
+      const supabase = createClientComponentClient();
+      try {
+        const { data: programData, error: programError } = await supabase
+          .from('programs')
+          .select('entity_id')
+          .eq('id', programId)
+          .single();
+
+        if (programError) return;
+
+        if (programData?.entity_id) {
+          const { data: entityData } = await supabase
+            .from('entities')
+            .select('type')
+            .eq('id', programData.entity_id)
+            .single();
+
+          if (entityData) {
+            setEntityType(entityData.type);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching entity type:', error);
+      }
+    }
+
+    fetchEntityType();
+  }, [programId]);
 
   const isPublicWorkoutPage =
     pathname.includes('/workout/') && pathname.split('/').length === 5;
@@ -65,9 +100,9 @@ export default function ProgramLayout({ children, params }) {
     },
     {
       href: `/program/${programId}/metrics`,
-      label: 'Client Metrics',
+      label: entityType === 'CLASS' ? 'Class Metrics' : 'Client Metrics',
       icon: BarChart3,
-      description: 'Track client progress and stats',
+      description: entityType === 'CLASS' ? 'Track class progress and stats' : 'Track client progress and stats',
     },
     {
       href: '/dashboard',

@@ -72,13 +72,13 @@ export default function ProgramDetails({
       // Update in database
       await updateFormFields({
         gym_details: {
-          ...formData.gym_details,
+          ...formData.gymDetails,
           gym_type: value,
           equipment: equipmentLabels,
         },
       });
     },
-    [handleChange, updateFormFields, formData.gym_details, updateEquipment]
+    [handleChange, updateFormFields, formData.gymDetails, updateEquipment]
   );
 
   const handleDifficultySelect = useCallback(
