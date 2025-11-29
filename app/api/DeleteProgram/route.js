@@ -1,5 +1,12 @@
-import { createClient } from '@/utils/supabase/server';
+import { createMobileCompatibleClient, corsHeaders } from '@/app/utils/supabase/mobile';
 import { NextResponse } from 'next/server';
+
+export async function OPTIONS(req) {
+  return new NextResponse(null, {
+    status: 200,
+    headers: corsHeaders()
+  });
+}
 
 export async function DELETE(req) {
   try {
@@ -9,11 +16,11 @@ export async function DELETE(req) {
     if (!programId) {
       return NextResponse.json(
         { error: 'Program ID is required' },
-        { status: 400 }
+        { status: 400, headers: corsHeaders() }
       );
     }
 
-    const supabase = await createClient();
+    const supabase = await createMobileCompatibleClient(req);
 
     // Get the user from the session server-side for security
     const {
@@ -21,7 +28,7 @@ export async function DELETE(req) {
     } = await supabase.auth.getSession();
 
     if (!session) {
-      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+      return NextResponse.json({ error: 'Not authenticated' }, { status: 401, headers: corsHeaders() });
     }
 
     // Verify that the program belongs to an entity owned by this user
@@ -35,12 +42,12 @@ export async function DELETE(req) {
       console.error('Error fetching program:', programError);
       return NextResponse.json(
         { error: programError.message },
-        { status: 500 }
+        { status: 500, headers: corsHeaders() }
       );
     }
 
     if (!programData) {
-      return NextResponse.json({ error: 'Program not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Program not found' }, { status: 404, headers: corsHeaders() });
     }
 
     // Check if the entity belongs to the current user
@@ -52,13 +59,13 @@ export async function DELETE(req) {
 
     if (entityError) {
       console.error('Error fetching entity:', entityError);
-      return NextResponse.json({ error: entityError.message }, { status: 500 });
+      return NextResponse.json({ error: entityError.message }, { status: 500, headers: corsHeaders() });
     }
 
     if (entityData.user_id !== session.user.id) {
       return NextResponse.json(
         { error: 'You do not have permission to delete this program' },
-        { status: 403 }
+        { status: 403, headers: corsHeaders() }
       );
     }
 
@@ -72,7 +79,7 @@ export async function DELETE(req) {
       console.error('Error deleting program workouts:', workoutsDeleteError);
       return NextResponse.json(
         { error: workoutsDeleteError.message },
-        { status: 500 }
+        { status: 500, headers: corsHeaders() }
       );
     }
 
@@ -86,16 +93,16 @@ export async function DELETE(req) {
       console.error('Error deleting program:', programDeleteError);
       return NextResponse.json(
         { error: programDeleteError.message },
-        { status: 500 }
+        { status: 500, headers: corsHeaders() }
       );
     }
 
     return NextResponse.json(
       { message: 'Program and all associated workouts deleted successfully' },
-      { status: 200 }
+      { status: 200, headers: corsHeaders() }
     );
   } catch (error) {
     console.error('Request failed:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: error.message }, { status: 500, headers: corsHeaders() });
   }
 }

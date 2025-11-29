@@ -3,7 +3,6 @@
 import { useRouter } from 'next/navigation';
 import {
   ArrowRight,
-  DollarSign,
   Clock,
   Users,
   TrendingUp,
@@ -110,17 +109,15 @@ export default function HomeClient() {
 
               <div className="space-y-6">
                 <h1 className="text-5xl lg:text-6xl font-bold text-gray-900 leading-tight">
-                  Stop Spending Hours on Programming.
+                  Why Pay More for Programming You Can't Customize?
                   <span className="text-primary block">
-                    Start Making More Money.
+                    8 Weeks. 10 Minutes. $99/month.
                   </span>
                 </h1>
 
                 <p className="text-xl lg:text-2xl text-gray-600 leading-relaxed">
-                  AI-powered workout programming that takes{' '}
-                  <strong>2 minutes instead of 2 hours</strong>. Free up your
-                  time to take on more clients while delivering state-of-the-art
-                  programming quality.
+                  Generate custom programming for your CrossFit box or functional fitness gym.{' '}
+                  <strong>YOUR equipment. YOUR goals. YOUR brand.</strong> Not generic workouts that assume gear you don't have.
                 </p>
               </div>
 
@@ -129,7 +126,7 @@ export default function HomeClient() {
                   onClick={() => push()}
                   className="bg-primary text-white px-8 py-4 rounded-xl font-semibold text-lg hover:bg-primary/90 transition duration-300 flex items-center justify-center shadow-lg"
                 >
-                  {session ? 'Go to Dashboard' : 'Start Free Trial'}
+                  {session ? 'Go to Dashboard' : 'Try Free for 14 Days'}
                   <ArrowRight className="w-5 h-5 ml-2" />
                 </button>
                 {!session && (
@@ -152,25 +149,25 @@ export default function HomeClient() {
                   <Clock className="w-6 h-6 text-primary" />
                   <div>
                     <div className="font-bold text-2xl text-gray-900">
-                      2 min
+                      8 weeks
                     </div>
-                    <div className="text-sm text-gray-600">vs 2 hours</div>
+                    <div className="text-sm text-gray-600">in 10 minutes</div>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Target className="w-6 h-6 text-primary" />
+                  <div>
+                    <div className="font-bold text-2xl text-gray-900">$99/mo</div>
+                    <div className="text-sm text-gray-600">not $129+</div>
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
                   <Users className="w-6 h-6 text-primary" />
                   <div>
-                    <div className="font-bold text-2xl text-gray-900">3x</div>
-                    <div className="text-sm text-gray-600">more clients</div>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <DollarSign className="w-6 h-6 text-primary" />
-                  <div>
                     <div className="font-bold text-2xl text-gray-900">
-                      $500+
+                      100%
                     </div>
-                    <div className="text-sm text-gray-600">extra monthly</div>
+                    <div className="text-sm text-gray-600">customizable</div>
                   </div>
                 </div>
               </div>
@@ -206,18 +203,18 @@ export default function HomeClient() {
                 </div>
                 <div className="mt-4 text-center">
                   <p className="text-sm text-gray-600">
-                    Program 6 weeks of workouts for a branch new client in under
-                    5 minutes.
+                    Generate 8 weeks of programming for your gym in under
+                    10 minutes.
                   </p>
                 </div>
               </div>
 
               {/* Floating badges */}
               <div className="absolute -top-4 -right-4 bg-green-500 text-white px-4 py-2 rounded-full text-sm font-semibold shadow-lg">
-                ⚡ 60x Faster
+                Your Equipment
               </div>
               <div className="absolute -bottom-4 -left-4 bg-blue-500 text-white px-4 py-2 rounded-full text-sm font-semibold shadow-lg">
-                🏆 Pro Quality
+                Your Programming
               </div>
             </div>
           </div>
@@ -229,32 +226,31 @@ export default function HomeClient() {
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
             <h2 className="text-4xl lg:text-5xl font-bold text-gray-900 mb-6">
-              Why Fitness Professionals Choose Halteres.ai
+              Why Gym Owners Choose Halteres.ai
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Transform your programming workflow and scale your business
-              without sacrificing quality
+              Stop paying for generic programming. Start delivering YOUR programming—customized for YOUR gym.
             </p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-8">
             <ValueProp
               icon={<Clock className="w-8 h-8 text-primary" />}
-              title="Save 10+ Hours Per Week"
-              description="Generate comprehensive 2-week programs in under 2 minutes. Spend your time coaching, not programming."
-              highlight="60x Faster Than Manual"
-            />
-            <ValueProp
-              icon={<DollarSign className="w-8 h-8 text-primary" />}
-              title="Increase Revenue by 50%+"
-              description="Take on 3-5 more clients with the time you save. That's $500-$2000+ extra monthly revenue."
-              highlight="ROI in First Month"
+              title="Stop Paying for What You Can't Modify"
+              description="Why pay hundreds of dollars per month for programming that doesn't fit your equipment? Generate 8 weeks of custom programming in 10 minutes."
+              highlight="Your Equipment"
             />
             <ValueProp
               icon={<Target className="w-8 h-8 text-primary" />}
-              title="State-of-the-Art Quality"
-              description="AI trained on proven methodologies ensures every workout is perfectly structured and progressively challenging."
-              highlight="Science-Based"
+              title="Your Programming, Your Brand"
+              description="Your members come for YOUR coaching and YOUR community. Now give them YOUR programming—not someone else's."
+              highlight="100% Ownership"
+            />
+            <ValueProp
+              icon={<Sparkles className="w-8 h-8 text-primary" />}
+              title="Modify Any Workout Day-Of"
+              description="Equipment breaks? Class size changes? Use our Enhance feature to rewrite any workout instantly—something generic programs can't do."
+              highlight="Day-Of Flexibility"
             />
           </div>
         </div>
@@ -267,28 +263,27 @@ export default function HomeClient() {
             <div className="space-y-8">
               <div className="space-y-6">
                 <h2 className="text-4xl lg:text-5xl font-bold text-gray-900">
-                  Stop Losing Money to Time-Consuming Programming
+                  Sound Familiar?
                 </h2>
                 <div className="space-y-4 text-lg text-gray-600">
                   <div className="flex items-start space-x-3">
                     <div className="bg-red-100 p-1 rounded-full mt-1">
                       <div className="w-2 h-2 bg-red-500 rounded-full"></div>
                     </div>
-                    <p>Spending 2-4 hours per client on workout programming</p>
+                    <p>Spending Sunday nights writing next week's programming</p>
                   </div>
                   <div className="flex items-start space-x-3">
                     <div className="bg-red-100 p-1 rounded-full mt-1">
                       <div className="w-2 h-2 bg-red-500 rounded-full"></div>
                     </div>
-                    <p>Turning away new clients because you're at capacity</p>
+                    <p>Paying for generic programming that assumes equipment you don't have</p>
                   </div>
                   <div className="flex items-start space-x-3">
                     <div className="bg-red-100 p-1 rounded-full mt-1">
                       <div className="w-2 h-2 bg-red-500 rounded-full"></div>
                     </div>
                     <p>
-                      Copy-pasting old workouts because you don't have time to
-                      create new ones
+                      Losing your gym's identity to "we follow [someone else's] programming"
                     </p>
                   </div>
                   <div className="flex items-start space-x-3">
@@ -296,8 +291,7 @@ export default function HomeClient() {
                       <div className="w-2 h-2 bg-red-500 rounded-full"></div>
                     </div>
                     <p>
-                      Staying up late to finish programming for tomorrow's
-                      sessions
+                      Can't modify workouts when equipment breaks or class size changes day-of
                     </p>
                   </div>
                 </div>
@@ -307,26 +301,26 @@ export default function HomeClient() {
             <div className="space-y-8">
               <div className="bg-white p-8 rounded-2xl shadow-xl border border-gray-100">
                 <h3 className="text-2xl font-bold mb-6 text-center">
-                  Revenue Calculator
+                  What You Get with Halteres
                 </h3>
                 <div className="space-y-4">
                   <div className="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
-                    <span>Current clients:</span>
-                    <span className="font-bold">20</span>
+                    <span>Programming cycles:</span>
+                    <span className="font-bold text-primary">8 weeks</span>
                   </div>
                   <div className="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
-                    <span>Time saved per week:</span>
-                    <span className="font-bold text-green-600">12 hours</span>
+                    <span>Time to generate:</span>
+                    <span className="font-bold text-green-600">~10 minutes</span>
                   </div>
                   <div className="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
-                    <span>Additional clients possible:</span>
-                    <span className="font-bold text-blue-600">+4 clients</span>
+                    <span>Equipment customization:</span>
+                    <span className="font-bold text-blue-600">100%</span>
                   </div>
                   <div className="border-t pt-4">
                     <div className="flex justify-between items-center p-4 bg-primary/10 rounded-lg">
-                      <span className="font-bold">Extra monthly revenue:</span>
-                      <span className="font-bold text-2xl text-primary">
-                        $1,200
+                      <span className="font-bold">Day-of modifications:</span>
+                      <span className="font-bold text-xl text-primary">
+                        Instant
                       </span>
                     </div>
                   </div>
@@ -342,36 +336,36 @@ export default function HomeClient() {
         <div className="container mx-auto px-4">
           <div className="text-center mb-20">
             <h2 className="text-4xl lg:text-5xl font-bold text-gray-900 mb-6">
-              Everything You Need to Scale Your Business
+              Everything You Need to Own Your Programming
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Professional-grade tools designed specifically for personal
-              trainers and CrossFit coaches
+              Professional-grade tools designed specifically for CrossFit boxes
+              and functional fitness gyms
             </p>
           </div>
 
           <div className="space-y-32">
             <FeatureShowcase
-              badge="🚀 Core Feature"
-              title="Generate Complete 2-Week Programs in 2 Minutes"
-              description="Our AI analyzes your client's goals, available equipment, training methodology, and creates scientifically-backed programs with perfect progression. No more staying up late writing workouts."
+              badge="Core Feature"
+              title="Generate 8-Week Programming Cycles in 10 Minutes"
+              description="Configure YOUR equipment, define YOUR training focus, and let AI generate complete programming cycles. Emphasize squats this cycle? Build toward the Open? You decide—and modify any workout instantly with our Enhance feature."
               image={programWriter}
-              imageAlt="AI Program Writer generating a complete 2-week workout program with customized exercises and progression"
+              imageAlt="AI Program Writer generating 8 weeks of custom gym programming with equipment-specific workouts"
             />
 
             <FeatureShowcase
-              badge="📊 Business Intelligence"
-              title="Manage All Your Clients From One Dashboard"
-              description="See every client's program at a glance. Track who's completed workouts, schedule upcoming sessions, and identify opportunities to optimize your programming efficiency."
+              badge="Full Control"
+              title="Manage All Your Programming From One Dashboard"
+              description="See your entire programming calendar at a glance. Modify any workout day-of when equipment breaks or class size changes. Your programming, fully under your control."
               image={dashboard}
-              imageAlt="Comprehensive dashboard showing client overview, program schedules, and workout completion tracking"
+              imageAlt="Comprehensive dashboard showing gym programming calendar with easy day-of modification capabilities"
               reverse={true}
             />
 
             <FeatureShowcase
-              badge="🔍 AI-Powered Search"
-              title="Find Any Workout Across the Web in Seconds"
-              description="Our AI agent searches the entire internet to find the perfect reference workouts for your needs. Access 2,000+ curated workouts in our database, plus unlimited web results. No more endless Google searches."
+              badge="AI-Powered Search"
+              title="Base Your Programming on Anything"
+              description="Search the web for inspiration and build on existing programs. Want to incorporate elements from any methodology but customize for YOUR equipment? Done. Find the perfect reference workouts in seconds."
               image={referencer}
               imageAlt="AI-powered workout search showing web results and curated database workouts with intelligent filtering"
               reverse={true}
@@ -385,14 +379,14 @@ export default function HomeClient() {
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
             <div className="inline-flex items-center px-4 py-2 bg-blue-100 text-blue-800 rounded-full text-sm font-semibold mb-6">
-              🚀 Coming Soon
+              Coming Soon
             </div>
             <h2 className="text-4xl lg:text-5xl font-bold text-gray-900 mb-6">
-              Even More Ways to Grow Your Business
+              Even More Ways to Own Your Programming
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              We're constantly building new features to help fitness
-              professionals scale their businesses
+              We're constantly building new features to help gym owners
+              deliver better programming
             </p>
           </div>
 
@@ -405,12 +399,11 @@ export default function HomeClient() {
                 <BarChart3 className="w-8 h-8 text-blue-600" />
               </div>
               <h3 className="text-2xl font-bold mb-4">
-                Advanced Progress Tracking
+                Member Progress Tracking
               </h3>
               <p className="text-gray-600 leading-relaxed">
-                Monitor client PRs, completion rates, and program adherence. Use
-                data-driven insights to demonstrate value and justify premium
-                pricing.
+                Track member PRs, completion rates, and program adherence across
+                your entire gym. Use data to improve your programming over time.
               </p>
             </div>
 
@@ -422,11 +415,11 @@ export default function HomeClient() {
                 <Sparkles className="w-8 h-8 text-green-600" />
               </div>
               <h3 className="text-2xl font-bold mb-4">
-                Smart Workout Recommendations
+                Competition Prep Cycles
               </h3>
               <p className="text-gray-600 leading-relaxed">
-                AI-powered suggestions based on client performance, preferences,
-                and progress patterns to optimize results automatically.
+                Build specialized cycles for the CrossFit Open, local competitions,
+                or HYROX events. Periodized programming that peaks at the right time.
               </p>
             </div>
 
@@ -437,67 +430,53 @@ export default function HomeClient() {
               <div className="p-4 bg-purple-50 rounded-full w-16 h-16 flex items-center justify-center mb-6">
                 <TrendingUp className="w-8 h-8 text-purple-600" />
               </div>
-              <h3 className="text-2xl font-bold mb-4">Business Analytics</h3>
+              <h3 className="text-2xl font-bold mb-4">Multi-Track Programming</h3>
               <p className="text-gray-600 leading-relaxed">
-                Track revenue per client, program effectiveness, and business
-                growth metrics to make data-driven decisions about your coaching
-                business.
+                Run different tracks for competitors, fitness members, and masters
+                athletes—all from one dashboard. Scale your programming without the headache.
               </p>
             </div>
           </div>
 
           <div className="text-center mt-12">
             <p className="text-lg text-gray-600 mb-6">
-              Want to influence our roadmap? Join our community and help shape
-              the future of fitness programming.
+              Want to influence our roadmap? Join early and help shape
+              the future of gym programming.
             </p>
             <button
               onClick={() => push()}
               className="bg-primary text-white px-8 py-4 rounded-xl font-semibold text-lg hover:bg-primary/90 transition duration-300 inline-flex items-center"
             >
-              Join Beta Program
+              Try Free for 14 Days
               <ArrowRight className="w-5 h-5 ml-2" />
             </button>
           </div>
         </div>
       </section>
 
-      {/* Social Proof & CTA Section */}
+      {/* CTA Section */}
       <section className="py-20 bg-primary">
         <div className="container mx-auto px-4 text-center">
           <div className="max-w-4xl mx-auto space-y-8">
             <h2 className="text-4xl lg:text-5xl font-bold text-white mb-6">
-              Join 500+ Fitness Professionals Making More Money
+              Ready to Take Back Your Programming?
             </h2>
 
-            <div className="grid md:grid-cols-3 gap-8 text-white">
-              <div className="space-y-2">
-                <div className="text-4xl font-bold">500+</div>
-                <div className="text-lg">Active Trainers</div>
-              </div>
-              <div className="space-y-2">
-                <div className="text-4xl font-bold">10,000+</div>
-                <div className="text-lg">Programs Created</div>
-              </div>
-              <div className="space-y-2">
-                <div className="text-4xl font-bold">95%</div>
-                <div className="text-lg">Time Savings</div>
-              </div>
-            </div>
+            <p className="text-xl text-blue-100 max-w-2xl mx-auto">
+              Stop paying for generic programming you can't customize. Generate 8 weeks of
+              equipment-specific programming in 10 minutes. Your gym, your brand, your programming.
+            </p>
 
             <div className="space-y-6 pt-8">
-              <p className="text-xl text-blue-100">
-                Start your free trial today. No credit card required.
-              </p>
               <button
                 onClick={() => push()}
                 className="bg-white text-primary px-10 py-4 rounded-xl font-bold text-xl hover:bg-gray-100 transition duration-300 inline-flex items-center shadow-xl"
               >
-                Start Free Trial
+                Try Free for 14 Days
                 <ArrowRight className="w-6 h-6 ml-3" />
               </button>
               <p className="text-sm text-blue-200">
-                ✓ 14-day free trial ✓ No setup fees ✓ Cancel anytime
+                No credit card required. Cancel anytime.
               </p>
             </div>
           </div>

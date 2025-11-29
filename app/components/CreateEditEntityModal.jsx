@@ -36,8 +36,20 @@ const CreateEditEntityModal = ({
   const [heightFeet, setHeightFeet] = useState(0);
   const [heightInches, setHeightInches] = useState(0);
 
+  // Class Metrics State (only relevant for CLASS type)
+  const [classMetrics, setClassMetrics] = useState({
+    class_size: '',
+    average_age: '',
+    has_elite_athletes: false,
+    average_experience_years: '',
+    skill_distribution: { beginner: 33, intermediate: 34, advanced: 33 },
+    class_duration_minutes: 60,
+    warmup_duration_minutes: 15,
+  });
+
   const isEditingClient = entityToEdit?.type === 'CLIENT';
   const isClientType = type === 'CLIENT';
+  const isClassType = type === 'CLASS';
 
   // Initialize form state when modal opens or entity changes
   useEffect(() => {
@@ -75,8 +87,22 @@ const CreateEditEntityModal = ({
           setHeightFeet(feet);
           setHeightInches(inches);
         }
-      } else {
-        setMetrics({}); // Reset metrics if editing a CLASS
+      } else if (entityToEdit.type === 'CLASS') {
+        // Initialize class metrics
+        setClassMetrics({
+          class_size: entityToEdit.class_size || '',
+          average_age: entityToEdit.average_age || '',
+          has_elite_athletes: entityToEdit.has_elite_athletes || false,
+          average_experience_years: entityToEdit.average_experience_years || '',
+          skill_distribution: entityToEdit.skill_distribution || {
+            beginner: 33,
+            intermediate: 34,
+            advanced: 33,
+          },
+          class_duration_minutes: entityToEdit.class_duration_minutes || 60,
+          warmup_duration_minutes: entityToEdit.warmup_duration_minutes || 15,
+        });
+        setMetrics({}); // Reset client metrics if editing a CLASS
       }
       setFormError('');
     } else {
@@ -84,6 +110,15 @@ const CreateEditEntityModal = ({
       setName('');
       setType('CLIENT');
       setMetrics({});
+      setClassMetrics({
+        class_size: '',
+        average_age: '',
+        has_elite_athletes: false,
+        average_experience_years: '',
+        skill_distribution: { beginner: 33, intermediate: 34, advanced: 33 },
+        class_duration_minutes: 60,
+        warmup_duration_minutes: 15,
+      });
       setUseImperial(true); // Default for create
       setHeightFeet(0);
       setHeightInches(0);
@@ -97,6 +132,50 @@ const CreateEditEntityModal = ({
       ...prev,
       [field]: value,
     }));
+  };
+
+  // --- Event Handlers (Class Metrics) ---
+  const handleClassMetricsChange = (field, value) => {
+    setClassMetrics((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  const handleSkillDistributionChange = (level, value) => {
+    const numValue = parseInt(value) || 0;
+    const levels = ['beginner', 'intermediate', 'advanced'];
+    const otherLevels = levels.filter((l) => l !== level);
+
+    const remaining = 100 - numValue;
+    const currentOtherTotal =
+      classMetrics.skill_distribution[otherLevels[0]] +
+      classMetrics.skill_distribution[otherLevels[1]];
+
+    let newDistribution = { ...classMetrics.skill_distribution, [level]: numValue };
+
+    if (currentOtherTotal > 0) {
+      const ratio0 =
+        classMetrics.skill_distribution[otherLevels[0]] / currentOtherTotal;
+      const ratio1 =
+        classMetrics.skill_distribution[otherLevels[1]] / currentOtherTotal;
+      newDistribution[otherLevels[0]] = Math.round(remaining * ratio0);
+      newDistribution[otherLevels[1]] = Math.round(remaining * ratio1);
+
+      // Adjust for rounding errors
+      const total =
+        newDistribution.beginner +
+        newDistribution.intermediate +
+        newDistribution.advanced;
+      if (total !== 100) {
+        newDistribution[otherLevels[1]] += 100 - total;
+      }
+    } else {
+      newDistribution[otherLevels[0]] = Math.round(remaining / 2);
+      newDistribution[otherLevels[1]] = remaining - newDistribution[otherLevels[0]];
+    }
+
+    handleClassMetricsChange('skill_distribution', newDistribution);
   };
 
   const toggleUnitSystem = () => {
@@ -164,6 +243,26 @@ const CreateEditEntityModal = ({
         injury_history: metrics.injury_history,
       };
       dataToSubmit = { ...dataToSubmit, metrics: metricsToSave };
+    }
+
+    // If creating or editing a class, include class metrics
+    if (isClassType) {
+      const classMetricsToSave = {
+        class_size: classMetrics.class_size ? parseInt(classMetrics.class_size) : null,
+        average_age: classMetrics.average_age ? parseInt(classMetrics.average_age) : null,
+        has_elite_athletes: classMetrics.has_elite_athletes || false,
+        average_experience_years: classMetrics.average_experience_years
+          ? parseFloat(classMetrics.average_experience_years)
+          : null,
+        skill_distribution: classMetrics.skill_distribution,
+        class_duration_minutes: classMetrics.class_duration_minutes
+          ? parseInt(classMetrics.class_duration_minutes)
+          : 60,
+        warmup_duration_minutes: classMetrics.warmup_duration_minutes
+          ? parseInt(classMetrics.warmup_duration_minutes)
+          : 15,
+      };
+      dataToSubmit = { ...dataToSubmit, metrics: classMetricsToSave };
     }
 
     onSubmit(dataToSubmit);
@@ -479,6 +578,201 @@ const CreateEditEntityModal = ({
                       <option value="Female">Female</option>
                       <option value="Other">Other</option>
                     </select>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Conditionally Render Metrics Section for Creating/Editing Classes */}
+          {isClassType && (
+            <div className="mt-6 border-t pt-4">
+              <h4 className="text-md font-semibold mb-4">Class Metrics</h4>
+
+              {/* Demographics Section */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <div className="space-y-2">
+                  <h5 className="font-medium mb-1 text-sm">Demographics</h5>
+                  <div className="w-full">
+                    <label className="label py-1">
+                      <span className="text-sm text-xs">Class Size</span>
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      className="input input-bordered input-sm w-full"
+                      value={classMetrics.class_size}
+                      onChange={(e) =>
+                        handleClassMetricsChange('class_size', e.target.value)
+                      }
+                      placeholder="Number of athletes"
+                      disabled={isSubmitting}
+                    />
+                  </div>
+                  <div className="w-full">
+                    <label className="label py-1">
+                      <span className="text-sm text-xs">Average Age</span>
+                    </label>
+                    <input
+                      type="number"
+                      min="5"
+                      max="100"
+                      className="input input-bordered input-sm w-full"
+                      value={classMetrics.average_age}
+                      onChange={(e) =>
+                        handleClassMetricsChange('average_age', e.target.value)
+                      }
+                      placeholder="Average age of class"
+                      disabled={isSubmitting}
+                    />
+                  </div>
+                  <div className="w-full">
+                    <label className="label py-1">
+                      <span className="text-sm text-xs">Avg Experience (years)</span>
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.5"
+                      className="input input-bordered input-sm w-full"
+                      value={classMetrics.average_experience_years}
+                      onChange={(e) =>
+                        handleClassMetricsChange('average_experience_years', e.target.value)
+                      }
+                      placeholder="Years of CrossFit experience"
+                      disabled={isSubmitting}
+                    />
+                  </div>
+                  <div className="w-full mt-2">
+                    <label className="label cursor-pointer justify-start gap-3">
+                      <input
+                        type="checkbox"
+                        className="checkbox checkbox-primary checkbox-sm"
+                        checked={classMetrics.has_elite_athletes}
+                        onChange={(e) =>
+                          handleClassMetricsChange('has_elite_athletes', e.target.checked)
+                        }
+                        disabled={isSubmitting}
+                      />
+                      <span className="text-sm">Elite Athletes Present</span>
+                    </label>
+                    <p className="text-xs text-gray-500 ml-7">
+                      Enable RX+ scaling options
+                    </p>
+                  </div>
+                </div>
+
+                {/* Skill Distribution Section */}
+                <div className="space-y-2">
+                  <h5 className="font-medium mb-1 text-sm">Skill Distribution</h5>
+                  <div className="w-full">
+                    <label className="label py-1">
+                      <span className="text-sm text-xs">
+                        Beginner ({classMetrics.skill_distribution.beginner}%)
+                      </span>
+                    </label>
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      className="range range-primary range-sm"
+                      value={classMetrics.skill_distribution.beginner}
+                      onChange={(e) =>
+                        handleSkillDistributionChange('beginner', e.target.value)
+                      }
+                      disabled={isSubmitting}
+                    />
+                  </div>
+                  <div className="w-full">
+                    <label className="label py-1">
+                      <span className="text-sm text-xs">
+                        Intermediate ({classMetrics.skill_distribution.intermediate}%)
+                      </span>
+                    </label>
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      className="range range-secondary range-sm"
+                      value={classMetrics.skill_distribution.intermediate}
+                      onChange={(e) =>
+                        handleSkillDistributionChange('intermediate', e.target.value)
+                      }
+                      disabled={isSubmitting}
+                    />
+                  </div>
+                  <div className="w-full">
+                    <label className="label py-1">
+                      <span className="text-sm text-xs">
+                        Advanced ({classMetrics.skill_distribution.advanced}%)
+                      </span>
+                    </label>
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      className="range range-accent range-sm"
+                      value={classMetrics.skill_distribution.advanced}
+                      onChange={(e) =>
+                        handleSkillDistributionChange('advanced', e.target.value)
+                      }
+                      disabled={isSubmitting}
+                    />
+                  </div>
+                  <div className="flex justify-between text-xs text-gray-500 mt-2 px-1">
+                    <span>Beginner: {classMetrics.skill_distribution.beginner}%</span>
+                    <span>Int: {classMetrics.skill_distribution.intermediate}%</span>
+                    <span>Adv: {classMetrics.skill_distribution.advanced}%</span>
+                  </div>
+                </div>
+
+                {/* Time Constraints Section */}
+                <div className="space-y-2">
+                  <h5 className="font-medium mb-1 text-sm">Time Constraints</h5>
+                  <div className="w-full">
+                    <label className="label py-1">
+                      <span className="text-sm text-xs">Class Duration (minutes)</span>
+                    </label>
+                    <input
+                      type="number"
+                      min="15"
+                      max="180"
+                      step="5"
+                      className="input input-bordered input-sm w-full"
+                      value={classMetrics.class_duration_minutes}
+                      onChange={(e) =>
+                        handleClassMetricsChange('class_duration_minutes', e.target.value)
+                      }
+                      disabled={isSubmitting}
+                    />
+                  </div>
+                  <div className="w-full">
+                    <label className="label py-1">
+                      <span className="text-sm text-xs">Warmup Duration (minutes)</span>
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="60"
+                      step="5"
+                      className="input input-bordered input-sm w-full"
+                      value={classMetrics.warmup_duration_minutes}
+                      onChange={(e) =>
+                        handleClassMetricsChange('warmup_duration_minutes', e.target.value)
+                      }
+                      disabled={isSubmitting}
+                    />
+                  </div>
+                  <div className="mt-2 p-2 bg-base-200 rounded-lg">
+                    <p className="text-xs text-gray-600">
+                      <strong>Working Time:</strong>{' '}
+                      {(classMetrics.class_duration_minutes || 60) -
+                        (classMetrics.warmup_duration_minutes || 15)}{' '}
+                      minutes
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Time remaining for strength, WOD, and cool-down
+                    </p>
                   </div>
                 </div>
               </div>

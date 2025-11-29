@@ -1,10 +1,19 @@
 import { createClient } from '@/utils/supabase/server';
+import { createMobileCompatibleClient, corsHeaders } from '@/utils/supabase/mobile';
 import { NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { formatClientMetrics } from '@/utils/prompt-builder/promptBuilder.js';
 
 export const maxDuration = 800; // Maximum for Vercel Pro plan (800 seconds)
 export const dynamic = 'force-dynamic';
+
+// Handle OPTIONS for CORS preflight
+export async function OPTIONS(request) {
+  return new Response(null, {
+    status: 200,
+    headers: corsHeaders()
+  });
+}
 
 // Helper function to log with timestamps
 function logWithTimestamp(message, data = null) {
@@ -60,7 +69,8 @@ export async function POST(request) {
     });
     logWithTimestamp('Anthropic client initialized');
 
-    const supabase = await createClient();
+    // Use mobile-compatible client that supports bearer tokens
+    const supabase = await createMobileCompatibleClient(request);
     logWithTimestamp('Supabase client initialized');
 
     const requestData = await request.json();
@@ -82,7 +92,10 @@ export async function POST(request) {
     });
     return NextResponse.json(
       { error: 'Failed to generate program: ' + error.message },
-      { status: 500 }
+      {
+        status: 500,
+        headers: corsHeaders()
+      }
     );
   }
 }
@@ -91,7 +104,7 @@ export async function POST(request) {
 async function handleChunkedGeneration(requestData, anthropic, supabase) {
   logWithTimestamp('Starting chunked generation');
 
-  // Set up streaming response
+  // Set up streaming response with CORS headers
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     start(controller) {
@@ -125,6 +138,7 @@ async function handleChunkedGeneration(requestData, anthropic, supabase) {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache',
       Connection: 'keep-alive',
+      ...corsHeaders(), // Add CORS headers for mobile support
     },
   });
 }
@@ -1114,15 +1128,20 @@ async function extractSharedData(requestData, supabase) {
   });
 
   // Verify user access to the program
+  // Note: Use getUser() instead of getSession() for bearer token auth (mobile apps)
   logWithTimestamp('About to check authentication');
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  if (!session) {
-    logWithTimestamp('Authentication failed');
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+  if (authError || !user) {
+    logWithTimestamp('Authentication failed', { error: authError?.message });
     throw new Error('Authentication required');
   }
-  logWithTimestamp('Authentication successful', { userId: session.user.id });
+  logWithTimestamp('Authentication successful', { userId: user.id });
+  
+  // Create a session-like object for compatibility with existing code
+  const session = { user };
 
   // Check if this is a regeneration (existing program with workouts)
   const forceRegenerate = requestData.forceRegenerate || false;

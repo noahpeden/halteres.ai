@@ -9,7 +9,7 @@ export const generateMetadata = () => {
     ...metadata,
     title: 'About Our Company | HalteresAI',
     description:
-      'Learn about HalteresAI, our founding story, and how we help fitness professionals save time and deliver better results.',
+      'Learn about HalteresAI, our founding story, and how we help gym owners take back their programming.',
   };
 };
 
@@ -25,9 +25,8 @@ export default function CompanyPage() {
                 About HalteresAI
               </h1>
               <p className="py-6 text-white">
-                We're on a mission to revolutionize fitness programming by
-                combining real-world coaching experience with cutting-edge AI
-                technology.
+                We're on a mission to give gym owners their programming back—
+                custom, equipment-specific, and 100% theirs.
               </p>
             </div>
           </div>
@@ -39,13 +38,12 @@ export default function CompanyPage() {
             <div className="text-center mb-12">
               <div className="badge badge-primary mb-2">Our Mission</div>
               <h2 className="text-4xl font-bold">
-                Empowering fitness professionals with AI
+                Giving gym owners their programming back
               </h2>
               <p className="mt-4 text-lg max-w-2xl mx-auto">
-                At HalteresAI, we believe that technology should enhance the
-                human experience, not replace it. We're dedicated to giving
-                fitness professionals more time to focus on what matters most:
-                their clients and community.
+                At HalteresAI, we believe your members come to YOUR gym for YOUR
+                coaching and YOUR community. They deserve YOUR programming too—not
+                generic workouts that don't fit your equipment or goals.
               </p>
             </div>
 
@@ -68,11 +66,11 @@ export default function CompanyPage() {
                         />
                       </svg>
                     </div>
-                    <h3 className="card-title">10x Productivity</h3>
+                    <h3 className="card-title">8 Weeks in 10 Minutes</h3>
                   </div>
                   <p>
-                    Transform programming time from hours to minutes while
-                    maintaining the quality and creativity your clients expect.
+                    Transform programming time from hours to minutes. Stop
+                    spending Sunday nights writing next week's workouts.
                   </p>
                 </div>
               </div>
@@ -95,11 +93,11 @@ export default function CompanyPage() {
                         />
                       </svg>
                     </div>
-                    <h3 className="card-title">Enhance Results</h3>
+                    <h3 className="card-title">Your Equipment, Your Way</h3>
                   </div>
                   <p>
-                    Deliver scientifically-sound programming that adapts to your
-                    specific facility and client needs.
+                    Programming that actually fits YOUR gym. No more workouts
+                    that assume sleds, ropes, or machines you don't have.
                   </p>
                 </div>
               </div>
@@ -122,12 +120,11 @@ export default function CompanyPage() {
                         />
                       </svg>
                     </div>
-                    <h3 className="card-title">Grow Your Business</h3>
+                    <h3 className="card-title">Your Brand, Not Theirs</h3>
                   </div>
                   <p>
-                    Efficiently scale your coaching business by taking on more
-                    clients while maintaining personalized, high-quality
-                    programming.
+                    Deliver programming that's uniquely yours. Your members came
+                    for YOUR gym—give them programming to match.
                   </p>
                 </div>
               </div>
@@ -151,20 +148,19 @@ export default function CompanyPage() {
                   </p>
                   <p className="text-lg">
                     After the Peace Corps, Noah became a software engineer and
-                    discovered CrossFit, where he noticed the significant time
-                    coaches spent on programming. Meanwhile, Ben entered the
-                    non-profit advising world while developing a passion for
-                    powerlifting and experiencing various training
-                    methodologies.
+                    discovered CrossFit, where he noticed a common problem: coaches
+                    either spent countless hours on programming OR paid for generic
+                    programming that didn't fit their equipment. Meanwhile, Ben
+                    entered the non-profit advising world while developing a passion
+                    for powerlifting and experiencing various training methodologies.
                   </p>
                   <p className="text-lg">
-                    When Noah saw the need for a solution that would streamline
-                    the program writing process for coaches, he approached Ben
-                    with the idea for HalteresAI. Combining Noah's technical
-                    expertise with Ben's business acumen and shared passion for
-                    fitness, they built a platform designed to help coaches 10x
-                    their productivity while delivering exceptional fitness
-                    experiences.
+                    When Noah saw gym owners struggling with this choice—time or
+                    authenticity—he approached Ben with the idea for HalteresAI.
+                    Combining Noah's technical expertise with Ben's business acumen
+                    and shared passion for fitness, they built a platform designed
+                    to give gym owners the best of both worlds: fast programming
+                    that's 100% customized to their gym.
                   </p>
                 </div>
               </div>
@@ -268,18 +264,18 @@ export default function CompanyPage() {
         <div className="bg-primary text-primary-content py-16">
           <div className="container mx-auto px-4 text-center">
             <h2 className="text-3xl font-bold mb-4 text-white">
-              Ready to transform your fitness programming?
+              Ready to take back your programming?
             </h2>
             <p className="max-w-xl mx-auto mb-8 text-lg opacity-80 text-white">
-              Join coaches who are saving time and delivering better results
-              with HalteresAI.
+              Join gym owners who've stopped paying for generic programming
+              and started delivering their own.
             </p>
             <div className="flex flex-wrap justify-center gap-4">
               <Link
                 href="/login"
                 className="btn btn-lg btn-secondary text-white"
               >
-                Get started
+                Try Free for 14 Days
               </Link>
               <Link
                 href="/contact"

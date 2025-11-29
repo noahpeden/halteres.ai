@@ -162,7 +162,7 @@ export default function Dashboard() {
                 className="inline-flex items-center justify-center px-4 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 transition-colors duration-200"
               >
                 <Users className="w-4 h-4 mr-2" />
-                Manage Clients
+                Manage Classes & Clients
               </button>
               <button
                 onClick={handleCreateProgram}
@@ -178,75 +178,7 @@ export default function Dashboard() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Enhanced Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 sm:p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-slate-600">
-                  Total Programs
-                </p>
-                <p className="text-2xl sm:text-3xl font-bold text-slate-900 mt-1">
-                  {stats.totalPrograms}
-                </p>
-              </div>
-              <div className="p-2 sm:p-3 bg-blue-100 rounded-lg">
-                <Dumbbell className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
-              </div>
-            </div>
-          </div>
 
-          <div 
-            className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 sm:p-6 cursor-pointer hover:shadow-md transition-shadow duration-200"
-            onClick={() => setShowTodaysWorkouts(true)}
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-slate-600">
-                  Today's Workouts
-                </p>
-                <p className="text-2xl sm:text-3xl font-bold text-slate-900 mt-1">
-                  {stats.activeWorkouts}
-                </p>
-              </div>
-              <div className="p-2 sm:p-3 bg-green-100 rounded-lg">
-                <Calendar className="w-5 h-5 sm:w-6 sm:h-6 text-green-600" />
-              </div>
-            </div>
-          </div>
-
-          <div 
-            className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 sm:p-6 cursor-pointer hover:shadow-md transition-shadow duration-200"
-            onClick={() => setShowThisWeeksWorkouts(true)}
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-slate-600">This Week</p>
-                <p className="text-2xl sm:text-3xl font-bold text-slate-900 mt-1">
-                  {stats.upcomingWorkouts}
-                </p>
-              </div>
-              <div className="p-2 sm:p-3 bg-purple-100 rounded-lg">
-                <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 text-purple-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 sm:p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-slate-600">
-                  Active Clients
-                </p>
-                <p className="text-2xl sm:text-3xl font-bold text-slate-900 mt-1">
-                  {entities.filter((e) => e.type === 'CLIENT').length}
-                </p>
-              </div>
-              <div className="p-2 sm:p-3 bg-orange-100 rounded-lg">
-                <Users className="w-5 h-5 sm:w-6 sm:h-6 text-orange-600" />
-              </div>
-            </div>
-          </div>
-        </div>
 
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
@@ -330,85 +262,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Quick Actions Section */}
-        <div className="mt-8 bg-white rounded-xl shadow-sm border border-slate-200 p-4 sm:p-6">
-          <h3 className="text-lg font-semibold text-slate-900 mb-4">
-            Quick Actions
-          </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-            <button
-              onClick={handleCreateProgram}
-              className="flex items-center p-3 sm:p-4 border border-slate-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-colors duration-200 group"
-            >
-              <div className="p-2 bg-blue-100 rounded-lg group-hover:bg-blue-200 transition-colors duration-200">
-                <Plus className="w-5 h-5 text-blue-600" />
-              </div>
-              <div className="ml-3">
-                <p className="text-sm font-medium text-slate-900">
-                  New Program
-                </p>
-                <p className="text-xs text-slate-600">
-                  Create training program
-                </p>
-              </div>
-            </button>
 
-            <button
-              onClick={() =>
-                (window.location.href = '/dashboard/manage/entities')
-              }
-              className="flex items-center p-3 sm:p-4 border border-slate-200 rounded-lg hover:border-green-300 hover:bg-green-50 transition-colors duration-200 group"
-            >
-              <div className="p-2 bg-green-100 rounded-lg group-hover:bg-green-200 transition-colors duration-200">
-                <Users className="w-5 h-5 text-green-600" />
-              </div>
-              <div className="ml-3">
-                <p className="text-sm font-medium text-slate-900">
-                  Manage Clients
-                </p>
-                <p className="text-xs text-slate-600">Add or edit clients</p>
-              </div>
-            </button>
-
-            <button
-              onClick={() => (window.location.href = '/dashboard')}
-              className="flex items-center p-3 sm:p-4 border border-slate-200 rounded-lg hover:border-purple-300 hover:bg-purple-50 transition-colors duration-200 group relative opacity-50 cursor-not-allowed"
-              disabled
-            >
-              <div className="p-2 bg-purple-100 rounded-lg group-hover:bg-purple-200 transition-colors duration-200">
-                <Calendar className="w-5 h-5 text-purple-600" />
-              </div>
-              <div className="ml-3">
-                <p className="text-sm font-medium text-slate-900">
-                  View Calendar
-                </p>
-                <p className="text-xs text-slate-600">Schedule overview</p>
-              </div>
-              <span className="absolute top-2 right-2 bg-yellow-200 text-yellow-800 text-xs font-semibold px-2 py-0.5 rounded">
-                Coming Soon
-              </span>
-            </button>
-
-            <button
-              onClick={() => (window.location.href = '/dashboard')}
-              className="flex items-center p-3 sm:p-4 border border-slate-200 rounded-lg hover:border-orange-300 hover:bg-orange-50 transition-colors duration-200 group relative opacity-50 cursor-not-allowed"
-              disabled
-            >
-              <div className="p-2 bg-orange-100 rounded-lg group-hover:bg-orange-200 transition-colors duration-200">
-                <TrendingUp className="w-5 h-5 text-orange-600" />
-              </div>
-              <div className="ml-3">
-                <p className="text-sm font-medium text-slate-900">
-                  View Analytics
-                </p>
-                <p className="text-xs text-slate-600">Progress tracking</p>
-              </div>
-              <span className="absolute top-2 right-2 bg-yellow-200 text-yellow-800 text-xs font-semibold px-2 py-0.5 rounded">
-                Coming Soon
-              </span>
-            </button>
-          </div>
-        </div>
 
         <FeedbackSection />
 

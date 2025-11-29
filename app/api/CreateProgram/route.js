@@ -1,5 +1,14 @@
 import { createClient } from '@/utils/supabase/server';
+import { createMobileCompatibleClient, corsHeaders } from '@/utils/supabase/mobile';
 import { NextResponse } from 'next/server';
+
+// Handle OPTIONS for CORS preflight
+export async function OPTIONS(request) {
+  return new Response(null, {
+    status: 200,
+    headers: corsHeaders()
+  });
+}
 
 export async function POST(req) {
   try {
@@ -33,11 +42,15 @@ export async function POST(req) {
     ) {
       return NextResponse.json(
         { error: 'Missing required fields' },
-        { status: 400 }
+        {
+          status: 400,
+          headers: corsHeaders()
+        }
       );
     }
 
-    const supabase = await createClient();
+    // Use mobile-compatible client that supports bearer tokens
+    const supabase = await createMobileCompatibleClient(req);
 
     // Get the user from the session server-side
     const {
@@ -45,7 +58,13 @@ export async function POST(req) {
     } = await supabase.auth.getSession();
 
     if (!session) {
-      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+      return NextResponse.json(
+        { error: 'Not authenticated' },
+        {
+          status: 401,
+          headers: corsHeaders()
+        }
+      );
     }
 
     const userId = session.user.id;
@@ -62,10 +81,13 @@ export async function POST(req) {
 
     if (existingPrograms && existingPrograms.length > 0) {
       console.log('Duplicate program creation prevented:', existingPrograms[0]);
-      return NextResponse.json({ 
+      return NextResponse.json({
         data: [existingPrograms[0]],
-        message: 'Program already exists (duplicate prevented)' 
-      }, { status: 200 });
+        message: 'Program already exists (duplicate prevented)'
+      }, {
+        status: 200,
+        headers: corsHeaders()
+      });
     }
 
     // Create program using the provided entity_id and all wizard data
@@ -109,11 +131,23 @@ export async function POST(req) {
 
     if (error) {
       console.error('Program creation error:', error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json(
+        { error: error.message },
+        {
+          status: 500,
+          headers: corsHeaders()
+        }
+      );
     }
 
     console.log('Program created:', data);
-    return NextResponse.json({ data: [data] }, { status: 200 });
+    return NextResponse.json(
+      { data: [data] },
+      {
+        status: 200,
+        headers: corsHeaders()
+      }
+    );
   } catch (error) {
     console.error('Request failed:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });

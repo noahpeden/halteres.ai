@@ -1,11 +1,18 @@
-import { createClient } from '@/utils/supabase/server';
+import { createMobileCompatibleClient, corsHeaders } from '@/utils/supabase/mobile';
 import { stripe } from '@/utils/stripe';
 import { NextResponse } from 'next/server';
 
+export async function OPTIONS(request) {
+  return new Response(null, {
+    status: 200,
+    headers: corsHeaders()
+  });
+}
+
 export async function POST(request) {
   try {
-    const supabase = await createClient();
-    
+    const supabase = await createMobileCompatibleClient(request);
+
     const {
       data: { user },
       error: authError,
@@ -14,7 +21,7 @@ export async function POST(request) {
     if (authError || !user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
-        { status: 401 }
+        { status: 401, headers: corsHeaders() }
       );
     }
 
@@ -28,7 +35,7 @@ export async function POST(request) {
     if (profileError || !profile?.stripe_customer_id) {
       return NextResponse.json(
         { error: 'No billing information found' },
-        { status: 400 }
+        { status: 400, headers: corsHeaders() }
       );
     }
 
@@ -38,12 +45,12 @@ export async function POST(request) {
       return_url: `${process.env.NEXT_PUBLIC_SITE_URL}/pricing`,
     });
 
-    return NextResponse.json({ url });
+    return NextResponse.json({ url }, { headers: corsHeaders() });
   } catch (error) {
     console.error('Billing portal error:', error);
     return NextResponse.json(
       { error: 'Failed to create billing portal session' },
-      { status: 500 }
+      { status: 500, headers: corsHeaders() }
     );
   }
 }

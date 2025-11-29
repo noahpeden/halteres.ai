@@ -1,11 +1,18 @@
-import { createClient } from '@/utils/supabase/server';
+import { createMobileCompatibleClient, corsHeaders } from '@/app/utils/supabase/mobile';
 import { stripe } from '@/utils/stripe';
 import { NextResponse } from 'next/server';
+
+export async function OPTIONS(req) {
+  return new NextResponse(null, {
+    status: 200,
+    headers: corsHeaders()
+  });
+}
 
 export async function GET(request) {
   try {
     // Get the user's session
-    const supabase = await createClient();
+    const supabase = await createMobileCompatibleClient(request);
     const {
       data: { session },
     } = await supabase.auth.getSession();
@@ -13,7 +20,7 @@ export async function GET(request) {
     if (!session) {
       return NextResponse.json(
         { error: 'Authentication required' },
-        { status: 401 }
+        { status: 401, headers: corsHeaders() }
       );
     }
 
@@ -24,7 +31,7 @@ export async function GET(request) {
     if (!subscriptionId) {
       return NextResponse.json(
         { error: 'Subscription ID is required' },
-        { status: 400 }
+        { status: 400, headers: corsHeaders() }
       );
     }
 
@@ -39,12 +46,12 @@ export async function GET(request) {
       current_period_end: subscription.current_period_end,
       cancel_at: subscription.cancel_at,
       canceled_at: subscription.canceled_at,
-    });
+    }, { headers: corsHeaders() });
   } catch (error) {
     console.error('Error checking subscription status:', error);
     return NextResponse.json(
       { error: 'Failed to check subscription status: ' + error.message },
-      { status: 500 }
+      { status: 500, headers: corsHeaders() }
     );
   }
 }

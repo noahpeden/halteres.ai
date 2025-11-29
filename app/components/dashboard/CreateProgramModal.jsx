@@ -21,7 +21,8 @@ export default function CreateProgramModal({
   onCancel,
 }) {
   // State to track which creation method was selected
-  const [selectedMethod, setSelectedMethod] = useState(null);
+  // Default to 'direct' to skip wizard selection
+  const [selectedMethod, setSelectedMethod] = useState('direct');
   // State for dropdown visibility
   const [isDurationDropdownOpen, setIsDurationDropdownOpen] = useState(false);
 
@@ -40,7 +41,7 @@ export default function CreateProgramModal({
 
   // Reset method selection when modal closes
   const handleCancel = () => {
-    setSelectedMethod(null);
+    setSelectedMethod('direct');
     onCancel();
   };
 
@@ -63,65 +64,7 @@ export default function CreateProgramModal({
         <div className="modal-box max-w-2xl">
           <h3 className="font-bold text-lg mb-4">Create New Program</h3>
 
-          {/* Show method selection first */}
-          {!selectedMethod && (
-            <div className="space-y-4">
-              <p className="text-sm text-base-content/70">
-                Choose how you'd like to create your program:
-              </p>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Wizard Option */}
-                <button
-                  type="button"
-                  onClick={() => setSelectedMethod('wizard')}
-                  className="card bg-base-100 hover:bg-base-200 border-2 border-base-300 hover:border-primary transition-all p-6 text-left"
-                >
-                  <div className="flex items-center gap-3 mb-3">
-                    <Sparkles className="w-8 h-8 text-primary" />
-                    <h4 className="font-semibold text-lg">Guided Wizard</h4>
-                  </div>
-                  <p className="text-sm text-base-content/70">
-                    Step-by-step program creation with AI assistance. Perfect
-                    for creating comprehensive, methodology-based programs.
-                  </p>
-                  <div className="mt-3 text-xs text-primary font-medium">
-                    Recommended for new users
-                  </div>
-                </button>
-
-                {/* Direct Writer Option */}
-                <button
-                  type="button"
-                  onClick={() => setSelectedMethod('direct')}
-                  className="card bg-base-100 hover:bg-base-200 border-2 border-base-300 hover:border-primary transition-all p-6 text-left"
-                >
-                  <div className="flex items-center gap-3 mb-3">
-                    <PenSquare className="w-8 h-8 text-secondary" />
-                    <h4 className="font-semibold text-lg">Direct Writer</h4>
-                  </div>
-                  <p className="text-sm text-base-content/70">
-                    Jump straight to program creation with full control. Best
-                    for experienced users who know exactly what they want.
-                  </p>
-                  <div className="mt-3 text-xs text-secondary font-medium">
-                    Quick and flexible
-                  </div>
-                </button>
-              </div>
-
-              <div className="modal-action">
-                <button
-                  type="button"
-                  onClick={handleCancel}
-                  className="btn btn-outline"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          )}
-
+          {/* Program wizard functionality is hidden - direct writer only */}
           {/* Show form after method selection */}
           {selectedMethod && (
             <>
@@ -240,14 +183,6 @@ export default function CreateProgramModal({
                 <div className="modal-action">
                   <button
                     type="button"
-                    onClick={() => setSelectedMethod(null)}
-                    className="btn btn-ghost btn-sm"
-                  >
-                    ← Back
-                  </button>
-                  <div className="flex-1" />
-                  <button
-                    type="button"
                     onClick={handleCancel}
                     className="btn btn-outline"
                   >
@@ -258,9 +193,7 @@ export default function CreateProgramModal({
                     className="btn btn-primary"
                     disabled={daysOfWeek.length === 0}
                   >
-                    {selectedMethod === 'wizard'
-                      ? 'Start Wizard'
-                      : 'Create Program'}
+                    Create Program
                   </button>
                 </div>
               </form>

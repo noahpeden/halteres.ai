@@ -84,12 +84,20 @@ IMPORTANT: Each workout you generate MUST be assigned to one of the above dates.
  * @returns {string} The assembled prompt string
  */
 export default function promptBuilder(context, trainingType) {
+  // Determine if this is a class or individual client based on entity type or metrics
+  const isClass = context.entityType === 'CLASS' || isClassMetrics(context.clientMetricsData);
+
   // Add contextual data processing for client metrics and reference workouts if not already provided
   const enhancedContext = {
     ...context,
     // If client metrics is provided as an object, convert to string format for the prompt
+    // Use formatClassMetrics for CLASS entities, formatClientMetrics for CLIENT entities
     clientMetrics:
-      context.clientMetrics || formatClientMetrics(context.clientMetricsData, context.useImperial),
+      context.clientMetrics || (isClass
+        ? formatClassMetrics(context.clientMetricsData, context.useImperial)
+        : formatClientMetrics(context.clientMetricsData, context.useImperial)),
+    // Flag to indicate if this is a class workout
+    isClassWorkout: isClass,
     // If reference workouts is provided as an array, convert to string format for the prompt
     referenceWorkouts:
       context.referenceWorkouts ||
@@ -437,4 +445,160 @@ function isNotEmptyInjuryHistory(injuryHistory) {
   }
 
   return false;
+}
+
+/**
+ * Formats skill distribution object into a readable string
+ * @param {Object} skillDistribution - {beginner: %, intermediate: %, advanced: %}
+ * @returns {string} Formatted skill distribution string
+ */
+function formatSkillDistribution(skillDistribution) {
+  if (!skillDistribution || typeof skillDistribution !== 'object') {
+    return 'Not specified';
+  }
+
+  const { beginner = 0, intermediate = 0, advanced = 0 } = skillDistribution;
+  return `Beginner: ${beginner}%, Intermediate: ${intermediate}%, Advanced: ${advanced}%`;
+}
+
+/**
+ * Formats class metrics data into a string format for the prompt
+ * Used for CLASS entity types (CrossFit/functional fitness classes)
+ * @param {Object} classMetricsData - Raw class metrics data
+ * @param {boolean} useImperial - Whether to display weights in imperial units (lbs) or metric (kg)
+ * @returns {string} Formatted class metrics string or empty string if no data
+ */
+export function formatClassMetrics(classMetricsData, useImperial = false) {
+  if (!classMetricsData) return '';
+
+  const weightUnit = useImperial ? 'lbs' : 'kg';
+  const classDuration = classMetricsData.class_duration_minutes || 60;
+  const warmupDuration = classMetricsData.warmup_duration_minutes || 15;
+  const workoutDuration = classDuration - warmupDuration;
+  const hasEliteAthletes = classMetricsData.has_elite_athletes === true;
+
+  let metricsString = `
+Class Profile:
+Class Size: ${classMetricsData.class_size || 'Not specified'} athletes
+Average Age: ${classMetricsData.average_age || 'Not specified'} years
+Elite Athletes Present: ${hasEliteAthletes ? 'YES - RX+ OPTIONS REQUIRED' : 'No'}
+Average Experience: ${classMetricsData.average_experience_years || 'Not specified'} years
+Skill Distribution: ${formatSkillDistribution(classMetricsData.skill_distribution)}
+Class Duration: ${classDuration} minutes total
+Warmup/Skill Work: ${warmupDuration} minutes
+Main Workout Window: ${workoutDuration} minutes
+
+⚠️ CRITICAL CLASS PROGRAMMING REQUIREMENTS ⚠️
+
+TIME MANAGEMENT:
+- Total class time: ${classDuration} minutes
+- Allocate ${warmupDuration} minutes for warmup and skill work
+- Main workout must fit within ${workoutDuration} minutes (including transitions)
+- Include clear time caps for all workout segments
+
+SCALING OPTIONS (REQUIRED FOR ALL MOVEMENTS):
+Every workout MUST include ${hasEliteAthletes ? 'ALL THREE' : 'at minimum two'} scaling levels:
+1. SCALED: For beginners and those building capacity
+   - Lighter loads, reduced complexity, modified movements
+   - Clear substitutions for technical movements
+2. RX: Standard prescribed weights and movements
+   - Appropriate for intermediate athletes${hasEliteAthletes ? `
+3. RX+: ⚠️ MANDATORY - Elite athletes are present in this class
+   - Heavier loads than standard RX (e.g., if RX is 135lb, RX+ should be 185lb+)
+   - Increased volume or reps
+   - More complex movement variations (e.g., strict instead of kipping, deficit movements)
+   - Competition-standard movements and weights` : ''}`;
+
+  // Add prominent elite athlete section if present
+  if (hasEliteAthletes) {
+    metricsString += `
+
+🏆 ELITE ATHLETE RX+ REQUIREMENTS (MANDATORY) 🏆
+This class has elite/competitive athletes. You MUST include RX+ options for EVERY workout.
+
+RX+ PROGRAMMING GUIDELINES:
+- WEIGHTS: RX+ weights should be 20-40% heavier than RX weights
+  Example: If RX barbell weight is 135lb, RX+ should be 165-185lb
+  Example: If RX dumbbell is 35lb, RX+ should be 50lb+
+- MOVEMENTS: Use more demanding variations
+  Example: Strict pull-ups instead of kipping
+  Example: Deficit handstand push-ups instead of regular
+  Example: Pistols instead of air squats
+- VOLUME: Increase reps or rounds for RX+
+  Example: If RX is 21-15-9, RX+ could be 30-20-10
+- STANDARDS: Use competition standards
+  Example: Full depth squats, chest-to-bar pull-ups, strict press lockout
+
+FORMAT FOR EACH WORKOUT:
+When listing weights and movements, ALWAYS show all three levels like this:
+- Back Squat: Scaled 95/65lb | RX 135/95lb | RX+ 185/135lb
+- Pull-ups: Scaled Ring Rows | RX Kipping | RX+ Strict or Chest-to-Bar`;
+  }
+
+  // Add class size considerations
+  if (classMetricsData.class_size) {
+    const classSize = classMetricsData.class_size;
+    metricsString += `
+
+EQUIPMENT & SPACE MANAGEMENT (${classSize} athletes):
+- Consider equipment sharing rotations if needed
+- Plan for sufficient barbells, rigs, and equipment access
+- Include partner or group options where appropriate`;
+
+    if (classSize > 15) {
+      metricsString += `
+- Large class: prioritize movements that don't require specialized equipment
+- Consider wave starts or heat structures for time-domain workouts`;
+    }
+  }
+
+  // Add skill distribution considerations
+  if (classMetricsData.skill_distribution) {
+    const { beginner = 0, intermediate = 0, advanced = 0 } = classMetricsData.skill_distribution;
+
+    if (beginner > 40) {
+      metricsString += `
+
+BEGINNER-HEAVY CLASS CONSIDERATIONS:
+- Emphasize movement quality over intensity
+- Include clear coaching cues for foundational movements
+- Provide detailed scaling options and progressions`;
+    }
+
+    if (advanced > 40) {
+      metricsString += `
+
+ADVANCED-HEAVY CLASS CONSIDERATIONS:
+- Include higher-skill movements and complex combinations
+- Provide challenging RX+ options
+- Consider competition-style workouts`;
+    }
+  }
+
+  metricsString += `
+
+WEIGHT UNIT REQUIREMENT: All weights MUST be provided in ${weightUnit.toUpperCase()} units.
+${hasEliteAthletes
+    ? `⚠️ MANDATORY: Include specific weights for ALL THREE scaling levels (Scaled/RX/RX+) in EVERY workout since elite athletes are present.`
+    : `Include specific weights for each scaling level (Scaled/RX).`}`;
+
+  return metricsString;
+}
+
+/**
+ * Determines if entity metrics are for a class or individual client
+ * @param {Object} metricsData - The metrics data object
+ * @returns {boolean} True if this is class metrics, false for individual client
+ */
+export function isClassMetrics(metricsData) {
+  if (!metricsData) return false;
+
+  // Check for class-specific fields
+  return (
+    metricsData.class_size !== undefined ||
+    metricsData.has_elite_athletes !== undefined ||
+    metricsData.skill_distribution !== undefined ||
+    metricsData.class_duration_minutes !== undefined ||
+    metricsData.type === 'CLASS'
+  );
 }

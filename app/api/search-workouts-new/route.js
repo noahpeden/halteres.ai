@@ -1,11 +1,21 @@
-import { createClient } from '@supabase/supabase-js';
+import { createMobileCompatibleClient, corsHeaders } from '@/utils/supabase/mobile';
+import { NextResponse } from 'next/server';
 
-// Initialize Supabase client
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+export async function OPTIONS(req) {
+  return new NextResponse(null, {
+    status: 200,
+    headers: corsHeaders()
+  });
+}
 
 export async function GET(request) {
+  const supabase = await createMobileCompatibleClient(request);
+
+  // Check authentication
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) {
+    return NextResponse.json({ error: 'Not authenticated' }, { status: 401, headers: corsHeaders() });
+  }
   const { searchParams } = new URL(request.url);
   const query = searchParams.get('query') || '';
   const limit = parseInt(searchParams.get('limit') || '10', 10);
@@ -21,17 +31,25 @@ export async function GET(request) {
 
     if (error) throw error;
 
-    return Response.json({ success: true, data });
+    return NextResponse.json({ success: true, data }, { headers: corsHeaders() });
   } catch (error) {
     console.error('Error searching workouts:', error);
-    return Response.json(
+    return NextResponse.json(
       { success: false, error: error.message },
-      { status: 500 }
+      { status: 500, headers: corsHeaders() }
     );
   }
 }
 
 export async function POST(request) {
+  const supabase = await createMobileCompatibleClient(request);
+
+  // Check authentication
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) {
+    return NextResponse.json({ error: 'Not authenticated' }, { status: 401, headers: corsHeaders() });
+  }
+
   try {
     const body = await request.json();
     const { query, limit = 10, filters = {} } = body;
@@ -67,12 +85,12 @@ export async function POST(request) {
 
     if (error) throw error;
 
-    return Response.json({ success: true, data });
+    return NextResponse.json({ success: true, data }, { headers: corsHeaders() });
   } catch (error) {
     console.error('Error in POST search-workouts:', error);
-    return Response.json(
+    return NextResponse.json(
       { success: false, error: error.message },
-      { status: 500 }
+      { status: 500, headers: corsHeaders() }
     );
   }
 }

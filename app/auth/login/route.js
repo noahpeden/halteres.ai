@@ -1,5 +1,4 @@
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
+import { createClient } from '../../utils/supabase/server';
 import { NextResponse } from 'next/server';
 
 export async function POST(request) {
@@ -7,15 +6,23 @@ export async function POST(request) {
   const formData = await request.formData();
   const email = formData.get('email');
   const password = formData.get('password');
-  const cookieStore = await cookies();
-  const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
+  const supabase = await createClient();
 
-  await supabase.auth.signInWithPassword({
+  const { error } = await supabase.auth.signInWithPassword({
     email,
     password,
   });
 
-  return NextResponse.redirect(requestUrl.origin, {
+  if (error) {
+    return NextResponse.redirect(
+      `${requestUrl.origin}/login?error=Could not authenticate user`,
+      {
+        status: 301,
+      }
+    );
+  }
+
+  return NextResponse.redirect(`${requestUrl.origin}/dashboard`, {
     status: 301,
   });
 }
