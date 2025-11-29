@@ -1,27 +1,18 @@
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
+import { createMobileCompatibleClient, corsHeaders } from '@/utils/supabase/mobile';
 import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
 import { stripe } from '@/utils/stripe';
 
+export async function OPTIONS(request) {
+  return new Response(null, {
+    status: 200,
+    headers: corsHeaders()
+  });
+}
+
 export async function POST(req) {
-  const cookieStore = cookies();
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-    {
-      cookies: {
-        get(name) {
-          return cookieStore.get(name)?.value;
-        },
-        set(name, value, options) {
-          cookieStore.set({ name, value, ...options });
-        },
-        remove(name, options) {
-          cookieStore.set({ name, value: '', ...options });
-        },
-      },
-    }
-  );
+  const supabase = await createMobileCompatibleClient(req);
 
   try {
     const { priceId } = await req.json();
@@ -32,7 +23,7 @@ export async function POST(req) {
         JSON.stringify({ error: 'Price ID is required' }),
         {
           status: 400,
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...corsHeaders() },
         }
       );
     }
@@ -42,7 +33,7 @@ export async function POST(req) {
         JSON.stringify({ error: 'Internal server configuration error' }),
         {
           status: 500,
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...corsHeaders() },
         }
       );
     }
@@ -57,7 +48,7 @@ export async function POST(req) {
       console.error('API Authentication Error:', authError?.message);
       return new NextResponse(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...corsHeaders() },
       });
     }
 
@@ -72,12 +63,12 @@ export async function POST(req) {
       // Block subscription creation if user already has active subscription
       if (existingProfile.subscription_status === 'active') {
         return new NextResponse(
-          JSON.stringify({ 
-            error: 'You already have an active subscription. Please manage your subscription from your profile page.' 
+          JSON.stringify({
+            error: 'You already have an active subscription. Please manage your subscription from your profile page.'
           }),
           {
             status: 400,
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', ...corsHeaders() },
           }
         );
       }
@@ -85,6 +76,7 @@ export async function POST(req) {
 
     // 3. Fetch user profile to get/create stripe_customer_id
     // Use service role key for backend operations
+    const cookieStore = await cookies();
     const supabaseAdmin = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
       process.env.SUPABASE_SERVICE_ROLE_KEY, // Use Service Role Key here
@@ -121,7 +113,7 @@ export async function POST(req) {
         JSON.stringify({ error: 'Failed to retrieve user profile' }),
         {
           status: 500,
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...corsHeaders() },
         }
       );
     }
@@ -137,7 +129,7 @@ export async function POST(req) {
           }),
           {
             status: 400,
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', ...corsHeaders() },
           }
         );
       }
@@ -177,7 +169,7 @@ export async function POST(req) {
           JSON.stringify({ error: `Stripe error: ${stripeError.message}` }),
           {
             status: statusCode,
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', ...corsHeaders() },
           }
         );
       }
@@ -216,7 +208,7 @@ export async function POST(req) {
         throw new Error('Failed to create Stripe checkout session ID.');
       }
 
-      return NextResponse.json({ sessionId: session.id });
+      return NextResponse.json({ sessionId: session.id }, { headers: corsHeaders() });
     } catch (stripeSessionError) {
       console.error(
         'Stripe checkout session creation error:',
@@ -229,7 +221,7 @@ export async function POST(req) {
         }),
         {
           status: statusCode,
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...corsHeaders() },
         }
       );
     }
@@ -239,7 +231,7 @@ export async function POST(req) {
       JSON.stringify({ error: 'Internal Server Error' }),
       {
         status: 500,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...corsHeaders() },
       }
     );
   }

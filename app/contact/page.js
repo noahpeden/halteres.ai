@@ -7,7 +7,7 @@ export const generateMetadata = () => {
     ...metadata,
     title: 'Contact Us | HalteresAI',
     description:
-      'Get in touch with the HalteresAI team for support, sales inquiries, or partnership opportunities.',
+      'Get in touch with the HalteresAI team for support, demos, or partnership opportunities. We help gym owners take back their programming.',
   };
 };
 
@@ -38,8 +38,8 @@ export default function ContactPage() {
               Contact Us
             </h2>
             <p className="mt-6 text-lg leading-8 text-gray-600">
-              Have questions about how HalteresAI can help your fitness
-              business? Our team is ready to assist.
+              Have questions about how HalteresAI can help your gym take back
+              its programming? Our team is ready to assist.
             </p>
           </div>
           <div className="mx-auto mt-16 grid max-w-2xl grid-cols-1 gap-8 text-base leading-7 sm:grid-cols-2 sm:gap-y-16 lg:mx-0 lg:max-w-none lg:grid-cols-4">
@@ -61,7 +61,7 @@ export default function ContactPage() {
               <address className="pt-2 pl-6 not-italic">
                 <p>sales@halteres.ai</p>
                 <p className="mt-2">
-                  Interested in HalteresAI for your business?
+                  Interested in HalteresAI for your gym?
                 </p>
               </address>
             </div>
@@ -223,7 +223,7 @@ export default function ContactPage() {
                 </dt>
                 <dd className="mt-2 text-base leading-7 text-gray-600">
                   Yes, we provide personalized onboarding sessions for all new
-                  customers to help you get the most out of HalteresAI.
+                  gyms to help you get the most out of HalteresAI.
                 </dd>
               </div>
               <div className="pt-6">

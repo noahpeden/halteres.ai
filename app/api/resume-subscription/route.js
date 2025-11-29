@@ -1,23 +1,31 @@
-import { createClient } from '@/utils/supabase/server';
+import { createMobileCompatibleClient, corsHeaders } from '@/utils/supabase/mobile';
 import { stripe } from '@/utils/stripe';
 import { NextResponse } from 'next/server';
+
+export async function OPTIONS(request) {
+  return new Response(null, {
+    status: 200,
+    headers: corsHeaders()
+  });
+}
 
 export async function POST(req) {
   try {
     // Get the user's session
-    const supabase = await createClient();
+    const supabase = await createMobileCompatibleClient(req);
     const {
-      data: { session },
-    } = await supabase.auth.getSession();
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
 
-    if (!session) {
+    if (authError || !user) {
       return NextResponse.json(
         { error: 'Authentication required' },
-        { status: 401 }
+        { status: 401, headers: corsHeaders() }
       );
     }
 
-    const userId = session.user.id;
+    const userId = user.id;
 
     // Fetch the user's subscription data from Supabase
     const { data: profile, error: profileError } = await supabase
@@ -30,7 +38,7 @@ export async function POST(req) {
       console.error('Error fetching profile data:', profileError);
       return NextResponse.json(
         { error: 'Failed to fetch profile data' },
-        { status: 500 }
+        { status: 500, headers: corsHeaders() }
       );
     }
 
@@ -38,7 +46,7 @@ export async function POST(req) {
     if (!profile.stripe_subscription_id) {
       return NextResponse.json(
         { error: 'No subscription found' },
-        { status: 400 }
+        { status: 400, headers: corsHeaders() }
       );
     }
 
@@ -51,12 +59,12 @@ export async function POST(req) {
     return NextResponse.json({
       success: true,
       message: 'Subscription resumed successfully',
-    });
+    }, { headers: corsHeaders() });
   } catch (error) {
     console.error('Error resuming subscription:', error);
     return NextResponse.json(
       { error: 'Failed to resume subscription: ' + error.message },
-      { status: 500 }
+      { status: 500, headers: corsHeaders() }
     );
   }
 }

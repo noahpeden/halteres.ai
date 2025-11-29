@@ -41,25 +41,25 @@ const tutorials = [
         {
           step: 2,
           title: 'Program Description',
-          description: 'Set your program name and write a detailed description of your client\'s goals, needs, and training preferences',
+          description: 'Set your program name and write a detailed description of your gym\'s goals, member needs, and training focus',
           location: '/program-wizard/step-2',
           features: [
             'Custom program naming (pre-filled from dashboard)',
-            'Detailed client description requirements (min 50 characters)',
-            'Example prompts for different client types',
-            'Tips for effective client descriptions'
+            'Detailed description requirements (min 50 characters)',
+            'Example prompts for different program types',
+            'Tips for effective program descriptions'
           ]
         },
         {
           step: 3,
           title: 'Previous Workouts',
-          description: 'Share your client\'s recent training history or search for reference workouts to inspire program creation',
+          description: 'Share your gym\'s recent programming or search for reference workouts to inspire your new cycle',
           location: '/program-wizard/step-3',
           features: [
-            'Upload previous workout logs and training history',
+            'Upload previous workout logs and programming history',
             'AI-powered web search for reference workouts',
             'Select multiple reference workouts as inspiration',
-            'Skip option for beginners or fresh starts'
+            'Skip option for fresh programming cycles'
           ]
         },
         {
@@ -77,14 +77,14 @@ const tutorials = [
         },
         {
           step: 5,
-          title: 'Client Metrics',
-          description: 'Review and update client metrics including physical stats, performance data, and injury history',
+          title: 'Member/Class Metrics',
+          description: 'Review and update metrics for your target members including performance benchmarks and considerations',
           location: '/program-wizard/step-5',
           features: [
-            'Physical stats (height, weight, gender)',
-            'Performance metrics (1RM for bench, squat, deadlift)',
-            'Cardio benchmarks (mile time, recovery score)',
-            'Injury history and limitations tracking',
+            'Typical member stats (fitness levels, experience)',
+            'Performance metrics (benchmark lifts, cardio capacity)',
+            'Class size and scaling considerations',
+            'Injury history and common limitations',
             'Imperial/Metric unit conversion',
             'Optional - can be updated after program creation'
           ]
@@ -92,10 +92,10 @@ const tutorials = [
       ],
       tips: [
         'Take your time in Step 1 - the training methodology and periodization model significantly impact your program',
-        'In Step 2, be detailed in your client description - this helps create better-targeted workouts',
+        'In Step 2, be detailed in your program description - this helps create better-targeted workouts',
         'Step 3 is optional but powerful - reference workouts help the AI understand your training style',
-        'In Step 4, equipment selection is auto-populated based on gym type but can be customized',
-        'Step 5 client metrics are optional but help personalize the program intensity and progressions'
+        'In Step 4, equipment selection is auto-populated based on gym type but can be fully customized to YOUR equipment',
+        'Step 5 metrics are optional but help personalize the program intensity and progressions for your members'
       ]
     }
   },
@@ -312,8 +312,8 @@ export default function TutorialsPage() {
             Training Tutorials
           </h1>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Learn how to make the most of our AI-powered training program tools. 
-            These tutorials cover everything from creating programs to sharing workouts.
+            Learn how to make the most of our AI-powered gym programming tools.
+            These tutorials cover everything from creating 8-week cycles to modifying workouts day-of.
           </p>
         </div>
 

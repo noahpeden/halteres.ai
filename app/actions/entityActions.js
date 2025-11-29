@@ -56,6 +56,19 @@ export async function createEntityAction(formData) {
       });
     }
 
+    // If creating a class with metrics, include class-specific fields
+    if (formData.type === 'CLASS' && formData.metrics) {
+      Object.assign(entityData, {
+        class_size: formData.metrics.class_size,
+        average_age: formData.metrics.average_age,
+        has_elite_athletes: formData.metrics.has_elite_athletes,
+        average_experience_years: formData.metrics.average_experience_years,
+        skill_distribution: formData.metrics.skill_distribution,
+        class_duration_minutes: formData.metrics.class_duration_minutes,
+        warmup_duration_minutes: formData.metrics.warmup_duration_minutes,
+      });
+    }
+
     const { data, error } = await supabase
       .from('entities')
       .insert([entityData])
@@ -109,8 +122,11 @@ export async function updateEntityAction(entityId, formData) {
     const updateData = {
       name: formData.name,
       type: formData.type,
-      // Include metrics if provided (they should be in standard units: kg, cm)
-      ...(formData.metrics && {
+    };
+
+    // Include client metrics if provided (they should be in standard units: kg, cm)
+    if (formData.type === 'CLIENT' && formData.metrics) {
+      Object.assign(updateData, {
         bench_1rm: formData.metrics.bench_1rm,
         deadlift_1rm: formData.metrics.deadlift_1rm,
         squat_1rm: formData.metrics.squat_1rm,
@@ -120,8 +136,21 @@ export async function updateEntityAction(entityId, formData) {
         weight_kg: formData.metrics.weight_kg,
         recovery_score: formData.metrics.recovery_score,
         injury_history: formData.metrics.injury_history,
-      }),
-    };
+      });
+    }
+
+    // Include class metrics if provided
+    if (formData.type === 'CLASS' && formData.metrics) {
+      Object.assign(updateData, {
+        class_size: formData.metrics.class_size,
+        average_age: formData.metrics.average_age,
+        has_elite_athletes: formData.metrics.has_elite_athletes,
+        average_experience_years: formData.metrics.average_experience_years,
+        skill_distribution: formData.metrics.skill_distribution,
+        class_duration_minutes: formData.metrics.class_duration_minutes,
+        warmup_duration_minutes: formData.metrics.warmup_duration_minutes,
+      });
+    }
 
     const { data, error } = await supabase
       .from('entities')

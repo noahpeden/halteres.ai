@@ -1,10 +1,23 @@
-import { createClient } from '@/utils/supabase/server';
+import { createMobileCompatibleClient, corsHeaders } from '@/app/utils/supabase/mobile';
 import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
+export async function OPTIONS(req) {
+  return new NextResponse(null, {
+    status: 200,
+    headers: corsHeaders()
+  });
+}
+
 export async function POST(request) {
-  const supabase = await createClient();
+  const supabase = await createMobileCompatibleClient(request);
+
+  // Check authentication
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) {
+    return NextResponse.json({ error: 'Not authenticated' }, { status: 401, headers: corsHeaders() });
+  }
 
   try {
     const { programId, title, description, tags, source, markAsReference } =
@@ -13,7 +26,7 @@ export async function POST(request) {
     if (!programId || !title || !description) {
       return NextResponse.json(
         { error: 'Missing required fields: programId, title, or description' },
-        { status: 400 }
+        { status: 400, headers: corsHeaders() }
       );
     }
 
@@ -34,19 +47,19 @@ export async function POST(request) {
       console.error('Error adding workout to program:', error);
       return NextResponse.json(
         { error: 'Failed to add workout to program: ' + error.message },
-        { status: 500 }
+        { status: 500, headers: corsHeaders() }
       );
     }
 
     return NextResponse.json(
       { message: 'Workout added successfully', workoutId: data.id },
-      { status: 201 }
+      { status: 201, headers: corsHeaders() }
     );
   } catch (error) {
     console.error('Error processing request:', error);
     return NextResponse.json(
       { error: 'An error occurred while processing your request' },
-      { status: 500 }
+      { status: 500, headers: corsHeaders() }
     );
   }
 }

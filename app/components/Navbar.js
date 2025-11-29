@@ -154,7 +154,7 @@ export default function Navbar() {
                   </details>
                 </li>
 
-                <li>
+                {/* <li>
                   <details>
                     <summary>Resources</summary>
                     <ul className="p-2 bg-base-100 w-48 z-50">
@@ -172,7 +172,7 @@ export default function Navbar() {
                       ))}
                     </ul>
                   </details>
-                </li>
+                </li> */}
 
                 <li>
                   <NavLink href="/company">About</NavLink>

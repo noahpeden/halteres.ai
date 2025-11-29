@@ -1,8 +1,33 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
+import { createMobileCompatibleClient, corsHeaders } from '@/utils/supabase/mobile';
+
+// Handle OPTIONS for CORS preflight
+export async function OPTIONS(request) {
+  return new Response(null, {
+    status: 200,
+    headers: corsHeaders()
+  });
+}
 
 export async function POST(req) {
   try {
+    // Check authentication using getUser() for bearer token compatibility
+    // NOTE: getSession() doesn't work with bearer tokens from mobile apps
+    // Always use getUser() when authenticating requests that may come from mobile
+    const supabase = await createMobileCompatibleClient(req);
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      console.error('Auth error:', authError);
+      return NextResponse.json(
+        { error: 'Not authenticated' },
+        {
+          status: 401,
+          headers: corsHeaders()
+        }
+      );
+    }
     const body = await req.json();
     const {
       workout, // { title, description, ... }
@@ -18,7 +43,10 @@ export async function POST(req) {
           error:
             'Missing required fields: workout, instructions, methodology, gymEquipment',
         },
-        { status: 400 }
+        {
+          status: 400,
+          headers: corsHeaders()
+        }
       );
     }
 
@@ -80,13 +108,28 @@ Requirements:
     } catch (err) {
       return NextResponse.json(
         { error: 'Failed to parse enhanced workout from AI response.' },
-        { status: 500 }
+        {
+          status: 500,
+          headers: corsHeaders()
+        }
       );
     }
 
-    return NextResponse.json({ enhancedWorkout }, { status: 200 });
+    return NextResponse.json(
+      { enhancedWorkout },
+      {
+        status: 200,
+        headers: corsHeaders()
+      }
+    );
   } catch (error) {
     console.error('Error enhancing workout:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(
+      { error: error.message },
+      {
+        status: 500,
+        headers: corsHeaders()
+      }
+    );
   }
 }

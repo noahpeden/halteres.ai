@@ -10,7 +10,7 @@ export const generateMetadata = () => {
     ...baseMetadata, // Spread the base metadata
     title: 'Pricing | HalteresAI',
     description:
-      'Choose the HalteresAI plan that best fits your needs. Monthly, Quarterly, and Annual options available with unlimited workout generations.',
+      'Simple pricing for CrossFit boxes and functional fitness gyms. Generate 8 weeks of custom programming in 10 minutes. Less than generic programming services.',
   };
 };
 
@@ -78,17 +78,22 @@ const faqs = [
   {
     question: 'What does "unlimited generations" mean?',
     answer:
-      'You can create as many workout programs as you need with no additional cost within fair use policy guidelines. There are no hard generation limits or tiers on paid plans.',
+      'You can create as many programming cycles as you need with no additional cost within fair use policy guidelines. There are no hard generation limits or tiers on paid plans.',
+  },
+  {
+    question: 'How is this different from other programming services?',
+    answer:
+      'Unlike generic programming that assumes equipment you may not have, Halteres generates programming customized to YOUR gym\'s equipment. Plus, you can modify any workout instantly with our Enhance feature—something other services can\'t do.',
   },
   {
     question: 'Do you offer a free trial?',
     answer:
-      'Yes, new users get a free trial with limited generations to experience HalteresAI. Sign up today to get started.',
+      'Yes, new gyms get a 14-day free trial to experience HalteresAI. Sign up today to get started.',
   },
   {
     question: 'Can I change plans later?',
     answer:
-      'Yes, you can upgrade, downgrade, or cancel your plan at any time through your account settings (via the Stripe Billing Portal).',
+      'Yes, you can upgrade, downgrade, or cancel your plan at any time through your account settings.',
   },
 ];
 
@@ -129,9 +134,9 @@ export default async function PricingPage({ searchParams }) {
       price: '$99',
       interval: '/ month',
       features: [
-        'Unlimited Program Generations*',
-        'Full Feature Access',
-        'Billed Monthly',
+        '8-Week Programming Cycles',
+        'Equipment-Specific Customization',
+        'Day-of Workout Modifications',
         'Cancel Anytime',
       ],
       lookupKey: 'standard_monthly', // Match the key set in Stripe
@@ -142,10 +147,10 @@ export default async function PricingPage({ searchParams }) {
       price: '$269',
       interval: '/ quarter',
       features: [
-        'Unlimited Program Generations*',
-        'Full Feature Access',
-        'Discounted Rate',
-        'Billed Every 3 Months',
+        '8-Week Programming Cycles',
+        'Equipment-Specific Customization',
+        'Day-of Workout Modifications',
+        'Save 10% vs Monthly',
       ],
       lookupKey: 'standard_quarterly',
     },
@@ -155,10 +160,10 @@ export default async function PricingPage({ searchParams }) {
       price: '$999',
       interval: '/ year',
       features: [
-        'Unlimited Program Generations*',
-        'Full Feature Access',
+        '8-Week Programming Cycles',
+        'Equipment-Specific Customization',
+        'Day-of Workout Modifications',
         'Best Value (Save ~15%)',
-        'Billed Annually',
       ],
       lookupKey: 'standard_annual',
     },
@@ -176,14 +181,14 @@ export default async function PricingPage({ searchParams }) {
       <main className="max-w-7xl mx-auto py-16 px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
           <h1 className="text-4xl font-extrabold text-base-content sm:text-5xl sm:tracking-tight lg:text-6xl">
-            Simple, Flexible Pricing for Personal Trainers and Coaches
+            Simple Pricing for CrossFit Boxes and Functional Fitness Gyms
           </h1>
           <p className="mt-5 max-w-xl mx-auto text-xl text-base-content/80">
-            Choose the plan that fits your fitness business. Upgrade, downgrade,
-            or cancel anytime.
+            Why pay more for programming you can't customize? Get 8 weeks of
+            equipment-specific programming in 10 minutes.
           </p>
           <p className="mt-2 text-sm text-base-content/60">
-            *Subject to fair use policy.
+            Less than generic programming services. 100% customizable.
           </p>
         </div>
 

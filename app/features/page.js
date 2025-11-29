@@ -15,58 +15,58 @@ export const generateMetadata = () => {
     ...metadata,
     title: 'Features | HalteresAI',
     description:
-      'Explore the powerful features of HalteresAI that help fitness professionals create personalized workout programs.',
+      'Explore the powerful features of HalteresAI that help CrossFit boxes and functional fitness gyms create custom programming.',
   };
 };
 
 export default function FeaturesPage() {
   const mainFeatures = [
     {
-      name: 'AI-Powered Workout Generation',
+      name: '8-Week Program Generation',
       description:
-        "Create personalized workout programs in seconds based on your gym's equipment, client needs, and programming preferences.",
+        "Generate entire programming cycles in minutes, not hours. Configure YOUR equipment, define YOUR training focus, and let AI handle the rest.",
       icon: Sparkles,
     },
     {
-      name: 'Custom Gym Configuration',
+      name: 'Equipment-Specific Programming',
       description:
-        "Set up your facility's unique equipment inventory, space constraints, and class types for perfectly tailored workouts.",
+        "Set up your gym's exact equipment inventory. No more workouts that assume sleds, ropes, or machines you don't have.",
       icon: Settings,
     },
     {
-      name: 'Time-Saving Automation',
+      name: 'Get Your Sunday Nights Back',
       description:
-        'Reduce programming time from hours to minutes while maintaining the quality and creativity your clients expect.',
+        'Stop spending 5-10 hours per week writing programming. Generate 8 weeks in about 10 minutes.',
       icon: Clock,
     },
     {
-      name: 'Periodization Planning',
+      name: 'Competition Prep & Periodization',
       description:
-        'Build structured programming cycles that progressively build toward specific fitness goals or competitions.',
+        'Build structured cycles that peak for the CrossFit Open, local competitions, or HYROX events.',
       icon: CalendarDays,
     },
     {
-      name: 'Intelligent Workout Recommendations',
+      name: 'Enhance Any Workout Day-Of',
       description:
-        'Get suggestions for movements, workouts and progressions based on your past programming and client needs.',
+        'Equipment breaks? Class size changes? Modify any workout instantly—something generic programs can\'t do.',
       icon: MessageSquare,
     },
     {
-      name: 'Easy Customization',
+      name: 'Your Programming, Your Brand',
       description:
-        'Fine-tune any generated workout with an intuitive interface that allows for quick modifications.',
+        'Deliver YOUR programming to your members—not "we follow [someone else\'s] programming."',
       icon: Settings,
     },
     {
       name: 'Programming Cycles',
       description:
-        'Create cohesive workout plans across days, weeks, or months with intentional progression and variety.',
+        'Create cohesive workout plans across weeks or months with intentional progression, variety, and goal focus.',
       icon: Repeat,
     },
     {
       name: 'Sharing & Export',
       description:
-        'Share workouts across multiple platforms and export in various formats for your gym management system.',
+        'Share programming with your members and coaches. Export in various formats for your gym management system.',
       icon: CloudUpload,
     },
   ];
@@ -79,19 +79,18 @@ export default function FeaturesPage() {
           <div className="mx-auto max-w-7xl px-6 lg:px-8">
             <div className="mx-auto max-w-2xl text-center">
               <h1 className="text-4xl font-bold tracking-tight text-white sm:text-6xl">
-                Powerful Features for Fitness Professionals
+                Powerful Features for CrossFit Boxes & Functional Fitness Gyms
               </h1>
               <p className="mt-6 text-lg leading-8 text-blue-100">
-                HalteresAI provides everything you need to create exceptional
-                workout programming for your clients, saving you time and
-                improving your results.
+                HalteresAI gives you everything you need to create YOUR programming—
+                customized for YOUR equipment, YOUR goals, and YOUR members.
               </p>
               <div className="mt-10 flex items-center justify-center gap-x-6">
                 <Link
                   href="/login"
                   className="rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-blue-600 shadow-sm hover:bg-blue-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
                 >
-                  Get started
+                  Try Free for 14 Days
                 </Link>
                 <Link
                   href="/pricing"
@@ -108,14 +107,14 @@ export default function FeaturesPage() {
         <div className="mx-auto max-w-7xl px-6 lg:px-8 py-24 sm:py-32">
           <div className="mx-auto max-w-2xl lg:text-center">
             <h2 className="text-base font-semibold leading-7 text-blue-600">
-              Fitness Programming Made Easy
+              Gym Programming Made Easy
             </h2>
             <p className="mt-2 text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
-              Everything you need to create exceptional workouts
+              Everything you need to own your programming
             </p>
             <p className="mt-6 text-lg leading-8 text-gray-600">
-              HalteresAI combines advanced AI technology with deep fitness
-              expertise to deliver a comprehensive workout programming platform.
+              HalteresAI combines advanced AI with deep functional fitness expertise
+              to help you create programming that's uniquely yours.
             </p>
           </div>
           <div className="mx-auto mt-16 max-w-2xl sm:mt-20 lg:mt-24 lg:max-w-4xl">
@@ -146,24 +145,24 @@ export default function FeaturesPage() {
             <div className="relative isolate overflow-hidden bg-blue-900 px-6 pt-16 shadow-2xl sm:rounded-3xl sm:px-16 md:pt-24 lg:flex lg:gap-x-20 lg:px-24 lg:pt-0">
               <div className="mx-auto max-w-md text-center lg:mx-0 lg:flex-auto lg:py-32 lg:text-left">
                 <h2 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
-                  Ready to revolutionize your fitness programming?
+                  Ready to take back your programming?
                 </h2>
                 <p className="mt-6 text-lg leading-8 text-gray-300">
-                  Join thousands of fitness professionals who are saving time
-                  and delivering better results with HalteresAI.
+                  Join gym owners who've stopped paying for generic programming
+                  and started delivering their own.
                 </p>
                 <div className="mt-10 flex items-center justify-center gap-x-6 lg:justify-start">
                   <Link
                     href="/login"
                     className="rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-blue-600 shadow-sm hover:bg-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
                   >
-                    Get started
+                    Try Free for 14 Days
                   </Link>
                   <Link
                     href="/pricing"
                     className="text-sm font-semibold leading-6 text-white"
                   >
-                    Learn more <span aria-hidden="true">→</span>
+                    View pricing <span aria-hidden="true">→</span>
                   </Link>
                 </div>
               </div>
