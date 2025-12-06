@@ -1,4 +1,4 @@
-import { createMobileCompatibleClient, corsHeaders } from '@/app/utils/supabase/mobile';
+import { createMobileCompatibleClient, corsHeaders } from '@/utils/supabase/mobile';
 import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';

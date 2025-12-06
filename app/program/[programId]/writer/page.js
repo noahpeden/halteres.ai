@@ -5,6 +5,7 @@ import { useParams, useSearchParams } from 'next/navigation';
 import AIProgramWriter from '@/components/AIProgramWriter/AIProgramWriter';
 import { ProgramProvider } from '@/contexts/ProgramContext';
 import ClientMetricsTab from '@/components/ClientMetricsTab';
+import ClassMetricsTab from '@/components/ClassMetricsTab';
 import { Edit2, Check, X, ChevronRight, Share2 } from 'lucide-react';
 
 export default function ProgramWriterPage() {
@@ -214,7 +215,7 @@ export default function ProgramWriterPage() {
             </div>
           </div>
 
-          {/* Client Metrics - Sidebar on desktop, below content on mobile */}
+          {/* Entity Metrics - Sidebar on desktop, below content on mobile */}
           <div
             className={`
               w-full lg:w-1/3
@@ -222,12 +223,21 @@ export default function ProgramWriterPage() {
               ${isSidebarCollapsed ? 'lg:w-0 lg:opacity-0 lg:pointer-events-none' : 'lg:opacity-100 lg:pointer-events-auto'}
             `}
           >
-            <ClientMetricsTab
-              programId={programId}
-              viewMode={isMobile ? "fullPage" : "sidebar"}
-              isCollapsed={isSidebarCollapsed}
-              onToggleCollapse={toggleSidebarCollapse}
-            />
+            {clientType === 'CLASS' ? (
+              <ClassMetricsTab
+                programId={programId}
+                viewMode={isMobile ? "fullPage" : "sidebar"}
+                isCollapsed={isSidebarCollapsed}
+                onToggleCollapse={toggleSidebarCollapse}
+              />
+            ) : (
+              <ClientMetricsTab
+                programId={programId}
+                viewMode={isMobile ? "fullPage" : "sidebar"}
+                isCollapsed={isSidebarCollapsed}
+                onToggleCollapse={toggleSidebarCollapse}
+              />
+            )}
           </div>
         </div>
       </div>

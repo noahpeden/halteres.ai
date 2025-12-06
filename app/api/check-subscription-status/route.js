@@ -1,4 +1,4 @@
-import { createMobileCompatibleClient, corsHeaders } from '@/app/utils/supabase/mobile';
+import { createMobileCompatibleClient, corsHeaders } from '@/utils/supabase/mobile';
 import { stripe } from '@/utils/stripe';
 import { NextResponse } from 'next/server';
 

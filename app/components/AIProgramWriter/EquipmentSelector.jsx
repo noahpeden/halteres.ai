@@ -51,6 +51,7 @@ export default function EquipmentSelector({ isVisible, onToggleVisibility }) {
       isAllEquipmentSelected,
       updateEquipment,
       updateFormFields,
+      formData,
     ]
   );
 
