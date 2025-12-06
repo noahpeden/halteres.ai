@@ -31,7 +31,6 @@ async function createMobileCompatibleClient(request) {
         },
       }
     );
-
     return client;
   }
 
@@ -76,7 +75,6 @@ async function createMobileCompatibleClient(request) {
 function corsHeaders(requestOrOrigin = null) {
   // If a request object is passed, try to get the origin
   let origin = '*';
-
   if (requestOrOrigin && typeof requestOrOrigin === 'object' && requestOrOrigin.headers) {
     const requestOrigin = requestOrOrigin.headers.get('origin');
     // Allow specific known origins, otherwise use wildcard for mobile apps
@@ -91,7 +89,6 @@ function corsHeaders(requestOrOrigin = null) {
     // If a string origin is passed directly, use it
     origin = requestOrOrigin;
   }
-
   return {
     'Access-Control-Allow-Origin': origin,
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
