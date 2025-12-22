@@ -30,10 +30,17 @@ export async function GET(request) {
       .from('programs')
       .select('id, name, description, duration_weeks, difficulty, goal, session_details, program_overview')
       .eq('id', programId)
-      .single();
+      .maybeSingle();
 
     if (programError) {
       console.error('Program fetch error:', programError);
+      return NextResponse.json(
+        { error: 'Failed to fetch program' },
+        { status: 500 }
+      );
+    }
+
+    if (!program) {
       return NextResponse.json(
         { error: 'Program not found' },
         { status: 404 }

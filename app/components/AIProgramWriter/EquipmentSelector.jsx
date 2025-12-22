@@ -15,36 +15,38 @@ export default function EquipmentSelector({ isVisible, onToggleVisibility }) {
     async (equipmentValue) => {
       const value = equipmentValue === '-1' ? -1 : parseInt(equipmentValue);
 
+      let newEquipment;
       if (value === -1) {
         // Toggle all equipment
-        const newEquipment = isAllEquipmentSelected
+        newEquipment = isAllEquipmentSelected
           ? []
           : equipmentList.map((item) => item.value);
-        updateEquipment(newEquipment);
-
-        // Update in database - preserve existing gym_details
-        await updateFormFields({
-          gym_details: {
-            ...formData.gymDetails,
-            equipment: newEquipment,
-          },
-        });
       } else {
         const isSelected = selectedEquipment.includes(value);
-        const newEquipment = isSelected
+        newEquipment = isSelected
           ? selectedEquipment.filter((item) => item !== value)
           : [...selectedEquipment, value];
-
-        updateEquipment(newEquipment);
-
-        // Update in database - preserve existing gym_details
-        await updateFormFields({
-          gym_details: {
-            ...formData.gymDetails,
-            equipment: newEquipment,
-          },
-        });
       }
+
+      // Update UI state with numeric IDs
+      updateEquipment(newEquipment);
+
+      // Convert equipment IDs to labels for database storage
+      // This matches the format used by ProgramDetails.handleGymTypeSelect
+      const equipmentLabels = newEquipment
+        .map((id) => {
+          const equipment = equipmentList.find((item) => item.value === id);
+          return equipment ? equipment.label : null;
+        })
+        .filter(Boolean);
+
+      // Update in database - preserve existing gym_details
+      await updateFormFields({
+        gym_details: {
+          ...formData.gymDetails,
+          equipment: equipmentLabels,
+        },
+      });
     },
     [
       selectedEquipment,

@@ -94,53 +94,42 @@ ${periodization.why_appropriate}
 
   // Build the Ironman-specific prompt
   const isGeneratingSpecificWeek = context.isWeekSpecific;
-  const weekSpecificInfo = isGeneratingSpecificWeek ? 
-    `Week ${context.weekNumber} of ${context.totalWeeks}` : 
+  const weekSpecificInfo = isGeneratingSpecificWeek ?
+    `Week ${context.weekNumber} of ${context.totalWeeks}` :
     `${numberOfWeeks}-week`;
-  
-  return `Generate a ${isGeneratingSpecificWeek ? 'single week' : numberOfWeeks + '-week'} Ironman training program for ${goal} based *strictly* on the following parameters. DO NOT deviate from the specified duration or workout formats.
 
-${
-  description
-    ? `CRITICAL REQUIREMENTS FROM THE CLIENT: ${description}
-These requirements MUST be the primary driver of the program design, overriding any conflicting general template instructions below.
+  return `Generate a ${isGeneratingSpecificWeek ? 'single week' : numberOfWeeks + '-week'} Ironman training program for ${goal}.
 
-`
-    : ''
-}Goal: ${goal}
-Athlete Level: ${difficulty}
-Days Per Week: ${daysPerWeek} days
-Selected Training Days: ${selectedDayNames || 'All available days'}
-${isGeneratingSpecificWeek ? `Current Week: ${weekSpecificInfo}` : `Total Length: ${numberOfWeeks} weeks`}
+<program_parameters>
+Goal: ${goal}
+Difficulty: ${difficulty}
+Days Per Week: ${daysPerWeek}
+Training Days: ${selectedDayNames || 'All available days'}
+${isGeneratingSpecificWeek ? `Current Week: ${weekSpecificInfo}` : `Duration: ${numberOfWeeks} weeks`}
 ${focus_area ? `Focus Area: ${focus_area}` : ''}
+Periodization: ${programType}
+</program_parameters>
+
+${description ? `<client_requirements priority="high">
+${description}
+These requirements take precedence over general guidelines below.
+</client_requirements>
+` : ''}
 ${formatEquipmentRestrictions(equipment)}
-${
-  workoutFormats.length > 0
-    ? `Workout Types to Include: ${formattedWorkoutFormats}\\nIMPORTANT: The generated workouts MUST primarily use the specified Workout Types. Prioritize these requested formats for Ironman-specific preparation.`
-    : 'Workout Types to Include: Long Swim Sessions, Long Bike Rides, Long Runs, Brick Workouts, Tempo Sessions, Recovery Sessions, Strength Training'
-}
 
-${isGeneratingSpecificWeek ? 
-`CRITICAL: You are generating ONLY Week ${context.weekNumber} of a ${context.totalWeeks}-week program. Generate exactly ${context.workoutsThisWeek || daysPerWeek} workouts for this week ONLY. Do NOT generate workouts for other weeks.` :
-`IMPORTANT DURATION: The program MUST be exactly ${numberOfWeeks} week(s) long. Generate exactly ${totalWorkouts} workouts total.`}
+<workout_formats required="${formattedWorkoutFormats}">
+${workoutFormats.length > 0
+    ? `Use primarily these formats: ${formattedWorkoutFormats}. Prioritize these for Ironman-specific preparation.`
+    : 'Use Ironman-specific formats: Long Swim, Long Bike, Long Run, Brick, Tempo, Recovery, Strength'}
+</workout_formats>
 
-IRONMAN TRAINING GUIDELINES:
-${trainingGuidelines}
+<output_quantity>
+${isGeneratingSpecificWeek
+  ? `Generate exactly ${context.workoutsThisWeek || daysPerWeek} workouts for Week ${context.weekNumber} only.`
+  : `Generate exactly ${totalWorkouts} workouts total (${numberOfWeeks} weeks × ${daysPerWeek} days).`}
+</output_quantity>
 
-REQUIRED WORKOUT DISTRIBUTION FOR IRONMAN PREPARATION:
-- Swimming: ${getIronmanSwimGuidelines(athleteLevel, daysPerWeek, numberOfWeeks)}
-- Cycling: ${getIronmanBikeGuidelines(athleteLevel, daysPerWeek, numberOfWeeks)}
-- Running: ${getIronmanRunGuidelines(athleteLevel, daysPerWeek, numberOfWeeks)}
-- Strength/Injury Prevention: ${getIronmanStrengthGuidelines(athleteLevel, daysPerWeek)}
-- Brick workouts: ${getIronmanBrickGuidelines(athleteLevel, daysPerWeek, numberOfWeeks)}
-
-IRONMAN-SPECIFIC INTENSITY DISTRIBUTION:
-- ${getIronmanIntensityDistribution(athleteLevel)}
-
-WEEKLY VOLUME TARGETS:
-- ${getIronmanVolumeTargets(athleteLevel, numberOfWeeks)}
-
-${personalization ? `Personalization: ${personalization}` : ''}
+${personalization ? `<personalization>${personalization}</personalization>` : ''}
 ${context.formattedReferenceInput}
 ${context.formattedRagMatchedWorkouts}
 ${context.clientMetrics ? `\n${context.clientMetrics}` : ''}
@@ -148,124 +137,109 @@ ${context.referenceWorkouts ? `\n${context.referenceWorkouts}` : ''}
 ${customFormatSection}
 ${formattedPeriodizationGuidelines}
 ${context.formattedDates ? `
-WORKOUT SCHEDULING REQUIREMENTS:
-Selected Training Days: ${selectedDayNames || 'All available days'}
-
-⚠️ CRITICAL SCHEDULING REQUIREMENT ⚠️
-The workouts MUST be scheduled on the EXACT dates below. These dates follow the user's selected training days (${selectedDayNames}). DO NOT create workouts on any other dates.
-
+<scheduling>
+Training Days: ${selectedDayNames || 'All available days'}
+Assign workouts to these exact dates:
 ${context.formattedDates}
-
-IMPORTANT: Each workout you generate MUST be assigned to one of the above dates. The "date" field in each workout object MUST match one of these dates EXACTLY, and all dates must be used.
+Each workout's "date" field must match one of these dates exactly.
+</scheduling>
 ` : formatSchedulingRequirements(suggestedDates, daysPerWeek, selectedDayNames)}
 
-For the program description, include:
-1. A detailed, engaging overview that clearly states the program's primary goals and target audience (e.g., "This ${numberOfWeeks}-week, ${daysPerWeek}-day-per-week program is designed for ${difficulty} Ironman athletes seeking to complete the ultimate endurance challenge through systematic ultra-distance preparation across swim, bike, and run...")
-2. The specific periodization approach used and why it's scientifically appropriate for Ironman preparation (e.g., macrocycle periodization for ultra-endurance, aerobic base building phases, intensity distribution for fatigue resistance, progressive volume loading, race-specific preparation blocks)
-3. How the training principles will drive measurable progress (e.g., "aerobic capacity development for sustained effort", "metabolic efficiency enhancement", "muscular endurance progression", "mental resilience building", "race-specific fueling practice")
-4. Expected adaptations and outcomes from following the program consistently (e.g., enhanced aerobic capacity, improved fat oxidation efficiency, increased muscular endurance, better pacing control, optimized race nutrition tolerance, mental fortitude for ultra-distance racing)
-5. Integration of Ironman methodology and approach (e.g., "ultra-endurance training principles emphasizing aerobic development, metabolic efficiency, and race-specific preparation for the 140.6-mile challenge")
-6. Brief recommendations for nutrition, recovery, and supplementary training if relevant (e.g., ultra-distance fueling strategies, heat acclimatization, recovery protocols for high-volume training, equipment selection, race simulation practices, mental preparation techniques)
+<methodology_guidelines>
+Training Approach:
+${trainingGuidelines}
 
-IRONMAN-SPECIFIC TRAINING PRINCIPLES:
-- Emphasize aerobic base development and fat adaptation
-- Include race-pace practice and nutrition rehearsal
-- Focus on durability and consistency over peak speed
-- Incorporate mental preparation and race simulation
-- Prioritize injury prevention and load management
-- Include heat adaptation and environmental preparation
+Workout Distribution:
+- Swimming: ${getIronmanSwimGuidelines(athleteLevel, daysPerWeek, numberOfWeeks)}
+- Cycling: ${getIronmanBikeGuidelines(athleteLevel, daysPerWeek, numberOfWeeks)}
+- Running: ${getIronmanRunGuidelines(athleteLevel, daysPerWeek, numberOfWeeks)}
+- Strength: ${getIronmanStrengthGuidelines(athleteLevel, daysPerWeek)}
+- Brick: ${getIronmanBrickGuidelines(athleteLevel, daysPerWeek, numberOfWeeks)}
 
-The program MUST follow Ironman-specific periodization based on the selected program type (${programType}) AND the client's requirements.
-Ensure proper progression toward race-day performance and ultra-endurance adaptations.
+Intensity Distribution: ${getIronmanIntensityDistribution(athleteLevel)}
 
-IMPORTANT: The workouts must be scheduled on specific dates according to the user's selected training days. DO NOT create workouts on days other than the ones specified.
+Volume Targets: ${getIronmanVolumeTargets(athleteLevel, numberOfWeeks)}
 
-CRITICAL TITLE FORMATTING: For workout titles, use the ACTUAL week and day numbers based on the scheduling information provided above. Include the primary discipline(s) and session type (e.g., "Week 8, Day 1: Long Swim + Technique", "Week 12, Day 6: Long Bike with Race Simulation").
+Core Principles:
+- Aerobic base development and fat adaptation
+- Race-pace practice with nutrition rehearsal
+- Durability and consistency over peak speed
+- Mental preparation and race simulation
+- Injury prevention and load management
+- Environmental adaptation (heat, conditions)
+</methodology_guidelines>
 
-Your response MUST be in this exact JSON format:
+<description_requirements>
+Include in the program description:
+1. Overview for ${difficulty} athletes, ${numberOfWeeks} weeks, ultra-distance preparation focus
+2. Periodization approach and scientific rationale for Ironman preparation
+3. Expected adaptations: aerobic capacity, metabolic efficiency, muscular endurance, pacing control, nutrition tolerance
+4. Nutrition, recovery, and race preparation recommendations
+</description_requirements>
+
+<title_format>
+Use actual week/day numbers with primary discipline and session type.
+Example: "Week 8, Day 1: Long Swim + Technique" or "Week 12, Day 6: Long Bike with Race Simulation"
+</title_format>
+
+<json_output_format>
 {
   "title": "Ironman Training Program for ${goal}",
-  "description": "Generate a description ACCURATELY reflecting the program's ACTUAL content: CRITICAL REQUIREMENTS (${
-    description || 'None provided'
-  }), duration (${numberOfWeeks} weeks), athlete level (${difficulty}), and the specific workout types used (${formattedWorkoutFormats}). Focus on ultra-endurance development and Ironman race preparation.",
-  "overview": "Generate a detailed explanation of the Ironman training methodology, periodization approach, expected physiological adaptations, and comprehensive race preparation strategy based SOLELY on the generated workouts, CRITICAL REQUIREMENTS, and athlete level. Include detailed guidance on nutrition, hydration, recovery, mental preparation, and race-day execution.",
+  "description": "Program description reflecting: goal, ${numberOfWeeks}-week duration, ${difficulty} difficulty, formats used (${formattedWorkoutFormats}), ultra-endurance focus",
+  "overview": "Detailed Ironman methodology, periodization, expected adaptations (aerobic capacity, metabolic efficiency, endurance), nutrition/hydration/recovery/mental preparation guidance",
   "workouts": [
     {
       "title": "Week X, Day Y: [Primary Discipline] - [Session Type/Focus]",
-      "body": "Detailed workout description including all required sections",
+      "body": "Workout content with all sections below",
       "date": "YYYY-MM-DD"
-    },
-    ...more workouts
+    }
   ]
 }
+</json_output_format>
 
-For each workout's "body" field, use this structure:
-\`\`\`
+<workout_body_structure>
 ${
   hasCustomFormat
     ? customWorkoutFormat.sections
         .map(
           (section) =>
-            `## ${
-              section.name
-            }\n[Detailed ${section.name.toLowerCase()} with specific movements, durations, and instructions]`
+            `## ${section.name}\n[${section.name} content: movements, durations, instructions]`
         )
         .join('\n\n')
-    : `## Session Overview and Training Adaptations
-[Detailed explanation of the session's physiological targets and Ironman-specific adaptations]
-- Explain the specific training stimulus and energy system development
-- Provide detailed pacing, effort, and execution guidance
-- Explain how this session contributes to overall Ironman preparation
+    : `## Session Overview
+Physiological targets, training stimulus, pacing guidance, contribution to Ironman preparation
 
 ${
   hasInjuryHistory
-    ? `## Injury Prevention and Modifications
-[Specific modifications for common ultra-endurance injuries and overuse prevention based on selected difficulty level: ${difficulty}]
-- Adapt training load appropriately for ${difficulty.toLowerCase()} athletes
-- Provide safer alternatives for high-risk movements or positions
-- Include recovery protocols specific to ultra-endurance training`
-    : ''
+    ? `## Injury Prevention
+Modifications for ultra-endurance injuries, load adaptation for ${difficulty} athletes, safer alternatives, recovery protocols
+` : ''
 }
-
 ## Pre-Session Preparation
-[Detailed preparation protocol including equipment, nutrition, and mindset]
-- Include specific warm-up duration and intensity progression
-- Equipment setup and safety considerations
-- Pre-session fueling and hydration guidelines
+Equipment, nutrition, warm-up (duration/intensity), fueling/hydration guidelines
 
 ## Main Training Block
-[Complete workout with specific sets, intervals, distances, durations, and intensities]
-- Clear structure with detailed progression and recovery periods
-- Specific paces, heart rate zones, power targets, or perceived effort scales
-- Technical and mental focus points throughout the session
-- Race-simulation elements where applicable
+Sets, intervals, distances, durations, intensities
+Paces, heart rate zones, power targets, perceived effort
+Technical/mental focus, race-simulation elements
 
-${getIronmanNutritionSection(workoutFormats)}
+${getIronmanNutritionSection(workoutFormats) ? `## Race Nutrition Practice
+Pre/during/post-session fueling protocols, hydration strategy, race rehearsal elements
+` : ''}
+## Recovery and Cool-Down
+Cool-down movements/duration, post-session nutrition/hydration, recovery techniques
 
-## Recovery and Cool-Down Protocol
-[Comprehensive recovery strategy]
-- Detailed cool-down with specific movements and duration
-- Post-session nutrition and hydration protocols
-- Recovery techniques and next-session preparation
+## Technical and Mental Focus
+5-7 cues for efficiency, injury prevention, race preparation, pacing, environmental adaptation
 
-## Technical and Mental Focus Points
-[5-7 specific technique and mental strategy cues]
-- Key technical elements for efficiency and injury prevention
-- Mental preparation and race-simulation strategies
-- Pacing discipline and effort management
-- Environmental adaptation considerations
-
-## Performance Metrics and Monitoring
-[Session-specific metrics to track progress]
-- Key performance indicators to monitor
-- Signs of appropriate training stress and adaptation
-- Recovery markers to assess before next session`
+## Performance Metrics
+Key indicators to monitor, training stress markers, recovery assessment`
 }
-\`\`\`
+</workout_body_structure>
 
-${isGeneratingSpecificWeek ? 
-`The "workouts" array MUST contain exactly ${context.workoutsThisWeek || daysPerWeek} workouts for Week ${context.weekNumber} ONLY.` :
-`The "workouts" array MUST contain exactly ${totalWorkouts} workouts, covering exactly ${numberOfWeeks} week(s).`}
+${isGeneratingSpecificWeek
+  ? `Generate exactly ${context.workoutsThisWeek || daysPerWeek} workouts for Week ${context.weekNumber}.`
+  : `Generate exactly ${totalWorkouts} workouts covering ${numberOfWeeks} week(s).`}
 `;
 }
 
@@ -367,23 +341,9 @@ function getIronmanVolumeTargets(athleteLevel, numberOfWeeks) {
 }
 
 function getIronmanNutritionSection(workoutFormats) {
-  const includesLongSessions = workoutFormats.some(format => 
-    format.toLowerCase().includes('long') || 
+  return workoutFormats.some(format =>
+    format.toLowerCase().includes('long') ||
     format.toLowerCase().includes('brick') ||
     format.toLowerCase().includes('race')
   );
-  
-  if (includesLongSessions) {
-    return `## Race Nutrition Practice
-[Specific nutrition and hydration strategy for this session]
-- Pre-session fueling protocol (timing and composition)
-- During-session nutrition plan (frequency, type, and amount)
-- Hydration strategy based on duration and conditions
-- Post-session recovery nutrition and timing
-- Race nutrition rehearsal elements
-
-`;
-  }
-  
-  return '';
 }

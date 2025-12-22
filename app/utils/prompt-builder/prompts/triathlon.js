@@ -94,50 +94,61 @@ ${periodization.why_appropriate}
 
   // Build the triathlon-specific prompt
   const isGeneratingSpecificWeek = context.isWeekSpecific;
-  const weekSpecificInfo = isGeneratingSpecificWeek ? 
-    `Week ${context.weekNumber} of ${context.totalWeeks}` : 
+  const weekSpecificInfo = isGeneratingSpecificWeek ?
+    `Week ${context.weekNumber} of ${context.totalWeeks}` :
     `${numberOfWeeks}-week`;
-  
-  return `Generate a ${isGeneratingSpecificWeek ? 'single week' : numberOfWeeks + '-week'} Triathlon training program for ${goal} based *strictly* on the following parameters. DO NOT deviate from the specified duration or workout formats.
 
-${
-  description
-    ? `CRITICAL REQUIREMENTS FROM THE CLIENT: ${description}
-These requirements MUST be the primary driver of the program design, overriding any conflicting general template instructions below.
+  return `Generate a ${isGeneratingSpecificWeek ? 'single week' : numberOfWeeks + '-week'} Triathlon training program for ${goal}.
 
-`
-    : ''
-}Goal: ${goal}
-Athlete Level: ${difficulty}
-Days Per Week: ${daysPerWeek} days
-Selected Training Days: ${selectedDayNames || 'All available days'}
-${isGeneratingSpecificWeek ? `Current Week: ${weekSpecificInfo}` : `Total Length: ${numberOfWeeks} weeks`}
+<program_parameters>
+Goal: ${goal}
+Difficulty: ${difficulty}
+Days Per Week: ${daysPerWeek}
+Training Days: ${selectedDayNames || 'All available days'}
+${isGeneratingSpecificWeek ? `Current Week: ${weekSpecificInfo}` : `Duration: ${numberOfWeeks} weeks`}
 ${focus_area ? `Focus Area: ${focus_area}` : ''}
+Periodization: ${programType}
+</program_parameters>
+
+${description ? `<client_requirements priority="high">
+${description}
+These requirements take precedence over general guidelines below.
+</client_requirements>
+` : ''}
 ${formatEquipmentRestrictions(equipment)}
-${
-  workoutFormats.length > 0
-    ? `Workout Types to Include: ${formattedWorkoutFormats}\\nIMPORTANT: The generated workouts MUST primarily use the specified Workout Types. Prioritize these requested formats over generic triathlon training.`
-    : 'Workout Types to Include: Swim Sessions, Bike Workouts, Run Training, Brick Workouts, Strength Training, Recovery Sessions'
-}
 
-${isGeneratingSpecificWeek ? 
-`CRITICAL: You are generating ONLY Week ${context.weekNumber} of a ${context.totalWeeks}-week program. Generate exactly ${context.workoutsThisWeek || daysPerWeek} workouts for this week ONLY. Do NOT generate workouts for other weeks.` :
-`IMPORTANT DURATION: The program MUST be exactly ${numberOfWeeks} week(s) long. Generate exactly ${totalWorkouts} workouts total.`}
+<workout_formats required="${formattedWorkoutFormats}">
+${workoutFormats.length > 0
+    ? `Use primarily these formats: ${formattedWorkoutFormats}. Only include other formats if essential for the stated goal.`
+    : 'Use standard triathlon mix: Swim, Bike, Run, Brick, Strength, Recovery'}
+</workout_formats>
 
-TRIATHLON TRAINING GUIDELINES:
+<output_quantity>
+${isGeneratingSpecificWeek
+  ? `Generate exactly ${context.workoutsThisWeek || daysPerWeek} workouts for Week ${context.weekNumber} only.`
+  : `Generate exactly ${totalWorkouts} workouts total (${numberOfWeeks} weeks × ${daysPerWeek} days).`}
+</output_quantity>
+
+<triathlon_guidelines>
 ${trainingGuidelines}
 
-REQUIRED WORKOUT DISTRIBUTION: Balance the three disciplines appropriately:
+Workout distribution across three disciplines:
 - Swimming: ${getSwimGuidelines(athleteLevel, daysPerWeek)}
 - Cycling: ${getBikeGuidelines(athleteLevel, daysPerWeek)}
 - Running: ${getRunGuidelines(athleteLevel, daysPerWeek)}
 - Strength/Cross-training: ${getStrengthGuidelines(athleteLevel, daysPerWeek)}
-- Brick workouts (bike-to-run transitions): Include ${getBrickGuidelines(athleteLevel, daysPerWeek)}
+- Brick workouts: Include ${getBrickGuidelines(athleteLevel, daysPerWeek)}
 
-INTENSITY DISTRIBUTION:
-- ${getIntensityDistribution(athleteLevel)}
+Intensity distribution: ${getIntensityDistribution(athleteLevel)}
 
-${personalization ? `Personalization: ${personalization}` : ''}
+Equipment usage:
+- Swimming: Technique, endurance, and speed work appropriate for available facilities
+- Cycling: Endurance, intervals, and power development with available bikes/trainers
+- Running: Varied terrain and paces based on available options
+- Strength: Triathlon-specific strength and injury prevention
+</triathlon_guidelines>
+
+${personalization ? `<personalization>${personalization}</personalization>` : ''}
 ${context.formattedReferenceInput}
 ${context.formattedRagMatchedWorkouts}
 ${context.clientMetrics ? `\n${context.clientMetrics}` : ''}
@@ -145,117 +156,98 @@ ${context.referenceWorkouts ? `\n${context.referenceWorkouts}` : ''}
 ${customFormatSection}
 ${formattedPeriodizationGuidelines}
 ${context.formattedDates ? `
-WORKOUT SCHEDULING REQUIREMENTS:
-Selected Training Days: ${selectedDayNames || 'All available days'}
-
-⚠️ CRITICAL SCHEDULING REQUIREMENT ⚠️
-The workouts MUST be scheduled on the EXACT dates below. These dates follow the user's selected training days (${selectedDayNames}). DO NOT create workouts on any other dates.
-
+<scheduling>
+Training Days: ${selectedDayNames || 'All available days'}
+Assign workouts to these exact dates:
 ${context.formattedDates}
-
-IMPORTANT: Each workout you generate MUST be assigned to one of the above dates. The "date" field in each workout object MUST match one of these dates EXACTLY, and all dates must be used.
+Each workout's "date" field must match one of these dates exactly.
+</scheduling>
 ` : formatSchedulingRequirements(suggestedDates, daysPerWeek, selectedDayNames)}
 
-For the program description, include:
-1. A detailed, engaging overview that clearly states the program's primary goals and target audience (e.g., "This ${numberOfWeeks}-week, ${daysPerWeek}-day-per-week program is designed for ${difficulty} triathletes seeking to optimize performance across swim, bike, and run disciplines through systematic training progression...")
-2. The specific periodization approach used and why it's scientifically appropriate for triathlon development (e.g., concurrent training model for multi-sport adaptation, periodized volume progression, intensity distribution for aerobic base building, sport-specific skill development phases)
-3. How the training principles will drive measurable progress (e.g., "progressive volume increases for aerobic capacity", "sport-specific skill development", "energy system targeting", "race-specific preparation", "transition training for efficiency")
-4. Expected adaptations and outcomes from following the program consistently (e.g., improved swim technique and endurance, enhanced cycling power and efficiency, increased running speed and stamina, better race transitions, optimized pacing strategies)
-5. Integration of triathlon methodology and approach (e.g., "triathlon-specific training principles balancing three disciplines while optimizing adaptation through structured periodization and race simulation")
-6. Brief recommendations for nutrition, recovery, and supplementary training if relevant (e.g., multi-sport nutrition strategies, recovery protocols for high training loads, equipment recommendations, race day preparation, tapering strategies)
+<description_requirements>
+Include in the program description:
+1. Overview reflecting goal, duration (${numberOfWeeks} weeks), difficulty (${difficulty}), and formats used
+2. Periodization approach and rationale for triathlon development (concurrent training, volume progression, intensity distribution)
+3. Expected outcomes (swim technique/endurance, cycling power/efficiency, running speed/stamina, race transitions, pacing strategies)
+4. Nutrition, recovery, and supplementary training recommendations (multi-sport nutrition, recovery protocols, equipment, race prep, tapering)
+</description_requirements>
 
-EQUIPMENT USAGE GUIDELINES:
-- Swimming: Focus on technique, endurance, and speed work appropriate for available facilities
-- Cycling: Utilize available bikes/trainers for endurance, intervals, and power development
-- Running: Incorporate varied terrain and paces based on available options
-- Strength: Use available equipment for triathlon-specific strength and injury prevention
+<methodology_guidelines context="triathlon-specific">
+Apply these principles where they don't conflict with client requirements:
+- Concurrent training model balancing three disciplines
+- Progressive volume increases following periodization approach
+- Sport-specific skill development and technique refinement
+- Energy system targeting appropriate for race distance
+- Transition training for efficiency (bike-to-run, swim-to-bike)
+- Race simulation and pacing strategies
+</methodology_guidelines>
 
-The program MUST follow logical triathlon periodization based on the selected program type (${programType}) AND the client's requirements.
-Ensure proper progression, recovery, and sport-specific adaptations.
+<title_format>
+Use actual week/day numbers in titles based on schedule position.
+Include primary discipline(s) in title.
+Example: "Week 3, Day 1: Swim Technique + Strength"
+</title_format>
 
-IMPORTANT: The workouts must be scheduled on specific dates according to the user's selected training days. DO NOT create workouts on days other than the ones specified.
-
-CRITICAL TITLE FORMATTING: For workout titles, use the ACTUAL week and day numbers based on the scheduling information provided above. Include the primary discipline(s) in the title (e.g., "Week 3, Day 1: Swim Technique + Strength", "Week 3, Day 2: Bike Intervals").
-
-Your response MUST be in this exact JSON format:
+<json_output_format>
 {
   "title": "Triathlon Training Program for ${goal}",
-  "description": "Generate a description ACCURATELY reflecting the program's ACTUAL content: CRITICAL REQUIREMENTS (${
-    description || 'None provided'
-  }), duration (${numberOfWeeks} weeks), athlete level (${difficulty}), and the specific workout types used (${formattedWorkoutFormats}). Focus on multi-sport development and triathlon-specific adaptations.",
-  "overview": "Generate a detailed explanation of the triathlon training methodology, periodization approach, expected outcomes, and supplementary recommendations based SOLELY on the generated workouts, CRITICAL REQUIREMENTS, and athlete level. Include guidance on nutrition, recovery, transition practice, and race preparation strategies.",
+  "description": "Program description reflecting: goal, ${numberOfWeeks}-week duration, ${difficulty} difficulty, formats used (${formattedWorkoutFormats}), multi-sport development",
+  "overview": "Detailed triathlon methodology, periodization, expected outcomes, and recommendations including nutrition, recovery, transition practice, and race preparation",
   "workouts": [
     {
       "title": "Week X, Day Y: [Primary Discipline] - [Creative Title]",
-      "body": "Detailed workout description including all required sections",
+      "body": "Workout content with all sections below",
       "date": "YYYY-MM-DD"
-    },
-    ...more workouts
+    }
   ]
 }
+</json_output_format>
 
-For each workout's "body" field, use this structure:
-\`\`\`
+<workout_body_structure>
 ${
   hasCustomFormat
     ? customWorkoutFormat.sections
         .map(
           (section) =>
-            `## ${
-              section.name
-            }\n[Detailed ${section.name.toLowerCase()} with specific movements, durations, and instructions]`
+            `## ${section.name}\n[${section.name} content: movements, durations, instructions]`
         )
         .join('\n\n')
     : `## Training Focus and Objectives
-[Detailed explanation of the session's primary training focus and physiological adaptations]
-- Explain the specific training stimulus for each discipline involved
-- Provide pacing and effort guidance for each segment
-- Explain how this session fits into the weekly training block
+Session's primary training focus, physiological adaptations, and how it fits into weekly block
+Specific training stimulus for each discipline, pacing/effort guidance
 
-${
-  hasInjuryHistory
-    ? `## Injury Considerations and Modifications
-[Modifications for common triathlon injuries and limitations based on selected difficulty level: ${difficulty}]
-- Adjust volume and intensity appropriately for ${difficulty.toLowerCase()} level
-- Provide alternatives for problematic movements or positions`
-    : ''
-}
-
+${hasInjuryHistory ? `## Injury Considerations and Modifications
+Modifications for limitations appropriate for ${difficulty} level
+Alternatives for problematic movements or positions
+` : ''}
 ## Warm-up
-[Detailed warm-up protocol specific to the primary discipline(s)]
-- Include duration, intensity, and specific movements
-- Focus on activation and preparation for the main set
+Detailed warm-up protocol specific to primary discipline(s)
+Duration, intensity, specific movements for activation and preparation
 
 ## Main Set
-[Complete main workout with specific sets, intervals, distances, and intensities]
-- Clear structure with sets, reps, distances, and recovery periods
-- Specific paces, heart rate zones, or power targets where applicable
-- Technical focus points for each discipline
+Complete workout with specific sets, intervals, distances, and intensities
+Clear structure with recovery periods
+Paces, heart rate zones, or power targets where applicable
+Technical focus points for each discipline
 
 ${getBrickWorkoutSection(workoutFormats)}
-
 ## Cool-down
-[Detailed cool-down protocol]
-- Include specific movements, stretches, and duration
-- Focus on recovery and preparation for subsequent training
+Detailed cool-down protocol with specific movements, stretches, and duration
+Focus on recovery and preparation for subsequent training
 
 ## Technical Focus
-[3-5 specific technique cues for the primary discipline(s)]
-- Key technical elements to focus on during the session
-- Common errors to avoid
-- Efficiency and performance optimization tips
+3-5 specific technique cues for primary discipline(s)
+Key technical elements, common errors to avoid, efficiency tips
 
 ## Nutrition and Hydration
-[Session-specific nutrition and hydration recommendations]
-- Pre-workout fueling guidelines
-- During-workout needs (for longer sessions)
-- Post-workout recovery nutrition`
+Session-specific nutrition and hydration recommendations
+Pre-workout fueling, during-workout needs (longer sessions), post-workout recovery nutrition`
 }
-\`\`\`
+</workout_body_structure>
 
-${isGeneratingSpecificWeek ? 
-`The "workouts" array MUST contain exactly ${context.workoutsThisWeek || daysPerWeek} workouts for Week ${context.weekNumber} ONLY.` :
-`The "workouts" array MUST contain exactly ${totalWorkouts} workouts, covering exactly ${numberOfWeeks} week(s).`}
+${isGeneratingSpecificWeek
+  ? `Generate exactly ${context.workoutsThisWeek || daysPerWeek} workouts for Week ${context.weekNumber}.`
+  : `Generate exactly ${totalWorkouts} workouts covering ${numberOfWeeks} week(s).`}
 `;
 }
 

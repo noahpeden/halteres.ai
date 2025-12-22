@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
-import OpenAI from 'openai';
+import Anthropic from '@anthropic-ai/sdk';
+
+export const maxDuration = 300; // 5 minutes for enhanced thinking
 
 export async function POST(req) {
   try {
@@ -25,22 +27,36 @@ export async function POST(req) {
       );
     }
 
-    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    const anthropic = new Anthropic({
+      apiKey: process.env.ANTHROPIC_API_KEY,
+    });
 
     // Compose the enhancement prompt
-    const systemPrompt = `
-You are an expert fitness coach who specializes in creating and enhancing effective, personalized workout programs. Always consider evidence-based training principles, safety, and client context. You understand program periodization, progressive overload, and how to adapt programs to specific needs.`;
+    const systemPrompt = `You are an expert fitness coach who specializes in creating and enhancing effective, personalized workout programs. Always consider evidence-based training principles, safety, and client context. You understand program periodization, progressive overload, and how to adapt programs to specific needs.
+
+<output_requirements>
+You must return your response as valid JSON with this exact structure:
+{
+  "enhancedWorkouts": [
+    {
+      "id": "original workout id",
+      "title": "enhanced title",
+      "body": "enhanced workout content with proper formatting"
+    }
+  ],
+  "notes": "Brief explanation of key changes made to the program"
+}
+</output_requirements>`;
 
     // Format workouts for the prompt
     const workoutsText = workouts
       .map((w, index) => `
-Workout ${index + 1} - ${w.title || `Day ${index + 1}`}:
+Workout ${index + 1} - ${w.title || `Day ${index + 1}`} (ID: ${w.id || 'N/A'}):
 ${w.body || w.description || 'No content'}
 `)
       .join('\n---\n');
 
-    const userPrompt = `
-Enhance the following program according to these user instructions: "${instructions}".
+    const userPrompt = `Enhance the following program according to these user instructions: "${instructions}".
 
 Program Name: ${programName || 'Untitled Program'}
 Total Workouts: ${workouts.length}
@@ -75,45 +91,54 @@ Requirements:
 7. If the user asks for specific changes (e.g., "add more metcons"), prioritize that
 8. Maintain safety and effectiveness
 
-Return your response as a JSON object with:
-{
-  "enhancedWorkouts": [
-    {
-      "id": "original workout id",
-      "title": "enhanced title",
-      "body": "enhanced workout content with proper formatting"
-    },
-    ... for all ${workouts.length} workouts
-  ],
-  "notes": "Brief explanation of key changes made to the program"
-}
+IMPORTANT: You must return exactly ${workouts.length} enhanced workouts, one for each original workout. Preserve the original workout IDs in your response.`;
 
-IMPORTANT: You must return exactly ${workouts.length} enhanced workouts, one for each original workout.`;
-
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4.1',
+    const response = await anthropic.messages.create({
+      model: 'claude-sonnet-4-5-20250929',
+      max_tokens: 16000,
+      temperature: 1, // Required for extended thinking
+      thinking: {
+        type: 'enabled',
+        budget_tokens: 5000,
+      },
+      system: systemPrompt,
       messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt },
+        {
+          role: 'user',
+          content: [{ type: 'text', text: userPrompt }],
+        },
       ],
-      temperature: 0.7,
-      response_format: { type: 'json_object' },
-      max_tokens: 4000,
     });
+
+    // Extract text content from response (skip thinking blocks)
+    const textBlock = response.content.find(block => block.type === 'text');
+    const responseContent = textBlock?.text || '';
+
+    if (!responseContent) {
+      throw new Error('No content received from AI response');
+    }
 
     let enhancedProgram;
     try {
-      enhancedProgram = JSON.parse(response.choices[0].message.content);
-      
+      // Check for markdown code blocks and extract JSON
+      let jsonContent = responseContent;
+      if (jsonContent.includes('```json')) {
+        jsonContent = jsonContent.replace(/```json\n?/g, '').replace(/```\n?/g, '');
+      } else if (jsonContent.includes('```')) {
+        jsonContent = jsonContent.replace(/```\n?/g, '');
+      }
+
+      enhancedProgram = JSON.parse(jsonContent.trim());
+
       // Validate the response
       if (!enhancedProgram.enhancedWorkouts || !Array.isArray(enhancedProgram.enhancedWorkouts)) {
         throw new Error('Invalid program format - missing enhancedWorkouts array');
       }
-      
+
       if (enhancedProgram.enhancedWorkouts.length !== workouts.length) {
         throw new Error(`Expected ${workouts.length} workouts but received ${enhancedProgram.enhancedWorkouts.length}`);
       }
-      
+
       // Ensure all workouts have required fields
       enhancedProgram.enhancedWorkouts.forEach((w, index) => {
         if (!w.title || !w.body) {
@@ -124,9 +149,10 @@ IMPORTANT: You must return exactly ${workouts.length} enhanced workouts, one for
           w.id = workouts[index].id;
         }
       });
-      
+
     } catch (err) {
       console.error('Parse error:', err);
+      console.error('Response content:', responseContent.substring(0, 500));
       return NextResponse.json(
         { error: 'Failed to parse enhanced program from AI response: ' + err.message },
         { status: 500 }

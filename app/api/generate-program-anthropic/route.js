@@ -395,24 +395,31 @@ async function generateWeekWorkouts(
     includeDescription
       ? `
 
-🔥 CRITICAL PROGRAM DESCRIPTION REQUIREMENT 🔥
-Since this is Week 1, you MUST also generate a comprehensive, detailed program description and overview that thoroughly explains:
+<program_description_requirement>
+Since this is Week 1, include a programDescription field (500-700 words) that is highly personalized to this specific client.
 
-1. **Detailed Program Overview**: A compelling, engaging overview that clearly states the program's primary goals, target audience, and unique value proposition (e.g., "This ${numberOfWeeks}-week, ${daysPerWeek}-day-per-week program is specifically designed for ${difficulty} ${goal} trainees seeking to achieve measurable improvements in...")
+FORMAT: Use markdown with **bold section headers** followed by detailed paragraphs. Structure like this:
 
-2. **Scientific Periodization Rationale**: Explain the specific periodization approach used (linear, undulating, block, etc.) and provide scientific justification for why this approach is optimal for the stated goals. Include how training variables (volume, intensity, frequency) will be manipulated over time.
+**Program Overview & Client Profile**
+[Reference their actual metrics - 1RMs, weight, height, age, experience level. Make it clear this was designed FOR THEM specifically.]
 
-3. **Progressive Training Methodology**: Detail how the training principles will drive measurable progress through specific mechanisms such as "progressive overload", "specificity adaptations", "structured volume progression", "planned deload phases", etc. Be specific about how each week builds upon the previous.
+**Periodization Approach**
+[Explain the ${programType || 'linear'} approach with specific intensity ranges (e.g., "80-85% 1RM for strength days, 65-75% for hypertrophy"). Detail how training variables progress.]
 
-4. **Expected Physiological Adaptations**: Describe the specific adaptations trainees can expect (strength gains, muscle hypertrophy, cardiovascular improvements, movement quality, etc.) and realistic timelines for seeing these changes.
+**Weekly Structure & Session Format**
+[Describe what each training day focuses on. Explain the session structure and how formats (${workoutFormats?.join(', ') || 'various formats'}) integrate together.]
 
-5. **Training Methodology Integration**: Explain how the chosen training methodology is seamlessly integrated throughout the program structure and why this approach is superior for the goals.
+**Expected Adaptations & Timeline**
+[Be specific - "soreness peaks days 3-4", "strength gains in weeks 2-3", "visible hypertrophy within 3-4 weeks", "conditioning improvements within 2 weeks".]
 
-6. **Holistic Performance Recommendations**: Provide actionable guidance for nutrition strategies, recovery protocols, sleep optimization, and any supplementary training that will enhance program outcomes.
+**Nutrition & Recovery Protocol**
+[Specific protein targets (g per lb bodyweight), carb timing around workouts, sleep recommendations, recovery modalities to use.]
 
-7. **Success Metrics & Tracking**: Suggest specific ways trainees can measure and track their progress throughout the program.
+**Medical & Injury Considerations**
+[If injury history exists, explain how the program accounts for it. If post-surgical or special conditions, address directly.]
 
-This description should be substantial, informative, and demonstrate deep expertise in exercise science and program design. Make it engaging and motivational while being scientifically sound.`
+Write in an engaging, expert coach tone. Each section should be a substantial paragraph, not bullet points.
+</program_description_requirement>`
       : ''
   }
 
@@ -456,13 +463,17 @@ ${
   referenceWorkoutsContent ? `${referenceWorkoutsContent}` : ''
 }${previousWeeksContext}
 
-CRITICAL PERIODIZATION REQUIREMENT: This week MUST follow ${programType} periodization principles:
-- Linear: Week ${weekNumber} should show appropriate progression from previous weeks
+<periodization_principles type="${programType}">
+Apply ${programType} periodization principles for week ${weekNumber}:
+- Linear: Show appropriate progression from previous weeks
 - Undulating: Vary intensity/volume appropriately for week ${weekNumber} in the cycle
 - Block: Ensure week ${weekNumber} fits the current training block focus
 - Conjugate: Include appropriate method variation for simultaneous quality development
+</periodization_principles>
 
-CRITICAL: Generate EXACTLY ${daysPerWeek} workouts for week ${weekNumber} ONLY.
+<output_quantity>
+Generate exactly ${daysPerWeek} workouts for week ${weekNumber} only.
+</output_quantity>
 
 Your response MUST be in this exact JSON format:
 {${
@@ -498,9 +509,11 @@ Each workout should include:
 - Coaching cues (3-5 specific technical cues)
 - Cool-down (specific movements and durations)
 
-CRITICAL WEIGHT UNIT REQUIREMENT: ALL weights in the workout MUST be expressed in ${
-    useImperial ? 'POUNDS (lbs)' : 'KILOGRAMS (kg)'
-  } to match the client's unit preference. This includes RX weights for men and women, scaling options, and all exercise prescriptions.
+<weight_units>
+Express all weights in ${useImperial ? 'pounds (lbs)' : 'kilograms (kg)'} throughout all workouts.
+This applies to RX weights for men and women, scaling options, and all exercise prescriptions.
+Context: The client's unit preference is ${useImperial ? 'imperial (lbs)' : 'metric (kg)'}, so using incorrect units would make the program confusing.
+</weight_units>
 
 Format each workout body with this structure:
 ## Stimulus and Strategy  
@@ -529,9 +542,24 @@ ${getGenderWeightInstructions(clientGender)}
 ## Cool-down
 [Specific cool-down movements and durations]`;
 
-  const systemPrompt = `You are an expert strength and conditioning coach. Generate professional workouts for the specified week only. CRITICAL: You MUST ONLY include exercises that use the EXACT equipment specified. CRITICAL: Generate EXACTLY ${daysPerWeek} workouts for week ${weekNumber} only. CRITICAL: ALL weights MUST be expressed in ${
-    useImperial ? 'POUNDS (lbs)' : 'KILOGRAMS (kg)'
-  } throughout all workouts. Follow sound exercise science with appropriate progression. Provide responses EXACTLY in the JSON format specified.`;
+  const systemPrompt = `You are an expert strength and conditioning coach with deep knowledge of exercise science, periodization theory, and program design. You create professional, detailed training programs.
+
+<output_requirements>
+Generate exactly ${daysPerWeek} professional workouts for week ${weekNumber} in valid JSON format.
+Include detailed coaching cues, scaling options, and progression guidance.
+Follow sound exercise science principles with appropriate weekly progression.
+${weekNumber === 1 ? `For Week 1, include a personalized programDescription field (400-600 words) that references the client's specific metrics, explains the periodization approach with intensity percentages, describes session structure, provides specific adaptation timelines, and includes tailored nutrition/recovery guidance.` : ''}
+</output_requirements>
+
+<constraints>
+Only use the equipment explicitly specified by the user. If common exercises require unavailable equipment, substitute with alternatives using only available equipment.
+Express all weights in ${useImperial ? 'pounds (lbs)' : 'kilograms (kg)'} throughout the program.
+Schedule workouts on the exact dates provided.
+</constraints>
+
+<context>
+Users have specific equipment access and unit preferences. Including exercises requiring unlisted equipment or wrong units makes workouts impractical for them.
+</context>`;
 
   try {
     logWithTimestamp(`About to call Anthropic API for week ${weekNumber}`, {
@@ -540,8 +568,8 @@ ${getGenderWeightInstructions(clientGender)}
     });
 
     const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 12000, // Increased for detailed workouts
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 16000,
       temperature: 0.7,
       system: systemPrompt,
       messages: [
@@ -555,7 +583,7 @@ ${getGenderWeightInstructions(clientGender)}
           ],
         },
       ],
-      stream: true, // Enable streaming
+      stream: true,
     });
 
     // Handle streaming response

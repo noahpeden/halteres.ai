@@ -313,10 +313,34 @@ export function useProgramWorkouts(programId) {
     fetchWorkouts();
   }, [fetchWorkouts]);
 
-  // Clear all non-reference workouts
-  const clearNonReferenceWorkouts = useCallback(() => {
-    setWorkouts([]);
-  }, []);
+  // Clear all non-reference workouts (from database and local state)
+  const clearNonReferenceWorkouts = useCallback(async () => {
+    if (!programId || !supabase) {
+      setWorkouts([]);
+      return;
+    }
+
+    try {
+      // Delete all non-reference workouts from the database
+      const { error } = await supabase
+        .from('program_workouts')
+        .delete()
+        .eq('program_id', programId)
+        .eq('is_reference', false);
+
+      if (error) {
+        console.error('Error deleting non-reference workouts:', error);
+        // Still clear local state even if DB delete fails
+      }
+
+      // Clear local state
+      setWorkouts([]);
+    } catch (err) {
+      console.error('Error clearing non-reference workouts:', err);
+      // Still clear local state
+      setWorkouts([]);
+    }
+  }, [programId, supabase]);
 
   return {
     workouts,

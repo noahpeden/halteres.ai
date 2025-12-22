@@ -13,6 +13,9 @@ export default function ProgramEssentials({
   const [localReferenceInput, setLocalReferenceInput] = useState(getReferenceInputValue());
   const descriptionTimeoutRef = useRef(null);
   const referenceTimeoutRef = useRef(null);
+  // Track whether user is actively editing to prevent real-time sync from overwriting
+  const isEditingDescriptionRef = useRef(false);
+  const isEditingReferenceRef = useRef(false);
 
   const selectedProgramType = programTypes.find(
     (type) => type.value === formData.programType
@@ -25,12 +28,17 @@ export default function ProgramEssentials({
   }
 
   // Sync local state with formData when it changes from outside
+  // Only sync when not actively editing to prevent race conditions with real-time subscription
   useEffect(() => {
-    setLocalDescription(formData.description || '');
+    if (!isEditingDescriptionRef.current) {
+      setLocalDescription(formData.description || '');
+    }
   }, [formData.description]);
 
   useEffect(() => {
-    setLocalReferenceInput(getReferenceInputValue());
+    if (!isEditingReferenceRef.current) {
+      setLocalReferenceInput(getReferenceInputValue());
+    }
   }, [formData.referenceInput, formData.personalization]);
 
   const handleProgramTypeSelect = (value) => {
@@ -41,6 +49,7 @@ export default function ProgramEssentials({
   // Debounced handler for description
   const handleDescriptionChange = useCallback((e) => {
     const newValue = e.target.value;
+    isEditingDescriptionRef.current = true; // Mark as actively editing
     setLocalDescription(newValue);
 
     // Clear existing timeout
@@ -63,11 +72,17 @@ export default function ProgramEssentials({
     }
     // Save immediately on blur
     handleChange({ target: { name: 'description', value: localDescription } });
+
+    // Allow sync after a short delay to let the save complete
+    setTimeout(() => {
+      isEditingDescriptionRef.current = false;
+    }, 100);
   }, [handleChange, localDescription]);
 
   // Debounced handler for reference input
   const handleReferenceInputChange = useCallback((e) => {
     const newValue = e.target.value;
+    isEditingReferenceRef.current = true; // Mark as actively editing
     setLocalReferenceInput(newValue);
 
     // Clear existing timeout
@@ -90,6 +105,11 @@ export default function ProgramEssentials({
     }
     // Save immediately on blur
     handleChange({ target: { name: 'referenceInput', value: localReferenceInput } });
+
+    // Allow sync after a short delay to let the save complete
+    setTimeout(() => {
+      isEditingReferenceRef.current = false;
+    }, 100);
   }, [handleChange, localReferenceInput]);
 
   // Cleanup timeouts on unmount

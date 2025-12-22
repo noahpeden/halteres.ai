@@ -92,39 +92,42 @@ ${periodization.why_appropriate}
 
   // Build the CrossFit-specific prompt
   const isGeneratingSpecificWeek = context.isWeekSpecific;
-  const weekSpecificInfo = isGeneratingSpecificWeek ? 
-    `Week ${context.weekNumber} of ${context.totalWeeks}` : 
+  const weekSpecificInfo = isGeneratingSpecificWeek ?
+    `Week ${context.weekNumber} of ${context.totalWeeks}` :
     `${numberOfWeeks}-week`;
-  
-  return `Generate a ${isGeneratingSpecificWeek ? 'single week' : numberOfWeeks + '-week'} CrossFit training program for ${goal} based *strictly* on the following parameters. DO NOT deviate from the specified duration or workout formats.
 
-${
-  description
-    ? `CRITICAL REQUIREMENTS FROM THE CLIENT: ${description}
-These requirements MUST be the primary driver of the program design, overriding any conflicting general template instructions below.
+  return `Generate a ${isGeneratingSpecificWeek ? 'single week' : numberOfWeeks + '-week'} CrossFit training program for ${goal}.
 
-`
-    : ''
-}Goal: ${goal}
+<program_parameters>
+Goal: ${goal}
 Difficulty: ${difficulty}
-Days Per Week: ${daysPerWeek} days
-Selected Training Days: ${selectedDayNames || 'All available days'}
-${isGeneratingSpecificWeek ? `Current Week: ${weekSpecificInfo}` : `Total Length: ${numberOfWeeks} weeks`}
+Days Per Week: ${daysPerWeek}
+Training Days: ${selectedDayNames || 'All available days'}
+${isGeneratingSpecificWeek ? `Current Week: ${weekSpecificInfo}` : `Duration: ${numberOfWeeks} weeks`}
 ${focus_area ? `Focus Area: ${focus_area}` : ''}
+Periodization: ${programType}
+</program_parameters>
+
+${description ? `<client_requirements priority="high">
+${description}
+These requirements take precedence over general guidelines below.
+</client_requirements>
+` : ''}
 ${formatEquipmentRestrictions(equipment)}
-${
-  workoutFormats.length > 0
-    ? `Workout Formats to Include: ${formattedWorkoutFormats}\\nIMPORTANT: The generated workouts MUST primarily use the specified Workout Formats. Do NOT include formats outside this list unless essential for the primary Goal or Description. Prioritize these requested formats.`
-    : 'Workout Formats to Include: AMRAP, EMOM, For Time, Chipper, Strength Complex, Intervals'
-}
 
-${isGeneratingSpecificWeek ? 
-`CRITICAL: You are generating ONLY Week ${context.weekNumber} of a ${context.totalWeeks}-week program. Generate exactly ${context.workoutsThisWeek || daysPerWeek} workouts for this week ONLY. Do NOT generate workouts for other weeks.` :
-`IMPORTANT DURATION: The program MUST be exactly ${numberOfWeeks} week(s) long. Generate exactly ${totalWorkouts} workouts total.`}
+<workout_formats required="${formattedWorkoutFormats}">
+${workoutFormats.length > 0
+    ? `Use primarily these formats: ${formattedWorkoutFormats}. Only include other formats if essential for the stated goal.`
+    : 'Use standard CrossFit mix: AMRAP, EMOM, For Time, Chipper, Strength Complex, Intervals'}
+</workout_formats>
 
-REQUIRED WORKOUT FORMATS: The generated workouts MUST exclusively use the following specified formats: [${formattedWorkoutFormats}]. Do NOT include any other formats (like pure strength days, skill-only days, etc.) unless explicitly listed here or required by the CRITICAL REQUIREMENTS section above. Prioritize these formats strictly.
+<output_quantity>
+${isGeneratingSpecificWeek
+  ? `Generate exactly ${context.workoutsThisWeek || daysPerWeek} workouts for Week ${context.weekNumber} only.`
+  : `Generate exactly ${totalWorkouts} workouts total (${numberOfWeeks} weeks × ${daysPerWeek} days).`}
+</output_quantity>
 
-${personalization ? `Personalization: ${personalization}` : ''}
+${personalization ? `<personalization>${personalization}</personalization>` : ''}
 ${context.formattedReferenceInput}
 ${context.formattedRagMatchedWorkouts}
 ${context.clientMetrics ? `\n${context.clientMetrics}` : ''}
@@ -132,129 +135,95 @@ ${context.referenceWorkouts ? `\n${context.referenceWorkouts}` : ''}
 ${customFormatSection}
 ${formattedPeriodizationGuidelines}
 ${context.formattedDates ? `
-WORKOUT SCHEDULING REQUIREMENTS:
-Selected Training Days: ${selectedDayNames || 'All available days'}
-
-⚠️ CRITICAL SCHEDULING REQUIREMENT ⚠️
-The workouts MUST be scheduled on the EXACT dates below. These dates follow the user's selected training days (${selectedDayNames}). DO NOT create workouts on any other dates.
-
+<scheduling>
+Training Days: ${selectedDayNames || 'All available days'}
+Assign workouts to these exact dates:
 ${context.formattedDates}
-
-IMPORTANT: Each workout you generate MUST be assigned to one of the above dates. The "date" field in each workout object MUST match one of these dates EXACTLY, and all dates must be used.
+Each workout's "date" field must match one of these dates exactly.
+</scheduling>
 ` : formatSchedulingRequirements(suggestedDates, daysPerWeek, selectedDayNames)}
 
-For the program description, include:
-1. A concise overview reflecting the CRITICAL REQUIREMENTS, Goal, ACTUAL duration (${numberOfWeeks} weeks), and ACTUAL formats used (${formattedWorkoutFormats}).
-2. The periodization approach used (if any) and why it's appropriate for the client requirements.
-3. Expected outcomes based *only* on the generated workouts and client requirements.
-4. Recommendations for nutrition, recovery, etc. if relevant.
+<description_requirements>
+Include in the program description:
+1. Overview reflecting goal, duration (${numberOfWeeks} weeks), and formats used
+2. Periodization approach and rationale
+3. Expected outcomes based on the workouts
+4. Nutrition and recovery recommendations if relevant
+</description_requirements>
 
-General CrossFit Guidelines (Apply *only if* they DO NOT CONFLICT with CRITICAL REQUIREMENTS or REQUIRED WORKOUT FORMATS):
-- Use varied functional movements executed at appropriate intensity
-- Include a mix of gymnastics, weightlifting, and metabolic conditioning 
-- Follow CrossFit methodology with varied functional movements executed at high intensity
-- Include benchmark WODs and Hero WODs where appropriate
-- Incorporate Olympic lifting progressions and skill development
-- Include both time-domain and task-domain workouts
-- Vary modalities (monostructural, gymnastics, weightlifting) and time domains
-- Ensure variety in modalities IF it fits within the REQUIRED WORKOUT FORMATS
+<crossfit_guidelines>
+Apply these CrossFit principles where they don't conflict with client requirements:
+- Varied functional movements at appropriate intensity
+- Mix of gymnastics, weightlifting, and metabolic conditioning
+- Benchmark and Hero WODs where appropriate
+- Olympic lifting progressions and skill development
+- Both time-domain and task-domain workouts
+- Variety in modalities (monostructural, gymnastics, weightlifting)
+</crossfit_guidelines>
 
-The program MUST follow logical progression based on the selected program type (${programType}) AND the client's requirements.
-Ensure proper periodization, recovery, and exercise variation *within the constraints provided*.
+<title_format>
+Use actual week/day numbers in titles based on schedule position.
+Example: "Week 3, Day 1: [Format] - [Creative Title]"
+</title_format>
 
-IMPORTANT: The workouts must be scheduled on specific dates according to the user's selected training days. DO NOT create workouts on days other than the ones specified.
-
-CRITICAL TITLE FORMATTING: For workout titles, use the ACTUAL week and day numbers based on the scheduling information provided above. For example, if generating workouts for Week 3, the titles should say "Week 3, Day 1", "Week 3, Day 2", etc. DO NOT use "Week 1" for all workouts - use the correct week number for each workout based on its position in the program schedule.
-
-Your response MUST be in this exact JSON format:
+<json_output_format>
 {
   "title": "CrossFit Training Program for ${goal}",
-  "description": "Generate a description ACCURATELY reflecting the program's ACTUAL content: CRITICAL REQUIREMENTS (${
-    description || 'None provided'
-  }), duration (${numberOfWeeks} weeks), difficulty (${difficulty}), and the specific workout formats used (${formattedWorkoutFormats}). Do NOT use a generic template description or mention formats not used.",
-  "overview": "Generate a detailed explanation of the program methodology, periodization approach (if any), expected outcomes, and supplementary recommendations based SOLELY on the generated workouts, CRITICAL REQUIREMENTS, and other user inputs. Do NOT use generic CrossFit explanations unless they directly apply to the constraints.",
+  "description": "Program description reflecting: goal, ${numberOfWeeks}-week duration, ${difficulty} difficulty, formats used (${formattedWorkoutFormats})",
+  "overview": "Detailed methodology, periodization, expected outcomes, and recommendations",
   "workouts": [
     {
-      "title": "Week X, Day Y: [${formattedWorkoutFormats
-        .split(',')[0]
-        .trim()}] - [Creative Title]",
-      "body": "Detailed workout description including all required sections",
+      "title": "Week X, Day Y: [Format] - [Creative Title]",
+      "body": "Workout content with all sections below",
       "date": "YYYY-MM-DD"
-    },
-    ...more workouts
+    }
   ]
 }
+</json_output_format>
 
-For each workout's "body" field, use this structure:
-\`\`\`
+<workout_body_structure>
 ${
   hasCustomFormat
     ? customWorkoutFormat.sections
         .map(
           (section) =>
-            `## ${
-              section.name
-            }\n[Detailed ${section.name.toLowerCase()} with specific movements, durations, and instructions]`
+            `## ${section.name}\n[${section.name} content: movements, durations, instructions]`
         )
         .join('\n\n')
     : `## Stimulus and Strategy
-[Detailed explanation of workout stimulus and strategy approach]
-- Explain the intended stimulus for both strength and conditioning portions
-- Provide pacing guidance for each section
-- Explain how to approach the workout (e.g., "Break the handstand push-ups into sets of 3 early")
+Intended stimulus, pacing guidance, tactical approach for the workout
 
-${
-  includeScaling
-    ? `## Scaling Options
+${includeScaling ? `## Scaling Options
 ### Intermediate Option
-[Detailed intermediate scaling with specific weights and modifications]
+Specific weights and modifications for intermediate athletes
 
 ### Beginner Option
-[Detailed beginner scaling with specific weights and modifications]
-${
-  hasInjuryHistory
-    ? `
-### Injury Considerations
-[Modifications for common limitations]`
-    : ''
-}`
-    : ''
-}
-
+Specific weights and modifications for beginners
+${hasInjuryHistory ? `\n### Injury Considerations\nModifications for noted limitations` : ''}
+` : ''}
 ## Warm-up
-[Detailed warm-up protocol with specific movements, sets, reps]
-- Include duration, reps, and brief explanations
-- Focus on movement preparation and activation
+Specific movements, sets, reps, durations for movement preparation
 
 ## Strength Work
-[Complete strength workout with movements, sets, reps, specific weights]
-- Clear exercise format (Sets x Reps, EMOM, etc.)
-- Specific movements, sets, reps, and rest periods
-- Exact weights for RX (men and women) and scaling options
-- Loading percentages when appropriate (e.g., "75% of 1RM")
+Exercise format, sets × reps, rest periods
+Exact weights for RX (men/women) and scaling options
+Loading percentages where appropriate (e.g., "75% of 1RM")
 
 ## Conditioning Work
-[Complete conditioning workout with movements, sets, reps, specific weights]
-- Clear exercise format (AMRAP, For Time, etc.)
-- Specific movements, sets, reps, and rest periods
-- Exact weights for RX (men and women) and scaling options
-- Target time domains or goal times when applicable
+Workout format (AMRAP, For Time, etc.)
+Movements, reps, weights for RX (men/women)
+Target time domain or goal times
 
 ## Cool-down
-[Detailed cool-down protocol]
-- Include specific movements and durations
-- Focus on recovery and mobility work
+Specific movements and durations for recovery
 
 ## Coaching Cues
-[3-5 specific technical cues for key movements]
-- Technical cues for the most complex movements
-- Form tips to maximize efficiency and safety
-- Common errors to avoid`
+3-5 technical cues for key movements, form tips, common errors to avoid`
 }
-\`\`\`
+</workout_body_structure>
 
-${isGeneratingSpecificWeek ? 
-`The "workouts" array MUST contain exactly ${context.workoutsThisWeek || daysPerWeek} workouts for Week ${context.weekNumber} ONLY.` :
-`The "workouts" array MUST contain exactly ${totalWorkouts} workouts, covering exactly ${numberOfWeeks} week(s).`}
+${isGeneratingSpecificWeek
+  ? `Generate exactly ${context.workoutsThisWeek || daysPerWeek} workouts for Week ${context.weekNumber}.`
+  : `Generate exactly ${totalWorkouts} workouts covering ${numberOfWeeks} week(s).`}
 `;
 }
