@@ -68,161 +68,142 @@ export function calisthenicsPrompt(context) {
 
   // Build the Calisthenics prompt
   const isGeneratingSpecificWeek = context.isWeekSpecific;
-  const weekSpecificInfo = isGeneratingSpecificWeek ? 
-    `Week ${context.weekNumber} of ${context.totalWeeks}` : 
+  const weekSpecificInfo = isGeneratingSpecificWeek ?
+    `Week ${context.weekNumber} of ${context.totalWeeks}` :
     `${numberOfWeeks}-week`;
-  
-  return `Generate a ${isGeneratingSpecificWeek ? 'single week' : numberOfWeeks + '-week'} calisthenics (bodyweight training) program with the following parameters:
 
-${
-  description
-    ? `IMPORTANT REQUIREMENTS FROM THE CLIENT: ${description}
-Please prioritize these specific requirements above all else in program design.
+  return `Generate a ${isGeneratingSpecificWeek ? 'single week' : numberOfWeeks + '-week'} calisthenics (bodyweight training) program for ${goal}.
 
-`
-    : ''
-}Goal: ${goal}
+<program_parameters>
+Goal: ${goal}
 Difficulty: ${difficulty}
-Days Per Week: ${daysPerWeek} days
-Selected Training Days: ${selectedDayNames || 'All available days'}
-${isGeneratingSpecificWeek ? `Current Week: ${weekSpecificInfo}` : `Total Length: ${numberOfWeeks} weeks`}
-${
-  focus_area ? `Focus Area/Skills: ${focus_area}` : ''
-} // e.g., Handstand, Muscle-up
+Days Per Week: ${daysPerWeek}
+Training Days: ${selectedDayNames || 'All available days'}
+${isGeneratingSpecificWeek ? `Current Week: ${weekSpecificInfo}` : `Duration: ${numberOfWeeks} weeks`}
+${focus_area ? `Focus Area/Skills: ${focus_area}` : ''}
+Periodization: ${programType}
+</program_parameters>
+
+${description ? `<client_requirements priority="high">
+${description}
+These requirements take precedence over general guidelines below.
+</client_requirements>
+` : ''}
 ${formatEquipmentRestrictions(equipment)}
 
-${isGeneratingSpecificWeek ? 
-`CRITICAL: You are generating ONLY Week ${context.weekNumber} of a ${context.totalWeeks}-week program. Generate exactly ${context.workoutsThisWeek || daysPerWeek} workouts for this week ONLY. Do NOT generate workouts for other weeks.` :
-`IMPORTANT DURATION: The program MUST be exactly ${numberOfWeeks} week(s) long. Generate exactly ${totalWorkouts} workouts total.`}
+<workout_formats required="${formattedWorkoutFormats}">
+Focus primarily on progressive bodyweight exercises. Include skill work, strength development through progressions (push-up variations, pull-up variations, squat variations), and bodyweight conditioning.
+</workout_formats>
 
-REQUIRED WORKOUT STRUCTURE: Focus primarily on progressive bodyweight exercises. Include skill work, strength development through progressions (e.g., push-up variations, pull-up variations), and bodyweight conditioning. Use ONLY the available equipment, which might include pull-up bars or rings if specified.
+<output_quantity>
+${isGeneratingSpecificWeek
+  ? `Generate exactly ${context.workoutsThisWeek || daysPerWeek} workouts for Week ${context.weekNumber} only.`
+  : `Generate exactly ${totalWorkouts} workouts total (${numberOfWeeks} weeks × ${daysPerWeek} days).`}
+</output_quantity>
 
-${personalization ? `Personalization: ${personalization}` : ''}
+${personalization ? `<personalization>${personalization}</personalization>` : ''}
 ${formattedReferenceInput}
 ${formattedRagMatchedWorkouts}
-${clientMetrics || ''}
-${referenceWorkouts || ''}
-${additionalNotes ? `\\nAdditional Notes: ${additionalNotes}` : ''}
+${clientMetrics ? `\n${clientMetrics}` : ''}
+${referenceWorkouts ? `\n${referenceWorkouts}` : ''}
+${additionalNotes ? `\nAdditional Notes: ${additionalNotes}` : ''}
 ${formattedPeriodizationGuidelines}
 ${context.formattedDates ? `
-WORKOUT SCHEDULING REQUIREMENTS:
-Selected Training Days: ${selectedDayNames || 'All available days'}
-
-⚠️ CRITICAL SCHEDULING REQUIREMENT ⚠️
-The workouts MUST be scheduled on the EXACT dates below. These dates follow the user's selected training days (${selectedDayNames}). DO NOT create workouts on any other dates.
-
+<scheduling>
+Training Days: ${selectedDayNames || 'All available days'}
+Assign workouts to these exact dates:
 ${context.formattedDates}
-
-IMPORTANT: Each workout you generate MUST be assigned to one of the above dates. The "date" field in each workout object MUST match one of these dates EXACTLY, and all dates must be used.
+Each workout's "date" field must match one of these dates exactly.
+</scheduling>
 ` : formatSchedulingRequirements(suggestedDates, daysPerWeek, selectedDayNames)}
 
-For the program description, include:
-1. A detailed, engaging overview that clearly states the program's primary goals and target audience (e.g., "This ${numberOfWeeks}-week, ${daysPerWeek}-day-per-week program is designed for ${difficulty} trainees seeking to master bodyweight movement skills and develop functional strength through progressive calisthenics training...")
-2. The specific periodization approach used and why it's scientifically appropriate for bodyweight skill development (e.g., skill acquisition through motor learning principles, progressive overload via exercise progressions, movement complexity advancement for neural adaptations)
-3. How the training principles will drive measurable progress (e.g., "progressive overload through exercise progressions", "skill acquisition through deliberate practice", "strength development in fundamental movement patterns", "body control enhancement")
-4. Expected adaptations and outcomes from following the program consistently (e.g., increased bodyweight strength, improved movement control and coordination, mastery of target skills, enhanced relative strength, better body awareness)
-5. Integration of calisthenics methodology and approach (e.g., "bodyweight training principles focusing on progressive skill development and functional strength through natural human movement patterns")
-6. Brief recommendations for nutrition, recovery, and supplementary training if relevant (e.g., nutrition for bodyweight training demands, recovery strategies for skill practice, mobility work for movement quality, progression tracking methods)
+<description_requirements>
+Include in the program description:
+1. Overview reflecting goal, duration (${numberOfWeeks} weeks), target audience, and bodyweight training focus
+2. Periodization approach and why it's appropriate for skill development and progressive overload
+3. Expected adaptations and outcomes (strength gains, skill mastery, movement control)
+4. Nutrition, recovery, and mobility recommendations if relevant
+</description_requirements>
 
-General Calisthenics Guidelines (Apply *only if* they DO NOT CONFLICT with CRITICAL REQUIREMENTS or REQUIRED WORKOUT STRUCTURE):
-- Prioritize mastering fundamental bodyweight movements (push-ups, pull-ups, squats, lunges, planks).
-- Use progressions and regressions to adjust difficulty (e.g., incline push-ups -> push-ups -> decline push-ups; assisted pull-ups -> pull-ups -> weighted pull-ups).
-- Incorporate skill practice for target calisthenics skills (handstands, levers, muscle-ups) if relevant to the goal.
-- Develop core strength as a foundation for all movements.
-- Include bodyweight conditioning elements (burpees, mountain climbers, jump squats).
+<methodology_guidelines>
+Apply these calisthenics principles where they don't conflict with client requirements:
+- Master fundamental bodyweight movements (push-ups, pull-ups, squats, lunges, planks)
+- Use progressions and regressions to adjust difficulty appropriately
+- Incorporate skill practice for target movements (handstands, levers, muscle-ups) where relevant
+- Develop core strength as foundation for all movements
+- Include bodyweight conditioning elements (burpees, mountain climbers, jump squats)
+- Progressive overload through exercise variations and increased difficulty
+</methodology_guidelines>
 
-The program MUST follow logical progression based on the selected program type (${programType}) AND the client's requirements, using bodyweight exercise progressions effectively.
-Ensure proper periodization, skill development focus (if any), and sufficient recovery *within the constraints provided*.
+<title_format>
+Use actual week/day numbers in titles based on schedule position.
+Example: "Week 3, Day 1: [Skill/Strength Focus] Calisthenics"
+</title_format>
 
-CRITICAL TITLE FORMATTING: For workout titles, use the ACTUAL week and day numbers based on the scheduling information provided above. For example, if generating workouts for Week 3, the titles should say "Week 3, Day 1", "Week 3, Day 2", etc. DO NOT use "Week 1" for all workouts - use the correct week number for each workout based on its position in the program schedule.
-
-Your response MUST be in this exact JSON format:
+<json_output_format>
 {
   "title": "Calisthenics Program for ${goal}",
-  "description": "Generate a description ACCURATELY reflecting the program's ACTUAL content: CRITICAL REQUIREMENTS (${
-    description || 'None provided'
-  }), duration (${numberOfWeeks} weeks), difficulty (${difficulty}), focus on bodyweight strength/skills (${
-    focus_area || 'general'
-  }), and utilizing ONLY available equipment. Do NOT use a generic template description.",
-  "overview": "Generate a detailed explanation of the program methodology, periodization approach (${programType}) for calisthenics progressions, rationale for exercise/skill selection, expected body control/strength outcomes, and supplementary recommendations based SOLELY on the generated workouts, CRITICAL REQUIREMENTS, and other user inputs. Do NOT use generic explanations unless they directly apply to the constraints.",
+  "description": "Program description reflecting: goal, ${numberOfWeeks}-week duration, ${difficulty} difficulty, bodyweight training focus (${focus_area || 'general'})",
+  "overview": "Detailed methodology, periodization (${programType}), expected outcomes, and recommendations",
   "workouts": [
     {
-      "title": "Week X, Day Y: [Skill/Strength Focus - e.g., Push/Pull] Calisthenics",
-      "body": "Detailed workout description including all required sections",
+      "title": "Week X, Day Y: [Skill/Strength Focus] Calisthenics",
+      "body": "Workout content with all sections below",
       "date": "YYYY-MM-DD"
-    },
-    ...more workouts
+    }
   ]
 }
 
-For each workout's "body" field, use this structure:
-\`\`\`
-## Workout Focus: [Target Skill/Strength Element]
-[Brief explanation of this session's purpose in the calisthenics program]
-- Explain the specific skill or strength progression being worked on
-- Provide guidance on form and technique for bodyweight exercises
-- Explain how this session contributes to overall bodyweight mastery
+</json_output_format>
 
-${
-  includeScaling
-    ? `## Scaling Options
+<workout_body_structure>
+## Workout Focus: [Target Skill/Strength Element]
+Brief explanation of this session's purpose, specific progressions being worked, form guidance, and how it contributes to bodyweight mastery
+
+${includeScaling ? `## Scaling Options
 ### Easier Progression
-[Specific exercise regressions or modifications to make it easier]
+Exercise regressions or modifications to reduce difficulty
 
 ### Harder Progression
-[Specific exercise progressions or added difficulty for advanced individuals]`
-    : ''
-}
-${
-  hasInjuryHistory
-    ? `
-## Injury Considerations
-[Alternative bodyweight exercises or modifications for limitations]`
-    : ''
-}
-
+Exercise progressions or added difficulty for advanced individuals
+${hasInjuryHistory ? `\n### Injury Considerations\nAlternative exercises or modifications for limitations` : ''}
+` : ''}
 ## Warm-up
-[Detailed dynamic warm-up focusing on joint mobility and movement preparation]
-- Include wrist, shoulder, hip, and spine mobility drills
-- Activation exercises for core and targeted muscle groups
+Dynamic warm-up with joint mobility and movement preparation
+- Wrist, shoulder, hip, and spine mobility drills
+- Core and muscle activation exercises
 
 ## Skill Work (If applicable)
-[Practice for target calisthenics skills]
-- Examples: Handstand holds, L-sit practice, Muscle-up transitions
-- Specific drills, sets, reps, and hold times
+Target calisthenics skill practice (handstands, levers, muscle-ups)
+- Specific drills, sets, reps, hold times
 - Focus on quality and control
 
 ## Strength Work
-[Main bodyweight strength exercises and progressions]
-- Examples: Push-up variations, Pull-up/Row variations, Squat/Lunge variations
-- Specify the exact progression level (e.g., Pike Push-ups, Archer Pull-ups)
-- Clear sets, reps, and rest periods
-- Focus on achieving target reps with good form before progressing
+Main bodyweight strength exercises and progressions
+- Specify exact progression level (Pike Push-ups, Archer Pull-ups, Pistol Squats)
+- Clear sets, reps, rest periods
+- Focus on proper form before advancing difficulty
 
 ## Conditioning / Endurance
-[Bodyweight circuits or higher-rep sets for endurance]
-- Examples: Burpee intervals, AMRAP circuits, High-rep bodyweight squats/lunges
-- Clear format, work/rest times, or rep targets
+Bodyweight circuits or higher-rep sets
+- Examples: Burpee intervals, AMRAP circuits, bodyweight complexes
+- Clear format, work/rest times, rep targets
 
 ## Core Work
-[Targeted exercises for core stability and strength]
-- Examples: Plank variations, Hollow body holds, Leg raises
+Targeted core stability and strength exercises
+- Examples: Plank variations, hollow body holds, leg raises
 - Sets, reps, or hold times
 
 ## Cool-down / Flexibility
-[Detailed cool-down protocol]
-- Include static stretching for major muscle groups
-- Focus on areas prone to tightness (shoulders, hips, wrists)
+Static stretching for major muscle groups
+- Focus on shoulders, hips, wrists
 
 ## Coaching Cues
-[3-5 specific technical cues for key bodyweight movements or skills]
-- Focus on proper body alignment, tension, and control
-- Tips for engaging the correct muscles
-- Common form errors to avoid
-\`\`\`
+3-5 technical cues for key movements: body alignment, muscle engagement, common errors to avoid
+</workout_body_structure>
 
-${isGeneratingSpecificWeek ? 
-`The "workouts" array MUST contain exactly ${context.workoutsThisWeek || daysPerWeek} workouts for Week ${context.weekNumber} ONLY.` :
-`The "workouts" array MUST contain exactly ${totalWorkouts} workouts, covering exactly ${numberOfWeeks} week(s).`}
+${isGeneratingSpecificWeek
+  ? `Generate exactly ${context.workoutsThisWeek || daysPerWeek} workouts for Week ${context.weekNumber}.`
+  : `Generate exactly ${totalWorkouts} workouts covering ${numberOfWeeks} week(s).`}
 `;
 }

@@ -68,140 +68,121 @@ export function powerliftingPrompt(context) {
 
   // Build the Powerlifting prompt
   const isGeneratingSpecificWeek = context.isWeekSpecific;
-  const weekSpecificInfo = isGeneratingSpecificWeek ? 
-    `Week ${context.weekNumber} of ${context.totalWeeks}` : 
+  const weekSpecificInfo = isGeneratingSpecificWeek ?
+    `Week ${context.weekNumber} of ${context.totalWeeks}` :
     `${numberOfWeeks}-week`;
-  
-  return `Generate a ${isGeneratingSpecificWeek ? 'single week' : numberOfWeeks + '-week'} powerlifting training program with the following parameters:
 
-${
-  description
-    ? `IMPORTANT REQUIREMENTS FROM THE CLIENT: ${description}
-Please prioritize these specific requirements above all else in program design.
+  return `Generate a ${isGeneratingSpecificWeek ? 'single week' : numberOfWeeks + '-week'} powerlifting training program focused on maximal strength development.
 
-`
-    : ''
-}Goal: ${goal}
+<program_parameters>
+Goal: ${goal}
 Difficulty: ${difficulty}
-Days Per Week: ${daysPerWeek} days
-Selected Training Days: ${selectedDayNames || 'All available days'}
-${isGeneratingSpecificWeek ? `Current Week: ${weekSpecificInfo}` : `Total Length: ${numberOfWeeks} weeks`}
+Days Per Week: ${daysPerWeek}
+Training Days: ${selectedDayNames || 'All available days'}
+${isGeneratingSpecificWeek ? `Current Week: ${weekSpecificInfo}` : `Duration: ${numberOfWeeks} weeks`}
 ${focus_area ? `Focus Area: ${focus_area}` : ''}
+Periodization: ${programType}
+</program_parameters>
+
+${description ? `<client_requirements priority="high">
+${description}
+These requirements take precedence over general guidelines below.
+</client_requirements>
+` : ''}
 ${formatEquipmentRestrictions(equipment)}
 
-${isGeneratingSpecificWeek ? 
-`CRITICAL: You are generating ONLY Week ${context.weekNumber} of a ${context.totalWeeks}-week program. Generate exactly ${context.workoutsThisWeek || daysPerWeek} workouts for this week ONLY. Do NOT generate workouts for other weeks.` :
-`IMPORTANT DURATION: The program MUST be exactly ${numberOfWeeks} week(s) long. Generate exactly ${totalWorkouts} workouts total.`}
+<workout_formats required="${formattedWorkoutFormats}">
+Focus primarily on Squat, Bench Press, and Deadlift variations with strategic accessory work. Use RPE or percentage-based load prescription.
+</workout_formats>
 
-REQUIRED WORKOUT STRUCTURE: Focus primarily on Squat, Bench Press, and Deadlift variations. Include appropriate accessory work targeting weaknesses and supporting the main lifts. Follow powerlifting principles (e.g., RPE, percentages of 1RM).
+<output_quantity>
+${isGeneratingSpecificWeek
+  ? `Generate exactly ${context.workoutsThisWeek || daysPerWeek} workouts for Week ${context.weekNumber} only.`
+  : `Generate exactly ${totalWorkouts} workouts total (${numberOfWeeks} weeks × ${daysPerWeek} days).`}
+</output_quantity>
 
-${personalization ? `Personalization: ${personalization}` : ''}
+${personalization ? `<personalization>${personalization}</personalization>` : ''}
 ${formattedReferenceInput}
 ${formattedRagMatchedWorkouts}
-${clientMetrics || ''}
-${referenceWorkouts || ''}
-${additionalNotes ? `\\nAdditional Notes: ${additionalNotes}` : ''}
+${clientMetrics ? `\n${clientMetrics}` : ''}
+${referenceWorkouts ? `\n${referenceWorkouts}` : ''}
+${additionalNotes ? `\nAdditional Notes: ${additionalNotes}` : ''}
 ${formattedPeriodizationGuidelines}
 ${context.formattedDates ? `
-WORKOUT SCHEDULING REQUIREMENTS:
-Selected Training Days: ${selectedDayNames || 'All available days'}
-
-⚠️ CRITICAL SCHEDULING REQUIREMENT ⚠️
-The workouts MUST be scheduled on the EXACT dates below. These dates follow the user's selected training days (${selectedDayNames}). DO NOT create workouts on any other dates.
-
+<scheduling>
+Training Days: ${selectedDayNames || 'All available days'}
+Assign workouts to these exact dates:
 ${context.formattedDates}
-
-IMPORTANT: Each workout you generate MUST be assigned to one of the above dates. The "date" field in each workout object MUST match one of these dates EXACTLY, and all dates must be used.
+Each workout's "date" field must match one of these dates exactly.
+</scheduling>
 ` : formatSchedulingRequirements(suggestedDates, daysPerWeek, selectedDayNames)}
 
-For the program description, include:
-1. A detailed, engaging overview that clearly states the program's primary goals and target audience (e.g., "This ${numberOfWeeks}-week, ${daysPerWeek}-day-per-week program is designed for ${difficulty} powerlifters seeking to maximize strength in the squat, bench press, and deadlift through systematic progression...")
-2. The specific periodization approach used and why it's scientifically appropriate for strength development (e.g., linear progression for neural adaptations, block periodization for peak strength, intensity manipulation for maximal force production)
-3. How the training principles will drive measurable progress (e.g., "progressive overload through systematic load increases", "specificity principle through competition lift focus", "strategic accessory work for weakness correction")
-4. Expected adaptations and outcomes from following the program consistently (e.g., neural efficiency improvements, maximal strength gains, technical proficiency in competition lifts, improved force production capacity)
-5. Integration of powerlifting methodology and approach (e.g., "powerlifting principles to develop maximal strength through heavy compound movements and competition-specific training")
-6. Brief recommendations for nutrition, recovery, and supplementary training if relevant (e.g., strength-focused nutrition, recovery protocols, meet preparation strategies, mobility work for lifting efficiency)
+<description_requirements>
+Include in the program description:
+1. Overview reflecting goal, duration (${numberOfWeeks} weeks), and target audience (${difficulty} powerlifters)
+2. Periodization approach and its rationale for strength development
+3. Training principles driving progress (progressive overload, specificity, accessory selection)
+4. Expected adaptations (neural efficiency, maximal strength, technical proficiency)
+5. Nutrition, recovery, and meet preparation recommendations if relevant
+</description_requirements>
 
-General Powerlifting Guidelines (Apply *only if* they DO NOT CONFLICT with CRITICAL REQUIREMENTS):
-- Prioritize the main lifts (Squat, Bench, Deadlift) with appropriate frequency and volume.
-- Use percentages of 1RM or RPE (Rate of Perceived Exertion) for load prescription.
-- Select accessory exercises that directly address weaknesses in the main lifts.
-- Manage fatigue carefully, incorporating deloads or lighter weeks as dictated by the periodization model.
-- Emphasize technical proficiency in the competition lifts.
+<methodology_guidelines>
+Apply these powerlifting principles where they don't conflict with client requirements:
+- Prioritize main lifts (Squat, Bench, Deadlift) with appropriate frequency and volume
+- Use percentages of 1RM or RPE for load prescription
+- Select accessories addressing weaknesses in main lifts
+- Manage fatigue with deloads or lighter weeks per periodization model
+- Emphasize technical proficiency in competition lifts
+</methodology_guidelines>
 
-The program MUST follow logical progression based on the selected program type (${programType}) AND the client's requirements, aiming for maximal strength increase in the three lifts.
-Ensure proper periodization, recovery, and exercise selection *within the constraints provided*.
+<title_format>
+Use actual week/day numbers in titles based on schedule position.
+Example: "Week 3, Day 1: [Main Lift Focus] Powerlifting Session"
+</title_format>
 
-CRITICAL TITLE FORMATTING: For workout titles, use the ACTUAL week and day numbers based on the scheduling information provided above. For example, if generating workouts for Week 3, the titles should say "Week 3, Day 1", "Week 3, Day 2", etc. DO NOT use "Week 1" for all workouts - use the correct week number for each workout based on its position in the program schedule.
-
-Your response MUST be in this exact JSON format:
+<json_output_format>
 {
   "title": "Powerlifting Program for ${goal}",
-  "description": "Generate a description ACCURATELY reflecting the program's ACTUAL content: CRITICAL REQUIREMENTS (${
-    description || 'None provided'
-  }), duration (${numberOfWeeks} weeks), difficulty (${difficulty}), and the specific focus on Squat, Bench, Deadlift, and accessory work. Do NOT use a generic template description.",
-  "overview": "Generate a detailed explanation of the program methodology, periodization approach (${programType}) for powerlifting, rationale for exercise selection (main lifts, accessories), expected strength outcomes, and supplementary recommendations based SOLELY on the generated workouts, CRITICAL REQUIREMENTS, and other user inputs. Do NOT use generic explanations unless they directly apply to the constraints.",
+  "description": "Program description reflecting: goal, ${numberOfWeeks}-week duration, ${difficulty} difficulty, focus on Squat/Bench/Deadlift with accessories",
+  "overview": "Detailed methodology, periodization (${programType}), exercise rationale, expected strength outcomes, and recommendations",
   "workouts": [
     {
-      "title": "Week X, Day Y: [Main Lift Focus - e.g., Squat/Bench] Powerlifting Session",
-      "body": "Detailed workout description including all required sections",
+      "title": "Week X, Day Y: [Main Lift Focus] Powerlifting Session",
+      "body": "Workout content with all sections below",
       "date": "YYYY-MM-DD"
-    },
-    ...more workouts
+    }
   ]
 }
+</json_output_format>
 
-For each workout's "body" field, use this structure:
-\`\`\`
+<workout_body_structure>
 ## Workout Focus
-[Brief explanation of this session's purpose in the powerlifting cycle]
-- Explain the specific lift(s) being targeted (e.g., Heavy Squat, Bench Volume)
-- Provide guidance on RPE targets or percentage ranges for main lifts
-- Explain the goal of the accessory work
+Session purpose, targeted lift(s), RPE/percentage targets, accessory goals
 
-${
-  includeScaling
-    ? `## Scaling Options
+${includeScaling ? `## Scaling Options
 ### Beginner Option
-[Modifications for beginners, focus on form]`
-    : ''
-}
-${
-  hasInjuryHistory
-    ? `
-## Injury Considerations
-[Modifications for common limitations specific to powerlifting]`
-    : ''
-}
-
+Modifications focusing on form development
+${hasInjuryHistory ? `\n### Injury Considerations\nModifications for noted limitations` : ''}
+` : ''}
 ## Warm-up
-[Detailed warm-up specific to the day's main lifts]
-- Include dynamic stretching, activation drills, and light sets of the main lift
+Dynamic stretching, activation drills, light sets of main lift
 
 ## Main Lift Work
-[Primary competition lift(s) for the day]
-- Specific variation (e.g., Competition Squat, Paused Bench Press)
-- Sets, reps, and load prescription (e.g., 5x5 @ 8 RPE, 3x8 @ 75% 1RM)
-- Prescribed rest periods
+Competition lift variation, sets × reps @ RPE or % of 1RM, rest periods
 
 ## Accessory Work
-[Exercises targeting weaknesses or supporting muscles]
-- 3-5 accessory movements
-- Sets, reps, and load/RPE guidance
-- Rationale for each accessory exercise (e.g., "Tricep Pushdowns for bench lockout")
+3-5 exercises targeting weaknesses or supporting muscles
+Sets, reps, load/RPE guidance, rationale for each exercise
 
-## Cool-down (Optional but Recommended)
-[Brief cool-down protocol]
-- Light stretching or mobility work for targeted areas
+## Cool-down
+Light stretching or mobility work for targeted areas
 
 ## Coaching Cues
-[3-5 specific technical cues for the main lift(s)]
-- Focus on key technique points for powerlifting efficiency and safety
-- Common errors to avoid in the competition lifts
-\`\`\`
+3-5 technical cues for main lifts, form tips, common errors to avoid
+</workout_body_structure>
 
-${isGeneratingSpecificWeek ? 
-`The "workouts" array MUST contain exactly ${context.workoutsThisWeek || daysPerWeek} workouts for Week ${context.weekNumber} ONLY.` :
-`The "workouts" array MUST contain exactly ${totalWorkouts} workouts, covering exactly ${numberOfWeeks} week(s).`}
+${isGeneratingSpecificWeek
+  ? `Generate exactly ${context.workoutsThisWeek || daysPerWeek} workouts for Week ${context.weekNumber}.`
+  : `Generate exactly ${totalWorkouts} workouts covering ${numberOfWeeks} week(s).`}
 `;
 }

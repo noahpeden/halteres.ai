@@ -89,60 +89,49 @@ export async function POST(req) {
     Additional notes from the user: ${preferences.additionalNotes || 'None'}
     `;
 
-    // System prompt for workout generation
-    const systemPrompt = `
-    As a knowledgeable fitness coach, create a comprehensive ${
-      preferences.duration || '7'
-    }-day workout plan 
-    tailored to a ${
-      preferences.personalization || 'general athlete'
-    } with a focus on ${preferences.focusArea || 'general fitness'} 
-    and a goal of ${preferences.goal || 'overall fitness'}.
+    // System prompt for workout generation - following Claude 4.5 best practices
+    const systemPrompt = `You are an expert strength and conditioning coach specializing in creating detailed, personalized workout programs.
 
-    Follow this structure for each day's workout:
+<program_parameters>
+Duration: ${preferences.duration || '7'} days
+Athlete Type: ${preferences.personalization || 'general athlete'}
+Focus Area: ${preferences.focusArea || 'general fitness'}
+Goal: ${preferences.goal || 'overall fitness'}
+</program_parameters>
 
-    1. Title: Create a unique, engaging title for each workout.
+<output_requirements>
+Generate exactly ${preferences.duration || '7'} unique workouts with this structure for each:
 
-    2. Body: 
-      - RX: Provide the main workout with specific weights and movements with options, percentages, and RPE for male and female.
-      - Scaled: Offer a scaled version with adjusted weights and movement modifications.
-      - RX+: Include a more challenging version for advanced athletes.
+1. Title: Create a unique, engaging title
+2. Body with three scaling levels:
+   - RX: Main workout with specific weights/percentages/RPE for male and female
+   - Scaled: Adjusted weights and movement modifications
+   - RX+: More challenging version for advanced athletes
+3. Coaching Strategy:
+   - Time Frame breakdown (Intro, Warmup, Strength, Workout, Cooldown, Mobility)
+   - Target Score with time caps
+   - Stimulus and Goals explanation
+4. Movement Strategy: Form cues, pacing advice, common faults, specific weights by gender
+5. Cool-down with specific stretches and durations
+</output_requirements>
 
-    3. Coaching Strategy:
-      a. Time Frame: Break down the class structure (e.g., Intro, Warmup, Strength, Workout, Cooldown, Mobility).
-      b. Target Score: Include target times and time caps for the workout.
-      c. Stimulus and Goals: Describe the intended stimulus and overall goals of the workout.
+<constraints>
+Only use equipment from: ${office?.equipmentList || 'standard gym equipment'}
+Context: Including exercises requiring unlisted equipment makes workouts impractical for users with limited equipment access.
+</constraints>
 
-    4. Workout Strategy & Flow:
-      - For each movement, provide detailed strategies including:
-        • Form cues
-        • Pacing advice
-        • Common faults to avoid
-        • Specific weights for male and female athletes
-      - Include coach's notes and suggestions for each strength and conditioning component.
+<quality_guidance>
+- Build progressive overload across the ${preferences.duration || '7'} days
+- Vary movements and time domains to prevent monotony
+- Include benchmark workouts where appropriate for progress tracking
+- Use RPE scales alongside percentage-based loading
+- Make each workout unique and specific, avoiding generic instructions
+</quality_guidance>`;
 
-
-    Key points to remember:
-    - Each workout builds on the previous day's progress.
-    - Make sure there is variety in movements and time domains.
-    - Include benchmark workouts if appropriate to track progress.
-    - Generate exactly ${preferences.duration || '7'} unique workouts.
-    - Use the matched external workouts as references to inform your programming.
-    - Include specific stretches and cool-down movements.
-    - Ensure each day's workout is unique and specific, avoiding repetitions or generic instructions.
-    - Use RPE (Rate of Perceived Exertion) scales to guide intensity levels as well as percentages of max lifts.
-    - DO NOT USE ANY EQUIPMENT THAT IS NOT INCLUDED IN ${
-      office?.equipmentList || 'standard gym equipment'
-    }.
-    - If the user has requested specific movements or types of workouts, incorporate those preferences.
-    - If there are any quirks or special features mentioned, take those into account in the program creation.
-
-    Your goal is to create a high-quality, personalized workout program that matches or exceeds the detail and specificity of professionally curated fitness workouts.
-    `;
 
     // Generate workouts using Anthropic
     const response = await anthropic.messages.create({
-      model: 'claude-3-7-sonnet-20250219',
+      model: 'claude-haiku-4-5-20251001',
       max_tokens: 4000,
       temperature: 0.7,
       system: systemPrompt,

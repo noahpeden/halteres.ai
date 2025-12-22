@@ -33,16 +33,23 @@ export async function GET(request) {
         .select('id, title, body, scheduled_date, created_at, completed')
         .eq('id', workoutId)
         .eq('program_id', programId)
-        .single(),
+        .maybeSingle(),
       supabaseServiceRole
         .from('programs')
         .select('name, description')
         .eq('id', programId)
-        .single(),
+        .maybeSingle(),
     ]);
 
     if (workoutResult.error) {
       console.error('Workout fetch error:', workoutResult.error);
+      return NextResponse.json(
+        { error: 'Failed to fetch workout' },
+        { status: 500 }
+      );
+    }
+
+    if (!workoutResult.data) {
       return NextResponse.json(
         { error: 'Workout not found' },
         { status: 404 }
@@ -51,6 +58,13 @@ export async function GET(request) {
 
     if (programResult.error) {
       console.error('Program fetch error:', programResult.error);
+      return NextResponse.json(
+        { error: 'Failed to fetch program' },
+        { status: 500 }
+      );
+    }
+
+    if (!programResult.data) {
       return NextResponse.json(
         { error: 'Program not found' },
         { status: 404 }

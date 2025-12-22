@@ -24,6 +24,7 @@ import DatePickerModalComponent from './DatePickerModal';
 import RescheduleModalComponent from './RescheduleModal';
 import EditWorkoutModalComponent from './EditWorkoutModal';
 import ProgramGenerationModalComponent from './ProgramGenerationModal';
+import EnhanceProgramModalComponent from './EnhanceProgramModal';
 import ReferenceWorkoutSearchModal from './ReferenceWorkoutSearchModal';
 import EnhancedReferenceWorkoutSearchModal from './EnhancedReferenceWorkoutSearchModal';
 
@@ -37,6 +38,7 @@ const DatePickerModal = memo(DatePickerModalComponent);
 const RescheduleModal = memo(RescheduleModalComponent);
 const EditWorkoutModal = memo(EditWorkoutModalComponent);
 const ProgramGenerationModal = memo(ProgramGenerationModalComponent);
+const EnhanceProgramModal = memo(EnhanceProgramModalComponent);
 
 export default function AIProgramWriter({ programId, wizardComplete }) {
   const router = useRouter();
@@ -94,6 +96,9 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
   
   // Local state for streaming workouts (UI-only, not saved to DB yet)
   const [streamingWorkouts, setStreamingWorkouts] = useState([]);
+
+  // State for program enhancement
+  const [isEnhancingProgram, setIsEnhancingProgram] = useState(false);
   
   // Combined workouts for display (database workouts + streaming workouts)
   const displayWorkouts = useMemo(() => {
@@ -303,10 +308,10 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
       return;
     }
 
-    // If regenerating, clear workouts from UI immediately
+    // If regenerating, delete existing workouts from database and clear UI
     const isReGenerating = workouts && workouts.length > 0;
     if (isReGenerating) {
-      clearNonReferenceWorkouts();
+      await clearNonReferenceWorkouts();
     }
 
     // Clear any previous streaming workouts
@@ -745,6 +750,37 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
     [updateWorkout, showToast]
   );
 
+  // Program enhancement handlers
+  const handleEnhanceProgram = useCallback(() => {
+    if (!workouts || workouts.length === 0) {
+      showToast('No workouts to enhance. Generate workouts first.', 'error');
+      return;
+    }
+    openModal('enhanceProgramModal');
+  }, [workouts, openModal, showToast]);
+
+  const handleSaveEnhancedProgram = useCallback(
+    async (enhancedWorkouts) => {
+      setIsEnhancingProgram(true);
+      try {
+        // Update each workout in the database
+        for (const enhanced of enhancedWorkouts) {
+          await updateWorkout(enhanced.id, {
+            title: enhanced.title,
+            body: enhanced.body,
+          });
+        }
+        closeModal('enhanceProgramModal');
+        showToast('Program enhanced successfully!', 'success');
+      } catch (error) {
+        showToast('Failed to save enhanced program: ' + error.message, 'error');
+      } finally {
+        setIsEnhancingProgram(false);
+      }
+    },
+    [updateWorkout, closeModal, showToast]
+  );
+
   if (loading && !formData) {
     return (
       <div className="flex justify-center items-center min-h-[400px]">
@@ -786,14 +822,6 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
 
       {programId && (
         <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center mt-4 mb-4 sm:mt-6 sm:mb-6 gap-2">
-          <button
-            onClick={handleBackToWizard}
-            className="btn btn-outline btn-secondary w-full sm:w-auto"
-            title="Return to wizard to modify program settings"
-          >
-            <ArrowLeftIcon className="w-4 h-4 mr-2" />
-            Go to Program Wizard
-          </button>
           <div>
             <button
               className="btn btn-sm btn-primary text-white w-full sm:w-auto tooltip tooltip-top tooltip-info"
@@ -853,6 +881,9 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
           lastGenerationDate={lastGenerationDate}
           calculatedEndDate={calculatedEndDate}
           onStopGeneration={handleStopGeneration}
+          onEnhanceProgram={handleEnhanceProgram}
+          workoutsExist={workouts && workouts.length > 0}
+          isEnhancing={isEnhancingProgram}
         />
       </div>
 
@@ -960,6 +991,18 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
           onClose={() => closeModal('confirmationModal')}
           onConfirm={handleConfirmGenerate}
           content={modals.confirmationModal.content}
+        />
+      )}
+
+      {modals.enhanceProgramModal?.isOpen && (
+        <EnhanceProgramModal
+          isOpen={modals.enhanceProgramModal.isOpen}
+          workouts={workouts}
+          formData={formData}
+          onClose={() => closeModal('enhanceProgramModal')}
+          onSave={handleSaveEnhancedProgram}
+          showToast={showToast}
+          isLoading={isEnhancingProgram}
         />
       )}
 

@@ -21,7 +21,7 @@ import { ironmanPrompt } from './prompts/ironman.js';
 import { formatPeriodizationGuidelines } from './periodizationUtils.js';
 
 /**
- * Creates a strongly worded equipment restriction notice
+ * Creates equipment restriction notice using Claude 4.5 best practices
  * @param {Array} equipment - The list of available equipment
  * @returns {string} Formatted string with equipment restrictions
  */
@@ -32,15 +32,17 @@ export function formatEquipmentRestrictions(equipment) {
       : 'Bodyweight only';
 
   return `
-AVAILABLE EQUIPMENT: ${equipmentList}
+<equipment_restrictions>
+Available equipment: ${equipmentList}
 
-⚠️ CRITICAL EQUIPMENT RESTRICTION ⚠️
-The program MUST STRICTLY ONLY use the equipment explicitly listed above. You MUST NOT include exercises that require equipment not listed in the available equipment, even in warm-ups, main workouts, cooldowns, or finishers. If a common exercise is not possible due to equipment limitations, substitute with an alternative that uses ONLY the available equipment.
-`;
+Only program exercises using the equipment listed above, including warm-ups, main workouts, cooldowns, and finishers. If a common exercise requires unavailable equipment, substitute with an alternative using only the available equipment.
+
+Context: Users have specific equipment access, so including exercises requiring unlisted equipment makes the workout impractical.
+</equipment_restrictions>`;
 }
 
 /**
- * Creates a strongly worded scheduling notice with dates to use
+ * Creates scheduling notice with dates using Claude 4.5 best practices
  * @param {Array} suggestedDates - The list of dates for workouts
  * @param {number} daysPerWeek - Number of workout days per week
  * @param {string} selectedDayNames - Names of selected days of the week
@@ -65,16 +67,16 @@ export function formatSchedulingRequirements(
     .join('\n');
 
   return `
-WORKOUT SCHEDULING REQUIREMENTS:
-Selected Training Days: ${selectedDayNames || 'All available days'}
+<scheduling_requirements>
+Selected training days: ${selectedDayNames || 'All available days'}
 
-⚠️ CRITICAL SCHEDULING REQUIREMENT ⚠️
-The workouts MUST be scheduled on the EXACT dates below. These dates follow the user's selected training days (${selectedDayNames}). DO NOT create workouts on any other dates.
-
+Assign each workout to these exact dates:
 ${datesList}
 
-IMPORTANT: Each workout you generate MUST be assigned to one of the above dates. The "date" field in each workout object MUST match one of these dates EXACTLY, and all dates must be used.
-`;
+Each workout's "date" field must match one of the dates above exactly. Use all dates provided.
+
+Context: Users have scheduled specific training days that fit their availability. Workouts on different dates would conflict with their schedule.
+</scheduling_requirements>`;
 }
 
 /**
@@ -179,7 +181,7 @@ export default function promptBuilder(context, trainingType) {
 }
 
 /**
- * Creates a prominent, detailed section about periodization for prompts
+ * Creates periodization section using Claude 4.5 best practices
  * @param {string} programType - The periodization type
  * @returns {string} Formatted string about periodization to include in prompts
  */
@@ -192,15 +194,17 @@ export function formatPeriodizationSection(programType) {
   const periodizationGuidelines = formatPeriodizationGuidelines(programType);
 
   return `
-PERIODIZATION: ${programType.toUpperCase()}
+<periodization_model type="${programType}">
 ${periodizationGuidelines}
 
-IMPORTANT PERIODIZATION REQUIREMENT: The periodization model above MUST be strictly followed throughout the entire program. Each workout must explicitly state which phase/cycle/day it belongs to in the periodization structure.
-`;
+Follow this periodization model throughout the program. Each workout should indicate which phase/cycle/day it belongs to in the periodization structure.
+
+Context: Proper periodization ensures progressive overload and recovery, optimizing training adaptations and preventing plateaus.
+</periodization_model>`;
 }
 
 /**
- * Formats client metrics data into a string format for the prompt
+ * Formats client metrics data using Claude 4.5 best practices
  * @param {Object} clientMetricsData - Raw client metrics data
  * @param {boolean} useImperial - Whether to display weights in imperial units (lbs) or metric (kg)
  * @returns {string} Formatted client metrics string or empty string if no data
@@ -231,65 +235,39 @@ export function formatClientMetrics(clientMetricsData, useImperial = false) {
 
   const weightUnit = useImperial ? 'lbs' : 'kg';
 
-  return `
-Client Metrics:
-${clientMetricsData.gender ? `Gender: ${clientMetricsData.gender}` : ''}
-${clientMetricsData.age ? `Age: ${clientMetricsData.age} years` : ''}
-${
-  clientMetricsData.height_cm ? `Height: ${formatHeight(clientMetricsData.height_cm)}` : ''
-}
-${
-  clientMetricsData.weight_kg ? `Weight: ${formatWeight(clientMetricsData.weight_kg)}` : ''
-}
-${
-  clientMetricsData.years_of_experience 
-    ? `Years of Training Experience: ${clientMetricsData.years_of_experience}` 
-    : ''
-}
-${
-  clientMetricsData.workout_experience_type 
-    ? `Primary Workout Experience: ${clientMetricsData.workout_experience_type}` 
-    : ''
-}
-${
-  clientMetricsData.bench_1rm
-    ? `Bench Press 1RM: ${formatWeight(clientMetricsData.bench_1rm)}`
-    : ''
-}
-${
-  clientMetricsData.squat_1rm
-    ? `Squat 1RM: ${formatWeight(clientMetricsData.squat_1rm)}`
-    : ''
-}
-${
-  clientMetricsData.deadlift_1rm
-    ? `Deadlift 1RM: ${formatWeight(clientMetricsData.deadlift_1rm)}`
-    : ''
-}
-${
-  clientMetricsData.mile_time ? `Mile Time: ${clientMetricsData.mile_time}` : ''
-}
-${
-  clientMetricsData.recovery_score
-    ? `Recovery Score: ${clientMetricsData.recovery_score}/10`
-    : ''
-}
-${
-  clientMetricsData.injury_history
-    ? `Injury History: ${
-        typeof clientMetricsData.injury_history === 'object'
-          ? JSON.stringify(clientMetricsData.injury_history)
-          : clientMetricsData.injury_history
-      }`
-    : ''
-}
+  // Build metrics list, filtering out empty values
+  const metrics = [
+    clientMetricsData.gender && `Gender: ${clientMetricsData.gender}`,
+    clientMetricsData.age && `Age: ${clientMetricsData.age} years`,
+    clientMetricsData.height_cm && `Height: ${formatHeight(clientMetricsData.height_cm)}`,
+    clientMetricsData.weight_kg && `Weight: ${formatWeight(clientMetricsData.weight_kg)}`,
+    clientMetricsData.years_of_experience && `Training Experience: ${clientMetricsData.years_of_experience} years`,
+    clientMetricsData.workout_experience_type && `Primary Experience: ${clientMetricsData.workout_experience_type}`,
+    clientMetricsData.bench_1rm && `Bench Press 1RM: ${formatWeight(clientMetricsData.bench_1rm)}`,
+    clientMetricsData.squat_1rm && `Squat 1RM: ${formatWeight(clientMetricsData.squat_1rm)}`,
+    clientMetricsData.deadlift_1rm && `Deadlift 1RM: ${formatWeight(clientMetricsData.deadlift_1rm)}`,
+    clientMetricsData.mile_time && `Mile Time: ${clientMetricsData.mile_time}`,
+    clientMetricsData.recovery_score && `Recovery Score: ${clientMetricsData.recovery_score}/10`,
+    clientMetricsData.injury_history && `Injury History: ${
+      typeof clientMetricsData.injury_history === 'object'
+        ? JSON.stringify(clientMetricsData.injury_history)
+        : clientMetricsData.injury_history
+    }`,
+  ].filter(Boolean).join('\n');
 
-CRITICAL WEIGHT UNIT REQUIREMENT: All weights in the generated workouts MUST be provided in ${weightUnit.toUpperCase()} units to match the client's preference. 
-When calculating RX weights, scale them appropriately based on the client's strength metrics (bench, squat, deadlift) if available.
-For other movements, estimate appropriate weights based on the client's metrics, gender, age, and strength levels.
-Consider the client's training experience level (${clientMetricsData.years_of_experience || 'unspecified'} years, ${clientMetricsData.workout_experience_type || 'general'}) when programming intensity and complexity.
-If client metrics indicate specific limitations, provide appropriate scaling options.
-IMPORTANT: Always express ALL workout weights in ${weightUnit} (${useImperial ? 'pounds' : 'kilograms'}) throughout the entire program to maintain consistency with the client's unit preference.`;
+  return `
+<client_metrics unit_preference="${weightUnit}">
+${metrics}
+</client_metrics>
+
+<weight_programming_guidance>
+Express all weights in ${weightUnit} (${useImperial ? 'pounds' : 'kilograms'}) throughout the program.
+Scale RX weights based on the client's strength metrics (bench, squat, deadlift) when available.
+Consider training experience (${clientMetricsData.years_of_experience || 'unspecified'} years) when programming intensity.
+${clientMetricsData.injury_history ? 'Provide modifications that accommodate the noted injury history.' : ''}
+
+Context: Using the client's preferred units and appropriate loading based on their metrics ensures the program is immediately actionable without conversions.
+</weight_programming_guidance>`;
 }
 
 /**
@@ -462,7 +440,7 @@ function formatSkillDistribution(skillDistribution) {
 }
 
 /**
- * Formats class metrics data into a string format for the prompt
+ * Formats class metrics data using Claude 4.5 best practices
  * Used for CLASS entity types (CrossFit/functional fitness classes)
  * @param {Object} classMetricsData - Raw class metrics data
  * @param {boolean} useImperial - Whether to display weights in imperial units (lbs) or metric (kg)
@@ -476,111 +454,83 @@ export function formatClassMetrics(classMetricsData, useImperial = false) {
   const warmupDuration = classMetricsData.warmup_duration_minutes || 15;
   const workoutDuration = classDuration - warmupDuration;
   const hasEliteAthletes = classMetricsData.has_elite_athletes === true;
+  const classSize = classMetricsData.class_size;
 
   let metricsString = `
-Class Profile:
-Class Size: ${classMetricsData.class_size || 'Not specified'} athletes
+<class_profile unit_preference="${weightUnit}">
+Class Size: ${classSize || 'Not specified'} athletes
 Average Age: ${classMetricsData.average_age || 'Not specified'} years
-Elite Athletes Present: ${hasEliteAthletes ? 'YES - RX+ OPTIONS REQUIRED' : 'No'}
+Elite Athletes Present: ${hasEliteAthletes ? 'Yes' : 'No'}
 Average Experience: ${classMetricsData.average_experience_years || 'Not specified'} years
 Skill Distribution: ${formatSkillDistribution(classMetricsData.skill_distribution)}
-Class Duration: ${classDuration} minutes total
-Warmup/Skill Work: ${warmupDuration} minutes
-Main Workout Window: ${workoutDuration} minutes
+</class_profile>
 
-⚠️ CRITICAL CLASS PROGRAMMING REQUIREMENTS ⚠️
+<time_structure>
+Total class time: ${classDuration} minutes
+Warmup/Skill work: ${warmupDuration} minutes
+Main workout window: ${workoutDuration} minutes (including transitions)
+Include time caps for all workout segments.
+</time_structure>
 
-TIME MANAGEMENT:
-- Total class time: ${classDuration} minutes
-- Allocate ${warmupDuration} minutes for warmup and skill work
-- Main workout must fit within ${workoutDuration} minutes (including transitions)
-- Include clear time caps for all workout segments
+<scaling_requirements levels="${hasEliteAthletes ? 'scaled,rx,rx+' : 'scaled,rx'}">
+Every workout needs ${hasEliteAthletes ? 'three' : 'two'} scaling levels:
 
-SCALING OPTIONS (REQUIRED FOR ALL MOVEMENTS):
-Every workout MUST include ${hasEliteAthletes ? 'ALL THREE' : 'at minimum two'} scaling levels:
-1. SCALED: For beginners and those building capacity
+1. Scaled: For beginners and those building capacity
    - Lighter loads, reduced complexity, modified movements
    - Clear substitutions for technical movements
+
 2. RX: Standard prescribed weights and movements
    - Appropriate for intermediate athletes${hasEliteAthletes ? `
-3. RX+: ⚠️ MANDATORY - Elite athletes are present in this class
-   - Heavier loads than standard RX (e.g., if RX is 135lb, RX+ should be 185lb+)
-   - Increased volume or reps
-   - More complex movement variations (e.g., strict instead of kipping, deficit movements)
-   - Competition-standard movements and weights` : ''}`;
 
-  // Add prominent elite athlete section if present
-  if (hasEliteAthletes) {
-    metricsString += `
+3. RX+: For elite/competitive athletes in this class
+   - Heavier loads (20-40% above RX)
+   - More demanding variations (strict vs kipping, deficit movements)
+   - Increased volume or competition-standard movements` : ''}
 
-🏆 ELITE ATHLETE RX+ REQUIREMENTS (MANDATORY) 🏆
-This class has elite/competitive athletes. You MUST include RX+ options for EVERY workout.
-
-RX+ PROGRAMMING GUIDELINES:
-- WEIGHTS: RX+ weights should be 20-40% heavier than RX weights
-  Example: If RX barbell weight is 135lb, RX+ should be 165-185lb
-  Example: If RX dumbbell is 35lb, RX+ should be 50lb+
-- MOVEMENTS: Use more demanding variations
-  Example: Strict pull-ups instead of kipping
-  Example: Deficit handstand push-ups instead of regular
-  Example: Pistols instead of air squats
-- VOLUME: Increase reps or rounds for RX+
-  Example: If RX is 21-15-9, RX+ could be 30-20-10
-- STANDARDS: Use competition standards
-  Example: Full depth squats, chest-to-bar pull-ups, strict press lockout
-
-FORMAT FOR EACH WORKOUT:
-When listing weights and movements, ALWAYS show all three levels like this:
-- Back Squat: Scaled 95/65lb | RX 135/95lb | RX+ 185/135lb
-- Pull-ups: Scaled Ring Rows | RX Kipping | RX+ Strict or Chest-to-Bar`;
-  }
+Format weights like: Back Squat: Scaled 95/65${weightUnit} | RX 135/95${weightUnit}${hasEliteAthletes ? ` | RX+ 185/135${weightUnit}` : ''}
+</scaling_requirements>`;
 
   // Add class size considerations
-  if (classMetricsData.class_size) {
-    const classSize = classMetricsData.class_size;
+  if (classSize) {
     metricsString += `
 
-EQUIPMENT & SPACE MANAGEMENT (${classSize} athletes):
-- Consider equipment sharing rotations if needed
-- Plan for sufficient barbells, rigs, and equipment access
-- Include partner or group options where appropriate`;
-
-    if (classSize > 15) {
-      metricsString += `
-- Large class: prioritize movements that don't require specialized equipment
-- Consider wave starts or heat structures for time-domain workouts`;
-    }
+<equipment_management athletes="${classSize}">
+Consider equipment sharing rotations and sufficient barbell/rig access.
+Include partner or group options where appropriate.${classSize > 15 ? `
+For this large class, prioritize movements not requiring specialized equipment.
+Consider wave starts or heat structures for time-domain workouts.` : ''}
+</equipment_management>`;
   }
 
   // Add skill distribution considerations
   if (classMetricsData.skill_distribution) {
-    const { beginner = 0, intermediate = 0, advanced = 0 } = classMetricsData.skill_distribution;
+    const { beginner = 0, advanced = 0 } = classMetricsData.skill_distribution;
 
     if (beginner > 40) {
       metricsString += `
 
-BEGINNER-HEAVY CLASS CONSIDERATIONS:
-- Emphasize movement quality over intensity
-- Include clear coaching cues for foundational movements
-- Provide detailed scaling options and progressions`;
+<beginner_focus>
+This class has many beginners. Emphasize movement quality over intensity.
+Include clear coaching cues for foundational movements.
+Provide detailed scaling options and progressions.
+</beginner_focus>`;
     }
 
     if (advanced > 40) {
       metricsString += `
 
-ADVANCED-HEAVY CLASS CONSIDERATIONS:
-- Include higher-skill movements and complex combinations
-- Provide challenging RX+ options
-- Consider competition-style workouts`;
+<advanced_focus>
+This class has many advanced athletes. Include higher-skill movements.
+Provide challenging RX+ options and consider competition-style workouts.
+</advanced_focus>`;
     }
   }
 
   metricsString += `
 
-WEIGHT UNIT REQUIREMENT: All weights MUST be provided in ${weightUnit.toUpperCase()} units.
-${hasEliteAthletes
-    ? `⚠️ MANDATORY: Include specific weights for ALL THREE scaling levels (Scaled/RX/RX+) in EVERY workout since elite athletes are present.`
-    : `Include specific weights for each scaling level (Scaled/RX).`}`;
+<context>
+Express all weights in ${weightUnit}. Classes with mixed ability levels need clear scaling so all athletes can participate safely and effectively at their level.
+</context>`;
 
   return metricsString;
 }

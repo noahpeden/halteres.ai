@@ -9,6 +9,7 @@ import {
 import { useProgramData } from '@/hooks/useProgramData';
 import { useProgramWorkouts } from '@/hooks/useProgramWorkouts';
 import equipmentList from '@/utils/equipmentList';
+import { gymEquipmentPresets } from '@/components/utils';
 
 const ProgramContext = createContext(null);
 
@@ -57,6 +58,7 @@ export function ProgramProvider({ children, programId }) {
     rescheduleModal: { isOpen: false, newStartDate: '' },
     editModal: { isOpen: false, workout: null },
     confirmationModal: { isOpen: false, content: {} },
+    enhanceProgramModal: { isOpen: false },
   });
 
   // Toast state
@@ -71,7 +73,21 @@ export function ProgramProvider({ children, programId }) {
       // If we have program data, use equipment from the database
       const equipment = programData.program.gym_details?.equipment || [];
       const normalizedEquipment = normalizeEquipment(equipment);
-      const newEquipment = [...new Set(normalizedEquipment)];
+      let newEquipment = [...new Set(normalizedEquipment)];
+
+      // If equipment is empty but gym type is set, apply the preset for that gym type
+      if (newEquipment.length === 0 && programData.program.gym_details?.gym_type) {
+        const gymType = programData.program.gym_details.gym_type;
+        // Convert database format (crossfit_box) to UI format (Crossfit Box)
+        const gymTypeMap = {
+          crossfit_box: 'Crossfit Box',
+          commercial_gym: 'Commercial Gym',
+          home_gym: 'Home Gym',
+          outdoor: 'Outdoor Space',
+        };
+        const uiGymType = gymTypeMap[gymType] || gymType;
+        newEquipment = gymEquipmentPresets[uiGymType] || [];
+      }
 
       setSelectedEquipment((prevEquipment) => {
         if (JSON.stringify(prevEquipment) !== JSON.stringify(newEquipment)) {

@@ -8,6 +8,7 @@ import CustomWorkoutFormat from './CustomWorkoutFormat';
 import LoadingButton from './LoadingButton';
 import { handleFormChange as handleFormChangeUtil } from './formHandlers';
 import equipmentList from '@/utils/equipmentList';
+import { Sparkles } from 'lucide-react';
 
 const ProgramForm = ({
   formData,
@@ -28,6 +29,9 @@ const ProgramForm = ({
   lastGenerationDate,
   calculatedEndDate,
   onStopGeneration,
+  onEnhanceProgram,
+  workoutsExist,
+  isEnhancing,
 }) => {
   const handleChange = useCallback(
     (e) => {
@@ -159,7 +163,7 @@ const ProgramForm = ({
         <div className="space-y-4"></div>
       </div> */}
 
-      <div className="flex justify-between items-center mt-6">
+      <div className="flex flex-col gap-3 mt-6">
         <button
           className={`btn btn-primary text-white w-full flex items-center justify-center text-lg ${
             isButtonDisabled ? ' btn-disabled' : ''
@@ -170,6 +174,18 @@ const ProgramForm = ({
         >
           {buttonText()}
         </button>
+
+        {/* Enhance Program Button - only show when workouts exist */}
+        {workoutsExist && (
+          <button
+            className="btn btn-secondary text-white w-full flex items-center justify-center gap-2"
+            onClick={onEnhanceProgram}
+            disabled={isLoading || isEnhancing}
+          >
+            <Sparkles className="w-4 h-4" />
+            {isEnhancing ? 'Enhancing...' : 'Enhance Program'}
+          </button>
+        )}
       </div>
       
       {/* Show LoadingButton when generating */}
