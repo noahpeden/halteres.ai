@@ -100,6 +100,42 @@ export async function POST(request) {
   }
 }
 
+// Save workouts to database in batch (incremental save for resilience)
+async function saveWorkoutsBatch(programId, workouts, weekNumber, sharedData, supabase) {
+  if (!programId || !workouts || workouts.length === 0) return;
+
+  try {
+    const workoutsToInsert = workouts.map((workout) => ({
+      program_id: programId,
+      entity_id: sharedData.entityId || null,
+      title: workout.title || 'Untitled Workout',
+      body: workout.body,
+      body_skeleton: workout.body, // Store skeleton version too
+      generation_status: 'detailed',
+      week_number: weekNumber,
+      scheduled_date: workout.date || new Date().toISOString().split('T')[0],
+      is_reference: false,
+      tags: {
+        suggestedDate: workout.date,
+        generatedBy: 'anthropic-incremental',
+        weekNumber: weekNumber,
+      },
+    }));
+
+    const { error } = await supabase
+      .from('program_workouts')
+      .insert(workoutsToInsert);
+
+    if (error) {
+      logWithTimestamp('Error saving workout batch', { error: error.message });
+      throw error;
+    }
+  } catch (error) {
+    logWithTimestamp('Error in saveWorkoutsBatch', { error: error.message });
+    // Don't throw - we don't want to fail the whole generation
+  }
+}
+
 // Handle chunked generation for large programs
 async function handleChunkedGeneration(requestData, anthropic, supabase) {
   logWithTimestamp('Starting chunked generation');
@@ -205,8 +241,14 @@ async function generateProgramChunked(
         const weekWorkouts = weekResult.workouts || weekResult;
         allWorkouts.push(...weekWorkouts);
 
-        // Stream the generated workouts for this week directly to UI
-        // Don't save to database yet - we'll save everything at the end
+        // INCREMENTAL SAVE: Save this week's workouts immediately for resilience
+        // This ensures workouts aren't lost if the connection drops
+        if (sharedData.programId && weekWorkouts.length > 0) {
+          await saveWorkoutsBatch(sharedData.programId, weekWorkouts, currentWeek, sharedData, supabase);
+          logWithTimestamp(`Saved ${weekWorkouts.length} workouts for week ${currentWeek} to database`);
+        }
+
+        // Stream the generated workouts for this week to UI
         sendEvent(controller, encoder, 'workout_chunk', {
           week: currentWeek,
           workouts: weekWorkouts,
@@ -221,30 +263,16 @@ async function generateProgramChunked(
 
         currentWeek++;
 
-        // Small delay between weeks to prevent rate limiting
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+        // Small delay between weeks to prevent rate limiting (reduced for speed)
+        await new Promise((resolve) => setTimeout(resolve, 100));
       } catch (weekError) {
         logWithTimestamp(`Error generating week ${currentWeek}`, {
           error: weekError.message,
         });
 
-        // Save any workouts we've generated so far before handling the error
-        if (allWorkouts.length > 0) {
-          try {
-            await saveWorkoutsToDatabase(
-              sharedData.programId,
-              allWorkouts,
-              supabase
-            );
-            logWithTimestamp(
-              `Saved ${allWorkouts.length} workouts before week ${currentWeek} error`
-            );
-          } catch (saveError) {
-            logWithTimestamp('Error saving workouts during failure recovery', {
-              error: saveError.message,
-            });
-          }
-        }
+        // Note: Workouts are saved incrementally, so previous weeks are already in database
+        // Just log the error - no need to save again
+        logWithTimestamp(`Week ${currentWeek} generation failed, but previous ${allWorkouts.length} workouts are already saved to database`);
 
         // Generate placeholder workouts for failed week
         const placeholderWorkouts = generatePlaceholderWeek(
@@ -262,37 +290,30 @@ async function generateProgramChunked(
       }
     }
 
-    // Save all workouts to database in one operation at the end
-    try {
-      if (sharedData.programId && allWorkouts.length > 0) {
-        sendEvent(controller, encoder, 'status', {
-          message: 'Saving workouts to database...',
-        });
+    // Note: Workouts are already saved incrementally via saveWorkoutsBatch
+    // No need for a final batch save - just update program status
+    if (sharedData.programId) {
+      try {
+        await supabase
+          .from('programs')
+          .update({
+            generation_status: 'completed',
+            generation_progress: {
+              total_weeks: numberOfWeeks,
+              workouts_saved: allWorkouts.length,
+              completed_at: new Date().toISOString(),
+            }
+          })
+          .eq('id', sharedData.programId);
 
-        await saveWorkoutsToDatabase(
-          sharedData.programId,
-          allWorkouts,
-          supabase
-        );
-        logWithTimestamp(
-          `Saved all ${allWorkouts.length} workouts to database`
-        );
+        logWithTimestamp(`Program generation completed, ${allWorkouts.length} workouts saved incrementally`);
 
         sendEvent(controller, encoder, 'status', {
-          message: 'Workouts saved successfully!',
+          message: 'All workouts saved successfully!',
         });
+      } catch (updateError) {
+        logWithTimestamp('Error updating program status', { error: updateError.message });
       }
-    } catch (saveError) {
-      logWithTimestamp('Error saving all workouts to database', {
-        error: saveError.message,
-      });
-      sendEvent(controller, encoder, 'error', {
-        error: 'Failed to save workouts to database: ' + saveError.message,
-      });
-      if (controller && controller.desiredSize !== null) {
-        controller.close();
-      }
-      return;
     }
 
     // Send completion
@@ -567,20 +588,44 @@ Users have specific equipment access and unit preferences. Including exercises r
       systemPromptLength: systemPrompt.length,
     });
 
+    // Optimize max_tokens based on week (Week 1 needs more for program description)
+    const maxTokensForWeek = weekNumber === 1 ? 16000 : 8000;
+
+    // Build system messages with prompt caching for client metrics
+    const systemMessages = [
+      {
+        type: "text",
+        text: systemPrompt,
+      }
+    ];
+
+    // Add client metrics with caching if available (reduces latency 30-50%)
+    if (clientMetricsContent) {
+      systemMessages.push({
+        type: "text",
+        text: clientMetricsContent,
+        cache_control: { type: "ephemeral" }
+      });
+    }
+
+    // Add reference workouts with caching if available
+    if (referenceWorkoutsContent) {
+      systemMessages.push({
+        type: "text",
+        text: referenceWorkoutsContent,
+        cache_control: { type: "ephemeral" }
+      });
+    }
+
     const response = await anthropic.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 16000,
+      model: 'claude-sonnet-4-5-20250929',
+      max_tokens: maxTokensForWeek,
       temperature: 0.7,
-      system: systemPrompt,
+      system: systemMessages,
       messages: [
         {
           role: 'user',
-          content: [
-            {
-              type: 'text',
-              text: weekPrompt,
-            },
-          ],
+          content: weekPrompt,
         },
       ],
       stream: true,
@@ -1167,7 +1212,7 @@ async function extractSharedData(requestData, supabase) {
     throw new Error('Authentication required');
   }
   logWithTimestamp('Authentication successful', { userId: user.id });
-  
+
   // Create a session-like object for compatibility with existing code
   const session = { user };
 

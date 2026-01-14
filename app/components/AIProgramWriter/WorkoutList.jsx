@@ -446,6 +446,21 @@ export default function WorkoutList({
                           Generating...
                         </span>
                       )}
+                      {workout.generation_status === 'skeleton' && (
+                        <span className="text-xs font-medium px-2 py-1 bg-warning/20 text-warning-content rounded">
+                          Skeleton
+                        </span>
+                      )}
+                      {workout.generation_status === 'enhancing' && (
+                        <span className="text-xs font-medium px-2 py-1 bg-info/20 text-info-content rounded animate-pulse">
+                          Enhancing...
+                        </span>
+                      )}
+                      {workout.generation_status === 'detailed' && (
+                        <span className="text-xs font-medium px-2 py-1 bg-success/20 text-success-content rounded">
+                          Detailed
+                        </span>
+                      )}
                     </div>
                     <h4 className="font-semibold break-words">
                       {workout.title ||
