@@ -1,7 +1,8 @@
 // app/actions/workout-upload.js
 'use server';
 
-import { createClient } from '@/utils/supabase/server';
+import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
 import OpenAI from 'openai';
 import mammoth from 'mammoth';
 import pdf from 'pdf-parse/lib/pdf-parse';
@@ -12,6 +13,27 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
   dangerouslyAllowBrowser: true,
 });
+
+async function createSupabaseClient() {
+  const cookieStore = await cookies();
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    {
+      cookies: {
+        get(name) {
+          return cookieStore.get(name)?.value;
+        },
+        set(name, value, options) {
+          cookieStore.set({ name, value, ...options });
+        },
+        remove(name, options) {
+          cookieStore.set({ name, value: '', ...options });
+        },
+      },
+    }
+  );
+}
 
 const parseFile = async (file) => {
   const buffer = Buffer.from(await file.arrayBuffer());
@@ -67,7 +89,7 @@ async function createEmbeddings(embeddingPrompt) {
 }
 
 export async function handleWorkoutUpload(formData) {
-  const supabase = await createClient();
+  const supabase = await createSupabaseClient();
 
   try {
     const file = formData.get('file');

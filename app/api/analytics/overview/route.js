@@ -1,4 +1,4 @@
-import { getGymOverviewAction } from '@/app/actions/analyticsActions';
+import { getGymOverviewAction } from '@/actions/analyticsActions';
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url);

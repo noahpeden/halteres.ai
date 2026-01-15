@@ -59,6 +59,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
     generationsRemaining,
     lastGenerationDate,
     refetchProfile,
+    currentGym,
   } = useAuth();
 
   const {
@@ -1299,6 +1300,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
               showToastMessage={showToast}
               generationStage={generationStage}
               serverStatus={serverStatus}
+              gymId={currentGym?.id || program?.gym_id}
             />
           </div>
         )}

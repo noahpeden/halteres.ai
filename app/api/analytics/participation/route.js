@@ -1,4 +1,4 @@
-import { getParticipationStatsAction } from '@/app/actions/analyticsActions';
+import { getParticipationStatsAction } from '@/actions/analyticsActions';
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url);

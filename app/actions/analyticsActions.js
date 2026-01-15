@@ -1,10 +1,32 @@
 'use server';
 
-import { createClient } from '@/utils/supabase/server';
+import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
+
+async function createSupabaseClient() {
+  const cookieStore = await cookies();
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    {
+      cookies: {
+        get(name) {
+          return cookieStore.get(name)?.value;
+        },
+        set(name, value, options) {
+          cookieStore.set({ name, value, ...options });
+        },
+        remove(name, options) {
+          cookieStore.set({ name, value: '', ...options });
+        },
+      },
+    }
+  );
+}
 
 // Get overview stats for a gym
 export async function getGymOverviewAction(gymId) {
-  const supabase = await createClient();
+  const supabase = await createSupabaseClient();
 
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
@@ -67,7 +89,7 @@ export async function getGymOverviewAction(gymId) {
 
 // Get recent PRs across the gym
 export async function getRecentPRsAction(gymId, limit = 10) {
-  const supabase = await createClient();
+  const supabase = await createSupabaseClient();
 
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
@@ -116,7 +138,7 @@ export async function getRecentPRsAction(gymId, limit = 10) {
 
 // Get athlete participation stats
 export async function getParticipationStatsAction(gymId, days = 7) {
-  const supabase = await createClient();
+  const supabase = await createSupabaseClient();
 
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
@@ -196,7 +218,7 @@ export async function getParticipationStatsAction(gymId, days = 7) {
 
 // Get top performers for a specific period
 export async function getTopPerformersAction(gymId, limit = 5) {
-  const supabase = await createClient();
+  const supabase = await createSupabaseClient();
 
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
@@ -285,7 +307,7 @@ export async function getTopPerformersAction(gymId, limit = 5) {
 
 // Get athlete list with recent activity
 export async function getAthleteListAction(gymId) {
-  const supabase = await createClient();
+  const supabase = await createSupabaseClient();
 
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
