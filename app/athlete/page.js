@@ -10,6 +10,8 @@ export default function AthleteDashboard() {
   const router = useRouter();
   const [todaysWorkouts, setTodaysWorkouts] = useState([]);
   const [recentResults, setRecentResults] = useState([]);
+  const [activeProgram, setActiveProgram] = useState(null);
+  const [programCount, setProgramCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
     workoutsThisWeek: 0,
@@ -37,15 +39,26 @@ export default function AthleteDashboard() {
     }
 
     try {
-      // Fetch today's workouts from the gym's programs
       const today = new Date().toISOString().split('T')[0];
-      const res = await fetch(`/api/athlete/today?gymId=${currentGym.id}&date=${today}`);
-      const data = await res.json();
 
-      if (data.success) {
-        setTodaysWorkouts(data.workouts || []);
-        setRecentResults(data.recentResults || []);
-        setStats(data.stats || stats);
+      // Fetch today's workouts and active program in parallel
+      const [workoutsRes, programsRes] = await Promise.all([
+        fetch(`/api/athlete/today?gymId=${currentGym.id}&date=${today}`),
+        fetch(`/api/athlete/programs?gymId=${currentGym.id}`),
+      ]);
+
+      const workoutsData = await workoutsRes.json();
+      const programsData = await programsRes.json();
+
+      if (workoutsData.success) {
+        setTodaysWorkouts(workoutsData.workouts || []);
+        setRecentResults(workoutsData.recentResults || []);
+        setStats(workoutsData.stats || stats);
+      }
+
+      if (programsData.success) {
+        setActiveProgram(programsData.activeProgram);
+        setProgramCount(programsData.programs?.length || 0);
       }
     } catch (err) {
       console.error('Error fetching dashboard data:', err);
@@ -117,6 +130,29 @@ export default function AthleteDashboard() {
       </div>
 
       <div className="max-w-4xl mx-auto p-4 space-y-6">
+        {/* Active Program Banner */}
+        {activeProgram && (
+          <Link href={`/athlete/programs/${activeProgram.id}`}>
+            <div className="card bg-gradient-to-r from-primary to-primary/80 text-primary-content shadow-lg hover:shadow-xl transition-shadow">
+              <div className="card-body p-4">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <p className="text-xs opacity-70">Active Program</p>
+                    <h2 className="font-bold text-lg">{activeProgram.name}</h2>
+                    <p className="text-sm opacity-80">
+                      {activeProgram.duration_weeks} weeks
+                      {activeProgram.focus_area && ` • ${activeProgram.focus_area}`}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-sm opacity-70">View Full Program →</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </Link>
+        )}
+
         {/* Quick Stats */}
         <div className="grid grid-cols-3 gap-4">
           <div className="card bg-base-100 shadow">
@@ -142,7 +178,14 @@ export default function AthleteDashboard() {
         {/* Today's Workouts */}
         <div className="card bg-base-100 shadow-lg">
           <div className="card-body">
-            <h2 className="card-title">Today's Workouts</h2>
+            <div className="flex justify-between items-center">
+              <h2 className="card-title">Today's Workouts</h2>
+              {activeProgram && (
+                <span className="text-sm text-base-content/60">
+                  from {activeProgram.name}
+                </span>
+              )}
+            </div>
             {todaysWorkouts.length === 0 ? (
               <div className="text-center py-8">
                 <div className="text-4xl mb-2">📅</div>
@@ -160,8 +203,8 @@ export default function AthleteDashboard() {
                     <div className="border rounded-lg p-4 hover:bg-base-200 transition-colors">
                       <div className="flex justify-between items-start">
                         <div>
-                          <h3 className="font-bold">{workout.name}</h3>
-                          <p className="text-sm text-base-content/60">{workout.workout_type}</p>
+                          <h3 className="font-bold">{workout.title}</h3>
+                          <p className="text-sm text-base-content/60">{workout.workout_type || workout.program?.name}</p>
                         </div>
                         {workout.hasLogged ? (
                           <span className="badge badge-success">Completed</span>
@@ -169,8 +212,8 @@ export default function AthleteDashboard() {
                           <span className="badge badge-outline">Log Result</span>
                         )}
                       </div>
-                      {workout.description && (
-                        <p className="text-sm mt-2 line-clamp-2">{workout.description}</p>
+                      {workout.body && (
+                        <p className="text-sm mt-2 line-clamp-2 text-base-content/70">{workout.body.substring(0, 150)}...</p>
                       )}
                     </div>
                   </Link>
@@ -219,16 +262,31 @@ export default function AthleteDashboard() {
 
         {/* Quick Links */}
         <div className="grid grid-cols-2 gap-4">
+          <Link href="/athlete/programs" className="card bg-base-100 shadow hover:shadow-lg transition-shadow">
+            <div className="card-body items-center text-center p-4">
+              <span className="text-3xl">📋</span>
+              <p className="font-medium">Programs</p>
+              {programCount > 0 && (
+                <span className="badge badge-sm badge-primary">{programCount}</span>
+              )}
+            </div>
+          </Link>
           <Link href="/athlete/leaderboard" className="card bg-base-100 shadow hover:shadow-lg transition-shadow">
-            <div className="card-body items-center text-center">
+            <div className="card-body items-center text-center p-4">
               <span className="text-3xl">🏆</span>
               <p className="font-medium">Leaderboards</p>
             </div>
           </Link>
           <Link href="/athlete/profile" className="card bg-base-100 shadow hover:shadow-lg transition-shadow">
-            <div className="card-body items-center text-center">
+            <div className="card-body items-center text-center p-4">
               <span className="text-3xl">📊</span>
               <p className="font-medium">My PRs</p>
+            </div>
+          </Link>
+          <Link href="/athlete/history" className="card bg-base-100 shadow hover:shadow-lg transition-shadow">
+            <div className="card-body items-center text-center p-4">
+              <span className="text-3xl">📅</span>
+              <p className="font-medium">History</p>
             </div>
           </Link>
         </div>

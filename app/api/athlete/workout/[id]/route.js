@@ -29,19 +29,31 @@ export async function GET(request, { params }) {
       .from('program_workouts')
       .select(`
         id,
-        name,
+        title,
         workout_type,
-        description,
-        exercises,
+        body,
         scheduled_date,
-        program:programs (id, name, gym_id)
+        gym_id,
+        program:programs (id, name)
       `)
       .eq('id', id)
       .single();
 
-    if (workoutError || !workout) {
+    if (workoutError) {
+      console.error('Workout fetch error:', workoutError);
+      return Response.json({ error: 'Workout not found', details: workoutError.message }, { status: 404 });
+    }
+
+    if (!workout) {
       return Response.json({ error: 'Workout not found' }, { status: 404 });
     }
+
+    // Map fields for compatibility with the frontend
+    const workoutResponse = {
+      ...workout,
+      name: workout.title,
+      description: workout.body,
+    };
 
     // Fetch user's result if they have one
     let userResult = null;
@@ -66,7 +78,7 @@ export async function GET(request, { params }) {
 
     return Response.json({
       success: true,
-      workout,
+      workout: workoutResponse,
       userResult,
     });
   } catch (error) {

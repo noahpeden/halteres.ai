@@ -17,18 +17,21 @@ export async function POST(req) {
 
     // Fetch program details if not provided
     let entityId;
+    let gymId;
     if (programDetails?.entity_id) {
       entityId = programDetails.entity_id;
+      gymId = programDetails.gym_id || null;
     } else {
-      // Fetch the program to get the entity_id
+      // Fetch the program to get the entity_id and gym_id
       const { data: program, error: programError } = await supabase
         .from('programs')
-        .select('entity_id')
+        .select('entity_id, gym_id')
         .eq('id', programId)
         .single();
 
       if (programError) throw programError;
       entityId = program?.entity_id;
+      gymId = program?.gym_id;
     }
 
     // Initialize Anthropic client
@@ -158,6 +161,7 @@ Context: Including exercises requiring unlisted equipment makes workouts impract
       await supabase.from('program_workouts').insert({
         program_id: programId,
         entity_id: entityId,
+        gym_id: gymId,
         title: workout.title,
         body: workout.description || workout.content,
         workout_type: workout.type,

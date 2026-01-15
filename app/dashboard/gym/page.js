@@ -13,7 +13,7 @@ import {
 } from '@/actions/gymActions';
 
 export default function GymManagementPage() {
-  const { currentGym, fetchGymMemberships, user } = useAuth();
+  const { currentGym, refetchGymMemberships, user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [members, setMembers] = useState([]);
   const [pendingMembers, setPendingMembers] = useState([]);
@@ -62,7 +62,7 @@ export default function GymManagementPage() {
     setLoading(true);
     const result = await createGymAction(formData);
     if (result.success) {
-      await fetchGymMemberships();
+      await refetchGymMemberships();
     } else {
       alert(result.error);
     }
@@ -74,7 +74,7 @@ export default function GymManagementPage() {
     setLoading(true);
     const result = await updateGymAction(currentGym.id, formData);
     if (result.success) {
-      await fetchGymMemberships();
+      await refetchGymMemberships();
     } else {
       alert(result.error);
     }
@@ -86,7 +86,7 @@ export default function GymManagementPage() {
     setLoading(true);
     const result = await regenerateInviteCodeAction(currentGym.id);
     if (result.success) {
-      await fetchGymMemberships();
+      await refetchGymMemberships();
     } else {
       alert(result.error);
     }

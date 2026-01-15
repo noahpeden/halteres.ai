@@ -37,6 +37,23 @@ export async function GET(request) {
     );
   }
 
-  // Standard OAuth and other auth flows - redirect to dashboard
+  // Get the user to determine their role
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (user) {
+    // Fetch user profile to check role
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+
+    // Redirect based on role
+    if (profile?.role === 'athlete') {
+      return NextResponse.redirect(new URL('/athlete', request.url));
+    }
+  }
+
+  // Default: redirect to dashboard (coaches and users without profile)
   return NextResponse.redirect(new URL('/dashboard', request.url));
 }

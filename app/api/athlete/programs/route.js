@@ -1,0 +1,92 @@
+import { cookies } from 'next/headers';
+import { createServerClient } from '@supabase/ssr';
+
+async function getSupabaseClient() {
+  const cookieStore = await cookies();
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    {
+      cookies: {
+        get(name) {
+          return cookieStore.get(name)?.value;
+        },
+      },
+    }
+  );
+}
+
+export async function GET(request) {
+  const { searchParams } = new URL(request.url);
+  const gymId = searchParams.get('gymId');
+
+  if (!gymId) {
+    return Response.json({ error: 'gymId is required' }, { status: 400 });
+  }
+
+  try {
+    const supabase = await getSupabaseClient();
+    const today = new Date().toISOString().split('T')[0];
+
+    // Fetch all programs for the gym
+    const { data: programs, error: programsError } = await supabase
+      .from('programs')
+      .select(`
+        id,
+        name,
+        description,
+        duration_weeks,
+        focus_area,
+        difficulty,
+        calendar_data,
+        created_at
+      `)
+      .eq('gym_id', gymId)
+      .order('created_at', { ascending: false });
+
+    if (programsError) {
+      console.error('Programs fetch error:', programsError);
+      return Response.json({ error: 'Failed to fetch programs' }, { status: 500 });
+    }
+
+    // Categorize programs by status
+    const categorizedPrograms = programs.map((program) => {
+      const startDate = program.calendar_data?.start_date;
+      const endDate = program.calendar_data?.end_date;
+
+      let status = 'unknown';
+      if (startDate && endDate) {
+        if (today >= startDate && today <= endDate) {
+          status = 'active';
+        } else if (today < startDate) {
+          status = 'upcoming';
+        } else {
+          status = 'completed';
+        }
+      }
+
+      return {
+        ...program,
+        status,
+        startDate,
+        endDate,
+      };
+    });
+
+    // Sort: active first, then upcoming, then completed
+    const statusOrder = { active: 0, upcoming: 1, completed: 2, unknown: 3 };
+    categorizedPrograms.sort((a, b) => statusOrder[a.status] - statusOrder[b.status]);
+
+    // Find the primary active program (first active one)
+    const activeProgram = categorizedPrograms.find((p) => p.status === 'active');
+
+    return Response.json({
+      success: true,
+      programs: categorizedPrograms,
+      activeProgram: activeProgram || null,
+    });
+  } catch (error) {
+    console.error('Error fetching programs:', error);
+    return Response.json({ error: 'Failed to fetch programs' }, { status: 500 });
+  }
+}

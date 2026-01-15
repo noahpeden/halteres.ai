@@ -38,17 +38,19 @@ export async function GET(request) {
       .from('program_workouts')
       .select(`
         id,
-        name,
+        title,
         workout_type,
-        description,
-        exercises,
+        body,
         scheduled_date,
-        program:programs (id, name, gym_id)
+        program:programs (id, name)
       `)
-      .eq('program.gym_id', gymId)
+      .eq('gym_id', gymId)
       .gte('scheduled_date', startOfDay)
-      .lte('scheduled_date', endOfDay)
-      .is('deleted_at', null);
+      .lte('scheduled_date', endOfDay);
+
+    if (workoutsError) {
+      console.error('Error fetching workouts:', workoutsError);
+    }
 
     // Get user's results for today's workouts
     const workoutIds = (workouts || []).map(w => w.id);
@@ -81,7 +83,7 @@ export async function GET(request) {
         scale,
         is_pr,
         created_at,
-        workout:program_workouts (id, name)
+        workout:program_workouts (id, title)
       `)
       .eq('user_id', user.id)
       .is('deleted_at', null)

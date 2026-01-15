@@ -3,6 +3,7 @@ import { createMobileCompatibleClient, corsHeaders } from '@/utils/supabase/mobi
 import { NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { formatClientMetrics } from '@/utils/prompt-builder/promptBuilder.js';
+import { getFeedbackContextForGeneration } from '@/utils/feedback/feedbackUtils.js';
 
 export const maxDuration = 800; // Maximum for Vercel Pro plan (800 seconds)
 export const dynamic = 'force-dynamic';
@@ -108,6 +109,7 @@ async function saveWorkoutsBatch(programId, workouts, weekNumber, sharedData, su
     const workoutsToInsert = workouts.map((workout) => ({
       program_id: programId,
       entity_id: sharedData.entityId || null,
+      gym_id: sharedData.gymId || null,
       title: workout.title || 'Untitled Workout',
       body: workout.body,
       body_skeleton: workout.body, // Store skeleton version too
@@ -388,6 +390,8 @@ async function generateWeekWorkouts(
     selectedDaysOfWeek,
     clientMetricsContent,
     referenceWorkoutsContent,
+    feedbackPatternsContent,
+    ragFeedbackWorkoutsContent,
     hasInjuryHistory,
     suggestedDates,
     useImperial,
@@ -482,6 +486,10 @@ ${personalization ? `Personalization: ${personalization}` : ''}
 ${clientMetricsContent ? `${clientMetricsContent}` : ''}
 ${
   referenceWorkoutsContent ? `${referenceWorkoutsContent}` : ''
+}${
+  feedbackPatternsContent ? `${feedbackPatternsContent}` : ''
+}${
+  ragFeedbackWorkoutsContent ? `${ragFeedbackWorkoutsContent}` : ''
 }${previousWeeksContext}
 
 <periodization_principles type="${programType}">
@@ -1031,7 +1039,7 @@ function generatePlaceholderWeek(weekNumber, sharedData) {
 }
 
 // Save workouts to database
-async function saveWorkoutsToDatabase(programId, workouts, supabase) {
+async function saveWorkoutsToDatabase(programId, workouts, supabase, gymId = null) {
   if (!programId || !workouts || workouts.length === 0) {
     return;
   }
@@ -1040,6 +1048,7 @@ async function saveWorkoutsToDatabase(programId, workouts, supabase) {
     // Prepare workouts for database insertion
     const workoutsToInsert = workouts.map((workout) => ({
       program_id: programId,
+      gym_id: gymId,
       title: workout.title || 'Untitled Workout',
       body: workout.body || workout.description || 'No description available',
       scheduled_date:
@@ -1245,6 +1254,7 @@ async function extractSharedData(requestData, supabase) {
   let clientMetricsContent = '';
   let entityData;
   let clientGender = '';
+  let gymId = null;
   // Determine unit preference - default to Imperial (true) if not specified in request
   const useImperial =
     requestData.useImperial !== undefined ? requestData.useImperial : true;
@@ -1254,10 +1264,10 @@ async function extractSharedData(requestData, supabase) {
     try {
       logWithTimestamp('Fetching client metrics', { programId });
 
-      // Get entity_id from the program
+      // Get entity_id and gym_id from the program
       const { data: programData, error: programError } = await supabase
         .from('programs')
-        .select('entity_id')
+        .select('entity_id, gym_id')
         .eq('id', programId)
         .single();
 
@@ -1265,7 +1275,13 @@ async function extractSharedData(requestData, supabase) {
         logWithTimestamp('Error fetching program entity_id', {
           error: programError,
         });
-      } else if (programData && programData.entity_id) {
+      } else if (programData) {
+        // Capture gym_id from program
+        gymId = programData.gym_id || null;
+        logWithTimestamp('Found gym_id', { gymId });
+      }
+
+      if (programData && programData.entity_id) {
         // Fetch metrics from entities table
         const { data: entityResult, error: entityError } = await supabase
           .from('entities')
@@ -1384,8 +1400,39 @@ Draw inspiration from these reference workouts when designing this program. Use 
     }
   }
 
+  // Fetch feedback context for RAG (pattern aggregation + similar workouts)
+  let feedbackPatternsContent = '';
+  let ragFeedbackWorkoutsContent = '';
+  try {
+    logWithTimestamp('Fetching feedback context for RAG');
+    const feedbackContext = await getFeedbackContextForGeneration(supabase, {
+      gymId,
+      methodology: trainingMethodology,
+      goal,
+      focusArea,
+    });
+
+    feedbackPatternsContent = feedbackContext.feedbackPatternsContent || '';
+    ragFeedbackWorkoutsContent = feedbackContext.ragFeedbackWorkoutsContent || '';
+
+    if (feedbackContext.hasFeedbackContext) {
+      logWithTimestamp('Found feedback context for generation', {
+        hasPatterns: !!feedbackPatternsContent,
+        hasRagWorkouts: !!ragFeedbackWorkoutsContent,
+      });
+    } else {
+      logWithTimestamp('No feedback context available');
+    }
+  } catch (err) {
+    logWithTimestamp('Error fetching feedback context', {
+      error: err.message,
+    });
+    // Continue without feedback context - not critical
+  }
+
   return {
     programId,
+    gymId,
     goal,
     difficulty,
     focusArea,
@@ -1402,6 +1449,8 @@ Draw inspiration from these reference workouts when designing this program. Use 
     suggestedDates,
     clientMetricsContent,
     referenceWorkoutsContent,
+    feedbackPatternsContent,
+    ragFeedbackWorkoutsContent,
     hasInjuryHistory,
     totalWorkouts,
     useImperial,

@@ -20,10 +20,13 @@ import {
   LogOut,
   Building,
   BookOpen,
+  Trophy,
+  Calendar,
+  Dumbbell,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 export default function Navbar() {
-  const { session, user } = useAuth();
+  const { session, user, isAthlete, isCoach, currentGym } = useAuth();
   const supabase = createClientComponentClient();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userProfile, setUserProfile] = useState(null);
@@ -110,7 +113,7 @@ export default function Navbar() {
       <div className="navbar max-w-7xl mx-auto px-4">
         <div className="navbar-start">
           <Link
-            href={session ? '/dashboard' : '/'}
+            href={session ? (isAthlete ? '/athlete' : '/dashboard') : '/'}
             className="flex-shrink-0 flex items-center"
           >
             <Image
@@ -179,13 +182,29 @@ export default function Navbar() {
                 </li>
               </>
             )}
-            {session && (
+            {session && isCoach && (
               <>
                 <li>
                   <NavLink href="/dashboard">Dashboard</NavLink>
                 </li>
                 <li>
+                  <NavLink href="/dashboard/gym">Gym</NavLink>
+                </li>
+                <li>
                   <NavLink href="/tutorials">Tutorials</NavLink>
+                </li>
+              </>
+            )}
+            {session && isAthlete && (
+              <>
+                <li>
+                  <NavLink href="/athlete">Today</NavLink>
+                </li>
+                <li>
+                  <NavLink href="/athlete/leaderboard">Leaderboard</NavLink>
+                </li>
+                <li>
+                  <NavLink href="/athlete/history">History</NavLink>
                 </li>
               </>
             )}
@@ -295,61 +314,131 @@ export default function Navbar() {
                   <div className="pb-4 mb-4 border-b border-gray-100">
                     <div className="flex items-center justify-between">
                       <h3 className="font-bold text-lg text-gray-900">Account</h3>
-                      {isPremiumUser && (
-                        <span className="badge badge-primary badge-sm">Premium</span>
-                      )}
+                      <div className="flex gap-2">
+                        {isAthlete && (
+                          <span className="badge badge-secondary badge-sm">Athlete</span>
+                        )}
+                        {isCoach && isPremiumUser && (
+                          <span className="badge badge-primary badge-sm">Premium</span>
+                        )}
+                      </div>
                     </div>
                     {user?.email && (
                       <p className="text-sm text-gray-600 mt-1 truncate">{user.email}</p>
                     )}
+                    {currentGym && (
+                      <p className="text-xs text-primary mt-1">{currentGym.name}</p>
+                    )}
                   </div>
 
-                  {/* Navigation Items */}
-                  <div className="space-y-2">
-                    <Link 
-                      href="/dashboard"
-                      className="flex items-center p-3 rounded-xl hover:bg-gray-50 transition-all duration-200"
-                    >
-                      <LayoutDashboard className="w-5 h-5 mr-3 text-gray-600" />
-                      <div>
-                        <div className="font-medium text-gray-900">Dashboard</div>
-                        <div className="text-sm text-gray-500">Overview of programs</div>
-                      </div>
-                    </Link>
+                  {/* Coach Navigation Items */}
+                  {isCoach && (
+                    <div className="space-y-2">
+                      <Link
+                        href="/dashboard"
+                        className="flex items-center p-3 rounded-xl hover:bg-gray-50 transition-all duration-200"
+                      >
+                        <LayoutDashboard className="w-5 h-5 mr-3 text-gray-600" />
+                        <div>
+                          <div className="font-medium text-gray-900">Dashboard</div>
+                          <div className="text-sm text-gray-500">Overview of programs</div>
+                        </div>
+                      </Link>
 
-                    <Link 
-                      href="/dashboard/manage/entities"
-                      className="flex items-center p-3 rounded-xl hover:bg-gray-50 transition-all duration-200"
-                    >
-                      <Users className="w-5 h-5 mr-3 text-gray-600" />
-                      <div>
-                        <div className="font-medium text-gray-900">Manage Clients</div>
-                        <div className="text-sm text-gray-500">Add and organize clients</div>
-                      </div>
-                    </Link>
+                      <Link
+                        href="/dashboard/gym"
+                        className="flex items-center p-3 rounded-xl hover:bg-gray-50 transition-all duration-200"
+                      >
+                        <Building className="w-5 h-5 mr-3 text-gray-600" />
+                        <div>
+                          <div className="font-medium text-gray-900">Gym Management</div>
+                          <div className="text-sm text-gray-500">Athletes & invites</div>
+                        </div>
+                      </Link>
 
-                    <Link 
-                      href="/tutorials"
-                      className="flex items-center p-3 rounded-xl hover:bg-gray-50 transition-all duration-200"
-                    >
-                      <BookOpen className="w-5 h-5 mr-3 text-gray-600" />
-                      <div>
-                        <div className="font-medium text-gray-900">Tutorials</div>
-                        <div className="text-sm text-gray-500">Learn how to use features</div>
-                      </div>
-                    </Link>
+                      <Link
+                        href="/dashboard/manage/entities"
+                        className="flex items-center p-3 rounded-xl hover:bg-gray-50 transition-all duration-200"
+                      >
+                        <Users className="w-5 h-5 mr-3 text-gray-600" />
+                        <div>
+                          <div className="font-medium text-gray-900">Manage Clients</div>
+                          <div className="text-sm text-gray-500">Add and organize clients</div>
+                        </div>
+                      </Link>
 
-                    <Link 
-                      href="/profile"
-                      className="flex items-center p-3 rounded-xl hover:bg-gray-50 transition-all duration-200"
-                    >
-                      <User className="w-5 h-5 mr-3 text-gray-600" />
-                      <div>
-                        <div className="font-medium text-gray-900">Profile</div>
-                        <div className="text-sm text-gray-500">Account settings</div>
-                      </div>
-                    </Link>
-                  </div>
+                      <Link
+                        href="/tutorials"
+                        className="flex items-center p-3 rounded-xl hover:bg-gray-50 transition-all duration-200"
+                      >
+                        <BookOpen className="w-5 h-5 mr-3 text-gray-600" />
+                        <div>
+                          <div className="font-medium text-gray-900">Tutorials</div>
+                          <div className="text-sm text-gray-500">Learn how to use features</div>
+                        </div>
+                      </Link>
+
+                      <Link
+                        href="/profile"
+                        className="flex items-center p-3 rounded-xl hover:bg-gray-50 transition-all duration-200"
+                      >
+                        <User className="w-5 h-5 mr-3 text-gray-600" />
+                        <div>
+                          <div className="font-medium text-gray-900">Profile</div>
+                          <div className="text-sm text-gray-500">Account settings</div>
+                        </div>
+                      </Link>
+                    </div>
+                  )}
+
+                  {/* Athlete Navigation Items */}
+                  {isAthlete && (
+                    <div className="space-y-2">
+                      <Link
+                        href="/athlete"
+                        className="flex items-center p-3 rounded-xl hover:bg-gray-50 transition-all duration-200"
+                      >
+                        <Calendar className="w-5 h-5 mr-3 text-gray-600" />
+                        <div>
+                          <div className="font-medium text-gray-900">Today</div>
+                          <div className="text-sm text-gray-500">Today's workouts</div>
+                        </div>
+                      </Link>
+
+                      <Link
+                        href="/athlete/leaderboard"
+                        className="flex items-center p-3 rounded-xl hover:bg-gray-50 transition-all duration-200"
+                      >
+                        <Trophy className="w-5 h-5 mr-3 text-gray-600" />
+                        <div>
+                          <div className="font-medium text-gray-900">Leaderboard</div>
+                          <div className="text-sm text-gray-500">Gym rankings</div>
+                        </div>
+                      </Link>
+
+                      <Link
+                        href="/athlete/history"
+                        className="flex items-center p-3 rounded-xl hover:bg-gray-50 transition-all duration-200"
+                      >
+                        <Clock className="w-5 h-5 mr-3 text-gray-600" />
+                        <div>
+                          <div className="font-medium text-gray-900">History</div>
+                          <div className="text-sm text-gray-500">Past workouts & PRs</div>
+                        </div>
+                      </Link>
+
+                      <Link
+                        href="/athlete/profile"
+                        className="flex items-center p-3 rounded-xl hover:bg-gray-50 transition-all duration-200"
+                      >
+                        <User className="w-5 h-5 mr-3 text-gray-600" />
+                        <div>
+                          <div className="font-medium text-gray-900">Profile</div>
+                          <div className="text-sm text-gray-500">Your stats & PRs</div>
+                        </div>
+                      </Link>
+                    </div>
+                  )}
 
                   {/* Logout Button */}
                   <div className="pt-4 mt-4 border-t border-gray-100">

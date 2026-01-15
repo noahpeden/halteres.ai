@@ -30,6 +30,7 @@ export async function POST(req) {
       reference_input,
       program_type,
       workout_duration,
+      gym_id: providedGymId,
     } = body;
 
     if (
@@ -90,12 +91,28 @@ export async function POST(req) {
       });
     }
 
+    // Get the coach's gym if gym_id not provided
+    let gymId = providedGymId;
+    if (!gymId) {
+      const { data: gymMembership } = await supabase
+        .from('gym_memberships')
+        .select('gym_id')
+        .eq('user_id', userId)
+        .in('role', ['owner', 'coach'])
+        .eq('status', 'active')
+        .limit(1)
+        .single();
+
+      gymId = gymMembership?.gym_id || null;
+    }
+
     // Create program using the provided entity_id and all wizard data
     const { data, error } = await supabase
       .from('programs')
       .insert({
         name,
         entity_id: entity_id,
+        gym_id: gymId,
         duration_weeks: duration_weeks,
         description: description || null,
         training_methodology: training_methodology || null,

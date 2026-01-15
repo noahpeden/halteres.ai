@@ -28,10 +28,9 @@ export async function POST(request) {
         *,
         workout:program_workouts (
           id,
-          name,
+          title,
           workout_type,
-          description,
-          exercises
+          body
         )
       `)
       .eq('id', workoutResultId)
@@ -57,7 +56,7 @@ export async function POST(request) {
       .from('workout_results')
       .select(`
         *,
-        workout:program_workouts (name, workout_type)
+        workout:program_workouts (title, workout_type)
       `)
       .eq('user_id', userId)
       .is('deleted_at', null)
@@ -75,9 +74,9 @@ export async function POST(request) {
     // Build the prompt for AI analysis
     const prompt = buildFeedbackPrompt(result, profile, recentResults, prs);
 
-    // Call Anthropic API
+    // Call Anthropic API - using Haiku for fast, cost-effective feedback
     const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-haiku-4-5-20250514',
       max_tokens: 1024,
       messages: [
         {
@@ -103,7 +102,7 @@ export async function POST(request) {
           areas_for_improvement: feedback.areasForImprovement,
           recovery_suggestions: feedback.recoverySuggestions,
           next_workout_recommendations: feedback.nextWorkoutRecommendations,
-          model_used: 'claude-sonnet-4-20250514',
+          model_used: 'claude-haiku-4-5-20250514',
         },
       ])
       .select()
@@ -127,9 +126,9 @@ export async function POST(request) {
 }
 
 function buildFeedbackPrompt(result, profile, recentResults, prs) {
-  const workoutName = result.workout?.name || 'Unknown Workout';
+  const workoutName = result.workout?.title || 'Unknown Workout';
   const workoutType = result.workout?.workout_type || 'general';
-  const workoutDescription = result.workout?.description || '';
+  const workoutDescription = result.workout?.body || '';
 
   // Format the result
   let resultDisplay = '';
@@ -166,7 +165,7 @@ function buildFeedbackPrompt(result, profile, recentResults, prs) {
   let historyContext = '';
   if (recentResults && recentResults.length > 1) {
     const recentSummary = recentResults.slice(0, 5).map((r) => {
-      const name = r.workout?.name || 'Workout';
+      const name = r.workout?.title || 'Workout';
       return `- ${name}: ${r.scale}`;
     });
     historyContext = `\nRecent Workouts:\n${recentSummary.join('\n')}`;
