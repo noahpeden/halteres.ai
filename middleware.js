@@ -96,20 +96,29 @@ export async function middleware(req) {
     return NextResponse.redirect(redirectUrl);
   }
 
+  // Define coach-only routes (athletes should not access these)
+  const coachOnlyRoutes = ['/dashboard', '/program', '/write-program'];
+  const isCoachOnlyRoute = coachOnlyRoutes.some((route) => pathname.startsWith(route)) && !isPublicRoute;
+
+  // Define athlete routes that require setup to be complete
+  const athleteRoutes = ['/athlete'];
+  const isAthleteRoute = athleteRoutes.some((route) => pathname.startsWith(route));
+  const isAthleteSetupRoute = pathname === '/athlete'; // Main athlete page shows setup/onboarding
+
   // User is logged in, check subscription status for protected/generation routes
-  if (user && (isProtectedRoute || isGenerationRoute)) {
+  if (user && (isProtectedRoute || isGenerationRoute || isAthleteRoute)) {
     try {
       const { data: profile } = await supabase
         .from('profiles')
         .select(
-          'subscription_status, trial_end_date, generations_remaining, generations_today, last_generation_date'
+          'subscription_status, trial_end_date, generations_remaining, generations_today, last_generation_date, role, onboarding_completed'
         )
         .eq('id', user.id)
         .single();
 
       if (!profile) {
-        // Profile not found
-        const redirectUrl = new URL('/pricing', req.url);
+        // Profile not found - for athletes, redirect to login; for coaches, to pricing
+        const redirectUrl = new URL('/login', req.url);
         redirectUrl.searchParams.set('error', 'profile_not_found');
         return NextResponse.redirect(redirectUrl);
       }
@@ -120,7 +129,42 @@ export async function middleware(req) {
         generations_remaining,
         generations_today,
         last_generation_date,
+        role,
+        onboarding_completed,
       } = profile;
+
+      // Role-based access control: Athletes cannot access coach-only routes
+      const isAthlete = role === 'athlete';
+      if (isAthlete && isCoachOnlyRoute) {
+        // Redirect athletes to their dashboard
+        const redirectUrl = new URL('/athlete', req.url);
+        return NextResponse.redirect(redirectUrl);
+      }
+
+      // Athlete setup check: if athlete needs setup, redirect to main athlete page
+      if (isAthlete && isAthleteRoute && !isAthleteSetupRoute) {
+        // Check if athlete has active gym membership
+        const { data: memberships } = await supabase
+          .from('gym_memberships')
+          .select('id, status')
+          .eq('user_id', user.id)
+          .eq('status', 'active')
+          .limit(1);
+
+        const hasActiveGym = memberships && memberships.length > 0;
+        const athleteNeedsSetup = !hasActiveGym || !onboarding_completed;
+
+        if (athleteNeedsSetup) {
+          // Redirect to main athlete page for setup/onboarding
+          const redirectUrl = new URL('/athlete', req.url);
+          return NextResponse.redirect(redirectUrl);
+        }
+      }
+
+      // Athletes don't need subscription checks - allow access to athlete routes
+      if (isAthlete && isAthleteRoute) {
+        return res;
+      }
 
       const isActive = subscription_status === 'active';
       const isTrialing = subscription_status === 'trialing';
@@ -191,5 +235,6 @@ export const config = {
     '/write-program/:path*',
     '/api/generate-program/:path*',
     '/api/generate-workouts/:path*',
+    '/athlete/:path*',
   ],
 };

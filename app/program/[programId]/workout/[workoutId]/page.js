@@ -13,6 +13,7 @@ import {
   X,
   Share2,
 } from 'lucide-react';
+import TemplateFeedbackButton from '@/components/feedback/TemplateFeedbackButton';
 
 export default function WorkoutDetailsPage(props) {
   const params = use(props.params);
@@ -360,6 +361,13 @@ export default function WorkoutDetailsPage(props) {
                       <Calendar className="w-4 h-4" />
                       {formatDate(workout.scheduled_date)}
                     </div>
+                    {/* Feedback Button */}
+                    <TemplateFeedbackButton
+                      workoutId={workoutId}
+                      gymId={formData?.gym_id}
+                      showStats={true}
+                      size="md"
+                    />
                     {workout.completed_at && (
                       <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-100 text-gray-700 rounded-full text-sm font-medium">
                         <CheckCircle className="w-4 h-4" />

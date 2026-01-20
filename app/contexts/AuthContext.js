@@ -17,6 +17,9 @@ export function AuthProvider({ children, initialSession }) {
   const [user, setUser] = useState(initialSession?.user || null);
   const [profile, setProfile] = useState(null);
   const [loadingProfile, setLoadingProfile] = useState(true);
+  const [gymMemberships, setGymMemberships] = useState([]);
+  const [currentGym, setCurrentGym] = useState(null);
+  const [loadingGym, setLoadingGym] = useState(true);
 
   const fetchProfile = useCallback(async (userId) => {
     if (!userId) {
@@ -29,7 +32,10 @@ export function AuthProvider({ children, initialSession }) {
       const { data, error } = await supabase
         .from('profiles')
         .select(
-          'subscription_status, trial_end_date, generations_remaining, last_generation_date'
+          `subscription_status, trial_end_date, generations_remaining, last_generation_date,
+           role, display_name, profile_photo_url, notification_preferences,
+           bench_1rm, squat_1rm, deadlift_1rm, weight_kg, height_cm, mile_time,
+           gender, recovery_score, injury_history, onboarding_completed`
         )
         .eq('id', userId)
         .single();
@@ -60,12 +66,64 @@ export function AuthProvider({ children, initialSession }) {
     }
   }, []);
 
+  // Fetch gym memberships for the user
+  const fetchGymMemberships = useCallback(async (userId) => {
+    if (!userId) {
+      setGymMemberships([]);
+      setCurrentGym(null);
+      setLoadingGym(false);
+      return;
+    }
+    setLoadingGym(true);
+    try {
+      const { data, error } = await supabase
+        .from('gym_memberships')
+        .select(`
+          id, role, status, joined_at, nickname, class_id,
+          gym:gyms (
+            id, name, description, logo_url, invite_code, owner_id
+          )
+        `)
+        .eq('user_id', userId)
+        .eq('status', 'active');
+
+      if (error) {
+        console.error('Error fetching gym memberships:', error);
+        setGymMemberships([]);
+      } else {
+        setGymMemberships(data || []);
+        // Set current gym to first active membership if not already set
+        if (data && data.length > 0 && !currentGym) {
+          setCurrentGym(data[0].gym);
+        }
+      }
+    } catch (error) {
+      console.error('Unexpected error fetching gym memberships:', error);
+      setGymMemberships([]);
+    } finally {
+      setLoadingGym(false);
+    }
+  }, [currentGym]);
+
+  // Switch to a different gym
+  const switchGym = useCallback((gym) => {
+    setCurrentGym(gym);
+    // Store preference in localStorage
+    if (typeof window !== 'undefined' && gym) {
+      localStorage.setItem('currentGymId', gym.id);
+    }
+  }, []);
+
   useEffect(() => {
     if (user?.id) {
       fetchProfile(user.id);
+      fetchGymMemberships(user.id);
     } else {
       setProfile(null);
       setLoadingProfile(false);
+      setGymMemberships([]);
+      setCurrentGym(null);
+      setLoadingGym(false);
     }
 
     const { data: authListener } = supabase.auth.onAuthStateChange(
@@ -76,9 +134,13 @@ export function AuthProvider({ children, initialSession }) {
 
         if (currentUser?.id) {
           fetchProfile(currentUser.id);
+          fetchGymMemberships(currentUser.id);
         } else {
           setProfile(null);
           setLoadingProfile(false);
+          setGymMemberships([]);
+          setCurrentGym(null);
+          setLoadingGym(false);
         }
       }
     );
@@ -86,7 +148,17 @@ export function AuthProvider({ children, initialSession }) {
     return () => {
       authListener?.subscription?.unsubscribe();
     };
-  }, [user?.id, fetchProfile]);
+  }, [user?.id, fetchProfile, fetchGymMemberships]);
+
+  // Derived values
+  const isCoach = profile?.role === 'coach' || !profile?.role; // Default to coach for backward compatibility
+  const isAthlete = profile?.role === 'athlete';
+  const isGymOwner = gymMemberships.some(m => m.role === 'owner');
+
+  // Check if athlete needs to complete setup (no gym membership or onboarding not complete)
+  const hasActiveGymMembership = gymMemberships.length > 0 && gymMemberships.some(m => m.status === 'active');
+  const athleteNeedsSetup = isAthlete && (!hasActiveGymMembership || !profile?.onboarding_completed);
+  const onboardingCompleted = profile?.onboarding_completed ?? false;
 
   const contextValue = useMemo(
     () => ({
@@ -101,8 +173,38 @@ export function AuthProvider({ children, initialSession }) {
       lastGenerationDate: profile?.last_generation_date,
       refetchProfile: () =>
         user?.id ? fetchProfile(user.id) : Promise.resolve(),
+      // Role-related
+      role: profile?.role || 'coach',
+      isCoach,
+      isAthlete,
+      // Athlete setup status
+      athleteNeedsSetup,
+      onboardingCompleted,
+      hasActiveGymMembership,
+      // Gym-related
+      gymMemberships,
+      currentGym,
+      switchGym,
+      isGymOwner,
+      loadingGym,
+      refetchGymMemberships: () =>
+        user?.id ? fetchGymMemberships(user.id) : Promise.resolve(),
+      // Athlete metrics from profile
+      athleteMetrics: isAthlete ? {
+        bench_1rm: profile?.bench_1rm,
+        squat_1rm: profile?.squat_1rm,
+        deadlift_1rm: profile?.deadlift_1rm,
+        weight_kg: profile?.weight_kg,
+        height_cm: profile?.height_cm,
+        mile_time: profile?.mile_time,
+        gender: profile?.gender,
+        recovery_score: profile?.recovery_score,
+        injury_history: profile?.injury_history,
+      } : null,
     }),
-    [session, user, profile, loadingProfile, fetchProfile]
+    [session, user, profile, loadingProfile, fetchProfile, isCoach, isAthlete,
+     athleteNeedsSetup, onboardingCompleted, hasActiveGymMembership,
+     gymMemberships, currentGym, switchGym, isGymOwner, loadingGym, fetchGymMemberships]
   );
 
   return (

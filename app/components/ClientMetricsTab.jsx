@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, User, Dumbbell, Activity, Heart, Timer, Ruler, Scale, Calendar, AlertCircle, Check, X, Edit2 } from 'lucide-react';
 
 // Conversion helpers
 const kgToLbs = (kg) => (kg ? kg * 2.20462 : 0);
@@ -353,8 +353,9 @@ export default function ClientMetricsTab({
 
   if (isLoading && !isMounted) {
     return (
-      <div className="bg-white rounded-lg shadow-md p-4 h-full flex justify-center items-center">
-        <span className="loading loading-spinner loading-md"></span>
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 h-full flex flex-col justify-center items-center">
+        <span className="loading loading-spinner loading-md text-blue-600"></span>
+        <p className="text-slate-500 text-sm mt-2">Loading metrics...</p>
       </div>
     );
   }
@@ -364,56 +365,64 @@ export default function ClientMetricsTab({
 
   // Helper for formatting display values based on selected unit system
   const formatWeight = (kg) => {
-    if (!kg) return 'N/A';
+    if (!kg) return '—';
     if (useImperial) {
-      return `${Math.round(kgToLbs(kg))}lbs`;
+      return `${Math.round(kgToLbs(kg))} lbs`;
     }
-    return `${Math.round(kg)}kg`;
+    return `${Math.round(kg)} kg`;
   };
 
   const formatHeight = (cm) => {
-    if (!cm) return 'N/A';
+    if (!cm) return '—';
     if (useImperial) {
       const { feet, inches } = cmToFeet(cm);
       return `${feet}'${inches}"`;
     }
-    return `${cm}cm`;
+    return `${cm} cm`;
   };
 
   // Determine grid classes based on viewMode
   const gridClasses =
     viewMode === 'fullPage'
-      ? 'grid grid-cols-1 md:grid-cols-3 gap-6'
-      : 'grid grid-cols-1 gap-6';
+      ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5'
+      : 'space-y-4';
 
   return (
     <div
-      className={`bg-white rounded-lg shadow-md p-4 w-full ${
+      className={`bg-white rounded-2xl border border-slate-200 shadow-sm w-full ${
         viewMode === 'sidebar' ? 'h-full flex flex-col min-h-0' : ''
       }`}
     >
-      <div className="flex justify-between items-center mb-4 flex-shrink-0">
-        <div className="flex items-center gap-2 flex-1 min-w-0">
-          <h2
-            className={`text-xl font-semibold truncate ${
-              isCollapsed && viewMode === 'sidebar' ? 'invisible' : ''
-            }`}
-          >
-            {clientData?.metrics?.name && viewMode === 'fullPage'
-              ? `${clientData.metrics.name} - `
-              : ''}
-            Client Metrics
-          </h2>
+      {/* Header */}
+      <div className="flex justify-between items-center p-4 border-b border-slate-100 flex-shrink-0">
+        <div className="flex items-center gap-3 flex-1 min-w-0">
+          <div className={`w-9 h-9 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-sm ${
+            isCollapsed && viewMode === 'sidebar' ? 'mx-auto' : ''
+          }`}>
+            <User className="w-4 h-4 text-white" />
+          </div>
+          {!(isCollapsed && viewMode === 'sidebar') && (
+            <div className="min-w-0">
+              <h2 className="text-base font-semibold text-slate-800 truncate">
+                {clientData?.metrics?.name && viewMode === 'fullPage'
+                  ? clientData.metrics.name
+                  : 'Client Metrics'}
+              </h2>
+              {viewMode === 'sidebar' && (
+                <p className="text-xs text-slate-500">Track progress & stats</p>
+              )}
+            </div>
+          )}
         </div>
 
         {viewMode === 'sidebar' && (
           <button
             onClick={onToggleCollapse}
-            className="btn btn-ghost btn-sm btn-circle hidden lg:flex"
+            className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors hidden lg:flex"
             aria-label="Collapse sidebar"
           >
             <ChevronRight
-              className={`h-5 w-5 transition-transform ${
+              className={`h-4 w-4 transition-transform ${
                 !isCollapsed ? 'rotate-180' : ''
               }`}
             />
@@ -421,38 +430,46 @@ export default function ClientMetricsTab({
         )}
 
         {!(isCollapsed && viewMode === 'sidebar') && (
-          <div className="flex space-x-2 items-center flex-shrink-0">
-            <div className="w-full">
-              <label className="label cursor-pointer">
-                <span className="text-sm mr-2">
-                  {useImperial ? 'Imperial' : 'Metric'}
-                </span>
-                <input
-                  type="checkbox"
-                  className="toggle toggle-primary toggle-sm"
-                  checked={useImperial}
-                  onChange={toggleUnitSystem}
-                />
-              </label>
-            </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {/* Unit Toggle */}
+            <button
+              onClick={toggleUnitSystem}
+              className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                useImperial
+                  ? 'bg-blue-100 text-blue-700'
+                  : 'bg-slate-100 text-slate-600'
+              }`}
+            >
+              {useImperial ? 'Imperial' : 'Metric'}
+            </button>
 
+            {/* Edit/Save Buttons */}
             {isEditing || showEditByDefault ? (
-              <div className="flex space-x-2">
-                <button onClick={handleSave} className="btn btn-sm btn-primary">
-                  Save
+              <div className="flex gap-1.5">
+                <button
+                  onClick={handleSave}
+                  className="p-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 rounded-lg transition-colors"
+                  title="Save changes"
+                >
+                  <Check className="w-4 h-4" />
                 </button>
                 {!isNewEntity && (
                   <button
                     onClick={handleCancel}
-                    className="btn btn-sm btn-outline"
+                    className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg transition-colors"
+                    title="Cancel"
                   >
-                    Cancel
+                    <X className="w-4 h-4" />
                   </button>
                 )}
               </div>
             ) : (
-              <button onClick={handleEdit} className="btn btn-sm btn-outline">
-                Edit
+              <button
+                onClick={handleEdit}
+                className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                title="Edit metrics"
+              >
+                <Edit2 className="w-4 h-4" />
               </button>
             )}
           </div>
@@ -461,46 +478,37 @@ export default function ClientMetricsTab({
 
       {!(isCollapsed && viewMode === 'sidebar') && (
         <div
-          className={`${
+          className={`p-4 ${
             viewMode === 'sidebar' ? 'overflow-y-auto flex-grow min-h-0' : ''
           }`}
         >
-          {showEditByDefault ? (
-            <div className="alert alert-info mb-4">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                className="stroke-current shrink-0 w-6 h-6"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                ></path>
-              </svg>
-              <span>
+          {showEditByDefault && (
+            <div className="flex items-center gap-3 p-3 bg-blue-50 border border-blue-100 rounded-xl mb-4">
+              <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0" />
+              <p className="text-sm text-blue-700">
                 No client metrics found. Please add information below.
-              </span>
+              </p>
             </div>
-          ) : null}
+          )}
 
           <div className={gridClasses}>
             {viewMode === 'fullPage' && (
-              <div>
-                <h3 className="text-lg font-medium mb-2">Program Info</h3>
+              <div className="bg-slate-50 rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <Calendar className="w-4 h-4 text-slate-500" />
+                  <h3 className="text-sm font-semibold text-slate-700">Program Info</h3>
+                </div>
                 {isEditing || showEditByDefault ? (
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     <input
                       type="text"
-                      className="input input-bordered w-full"
+                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                       value={editedData.name || ''}
                       onChange={(e) => handleChange('name', e.target.value)}
                       placeholder="Program Name"
                     />
                     <textarea
-                      className="textarea textarea-bordered w-full"
+                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm h-20 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                       value={editedData.description || ''}
                       onChange={(e) =>
                         handleChange('description', e.target.value)
@@ -510,10 +518,10 @@ export default function ClientMetricsTab({
                   </div>
                 ) : (
                   <div>
-                    <p className="font-medium">
+                    <p className="font-medium text-slate-800">
                       {clientData?.program?.name || 'Unnamed Program'}
                     </p>
-                    <p className="text-gray-600">
+                    <p className="text-sm text-slate-500 mt-1">
                       {clientData?.program?.description || 'No description'}
                     </p>
                   </div>
@@ -521,19 +529,21 @@ export default function ClientMetricsTab({
               </div>
             )}
 
-            <div>
-              <h3 className="text-lg font-medium mb-2">1RM Lifts</h3>
+            {/* 1RM Lifts Section */}
+            <div className="bg-slate-50 rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Dumbbell className="w-4 h-4 text-blue-600" />
+                <h3 className="text-sm font-semibold text-slate-700">1RM Lifts</h3>
+              </div>
               {isEditing || showEditByDefault ? (
-                <div className="space-y-2">
-                  <div className="w-full">
-                    <label className="label">
-                      <span className="text-sm">
-                        Bench Press ({useImperial ? 'lbs' : 'kg'})
-                      </span>
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                      Bench Press ({useImperial ? 'lbs' : 'kg'})
                     </label>
                     <input
                       type="number"
-                      className="input input-bordered w-full"
+                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                       value={editedData.metrics.bench_1rm || ''}
                       onChange={(e) =>
                         handleMetricsChange(
@@ -543,15 +553,13 @@ export default function ClientMetricsTab({
                       }
                     />
                   </div>
-                  <div className="w-full">
-                    <label className="label">
-                      <span className="text-sm">
-                        Squat ({useImperial ? 'lbs' : 'kg'})
-                      </span>
+                  <div>
+                    <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                      Squat ({useImperial ? 'lbs' : 'kg'})
                     </label>
                     <input
                       type="number"
-                      className="input input-bordered w-full"
+                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                       value={editedData.metrics.squat_1rm || ''}
                       onChange={(e) =>
                         handleMetricsChange(
@@ -561,15 +569,13 @@ export default function ClientMetricsTab({
                       }
                     />
                   </div>
-                  <div className="w-full">
-                    <label className="label">
-                      <span className="text-sm">
-                        Deadlift ({useImperial ? 'lbs' : 'kg'})
-                      </span>
+                  <div>
+                    <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                      Deadlift ({useImperial ? 'lbs' : 'kg'})
                     </label>
                     <input
                       type="number"
-                      className="input input-bordered w-full"
+                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                       value={editedData.metrics.deadlift_1rm || ''}
                       onChange={(e) =>
                         handleMetricsChange(
@@ -581,45 +587,47 @@ export default function ClientMetricsTab({
                   </div>
                 </div>
               ) : (
-                <div className="stats stats-vertical shadow w-full">
-                  <div className="stat">
-                    <div className="stat-title">Bench Press</div>
-                    <div className="stat-value text-lg">
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center py-2 border-b border-slate-200">
+                    <span className="text-sm text-slate-600">Bench Press</span>
+                    <span className="text-sm font-semibold text-slate-800">
                       {clientData?.metrics?.bench_1rm
                         ? formatWeight(clientData.metrics.bench_1rm)
-                        : 'N/A'}
-                    </div>
+                        : '—'}
+                    </span>
                   </div>
-                  <div className="stat">
-                    <div className="stat-title">Squat</div>
-                    <div className="stat-value text-lg">
+                  <div className="flex justify-between items-center py-2 border-b border-slate-200">
+                    <span className="text-sm text-slate-600">Squat</span>
+                    <span className="text-sm font-semibold text-slate-800">
                       {clientData?.metrics?.squat_1rm
                         ? formatWeight(clientData.metrics.squat_1rm)
-                        : 'N/A'}
-                    </div>
+                        : '—'}
+                    </span>
                   </div>
-                  <div className="stat">
-                    <div className="stat-title">Deadlift</div>
-                    <div className="stat-value text-lg">
+                  <div className="flex justify-between items-center py-2">
+                    <span className="text-sm text-slate-600">Deadlift</span>
+                    <span className="text-sm font-semibold text-slate-800">
                       {clientData?.metrics?.deadlift_1rm
                         ? formatWeight(clientData.metrics.deadlift_1rm)
-                        : 'N/A'}
-                    </div>
+                        : '—'}
+                    </span>
                   </div>
                 </div>
               )}
             </div>
 
-            <div>
-              <h3 className="text-lg font-medium mb-2">Physical Stats</h3>
+            {/* Physical Stats Section */}
+            <div className="bg-slate-50 rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Activity className="w-4 h-4 text-emerald-600" />
+                <h3 className="text-sm font-semibold text-slate-700">Physical Stats</h3>
+              </div>
               {isEditing || showEditByDefault ? (
-                <div className="space-y-2">
-                  <div className="w-full">
-                    <label className="label">
-                      <span className="text-sm">Gender</span>
-                    </label>
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-xs font-medium text-slate-500 mb-1.5 block">Gender</label>
                     <select
-                      className="select select-bordered w-full"
+                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                       value={editedData.metrics.gender || ''}
                       onChange={(e) =>
                         handleMetricsChange('gender', e.target.value)
@@ -631,15 +639,13 @@ export default function ClientMetricsTab({
                       <option value="Other">Other</option>
                     </select>
                   </div>
-                  <div className="w-full">
-                    <label className="label">
-                      <span className="text-sm">Age</span>
-                    </label>
+                  <div>
+                    <label className="text-xs font-medium text-slate-500 mb-1.5 block">Age</label>
                     <input
                       type="number"
                       min="1"
                       max="120"
-                      className="input input-bordered w-full"
+                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                       value={editedData.metrics.age || ''}
                       onChange={(e) =>
                         handleMetricsChange(
@@ -650,20 +656,18 @@ export default function ClientMetricsTab({
                       placeholder="Age in years"
                     />
                   </div>
-                  <div className="w-full">
-                    <label className="label">
-                      <span className="text-sm">
-                        Height {useImperial ? '(ft-in)' : '(cm)'}
-                      </span>
+                  <div>
+                    <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                      Height {useImperial ? '(ft-in)' : '(cm)'}
                     </label>
                     {useImperial ? (
-                      <div className="flex space-x-2">
+                      <div className="flex gap-2">
                         <div className="relative flex-1">
                           <input
                             type="number"
                             min="0"
                             max="8"
-                            className="input input-bordered w-full pr-8"
+                            className="w-full px-3 py-2 pr-10 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                             value={heightFeet}
                             onChange={(e) => {
                               const newFeet = parseInt(e.target.value) || 0;
@@ -676,7 +680,7 @@ export default function ClientMetricsTab({
                             }}
                             placeholder="Feet"
                           />
-                          <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500">
+                          <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-xs text-slate-400">
                             ft
                           </span>
                         </div>
@@ -685,7 +689,7 @@ export default function ClientMetricsTab({
                             type="number"
                             min="0"
                             max="11"
-                            className="input input-bordered w-full pr-8"
+                            className="w-full px-3 py-2 pr-10 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                             value={heightInches}
                             onChange={(e) => {
                               const newInches = parseInt(e.target.value) || 0;
@@ -698,7 +702,7 @@ export default function ClientMetricsTab({
                             }}
                             placeholder="Inches"
                           />
-                          <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500">
+                          <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-xs text-slate-400">
                             in
                           </span>
                         </div>
@@ -706,7 +710,7 @@ export default function ClientMetricsTab({
                     ) : (
                       <input
                         type="number"
-                        className="input input-bordered w-full"
+                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                         value={editedData.metrics.height_cm || ''}
                         onChange={(e) =>
                           handleMetricsChange(
@@ -717,16 +721,14 @@ export default function ClientMetricsTab({
                       />
                     )}
                   </div>
-                  <div className="w-full">
-                    <label className="label">
-                      <span className="text-sm">
-                        Weight ({useImperial ? 'lbs' : 'kg'})
-                      </span>
+                  <div>
+                    <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                      Weight ({useImperial ? 'lbs' : 'kg'})
                     </label>
                     <input
                       type="number"
                       step="0.1"
-                      className="input input-bordered w-full"
+                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                       value={editedData.metrics.weight_kg || ''}
                       onChange={(e) =>
                         handleMetricsChange(
@@ -736,13 +738,11 @@ export default function ClientMetricsTab({
                       }
                     />
                   </div>
-                  <div className="w-full">
-                    <label className="label">
-                      <span className="text-sm">Mile Time (min:sec)</span>
-                    </label>
+                  <div>
+                    <label className="text-xs font-medium text-slate-500 mb-1.5 block">Mile Time (min:sec)</label>
                     <input
                       type="text"
-                      className="input input-bordered w-full"
+                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                       value={editedData.metrics.mile_time || ''}
                       onChange={(e) =>
                         handleMetricsChange('mile_time', e.target.value)
@@ -752,59 +752,61 @@ export default function ClientMetricsTab({
                   </div>
                 </div>
               ) : (
-                <div className="stats stats-vertical shadow w-full">
-                  <div className="stat">
-                    <div className="stat-title">Gender</div>
-                    <div className="stat-value text-lg">
-                      {clientData?.metrics?.gender || 'N/A'}
-                    </div>
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center py-2 border-b border-slate-200">
+                    <span className="text-sm text-slate-600">Gender</span>
+                    <span className="text-sm font-semibold text-slate-800">
+                      {clientData?.metrics?.gender || '—'}
+                    </span>
                   </div>
-                  <div className="stat">
-                    <div className="stat-title">Age</div>
-                    <div className="stat-value text-lg">
-                      {clientData?.metrics?.age || 'N/A'}
-                    </div>
+                  <div className="flex justify-between items-center py-2 border-b border-slate-200">
+                    <span className="text-sm text-slate-600">Age</span>
+                    <span className="text-sm font-semibold text-slate-800">
+                      {clientData?.metrics?.age || '—'}
+                    </span>
                   </div>
-                  <div className="stat">
-                    <div className="stat-title">Height</div>
-                    <div className="stat-value text-lg">
+                  <div className="flex justify-between items-center py-2 border-b border-slate-200">
+                    <span className="text-sm text-slate-600">Height</span>
+                    <span className="text-sm font-semibold text-slate-800">
                       {clientData?.metrics?.height_cm
                         ? formatHeight(clientData.metrics.height_cm)
-                        : 'N/A'}
-                    </div>
+                        : '—'}
+                    </span>
                   </div>
-                  <div className="stat">
-                    <div className="stat-title">Weight</div>
-                    <div className="stat-value text-lg">
+                  <div className="flex justify-between items-center py-2 border-b border-slate-200">
+                    <span className="text-sm text-slate-600">Weight</span>
+                    <span className="text-sm font-semibold text-slate-800">
                       {clientData?.metrics?.weight_kg
                         ? formatWeight(clientData.metrics.weight_kg)
-                        : 'N/A'}
-                    </div>
+                        : '—'}
+                    </span>
                   </div>
-                  <div className="stat">
-                    <div className="stat-title">Mile Time</div>
-                    <div className="stat-value text-lg">
-                      {clientData?.metrics?.mile_time || 'N/A'}
-                    </div>
+                  <div className="flex justify-between items-center py-2">
+                    <span className="text-sm text-slate-600">Mile Time</span>
+                    <span className="text-sm font-semibold text-slate-800">
+                      {clientData?.metrics?.mile_time || '—'}
+                    </span>
                   </div>
                 </div>
               )}
             </div>
 
-            <div>
-              <h3 className="text-lg font-medium mb-2">Training Experience</h3>
+            {/* Training Experience Section */}
+            <div className="bg-slate-50 rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Timer className="w-4 h-4 text-purple-600" />
+                <h3 className="text-sm font-semibold text-slate-700">Training Experience</h3>
+              </div>
               {isEditing || showEditByDefault ? (
-                <div className="space-y-2">
-                  <div className="w-full">
-                    <label className="label">
-                      <span className="text-sm">Years of Experience</span>
-                    </label>
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-xs font-medium text-slate-500 mb-1.5 block">Years of Experience</label>
                     <input
                       type="number"
                       min="0"
                       max="50"
                       step="0.5"
-                      className="input input-bordered w-full"
+                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                       value={editedData.metrics.years_of_experience || ''}
                       onChange={(e) =>
                         handleMetricsChange(
@@ -815,14 +817,12 @@ export default function ClientMetricsTab({
                       placeholder="Years of training experience"
                     />
                   </div>
-                  <div className="w-full">
-                    <label className="label">
-                      <span className="text-sm">
-                        Primary Workout Experience
-                      </span>
+                  <div>
+                    <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                      Primary Workout Experience
                     </label>
                     <select
-                      className="select select-bordered w-full"
+                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                       value={editedData.metrics.workout_experience_type || ''}
                       onChange={(e) =>
                         handleMetricsChange(
@@ -852,38 +852,42 @@ export default function ClientMetricsTab({
                   </div>
                 </div>
               ) : (
-                <div className="stats stats-vertical shadow w-full">
-                  <div className="stat">
-                    <div className="stat-title">Years of Experience</div>
-                    <div className="stat-value text-lg">
-                      {clientData?.metrics?.years_of_experience || 'N/A'}
-                    </div>
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center py-2 border-b border-slate-200">
+                    <span className="text-sm text-slate-600">Years of Experience</span>
+                    <span className="text-sm font-semibold text-slate-800">
+                      {clientData?.metrics?.years_of_experience
+                        ? `${clientData.metrics.years_of_experience} yrs`
+                        : '—'}
+                    </span>
                   </div>
-                  <div className="stat">
-                    <div className="stat-title">Primary Experience</div>
-                    <div className="stat-value text-base">
-                      {clientData?.metrics?.workout_experience_type || 'N/A'}
-                    </div>
+                  <div className="flex justify-between items-center py-2">
+                    <span className="text-sm text-slate-600">Primary Experience</span>
+                    <span className="text-sm font-semibold text-slate-800 text-right max-w-[120px] truncate">
+                      {clientData?.metrics?.workout_experience_type || '—'}
+                    </span>
                   </div>
                 </div>
               )}
             </div>
 
+            {/* Recovery & Injuries Section */}
             <div
-              className={`${viewMode === 'fullPage' ? 'md:col-span-3' : ''}`}
+              className={`bg-slate-50 rounded-xl p-4 ${viewMode === 'fullPage' ? 'md:col-span-2 lg:col-span-3' : ''}`}
             >
-              <h3 className="text-lg font-medium mb-2">Recovery & Injuries</h3>
+              <div className="flex items-center gap-2 mb-3">
+                <Heart className="w-4 h-4 text-red-500" />
+                <h3 className="text-sm font-semibold text-slate-700">Recovery & Injuries</h3>
+              </div>
               {isEditing || showEditByDefault ? (
-                <div className="space-y-2">
-                  <div className="w-full">
-                    <label className="label">
-                      <span className="text-sm">Recovery Score (1-10)</span>
-                    </label>
+                <div className={`${viewMode === 'fullPage' ? 'grid grid-cols-1 md:grid-cols-2 gap-4' : 'space-y-3'}`}>
+                  <div>
+                    <label className="text-xs font-medium text-slate-500 mb-1.5 block">Recovery Score (1-10)</label>
                     <input
                       type="number"
                       min="1"
                       max="10"
-                      className="input input-bordered w-full"
+                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                       value={editedData.metrics.recovery_score || ''}
                       onChange={(e) =>
                         handleMetricsChange(
@@ -893,12 +897,10 @@ export default function ClientMetricsTab({
                       }
                     />
                   </div>
-                  <div className="w-full">
-                    <label className="label">
-                      <span className="text-sm">Injury History</span>
-                    </label>
+                  <div>
+                    <label className="text-xs font-medium text-slate-500 mb-1.5 block">Injury History</label>
                     <textarea
-                      className="textarea textarea-bordered w-full"
+                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm h-20 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                       value={
                         typeof editedData.metrics.injury_history === 'object'
                           ? JSON.stringify(editedData.metrics.injury_history)
@@ -917,16 +919,29 @@ export default function ClientMetricsTab({
                   </div>
                 </div>
               ) : (
-                <div className="stats stats-vertical shadow w-full">
-                  <div className="stat">
-                    <div className="stat-title">Recovery Score</div>
-                    <div className="stat-value text-lg">
-                      {clientData?.metrics?.recovery_score || 'N/A'}
+                <div className={`${viewMode === 'fullPage' ? 'grid grid-cols-1 md:grid-cols-2 gap-4' : 'space-y-3'}`}>
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center border border-slate-200">
+                      <span className="text-lg font-bold text-slate-800">
+                        {clientData?.metrics?.recovery_score || '—'}
+                      </span>
+                    </div>
+                    <div>
+                      <p className="text-xs text-slate-500">Recovery Score</p>
+                      <p className="text-sm font-medium text-slate-700">
+                        {clientData?.metrics?.recovery_score
+                          ? clientData.metrics.recovery_score >= 7
+                            ? 'Excellent'
+                            : clientData.metrics.recovery_score >= 5
+                            ? 'Good'
+                            : 'Needs Attention'
+                          : 'Not Set'}
+                      </p>
                     </div>
                   </div>
-                  <div className="stat">
-                    <div className="stat-title">Injury History</div>
-                    <div className="stat-desc whitespace-pre-wrap">
+                  <div>
+                    <p className="text-xs text-slate-500 mb-1">Injury History</p>
+                    <p className="text-sm text-slate-700 bg-white rounded-lg p-2 border border-slate-200">
                       {clientData?.metrics?.injury_history
                         ? typeof clientData.metrics.injury_history === 'object'
                           ? JSON.stringify(
@@ -936,7 +951,7 @@ export default function ClientMetricsTab({
                             )
                           : clientData.metrics.injury_history
                         : 'None reported'}
-                    </div>
+                    </p>
                   </div>
                 </div>
               )}

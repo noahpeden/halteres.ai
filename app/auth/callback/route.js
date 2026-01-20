@@ -5,10 +5,14 @@ export async function GET(request) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get('code');
   const isReset = requestUrl.searchParams.get('reset') === 'true';
+  const roleParam = requestUrl.searchParams.get('role');
+  const gymCodeParam = requestUrl.searchParams.get('gymCode');
 
   console.log('Auth callback received:', {
     code: code ? 'exists' : 'missing',
     isReset,
+    roleParam,
+    gymCodeParam: gymCodeParam ? 'exists' : 'missing',
   });
 
   // If there's no code, redirect to login
@@ -37,6 +41,103 @@ export async function GET(request) {
     );
   }
 
-  // Standard OAuth and other auth flows - redirect to dashboard
+  // Get the user to determine their role
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (user) {
+    // Check if this is a new signup with role metadata
+    const userMetadata = user.user_metadata;
+    const roleFromMetadata = userMetadata?.role;
+    const gymCodeFromMetadata = userMetadata?.gym_invite_code;
+
+    // Use role from URL params, metadata, or fallback to checking profile
+    const signupRole = roleParam || roleFromMetadata;
+    const signupGymCode = gymCodeParam || gymCodeFromMetadata;
+
+    console.log('Processing signup:', {
+      signupRole,
+      hasGymCode: !!signupGymCode,
+    });
+
+    // If we have a role from signup, update the profile
+    if (signupRole) {
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ role: signupRole })
+        .eq('id', user.id);
+
+      if (updateError) {
+        console.error('Error updating profile role:', updateError);
+      } else {
+        console.log('Profile role updated to:', signupRole);
+      }
+
+      // If athlete with gym code, auto-join the gym (always auto-approve, no approval process)
+      if (signupRole === 'athlete' && signupGymCode) {
+        try {
+          // Find gym by invite code
+          const { data: gym, error: gymError } = await supabase
+            .from('gyms')
+            .select('id, name')
+            .eq('invite_code', signupGymCode.toUpperCase())
+            .is('deleted_at', null)
+            .single();
+
+          if (gym && !gymError) {
+            // Check if already a member
+            const { data: existingMembership } = await supabase
+              .from('gym_memberships')
+              .select('id')
+              .eq('gym_id', gym.id)
+              .eq('user_id', user.id)
+              .single();
+
+            if (!existingMembership) {
+              // Create membership - always active (no approval process)
+              const { error: membershipError } = await supabase
+                .from('gym_memberships')
+                .insert([{
+                  gym_id: gym.id,
+                  user_id: user.id,
+                  role: 'athlete',
+                  status: 'active',
+                  joined_at: new Date().toISOString(),
+                }]);
+
+              if (membershipError) {
+                console.error('Error creating gym membership:', membershipError);
+              } else {
+                console.log('Auto-joined gym:', gym.name);
+              }
+            }
+          } else {
+            console.error('Gym not found for code:', signupGymCode);
+          }
+        } catch (err) {
+          console.error('Error auto-joining gym:', err);
+        }
+      }
+
+      // Redirect based on signup role
+      if (signupRole === 'athlete') {
+        return NextResponse.redirect(new URL('/athlete', request.url));
+      }
+      return NextResponse.redirect(new URL('/dashboard', request.url));
+    }
+
+    // Existing user - fetch profile to check role
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+
+    // Redirect based on role
+    if (profile?.role === 'athlete') {
+      return NextResponse.redirect(new URL('/athlete', request.url));
+    }
+  }
+
+  // Default: redirect to dashboard (coaches and users without profile)
   return NextResponse.redirect(new URL('/dashboard', request.url));
 }

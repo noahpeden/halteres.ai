@@ -10,7 +10,7 @@ export const generateMetadata = () => {
     ...baseMetadata, // Spread the base metadata
     title: 'Pricing | HalteresAI',
     description:
-      'Simple pricing for CrossFit boxes and functional fitness gyms. Generate 8 weeks of custom programming in 10 minutes. Less than generic programming services.',
+      'Simple pricing for the complete AI gym platform. Programming generation, athlete feedback, leaderboards, and progress tracking. Athletes join free.',
   };
 };
 
@@ -71,6 +71,11 @@ async function fetchUserSubscription(supabase) {
 // FAQ Data (extracted from old page.js for clarity)
 const faqs = [
   {
+    question: 'What do athletes pay?',
+    answer:
+      'Athletes join for free! When your gym subscribes, all your athletes get access to workouts, leaderboards, AI feedback, and progress tracking at no additional cost.',
+  },
+  {
     question: 'Are there any long-term contracts?',
     answer:
       'No, our pricing is flexible. Choose monthly, quarterly, or annual billing. You can cancel your subscription anytime.',
@@ -83,12 +88,17 @@ const faqs = [
   {
     question: 'How is this different from other programming services?',
     answer:
-      'Unlike generic programming that assumes equipment you may not have, Halteres generates programming customized to YOUR gym\'s equipment. Plus, you can modify any workout instantly with our Enhance feature—something other services can\'t do.',
+      'HalteresAI is a complete gym platform, not just programming. You get AI-generated workouts for coaches, plus athlete apps with leaderboards, feedback, and progress tracking. The AI learns from both coach and athlete feedback to continuously improve.',
+  },
+  {
+    question: 'What features do athletes get?',
+    answer:
+      'Athletes can view daily workouts, log results, track PRs, compete on weekly/monthly leaderboards, receive personalized AI feedback, and monitor their progress trends—all from the mobile app.',
   },
   {
     question: 'Do you offer a free trial?',
     answer:
-      'Yes, new gyms get a 14-day free trial to experience HalteresAI. Sign up today to get started.',
+      'Yes, coaches and gym owners get a 14-day free trial with full access to all features. Athletes can join immediately once your gym is set up.',
   },
   {
     question: 'Can I change plans later?',
@@ -135,8 +145,9 @@ export default async function PricingPage({ searchParams }) {
       interval: '/ month',
       features: [
         '8-Week Programming Cycles',
-        'Equipment-Specific Customization',
-        'Day-of Workout Modifications',
+        'AI Feedback & Learning',
+        'Athlete Leaderboards & Tracking',
+        'Unlimited Athletes (Free)',
         'Cancel Anytime',
       ],
       lookupKey: 'standard_monthly', // Match the key set in Stripe
@@ -148,8 +159,9 @@ export default async function PricingPage({ searchParams }) {
       interval: '/ quarter',
       features: [
         '8-Week Programming Cycles',
-        'Equipment-Specific Customization',
-        'Day-of Workout Modifications',
+        'AI Feedback & Learning',
+        'Athlete Leaderboards & Tracking',
+        'Unlimited Athletes (Free)',
         'Save 10% vs Monthly',
       ],
       lookupKey: 'standard_quarterly',
@@ -161,8 +173,9 @@ export default async function PricingPage({ searchParams }) {
       interval: '/ year',
       features: [
         '8-Week Programming Cycles',
-        'Equipment-Specific Customization',
-        'Day-of Workout Modifications',
+        'AI Feedback & Learning',
+        'Athlete Leaderboards & Tracking',
+        'Unlimited Athletes (Free)',
         'Best Value (Save ~15%)',
       ],
       lookupKey: 'standard_annual',
@@ -181,14 +194,14 @@ export default async function PricingPage({ searchParams }) {
       <main className="max-w-7xl mx-auto py-16 px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
           <h1 className="text-4xl font-extrabold text-base-content sm:text-5xl sm:tracking-tight lg:text-6xl">
-            Simple Pricing for CrossFit Boxes and Functional Fitness Gyms
+            One Platform. Complete Gym Integration.
           </h1>
           <p className="mt-5 max-w-xl mx-auto text-xl text-base-content/80">
-            Why pay more for programming you can't customize? Get 8 weeks of
-            equipment-specific programming in 10 minutes.
+            AI programming for coaches. Leaderboards and feedback for athletes.
+            All in one connected platform.
           </p>
           <p className="mt-2 text-sm text-base-content/60">
-            Less than generic programming services. 100% customizable.
+            Athletes join free. Coaches start with a 14-day trial.
           </p>
         </div>
 

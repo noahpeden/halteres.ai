@@ -8,6 +8,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
+import TemplateFeedbackButton from '@/components/feedback/TemplateFeedbackButton';
 
 // Simple markdown parser for workout content
 const parseMarkdownToHTML = (markdown) => {
@@ -65,6 +66,7 @@ export default function WorkoutList({
   showToastMessage,
   generationStage, // Add generation stage
   serverStatus, // Add server status for progress tracking
+  gymId, // For feedback functionality
 }) {
   const [currentWeek, setCurrentWeek] = useState(1);
 
@@ -446,6 +448,21 @@ export default function WorkoutList({
                           Generating...
                         </span>
                       )}
+                      {workout.generation_status === 'skeleton' && (
+                        <span className="text-xs font-medium px-2 py-1 bg-warning/20 text-warning-content rounded">
+                          Skeleton
+                        </span>
+                      )}
+                      {workout.generation_status === 'enhancing' && (
+                        <span className="text-xs font-medium px-2 py-1 bg-info/20 text-info-content rounded animate-pulse">
+                          Enhancing...
+                        </span>
+                      )}
+                      {workout.generation_status === 'detailed' && (
+                        <span className="text-xs font-medium px-2 py-1 bg-success/20 text-success-content rounded">
+                          Detailed
+                        </span>
+                      )}
                     </div>
                     <h4 className="font-semibold break-words">
                       {workout.title ||
@@ -530,7 +547,16 @@ export default function WorkoutList({
                     )
                   }}
                 />
-                <div className="flex justify-end items-center mt-auto">
+                <div className="flex justify-between items-center mt-auto gap-2">
+                  {/* Feedback Button */}
+                  {workout.id && (
+                    <TemplateFeedbackButton
+                      workoutId={workout.id}
+                      gymId={gymId}
+                      showStats={true}
+                      size="sm"
+                    />
+                  )}
                   <button
                     className="btn btn-sm text-white btn-primary w-full sm:w-auto"
                     onClick={(e) => {

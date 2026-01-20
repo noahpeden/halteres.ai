@@ -1,18 +1,18 @@
 import { metadata } from '../metadata';
 import Link from 'next/link';
-import { BookOpen, Video, BarChart, GraduationCap } from 'lucide-react';
+import { BookOpen, Video, BarChart, GraduationCap, Users, Trophy, MessageSquare, Dumbbell } from 'lucide-react';
 
 export const generateMetadata = () => {
   return {
     ...metadata,
     title: 'Help Center | HalteresAI',
     description:
-      'Find answers to common questions, tutorials, and resources to help you get the most out of HalteresAI for your gym.',
+      'Find answers about HalteresAI for coaches and athletes. Programming, leaderboards, AI feedback, and more.',
   };
 };
 
 export default function HelpPage() {
-  const faqs = [
+  const coachFaqs = [
     {
       question: 'How do I set up my gym profile and equipment?',
       answer:
@@ -29,19 +29,52 @@ export default function HelpPage() {
         'You can generate up to 8 weeks of programming at once. The calendar view makes it easy to see and manage your entire programming schedule.',
     },
     {
-      question: 'Can I share programming with my coaches or members?',
+      question: 'How do I invite athletes to my gym?',
       answer:
-        'Yes, you can share programming in several ways. Copy them as text to paste into your gym management system or share with your coaching staff. PDF export coming soon!',
+        'Go to your Gym Settings in the dashboard to find your unique invite code. Share this code with your members—they can use it to join your gym on the mobile app and instantly access workouts, leaderboards, and AI feedback.',
     },
     {
-      question: 'How do I customize programming for my gym\'s specific goals?',
+      question: 'How does the AI feedback system work?',
       answer:
-        'When generating programming, you can specify your training focus—whether you want to emphasize squats this cycle, prepare for the Open, or focus on HYROX training. The AI adapts to your goals.',
+        'The AI learns from two sources: your ratings and feedback on generated workouts, and athlete feedback after logging results. Over time, programming becomes more tailored to your gym\'s preferences.',
     },
     {
       question: 'What if I need help with a specific feature?',
       answer:
         'Our team is available to help! You can reach us by emailing ben@halteres.ai.',
+    },
+  ];
+
+  const athleteFaqs = [
+    {
+      question: 'How do I join my gym on HalteresAI?',
+      answer:
+        'Download the HalteresAI app and enter the invite code provided by your coach. You\'ll be connected to your gym and can immediately see today\'s workout.',
+    },
+    {
+      question: 'How do I log my workout results?',
+      answer:
+        'After completing a workout, tap on it in the app and enter your results (time, reps, or weight). You can mark whether you went RX or scaled, and add notes about how it felt.',
+    },
+    {
+      question: 'How do leaderboards work?',
+      answer:
+        'You earn points for participating: completing workouts (+3), hitting PRs (+2), going RX (+1), and placing 1st/2nd/3rd (+10/+7/+5). Points accumulate on weekly and monthly leaderboards.',
+    },
+    {
+      question: 'What is AI feedback?',
+      answer:
+        'After logging a workout, you can request AI feedback. The AI analyzes your performance, compares it to your history, and provides personalized tips and observations.',
+    },
+    {
+      question: 'How do I update my profile and metrics?',
+      answer:
+        'Go to the Profile tab in the app. You can update your display name, 1RM lifts, mile time, and body metrics anytime. Keeping these updated helps the AI provide better feedback.',
+    },
+    {
+      question: 'Can I see my progress over time?',
+      answer:
+        'Yes! The app tracks your workout history, PRs, and shows weekly AI-generated trends analyzing your improvement and areas to focus on.',
     },
   ];
 
@@ -56,8 +89,8 @@ export default function HelpPage() {
                 Help Center
               </h1>
               <p className="mt-6 text-lg leading-8 text-blue-100">
-                Find answers, tutorials, and resources to help you get the most
-                out of HalteresAI.
+                Resources for coaches and athletes. Learn how to generate programming,
+                use leaderboards, get AI feedback, and more.
               </p>
             </div>
           </div>
@@ -71,8 +104,7 @@ export default function HelpPage() {
                 Resources
               </h2>
               <p className="mt-6 text-lg leading-8 text-gray-600">
-                Explore our guides, tutorials, and documentation to help you
-                master HalteresAI.
+                Guides and tutorials for both coaches and athletes.
               </p>
             </div>
             <div className="mx-auto mt-16 max-w-2xl sm:mt-20 lg:max-w-4xl">
@@ -85,77 +117,77 @@ export default function HelpPage() {
                     />
                   </div>
                   <h3 className="text-base font-semibold leading-7 text-gray-900">
-                    Getting Started Guide
+                    Coach Getting Started
                   </h3>
                   <p className="mt-2 text-base leading-7 text-gray-600">
-                    Learn how to set up your account, configure your gym, and
-                    create your first workout in minutes.
+                    Set up your gym, configure equipment, and generate your first
+                    8-week programming cycle.
                   </p>
                   <Link
-                    href="#"
+                    href="/tutorials"
                     className="text-sm font-semibold leading-6 text-blue-600 hover:text-blue-500"
                   >
                     Read the guide <span aria-hidden="true">→</span>
                   </Link>
                 </div>
                 <div className="relative pl-16">
-                  <div className="absolute left-0 top-0 flex h-10 w-10 items-center justify-center rounded-lg bg-blue-600">
-                    <Video className="h-6 w-6 text-white" aria-hidden="true" />
+                  <div className="absolute left-0 top-0 flex h-10 w-10 items-center justify-center rounded-lg bg-green-600">
+                    <Dumbbell className="h-6 w-6 text-white" aria-hidden="true" />
                   </div>
                   <h3 className="text-base font-semibold leading-7 text-gray-900">
-                    Video Tutorials
+                    Athlete App Guide
                   </h3>
                   <p className="mt-2 text-base leading-7 text-gray-600">
-                    Watch step-by-step videos on how to use all features of the
-                    HalteresAI platform.
+                    Learn how to join your gym, log workouts, compete on leaderboards,
+                    and get AI feedback.
                   </p>
                   <Link
-                    href="#"
+                    href="/tutorials"
                     className="text-sm font-semibold leading-6 text-blue-600 hover:text-blue-500"
                   >
-                    Watch tutorials <span aria-hidden="true">→</span>
+                    View athlete guide <span aria-hidden="true">→</span>
                   </Link>
                 </div>
                 <div className="relative pl-16">
-                  <div className="absolute left-0 top-0 flex h-10 w-10 items-center justify-center rounded-lg bg-blue-600">
-                    <BarChart
+                  <div className="absolute left-0 top-0 flex h-10 w-10 items-center justify-center rounded-lg bg-yellow-500">
+                    <Trophy
                       className="h-6 w-6 text-white"
                       aria-hidden="true"
                     />
                   </div>
                   <h3 className="text-base font-semibold leading-7 text-gray-900">
-                    Programming Best Practices
+                    Leaderboards & Points
                   </h3>
                   <p className="mt-2 text-base leading-7 text-gray-600">
-                    Learn how to create effective programming cycles and
-                    periodization plans for your gym's goals.
+                    Understand how the points system works and how to use
+                    leaderboards to motivate your athletes.
                   </p>
                   <Link
-                    href="#"
+                    href="/tutorials"
                     className="text-sm font-semibold leading-6 text-blue-600 hover:text-blue-500"
                   >
-                    View best practices <span aria-hidden="true">→</span>
+                    Learn about leaderboards <span aria-hidden="true">→</span>
                   </Link>
                 </div>
                 <div className="relative pl-16">
-                  <div className="absolute left-0 top-0 flex h-10 w-10 items-center justify-center rounded-lg bg-blue-600">
-                    <GraduationCap
+                  <div className="absolute left-0 top-0 flex h-10 w-10 items-center justify-center rounded-lg bg-purple-600">
+                    <MessageSquare
                       className="h-6 w-6 text-white"
                       aria-hidden="true"
                     />
                   </div>
                   <h3 className="text-base font-semibold leading-7 text-gray-900">
-                    Advanced Features
+                    AI Feedback System
                   </h3>
                   <p className="mt-2 text-base leading-7 text-gray-600">
-                    Discover advanced techniques for customizing workouts and
-                    maximizing the platform's capabilities.
+                    Discover how the AI learns from coaches and athletes to
+                    provide better programming and insights.
                   </p>
                   <Link
-                    href="#"
+                    href="/tutorials"
                     className="text-sm font-semibold leading-6 text-blue-600 hover:text-blue-500"
                   >
-                    Explore advanced features <span aria-hidden="true">→</span>
+                    Explore AI features <span aria-hidden="true">→</span>
                   </Link>
                 </div>
               </div>
@@ -168,14 +200,37 @@ export default function HelpPage() {
           <div className="mx-auto max-w-7xl px-6 lg:px-8">
             <div className="mx-auto max-w-4xl">
               <h2 className="text-2xl font-bold leading-10 tracking-tight text-gray-900">
-                Frequently asked questions
+                Frequently Asked Questions
               </h2>
-              <p className="mt-6 text-base leading-7 text-gray-600">
-                Find answers to common questions about using HalteresAI.
-              </p>
+
+              {/* Coach FAQs */}
               <div className="mt-10">
+                <h3 className="text-xl font-semibold text-blue-600 mb-6 flex items-center">
+                  <Users className="h-5 w-5 mr-2" />
+                  For Coaches & Gym Owners
+                </h3>
                 <dl className="space-y-8">
-                  {faqs.map((faq, index) => (
+                  {coachFaqs.map((faq, index) => (
+                    <div key={index} className="border-b border-gray-200 pb-8">
+                      <dt className="text-lg font-semibold leading-7 text-gray-900">
+                        {faq.question}
+                      </dt>
+                      <dd className="mt-4 text-base leading-7 text-gray-600">
+                        {faq.answer}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+              </div>
+
+              {/* Athlete FAQs */}
+              <div className="mt-16">
+                <h3 className="text-xl font-semibold text-green-600 mb-6 flex items-center">
+                  <Dumbbell className="h-5 w-5 mr-2" />
+                  For Athletes
+                </h3>
+                <dl className="space-y-8">
+                  {athleteFaqs.map((faq, index) => (
                     <div key={index} className="border-b border-gray-200 pb-8">
                       <dt className="text-lg font-semibold leading-7 text-gray-900">
                         {faq.question}
