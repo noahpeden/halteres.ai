@@ -247,7 +247,7 @@ export default function Dashboard() {
               )}
 
               <div className="card-actions">
-                <Link href="/dashboard/gym" className="btn btn-primary btn-block gap-2">
+                <Link href="/dashboard/gym" className="btn btn-primary text-primary-content btn-block gap-2">
                   <Settings className="w-4 h-4" />
                   Manage Gym
                   <ChevronRight className="w-4 h-4 ml-auto" />
@@ -256,18 +256,18 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* ATHLETES Card */}
+          {/* CLIENTS & CLASSES Card (Entities for Programs) */}
           <div className="card bg-base-100 shadow-md hover:shadow-lg transition-shadow border border-base-300">
             <div className="card-body">
               <div className="flex items-center justify-between mb-4">
                 <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center">
-                  <Users className="w-6 h-6 text-accent" />
+                  <Target className="w-6 h-6 text-accent" />
                 </div>
-                <span className="badge badge-accent badge-outline">Athletes</span>
+                <span className="badge badge-accent badge-outline">Program Targets</span>
               </div>
               <h2 className="card-title text-xl">Clients & Classes</h2>
               <p className="text-base-content/60 text-sm mb-4">
-                View athlete profiles, track engagement, and manage your roster
+                Training targets for program generation
               </p>
 
               {/* Quick Stats */}
@@ -283,9 +283,9 @@ export default function Dashboard() {
               </div>
 
               <div className="card-actions">
-                <Link href="/dashboard/manage/entities" className="btn btn-accent btn-block gap-2">
-                  <UserPlus className="w-4 h-4" />
-                  Manage Athletes
+                <Link href="/dashboard/manage/entities" className="btn btn-accent text-accent-content btn-block gap-2">
+                  <Target className="w-4 h-4" />
+                  Manage Clients & Classes
                   <ChevronRight className="w-4 h-4 ml-auto" />
                 </Link>
               </div>
@@ -322,7 +322,7 @@ export default function Dashboard() {
               <div className="card-actions">
                 <button
                   onClick={handleCreateProgram}
-                  className="btn btn-secondary btn-block gap-2"
+                  className="btn btn-secondary text-secondary-content btn-block gap-2"
                 >
                   <Plus className="w-4 h-4" />
                   Create New Program
@@ -333,35 +333,28 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Quick Actions Row */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
-          <button
-            onClick={handleCreateProgram}
-            className="btn btn-outline btn-primary gap-2 h-auto py-4 flex-col"
-          >
-            <Zap className="w-5 h-5" />
-            <span className="text-xs">Quick Program</span>
-          </button>
+        {/* Quick Actions Row - Only unique shortcuts not in cards above */}
+        <div className="grid grid-cols-3 gap-4 mb-8">
           <Link
-            href="/dashboard/manage/entities"
-            className="btn btn-outline btn-accent gap-2 h-auto py-4 flex-col"
+            href="/dashboard/manage/athletes"
+            className="btn btn-outline border-base-300 hover:border-primary hover:bg-primary/5 gap-2 h-auto py-4 flex-col text-base-content"
           >
-            <UserPlus className="w-5 h-5" />
-            <span className="text-xs">Add Client</span>
-          </Link>
-          <Link
-            href="/dashboard/gym"
-            className="btn btn-outline gap-2 h-auto py-4 flex-col"
-          >
-            <Link2 className="w-5 h-5" />
-            <span className="text-xs">Invite Athletes</span>
+            <Users className="w-5 h-5 text-primary" />
+            <span className="text-xs font-medium">Gym Athletes</span>
           </Link>
           <Link
             href="/dashboard/analytics"
-            className="btn btn-outline btn-info gap-2 h-auto py-4 flex-col"
+            className="btn btn-outline border-base-300 hover:border-info hover:bg-info/5 gap-2 h-auto py-4 flex-col text-base-content"
           >
-            <BarChart3 className="w-5 h-5" />
-            <span className="text-xs">Gym Analytics</span>
+            <BarChart3 className="w-5 h-5 text-info" />
+            <span className="text-xs font-medium">Analytics</span>
+          </Link>
+          <Link
+            href="/athlete/leaderboard"
+            className="btn btn-outline border-base-300 hover:border-warning hover:bg-warning/5 gap-2 h-auto py-4 flex-col text-base-content"
+          >
+            <Trophy className="w-5 h-5 text-warning" />
+            <span className="text-xs font-medium">Leaderboard</span>
           </Link>
         </div>
 

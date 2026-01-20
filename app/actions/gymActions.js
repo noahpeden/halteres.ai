@@ -630,3 +630,89 @@ export async function getPendingMembersAction(gymId) {
     };
   }
 }
+
+export async function removeMemberAction(membershipId) {
+  const supabase = await createSupabaseClient();
+
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    return { success: false, error: 'User not authenticated.' };
+  }
+
+  try {
+    // Get the membership and verify the user is the gym owner
+    const { data: membership, error: fetchError } = await supabase
+      .from('gym_memberships')
+      .select('*, gym:gyms(owner_id)')
+      .eq('id', membershipId)
+      .single();
+
+    if (fetchError) throw fetchError;
+
+    if (membership.gym.owner_id !== user.id) {
+      return { success: false, error: 'Only the gym owner can remove members.' };
+    }
+
+    if (membership.role === 'owner') {
+      return { success: false, error: 'Cannot remove the gym owner.' };
+    }
+
+    // Update status to 'left' (removed by coach)
+    const { data, error } = await supabase
+      .from('gym_memberships')
+      .update({
+        status: 'left',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', membershipId)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return { success: true, data };
+  } catch (error) {
+    console.error('Remove Member Error:', error);
+    return {
+      success: false,
+      error: `Failed to remove member: ${error.message}`,
+    };
+  }
+}
+
+export async function getClassEntitiesAction() {
+  const supabase = await createSupabaseClient();
+
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    return { success: false, error: 'User not authenticated.' };
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('entities')
+      .select('id, name')
+      .eq('user_id', user.id)
+      .eq('type', 'CLASS')
+      .is('deleted_at', null)
+      .order('name', { ascending: true });
+
+    if (error) throw error;
+
+    return { success: true, data };
+  } catch (error) {
+    console.error('Get Class Entities Error:', error);
+    return {
+      success: false,
+      error: `Failed to get classes: ${error.message}`,
+    };
+  }
+}
