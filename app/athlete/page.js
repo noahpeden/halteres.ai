@@ -4,20 +4,24 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import AthleteOnboardingModal from '@/components/athlete/AthleteOnboardingModal';
+import WeeklyTrendsCard from '@/components/athlete/WeeklyTrendsCard';
 
 export default function AthleteDashboard() {
-  const { user, profile, currentGym, isAthlete, gymMemberships } = useAuth();
+  const { user, profile, currentGym, isAthlete, gymMemberships, refetchProfile } = useAuth();
   const router = useRouter();
   const [todaysWorkouts, setTodaysWorkouts] = useState([]);
   const [recentResults, setRecentResults] = useState([]);
   const [activeProgram, setActiveProgram] = useState(null);
   const [programCount, setProgramCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [showOnboarding, setShowOnboarding] = useState(false);
   const [stats, setStats] = useState({
     workoutsThisWeek: 0,
     prsThisMonth: 0,
     currentStreak: 0,
   });
+  const [inviteCode, setInviteCode] = useState('');
 
   useEffect(() => {
     if (!user) {
@@ -31,6 +35,21 @@ export default function AthleteDashboard() {
     }
     fetchDashboardData();
   }, [user, currentGym]);
+
+  // Show onboarding for new athletes
+  useEffect(() => {
+    if (profile && currentGym && !profile.onboarding_completed && isAthlete) {
+      setShowOnboarding(true);
+    }
+  }, [profile, currentGym, isAthlete]);
+
+  const handleOnboardingComplete = async () => {
+    setShowOnboarding(false);
+    // Refetch profile to get updated data
+    if (refetchProfile) {
+      await refetchProfile();
+    }
+  };
 
   const fetchDashboardData = async () => {
     if (!currentGym?.id) {
@@ -90,13 +109,18 @@ export default function AthleteDashboard() {
                   type="text"
                   placeholder="Enter code"
                   className="input input-bordered flex-1"
-                  id="invite-code-input"
+                  value={inviteCode}
+                  onChange={(e) => setInviteCode(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && inviteCode.trim()) {
+                      router.push(`/join/${inviteCode.trim()}`);
+                    }
+                  }}
                 />
                 <button
                   className="btn btn-primary"
                   onClick={() => {
-                    const code = document.getElementById('invite-code-input').value;
-                    if (code) router.push(`/join/${code}`);
+                    if (inviteCode.trim()) router.push(`/join/${inviteCode.trim()}`);
                   }}
                 >
                   Join
@@ -119,6 +143,15 @@ export default function AthleteDashboard() {
 
   return (
     <div className="min-h-screen bg-base-200">
+      {/* Onboarding Modal */}
+      {showOnboarding && (
+        <AthleteOnboardingModal
+          profile={profile}
+          gymName={currentGym?.name}
+          onComplete={handleOnboardingComplete}
+        />
+      )}
+
       {/* Header */}
       <div className="bg-primary text-primary-content p-6">
         <div className="max-w-4xl mx-auto">
@@ -152,6 +185,9 @@ export default function AthleteDashboard() {
             </div>
           </Link>
         )}
+
+        {/* Weekly AI Trends */}
+        <WeeklyTrendsCard />
 
         {/* Quick Stats */}
         <div className="grid grid-cols-3 gap-4">

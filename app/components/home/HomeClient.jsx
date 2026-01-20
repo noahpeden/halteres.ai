@@ -10,6 +10,10 @@ import {
   CheckCircle,
   BarChart3,
   Sparkles,
+  Trophy,
+  MessageSquare,
+  Brain,
+  Dumbbell,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import Image from 'next/image';
@@ -109,15 +113,16 @@ export default function HomeClient() {
 
               <div className="space-y-6">
                 <h1 className="text-5xl lg:text-6xl font-bold text-gray-900 leading-tight">
-                  Why Pay More for Programming You Can't Customize?
+                  The Complete AI Platform for Your Gym
                   <span className="text-primary block">
-                    8 Weeks. 10 Minutes. $99/month.
+                    Coaches Program. Athletes Thrive.
                   </span>
                 </h1>
 
                 <p className="text-xl lg:text-2xl text-gray-600 leading-relaxed">
-                  Generate custom programming for your CrossFit box or functional fitness gym.{' '}
-                  <strong>YOUR equipment. YOUR goals. YOUR brand.</strong> Not generic workouts that assume gear you don't have.
+                  More than just programming. HalteresAI connects coaches and athletes with{' '}
+                  <strong>intelligent program generation, AI-powered feedback, and real-time leaderboards.</strong>{' '}
+                  Your gym, elevated by AI.
                 </p>
               </div>
 
@@ -155,19 +160,19 @@ export default function HomeClient() {
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <Target className="w-6 h-6 text-primary" />
+                  <Brain className="w-6 h-6 text-primary" />
                   <div>
-                    <div className="font-bold text-2xl text-gray-900">$99/mo</div>
-                    <div className="text-sm text-gray-600">not $129+</div>
+                    <div className="font-bold text-2xl text-gray-900">AI Feedback</div>
+                    <div className="text-sm text-gray-600">that learns</div>
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <Users className="w-6 h-6 text-primary" />
+                  <Trophy className="w-6 h-6 text-primary" />
                   <div>
                     <div className="font-bold text-2xl text-gray-900">
-                      100%
+                      Leaderboards
                     </div>
-                    <div className="text-sm text-gray-600">customizable</div>
+                    <div className="text-sm text-gray-600">weekly & monthly</div>
                   </div>
                 </div>
               </div>
@@ -226,31 +231,98 @@ export default function HomeClient() {
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
             <h2 className="text-4xl lg:text-5xl font-bold text-gray-900 mb-6">
-              Why Gym Owners Choose Halteres.ai
+              One Platform. Two Powerful Experiences.
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Stop paying for generic programming. Start delivering YOUR programming—customized for YOUR gym.
+              HalteresAI bridges the gap between coaches and athletes with AI that learns from every interaction.
             </p>
+          </div>
+
+          {/* Two Column Layout for Coach/Athlete */}
+          <div className="grid lg:grid-cols-2 gap-12 mb-16">
+            {/* Coach Side */}
+            <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-8 rounded-3xl">
+              <div className="flex items-center mb-6">
+                <div className="p-3 bg-blue-600 rounded-xl mr-4">
+                  <Users className="w-6 h-6 text-white" />
+                </div>
+                <h3 className="text-2xl font-bold text-gray-900">For Coaches</h3>
+              </div>
+              <div className="space-y-4">
+                <div className="flex items-start space-x-3">
+                  <CheckCircle className="w-5 h-5 text-blue-600 mt-1 flex-shrink-0" />
+                  <p className="text-gray-700">Generate up to 8 weeks of programming in 10 minutes</p>
+                </div>
+                <div className="flex items-start space-x-3">
+                  <CheckCircle className="w-5 h-5 text-blue-600 mt-1 flex-shrink-0" />
+                  <p className="text-gray-700">AI learns from your feedback to improve future programs</p>
+                </div>
+                <div className="flex items-start space-x-3">
+                  <CheckCircle className="w-5 h-5 text-blue-600 mt-1 flex-shrink-0" />
+                  <p className="text-gray-700">Equipment-specific workouts tailored to YOUR gym</p>
+                </div>
+                <div className="flex items-start space-x-3">
+                  <CheckCircle className="w-5 h-5 text-blue-600 mt-1 flex-shrink-0" />
+                  <p className="text-gray-700">Modify any workout day-of with instant AI enhancement</p>
+                </div>
+                <div className="flex items-start space-x-3">
+                  <CheckCircle className="w-5 h-5 text-blue-600 mt-1 flex-shrink-0" />
+                  <p className="text-gray-700">View athlete progress and engagement analytics</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Athlete Side */}
+            <div className="bg-gradient-to-br from-green-50 to-green-100 p-8 rounded-3xl">
+              <div className="flex items-center mb-6">
+                <div className="p-3 bg-green-600 rounded-xl mr-4">
+                  <Dumbbell className="w-6 h-6 text-white" />
+                </div>
+                <h3 className="text-2xl font-bold text-gray-900">For Athletes</h3>
+              </div>
+              <div className="space-y-4">
+                <div className="flex items-start space-x-3">
+                  <CheckCircle className="w-5 h-5 text-green-600 mt-1 flex-shrink-0" />
+                  <p className="text-gray-700">Access today's workout and log your results</p>
+                </div>
+                <div className="flex items-start space-x-3">
+                  <CheckCircle className="w-5 h-5 text-green-600 mt-1 flex-shrink-0" />
+                  <p className="text-gray-700">Get personalized AI feedback on your performance</p>
+                </div>
+                <div className="flex items-start space-x-3">
+                  <CheckCircle className="w-5 h-5 text-green-600 mt-1 flex-shrink-0" />
+                  <p className="text-gray-700">Compete on weekly and monthly leaderboards</p>
+                </div>
+                <div className="flex items-start space-x-3">
+                  <CheckCircle className="w-5 h-5 text-green-600 mt-1 flex-shrink-0" />
+                  <p className="text-gray-700">Track PRs, metrics, and progress trends</p>
+                </div>
+                <div className="flex items-start space-x-3">
+                  <CheckCircle className="w-5 h-5 text-green-600 mt-1 flex-shrink-0" />
+                  <p className="text-gray-700">Your feedback helps AI improve programming</p>
+                </div>
+              </div>
+            </div>
           </div>
 
           <div className="grid md:grid-cols-3 gap-8">
             <ValueProp
-              icon={<Clock className="w-8 h-8 text-primary" />}
-              title="Stop Paying for What You Can't Modify"
-              description="Why pay hundreds of dollars per month for programming that doesn't fit your equipment? Generate 8 weeks of custom programming in 10 minutes."
-              highlight="Your Equipment"
+              icon={<Brain className="w-8 h-8 text-primary" />}
+              title="AI That Gets Smarter"
+              description="Every workout logged, every piece of feedback shared—our AI learns and improves. Programming that evolves with your gym."
+              highlight="Continuous Learning"
             />
             <ValueProp
-              icon={<Target className="w-8 h-8 text-primary" />}
-              title="Your Programming, Your Brand"
-              description="Your members come for YOUR coaching and YOUR community. Now give them YOUR programming—not someone else's."
-              highlight="100% Ownership"
+              icon={<Trophy className="w-8 h-8 text-primary" />}
+              title="Gamified Engagement"
+              description="Weekly and monthly leaderboards keep athletes motivated. Points for completing workouts, hitting PRs, and going RX."
+              highlight="Boost Retention"
             />
             <ValueProp
               icon={<Sparkles className="w-8 h-8 text-primary" />}
-              title="Modify Any Workout Day-Of"
-              description="Equipment breaks? Class size changes? Use our Enhance feature to rewrite any workout instantly—something generic programs can't do."
-              highlight="Day-Of Flexibility"
+              title="Personalized Feedback"
+              description="Athletes get AI-powered insights on their performance. Coaches get visibility into member progress and engagement."
+              highlight="Real-Time Insights"
             />
           </div>
         </div>

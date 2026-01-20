@@ -4,11 +4,14 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function AthleteProfilePage() {
-  const { user, profile, currentGym } = useAuth();
+  const { user, profile, currentGym, refetchProfile } = useAuth();
   const [prs, setPrs] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('prs');
+  const [isEditing, setIsEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [editForm, setEditForm] = useState({});
 
   useEffect(() => {
     fetchProfileData();
@@ -29,6 +32,47 @@ export default function AthleteProfilePage() {
       console.error('Error fetching profile:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const startEditing = () => {
+    setEditForm({
+      display_name: profile?.display_name || profile?.full_name || '',
+      squat_1rm: profile?.squat_1rm || '',
+      deadlift_1rm: profile?.deadlift_1rm || '',
+      bench_1rm: profile?.bench_1rm || '',
+      mile_time: profile?.mile_time || '',
+      weight_kg: profile?.weight_kg || '',
+      height_cm: profile?.height_cm || '',
+    });
+    setIsEditing(true);
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setEditForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const saveProfile = async () => {
+    setSaving(true);
+    try {
+      const res = await fetch('/api/athlete/update-profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editForm),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setIsEditing(false);
+        if (refetchProfile) {
+          await refetchProfile();
+        }
+      }
+    } catch (err) {
+      console.error('Error saving profile:', err);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -163,31 +207,172 @@ export default function AthleteProfilePage() {
         {/* Metrics Tab */}
         {activeTab === 'metrics' && (
           <div className="space-y-4">
-            <div className="card bg-base-100 shadow">
-              <div className="card-body">
-                <h3 className="card-title text-base">Strength Metrics</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <MetricItem label="Back Squat 1RM" value={profile?.squat_1rm} unit="kg" />
-                  <MetricItem label="Deadlift 1RM" value={profile?.deadlift_1rm} unit="kg" />
-                  <MetricItem label="Bench Press 1RM" value={profile?.bench_1rm} unit="kg" />
-                  <MetricItem label="Mile Time" value={profile?.mile_time} />
+            {isEditing ? (
+              <>
+                <div className="card bg-base-100 shadow">
+                  <div className="card-body">
+                    <h3 className="card-title text-base">Profile</h3>
+                    <div className="form-control">
+                      <label className="label">
+                        <span className="label-text">Display Name</span>
+                      </label>
+                      <input
+                        type="text"
+                        name="display_name"
+                        value={editForm.display_name}
+                        onChange={handleInputChange}
+                        className="input input-bordered"
+                        placeholder="Your name or nickname"
+                      />
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
 
-            <div className="card bg-base-100 shadow">
-              <div className="card-body">
-                <h3 className="card-title text-base">Body Metrics</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <MetricItem label="Weight" value={profile?.weight_kg} unit="kg" />
-                  <MetricItem label="Height" value={profile?.height_cm} unit="cm" />
+                <div className="card bg-base-100 shadow">
+                  <div className="card-body">
+                    <h3 className="card-title text-base">Strength Metrics</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="form-control">
+                        <label className="label">
+                          <span className="label-text">Back Squat 1RM (kg)</span>
+                        </label>
+                        <input
+                          type="number"
+                          name="squat_1rm"
+                          value={editForm.squat_1rm}
+                          onChange={handleInputChange}
+                          className="input input-bordered"
+                        />
+                      </div>
+                      <div className="form-control">
+                        <label className="label">
+                          <span className="label-text">Deadlift 1RM (kg)</span>
+                        </label>
+                        <input
+                          type="number"
+                          name="deadlift_1rm"
+                          value={editForm.deadlift_1rm}
+                          onChange={handleInputChange}
+                          className="input input-bordered"
+                        />
+                      </div>
+                      <div className="form-control">
+                        <label className="label">
+                          <span className="label-text">Bench Press 1RM (kg)</span>
+                        </label>
+                        <input
+                          type="number"
+                          name="bench_1rm"
+                          value={editForm.bench_1rm}
+                          onChange={handleInputChange}
+                          className="input input-bordered"
+                        />
+                      </div>
+                      <div className="form-control">
+                        <label className="label">
+                          <span className="label-text">Mile Time</span>
+                        </label>
+                        <input
+                          type="text"
+                          name="mile_time"
+                          value={editForm.mile_time}
+                          onChange={handleInputChange}
+                          className="input input-bordered"
+                          placeholder="e.g. 7:30"
+                        />
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
 
-            <p className="text-center text-sm text-base-content/60">
-              Contact your coach to update your metrics
-            </p>
+                <div className="card bg-base-100 shadow">
+                  <div className="card-body">
+                    <h3 className="card-title text-base">Body Metrics</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="form-control">
+                        <label className="label">
+                          <span className="label-text">Weight (kg)</span>
+                        </label>
+                        <input
+                          type="number"
+                          name="weight_kg"
+                          value={editForm.weight_kg}
+                          onChange={handleInputChange}
+                          className="input input-bordered"
+                        />
+                      </div>
+                      <div className="form-control">
+                        <label className="label">
+                          <span className="label-text">Height (cm)</span>
+                        </label>
+                        <input
+                          type="number"
+                          name="height_cm"
+                          value={editForm.height_cm}
+                          onChange={handleInputChange}
+                          className="input input-bordered"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex gap-2 justify-end">
+                  <button
+                    className="btn btn-ghost"
+                    onClick={() => setIsEditing(false)}
+                    disabled={saving}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    className="btn btn-primary"
+                    onClick={saveProfile}
+                    disabled={saving}
+                  >
+                    {saving ? (
+                      <>
+                        <span className="loading loading-spinner loading-sm" />
+                        Saving...
+                      </>
+                    ) : (
+                      'Save Changes'
+                    )}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="card bg-base-100 shadow">
+                  <div className="card-body">
+                    <h3 className="card-title text-base">Strength Metrics</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <MetricItem label="Back Squat 1RM" value={profile?.squat_1rm} unit="kg" />
+                      <MetricItem label="Deadlift 1RM" value={profile?.deadlift_1rm} unit="kg" />
+                      <MetricItem label="Bench Press 1RM" value={profile?.bench_1rm} unit="kg" />
+                      <MetricItem label="Mile Time" value={profile?.mile_time} />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="card bg-base-100 shadow">
+                  <div className="card-body">
+                    <h3 className="card-title text-base">Body Metrics</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <MetricItem label="Weight" value={profile?.weight_kg} unit="kg" />
+                      <MetricItem label="Height" value={profile?.height_cm} unit="cm" />
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  className="btn btn-outline btn-block"
+                  onClick={startEditing}
+                >
+                  Edit My Metrics
+                </button>
+              </>
+            )}
           </div>
         )}
       </div>

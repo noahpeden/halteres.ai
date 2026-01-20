@@ -6,7 +6,7 @@ import AIProgramWriter from '@/components/AIProgramWriter/AIProgramWriter';
 import { ProgramProvider } from '@/contexts/ProgramContext';
 import ClientMetricsTab from '@/components/ClientMetricsTab';
 import ClassMetricsTab from '@/components/ClassMetricsTab';
-import { Edit2, Check, X, ChevronRight, Share2 } from 'lucide-react';
+import { Edit2, Check, X, ChevronRight, Share2, Sparkles, User, GraduationCap } from 'lucide-react';
 
 export default function ProgramWriterPage() {
   const { programId } = useParams();
@@ -138,63 +138,88 @@ export default function ProgramWriterPage() {
   };
 
   return (
-    <div className="w-full max-w-full overflow-hidden relative">
-        <div className="mb-6">
+    <div className="w-full max-w-full overflow-hidden relative animate-fadeIn">
+        {/* Enhanced Header Section */}
+        <div className="mb-6 pb-4 border-b border-slate-200">
           {isEditingName ? (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               <input
                 type="text"
-                className="input input-bordered w-auto text-2xl font-bold"
+                className="flex-1 max-w-md px-4 py-2.5 text-xl font-bold bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                 value={editedName}
                 onChange={(e) => setEditedName(e.target.value)}
+                autoFocus
               />
               <button
-                className="btn btn-success btn-sm"
+                className="p-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 rounded-lg transition-colors"
                 onClick={handleSaveName}
               >
-                <Check className="h-4 w-4" />
+                <Check className="h-5 w-5" />
               </button>
               <button
-                className="btn btn-error btn-sm"
+                className="p-2 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg transition-colors"
                 onClick={handleCancelEdit}
               >
-                <X className="h-4 w-4" />
+                <X className="h-5 w-5" />
               </button>
             </div>
           ) : (
-            <div className="flex justify-between items-center">
-              <div className="flex items-center gap-2">
-                <h1 className="text-2xl font-bold text-primary">
-                  {programName}
-                </h1>
-                <Edit2
-                  className="h-5 w-5 cursor-pointer text-primary"
-                  onClick={() => setIsEditingName(true)}
-                />
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/25">
+                  <Sparkles className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h1 className="text-2xl font-bold text-slate-800">
+                      {programName}
+                    </h1>
+                    <button
+                      onClick={() => setIsEditingName(true)}
+                      className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                      title="Edit program name"
+                    >
+                      <Edit2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                  {programDescription && (
+                    <p className="text-sm text-slate-500 mt-0.5">{programDescription}</p>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                {clientName && (
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 rounded-lg">
+                    <div className={`w-6 h-6 rounded-lg flex items-center justify-center ${
+                      clientType === 'CLASS' ? 'bg-purple-100' : 'bg-emerald-100'
+                    }`}>
+                      {clientType === 'CLASS' ? (
+                        <GraduationCap className="w-3.5 h-3.5 text-purple-600" />
+                      ) : (
+                        <User className="w-3.5 h-3.5 text-emerald-600" />
+                      )}
+                    </div>
+                    <span className="text-sm font-medium text-slate-700">{clientName}</span>
+                  </div>
+                )}
                 <button
                   onClick={handleShareProgram}
-                  className="btn btn-outline btn-sm"
+                  className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 hover:border-blue-300 hover:bg-blue-50 text-slate-700 hover:text-blue-700 rounded-xl text-sm font-medium shadow-sm transition-all"
                   title="Share this program"
                 >
                   <Share2 className="h-4 w-4" />
-                  <span className="hidden sm:inline ml-2">Share</span>
+                  <span className="hidden sm:inline">Share</span>
                 </button>
               </div>
-              {clientName && (
-                <p className="text-xl text-gray-500">
-                  {clientName} ({clientType})
-                </p>
-              )}
             </div>
           )}
-          <p className="text-practical-gray">{programDescription}</p>
         </div>
 
         {/* Open Sidebar Button - Visible only when collapsed on desktop */}
         {isSidebarCollapsed && !isMobile && (
           <button
             onClick={toggleSidebarCollapse}
-            className="fixed top-1/2 right-0 transform -translate-y-1/2 z-20 btn btn-primary btn-circle shadow-lg flex"
+            className="fixed top-1/2 right-0 transform -translate-y-1/2 z-20 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white p-3 rounded-l-xl shadow-lg shadow-blue-500/25 transition-all duration-200"
             aria-label="Expand Sidebar"
           >
             <ChevronRight size={20} />
@@ -205,7 +230,7 @@ export default function ProgramWriterPage() {
         <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 w-full max-w-full overflow-hidden">
           {/* AI Program Writer (Main Content) */}
           <div className={`flex-grow w-full ${isSidebarCollapsed ? 'lg:w-full' : 'lg:w-2/3'} transition-all duration-300 ease-in-out`}>
-            <div className="bg-white rounded-lg shadow h-full w-full">
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 h-full w-full overflow-hidden">
               <ProgramProvider programId={programId}>
                 <AIProgramWriter
                   programId={programId}

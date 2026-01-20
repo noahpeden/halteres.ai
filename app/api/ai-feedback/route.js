@@ -87,7 +87,10 @@ export async function POST(request) {
     });
 
     // Parse the AI response
-    const aiResponse = message.content[0].text;
+    const aiResponse = message.content?.[0]?.text;
+    if (!aiResponse) {
+      throw new Error('Invalid response format from AI service');
+    }
     const feedback = parseAIResponse(aiResponse);
 
     // Store the feedback in the database

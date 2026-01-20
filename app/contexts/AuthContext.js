@@ -35,7 +35,7 @@ export function AuthProvider({ children, initialSession }) {
           `subscription_status, trial_end_date, generations_remaining, last_generation_date,
            role, display_name, profile_photo_url, notification_preferences,
            bench_1rm, squat_1rm, deadlift_1rm, weight_kg, height_cm, mile_time,
-           gender, recovery_score, injury_history`
+           gender, recovery_score, injury_history, onboarding_completed`
         )
         .eq('id', userId)
         .single();
@@ -155,6 +155,11 @@ export function AuthProvider({ children, initialSession }) {
   const isAthlete = profile?.role === 'athlete';
   const isGymOwner = gymMemberships.some(m => m.role === 'owner');
 
+  // Check if athlete needs to complete setup (no gym membership or onboarding not complete)
+  const hasActiveGymMembership = gymMemberships.length > 0 && gymMemberships.some(m => m.status === 'active');
+  const athleteNeedsSetup = isAthlete && (!hasActiveGymMembership || !profile?.onboarding_completed);
+  const onboardingCompleted = profile?.onboarding_completed ?? false;
+
   const contextValue = useMemo(
     () => ({
       session,
@@ -172,6 +177,10 @@ export function AuthProvider({ children, initialSession }) {
       role: profile?.role || 'coach',
       isCoach,
       isAthlete,
+      // Athlete setup status
+      athleteNeedsSetup,
+      onboardingCompleted,
+      hasActiveGymMembership,
       // Gym-related
       gymMemberships,
       currentGym,
@@ -194,6 +203,7 @@ export function AuthProvider({ children, initialSession }) {
       } : null,
     }),
     [session, user, profile, loadingProfile, fetchProfile, isCoach, isAthlete,
+     athleteNeedsSetup, onboardingCompleted, hasActiveGymMembership,
      gymMemberships, currentGym, switchGym, isGymOwner, loadingGym, fetchGymMemberships]
   );
 

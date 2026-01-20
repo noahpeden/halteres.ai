@@ -26,7 +26,7 @@ import {
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 export default function Navbar() {
-  const { session, user, isAthlete, isCoach, currentGym } = useAuth();
+  const { session, user, isAthlete, isCoach, currentGym, athleteNeedsSetup, loadingProfile, loadingGym } = useAuth();
   const supabase = createClientComponentClient();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userProfile, setUserProfile] = useState(null);
@@ -195,7 +195,8 @@ export default function Navbar() {
                 </li>
               </>
             )}
-            {session && isAthlete && (
+            {/* Hide navigation for athletes who need to complete setup */}
+            {session && isAthlete && !athleteNeedsSetup && (
               <>
                 <li>
                   <NavLink href="/athlete">Today</NavLink>
@@ -391,8 +392,8 @@ export default function Navbar() {
                     </div>
                   )}
 
-                  {/* Athlete Navigation Items */}
-                  {isAthlete && (
+                  {/* Athlete Navigation Items - only show if setup is complete */}
+                  {isAthlete && !athleteNeedsSetup && (
                     <div className="space-y-2">
                       <Link
                         href="/athlete"
@@ -437,6 +438,13 @@ export default function Navbar() {
                           <div className="text-sm text-gray-500">Your stats & PRs</div>
                         </div>
                       </Link>
+                    </div>
+                  )}
+
+                  {/* Show setup message for athletes who need to complete setup */}
+                  {isAthlete && athleteNeedsSetup && (
+                    <div className="p-4 bg-base-200 rounded-xl text-center">
+                      <p className="text-sm text-gray-600">Complete your setup to access all features</p>
                     </div>
                   )}
 

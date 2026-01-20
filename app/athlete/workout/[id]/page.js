@@ -39,14 +39,28 @@ export default function WorkoutDetailPage() {
     }
   };
 
-  const handleResultSuccess = (result, isPR, prInfo) => {
+  const handleResultSuccess = async (result, isPR, prInfo) => {
     setUserResult(result);
-    setActiveTab('leaderboard');
 
     if (isPR && prInfo) {
       setPrData(prInfo);
       setShowPRCelebration(true);
     }
+
+    // Auto-trigger AI feedback generation in the background
+    fetch('/api/ai-feedback', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        workoutResultId: result.id,
+        userId: user?.id,
+      }),
+    }).catch((err) => {
+      console.error('Failed to generate AI feedback:', err);
+    });
+
+    // Show leaderboard after logging
+    setActiveTab('leaderboard');
   };
 
   if (loading) {

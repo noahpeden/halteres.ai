@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { getGymByInviteCodeAction, joinGymAction } from '@/actions/gymActions';
+import { joinGymAction } from '@/actions/gymActions';
 import Link from 'next/link';
 
 export default function JoinGymPage() {
@@ -22,12 +22,18 @@ export default function JoinGymPage() {
       if (!gymCode) return;
 
       setLoading(true);
-      const result = await getGymByInviteCodeAction(gymCode);
+      try {
+        // Use public API endpoint that doesn't require authentication
+        const res = await fetch(`/api/gym/by-invite-code?code=${gymCode}`);
+        const result = await res.json();
 
-      if (result.success) {
-        setGym(result.data);
-      } else {
-        setError(result.error);
+        if (result.success) {
+          setGym(result.data);
+        } else {
+          setError(result.error);
+        }
+      } catch (err) {
+        setError('Failed to load gym information');
       }
       setLoading(false);
     }
@@ -192,7 +198,7 @@ export default function JoinGymPage() {
                         Sign In
                       </Link>
                       <Link
-                        href={`/signup?redirect=/join/${gymCode}&role=athlete`}
+                        href={`/login?tab=signup&redirect=/join/${gymCode}&role=athlete`}
                         className="btn btn-outline"
                       >
                         Create Account

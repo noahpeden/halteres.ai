@@ -912,13 +912,16 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
   if (loading && !formData) {
     return (
       <div className="flex justify-center items-center min-h-[400px]">
-        <span className="loading loading-spinner loading-lg"></span>
+        <div className="flex flex-col items-center gap-3">
+          <span className="loading loading-spinner loading-lg text-blue-600"></span>
+          <p className="text-slate-500 text-sm">Loading program...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="flex gap-6 min-h-[600px]">
+    <div className="flex gap-0 min-h-[600px]">
       {/* Generation Progress Overlay */}
       <GenerationProgress
         isVisible={showGenerationProgress}
@@ -945,13 +948,18 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
       )}
 
       {/* LEFT: Compact Config Panel */}
-      <div className="w-80 flex-shrink-0 border-r border-base-200 pr-4 overflow-y-auto max-h-[calc(100vh-180px)]">
+      <div className="w-80 flex-shrink-0 border-r border-slate-200 bg-slate-50/50 overflow-y-auto max-h-[calc(100vh-180px)]">
         {/* Config Header */}
-        <div className="flex items-center justify-between pb-3 border-b border-base-200 mb-2 sticky top-0 bg-base-100 z-10">
-          <span className="text-sm font-medium text-base-content/70">Program Config</span>
+        <div className="flex items-center justify-between p-4 border-b border-slate-200 sticky top-0 bg-slate-50/95 backdrop-blur-sm z-10">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 bg-blue-100 rounded-lg flex items-center justify-center">
+              <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+            </div>
+            <span className="text-sm font-semibold text-slate-700">Program Config</span>
+          </div>
           {programId && (
             <button
-              className="btn btn-xs btn-ghost"
+              className="px-3 py-1.5 text-xs font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
               onClick={handleSaveProgram}
               disabled={loading}
             >
@@ -960,17 +968,17 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
           )}
         </div>
 
-        {/* Collapsible Sections with fixed arrow spacing */}
-        <div className="space-y-1">
+        {/* Collapsible Sections */}
+        <div className="p-4 space-y-1">
           {/* Methodology Section */}
           <details className="group" open>
-            <summary className="flex items-center justify-between cursor-pointer py-2 px-1 hover:bg-base-200 rounded text-sm font-medium">
+            <summary className="flex items-center justify-between cursor-pointer py-2.5 px-3 hover:bg-slate-100 rounded-xl text-sm font-medium text-slate-700 transition-colors">
               <span>Methodology</span>
-              <ChevronDown className="w-4 h-4 transition-transform group-open:rotate-180" />
+              <ChevronDown className="w-4 h-4 text-slate-400 transition-transform group-open:rotate-180" />
             </summary>
-            <div className="pl-1 pr-1 pb-2 space-y-2">
+            <div className="px-3 pb-3 pt-1 space-y-3">
               <select
-                className="select select-bordered select-sm w-full"
+                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                 value={formData?.trainingMethodology || ''}
                 onChange={(e) => handleFieldChange('trainingMethodology', e.target.value)}
               >
@@ -985,7 +993,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
                 <option value="hybrid">Hybrid</option>
               </select>
               <select
-                className="select select-bordered select-sm w-full"
+                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                 value={formData?.programType || 'linear'}
                 onChange={(e) => handleFieldChange('programType', e.target.value)}
               >
@@ -998,14 +1006,14 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
 
           {/* Schedule Section */}
           <details className="group" open>
-            <summary className="flex items-center justify-between cursor-pointer py-2 px-1 hover:bg-base-200 rounded text-sm font-medium">
+            <summary className="flex items-center justify-between cursor-pointer py-2.5 px-3 hover:bg-slate-100 rounded-xl text-sm font-medium text-slate-700 transition-colors">
               <span>Schedule</span>
-              <ChevronDown className="w-4 h-4 transition-transform group-open:rotate-180" />
+              <ChevronDown className="w-4 h-4 text-slate-400 transition-transform group-open:rotate-180" />
             </summary>
-            <div className="pl-1 pr-1 pb-2 space-y-2">
+            <div className="px-3 pb-3 pt-1 space-y-3">
               <div>
-                <label className="text-xs text-base-content/60 mb-1 block">Days of Week</label>
-                <div className="flex flex-wrap gap-1">
+                <label className="text-xs font-medium text-slate-500 mb-1.5 block">Days of Week</label>
+                <div className="flex flex-wrap gap-1.5">
                   {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, i) => {
                     const fullDay = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][i];
                     const isSelected = formData?.daysOfWeek?.some(d =>
@@ -1014,7 +1022,11 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
                     return (
                       <button
                         key={day}
-                        className={`btn btn-xs ${isSelected ? 'btn-primary' : 'btn-ghost'}`}
+                        className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                          isSelected
+                            ? 'bg-blue-600 text-white shadow-sm'
+                            : 'bg-white border border-slate-200 text-slate-600 hover:border-blue-300 hover:text-blue-600'
+                        }`}
                         onClick={() => handleDayOfWeekChange(fullDay)}
                       >
                         {day}
@@ -1023,11 +1035,11 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
                   })}
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs text-base-content/60 mb-1 block">Weeks</label>
+                  <label className="text-xs font-medium text-slate-500 mb-1.5 block">Weeks</label>
                   <select
-                    className="select select-bordered select-sm w-full"
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                     value={formData?.numberOfWeeks || '4'}
                     onChange={(e) => handleFieldChange('numberOfWeeks', e.target.value)}
                   >
@@ -1037,10 +1049,10 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
                   </select>
                 </div>
                 <div>
-                  <label className="text-xs text-base-content/60 mb-1 block">Duration (min)</label>
+                  <label className="text-xs font-medium text-slate-500 mb-1.5 block">Duration (min)</label>
                   <input
                     type="number"
-                    className="input input-bordered input-sm w-full"
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                     placeholder="60"
                     value={formData?.sessionDetails?.duration_minutes || ''}
                     onChange={(e) => handleFieldChange('sessionDetails', {
@@ -1051,17 +1063,17 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
                 </div>
               </div>
               <div>
-                <label className="text-xs text-base-content/60 mb-1 block">Start Date</label>
+                <label className="text-xs font-medium text-slate-500 mb-1.5 block">Start Date</label>
                 <input
                   type="date"
-                  className="input input-bordered input-sm w-full"
+                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                   value={formData?.startDate || ''}
                   onChange={(e) => handleFieldChange('startDate', e.target.value)}
                 />
               </div>
               {calculatedEndDate && (
-                <div className="text-xs text-base-content/50">
-                  End Date: {new Date(calculatedEndDate).toLocaleDateString()}
+                <div className="text-xs text-slate-500 bg-slate-100 px-3 py-2 rounded-lg">
+                  End Date: <span className="font-medium text-slate-700">{new Date(calculatedEndDate).toLocaleDateString()}</span>
                 </div>
               )}
             </div>
@@ -1069,15 +1081,15 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
 
           {/* Gym & Equipment Section */}
           <details className="group">
-            <summary className="flex items-center justify-between cursor-pointer py-2 px-1 hover:bg-base-200 rounded text-sm font-medium">
+            <summary className="flex items-center justify-between cursor-pointer py-2.5 px-3 hover:bg-slate-100 rounded-xl text-sm font-medium text-slate-700 transition-colors">
               <span>Gym & Equipment</span>
-              <ChevronDown className="w-4 h-4 transition-transform group-open:rotate-180" />
+              <ChevronDown className="w-4 h-4 text-slate-400 transition-transform group-open:rotate-180" />
             </summary>
-            <div className="pl-1 pr-1 pb-2 space-y-2">
+            <div className="px-3 pb-3 pt-1 space-y-3">
               <div>
-                <label className="text-xs text-base-content/60 mb-1 block">Gym Type</label>
+                <label className="text-xs font-medium text-slate-500 mb-1.5 block">Gym Type</label>
                 <select
-                  className="select select-bordered select-sm w-full"
+                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                   value={formData?.gymType || ''}
                   onChange={(e) => handleFieldChange('gymType', e.target.value)}
                 >
@@ -1088,9 +1100,9 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
                 </select>
               </div>
               <div>
-                <label className="text-xs text-base-content/60 mb-1 block">Difficulty</label>
+                <label className="text-xs font-medium text-slate-500 mb-1.5 block">Difficulty</label>
                 <select
-                  className="select select-bordered select-sm w-full"
+                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                   value={formData?.difficulty || 'intermediate'}
                   onChange={(e) => handleFieldChange('difficulty', e.target.value)}
                 >
@@ -1108,15 +1120,15 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
 
           {/* Focus & Style Section */}
           <details className="group">
-            <summary className="flex items-center justify-between cursor-pointer py-2 px-1 hover:bg-base-200 rounded text-sm font-medium">
+            <summary className="flex items-center justify-between cursor-pointer py-2.5 px-3 hover:bg-slate-100 rounded-xl text-sm font-medium text-slate-700 transition-colors">
               <span>Focus & Style</span>
-              <ChevronDown className="w-4 h-4 transition-transform group-open:rotate-180" />
+              <ChevronDown className="w-4 h-4 text-slate-400 transition-transform group-open:rotate-180" />
             </summary>
-            <div className="pl-1 pr-1 pb-2 space-y-2">
+            <div className="px-3 pb-3 pt-1 space-y-3">
               <div>
-                <label className="text-xs text-base-content/60 mb-1 block">Focus Area</label>
+                <label className="text-xs font-medium text-slate-500 mb-1.5 block">Focus Area</label>
                 <select
-                  className="select select-bordered select-sm w-full"
+                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                   value={formData?.focusArea || ''}
                   onChange={(e) => handleFieldChange('focusArea', e.target.value)}
                 >
@@ -1127,8 +1139,8 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
                 </select>
               </div>
               <div>
-                <label className="text-xs text-base-content/60 mb-1 block">Workout Types</label>
-                <div className="flex flex-wrap gap-1">
+                <label className="text-xs font-medium text-slate-500 mb-1.5 block">Workout Types</label>
+                <div className="flex flex-wrap gap-1.5">
                   {[
                     { id: 'strength', label: 'Strength' },
                     { id: 'hypertrophy', label: 'Hypertrophy' },
@@ -1140,7 +1152,11 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
                   ].map(type => (
                     <button
                       key={type.id}
-                      className={`btn btn-xs ${formData?.workoutFormats?.includes(type.id) ? 'btn-secondary' : 'btn-ghost'}`}
+                      className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                        formData?.workoutFormats?.includes(type.id)
+                          ? 'bg-purple-600 text-white shadow-sm'
+                          : 'bg-white border border-slate-200 text-slate-600 hover:border-purple-300 hover:text-purple-600'
+                      }`}
                       onClick={() => handleWorkoutFormatChange(type.id)}
                     >
                       {type.label}
@@ -1153,13 +1169,13 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
 
           {/* Description Section */}
           <details className="group">
-            <summary className="flex items-center justify-between cursor-pointer py-2 px-1 hover:bg-base-200 rounded text-sm font-medium">
+            <summary className="flex items-center justify-between cursor-pointer py-2.5 px-3 hover:bg-slate-100 rounded-xl text-sm font-medium text-slate-700 transition-colors">
               <span>Description</span>
-              <ChevronDown className="w-4 h-4 transition-transform group-open:rotate-180" />
+              <ChevronDown className="w-4 h-4 text-slate-400 transition-transform group-open:rotate-180" />
             </summary>
-            <div className="pl-1 pr-1 pb-2 space-y-2">
+            <div className="px-3 pb-3 pt-1">
               <textarea
-                className="textarea textarea-bordered textarea-sm w-full h-20"
+                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm h-20 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                 placeholder="Program goals and notes..."
                 value={formData?.description || ''}
                 onChange={(e) => handleFieldChange('description', e.target.value)}
@@ -1169,19 +1185,19 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
 
           {/* Previous Workouts Section */}
           <details className="group">
-            <summary className="flex items-center justify-between cursor-pointer py-2 px-1 hover:bg-base-200 rounded text-sm font-medium">
+            <summary className="flex items-center justify-between cursor-pointer py-2.5 px-3 hover:bg-slate-100 rounded-xl text-sm font-medium text-slate-700 transition-colors">
               <span>Reference Input</span>
-              <ChevronDown className="w-4 h-4 transition-transform group-open:rotate-180" />
+              <ChevronDown className="w-4 h-4 text-slate-400 transition-transform group-open:rotate-180" />
             </summary>
-            <div className="pl-1 pr-1 pb-2 space-y-2">
+            <div className="px-3 pb-3 pt-1 space-y-2">
               <textarea
-                className="textarea textarea-bordered textarea-sm w-full h-20"
+                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm h-20 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                 placeholder="Paste previous workout or program text..."
                 value={formData?.referenceInput || formData?.personalization || ''}
                 onChange={(e) => handleFieldChange('referenceInput', e.target.value)}
               />
               <button
-                className="btn btn-ghost btn-xs w-full"
+                className="w-full px-3 py-2 text-xs font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
                 onClick={() => setIsEnhancedReferenceModalOpen(true)}
               >
                 + Add Reference Workouts
@@ -1191,27 +1207,27 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
         </div>
 
         {/* Generate Button - Fixed at bottom */}
-        <div className="pt-4 border-t border-base-200 mt-4 sticky bottom-0 bg-base-100 pb-2">
+        <div className="p-4 border-t border-slate-200 sticky bottom-0 bg-slate-50/95 backdrop-blur-sm">
           <button
-            className="btn btn-primary w-full gap-2"
+            className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white py-2.5 rounded-xl font-medium shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 transition-all duration-200 flex items-center justify-center gap-2"
             onClick={handleGenerateClick}
             disabled={isGenerating}
           >
             {isGenerating ? (
               <>
                 <span className="loading loading-spinner loading-sm"></span>
-                Generating...
+                <span>Generating...</span>
               </>
             ) : (
               <>
                 <Sparkles className="w-4 h-4" />
-                {displayWorkouts.length > 0 ? 'Re-Generate' : 'Generate Program'}
+                <span>{displayWorkouts.length > 0 ? 'Re-Generate' : 'Generate Program'}</span>
               </>
             )}
           </button>
           {displayWorkouts.length > 0 && (
             <button
-              className="btn btn-outline btn-sm w-full mt-2"
+              className="w-full mt-2 px-4 py-2 bg-white border border-slate-200 hover:border-blue-300 hover:bg-blue-50 text-slate-700 hover:text-blue-700 rounded-xl text-sm font-medium transition-all"
               onClick={handleEnhanceProgram}
               disabled={isEnhancingProgram}
             >
@@ -1222,20 +1238,28 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
       </div>
 
       {/* RIGHT: Main Content Area - Workouts */}
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0 p-6 overflow-y-auto max-h-[calc(100vh-180px)]">
         {/* Workouts Header */}
-        <div className="flex items-center justify-between mb-4 pb-3 border-b border-base-200">
+        <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-200">
           <div>
-            <h2 className="text-lg font-semibold">Generated Workouts</h2>
-            <p className="text-sm text-base-content/60">
-              {displayWorkouts.length} workouts &bull; {formData?.numberOfWeeks || 0} weeks &bull; {formData?.daysOfWeek?.length || 0} days/week
-            </p>
+            <h2 className="text-lg font-semibold text-slate-800">Generated Workouts</h2>
+            <div className="flex items-center gap-3 mt-1">
+              <span className="inline-flex items-center px-2.5 py-1 bg-blue-50 text-blue-700 rounded-lg text-xs font-medium">
+                {displayWorkouts.length} workouts
+              </span>
+              <span className="inline-flex items-center px-2.5 py-1 bg-slate-100 text-slate-600 rounded-lg text-xs font-medium">
+                {formData?.numberOfWeeks || 0} weeks
+              </span>
+              <span className="inline-flex items-center px-2.5 py-1 bg-slate-100 text-slate-600 rounded-lg text-xs font-medium">
+                {formData?.daysOfWeek?.length || 0} days/week
+              </span>
+            </div>
           </div>
         </div>
 
         {/* Reference Workouts (if any) */}
         {referenceWorkouts.length > 0 && (
-          <div className="mb-4">
+          <div className="mb-6">
             <ReferenceWorkouts
               workouts={referenceWorkouts}
               supabase={supabase}
@@ -1307,16 +1331,18 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
 
         {/* Empty State */}
         {displayWorkouts.length === 0 && !isGenerating && (
-          <div className="flex flex-col items-center justify-center h-96 text-center">
-            <Sparkles className="w-16 h-16 text-base-content/20 mb-4" />
-            <h3 className="text-lg font-medium text-base-content/70 mb-2">
+          <div className="flex flex-col items-center justify-center h-96 text-center bg-slate-50/50 rounded-2xl border-2 border-dashed border-slate-200">
+            <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mb-4">
+              <Sparkles className="w-8 h-8 text-slate-400" />
+            </div>
+            <h3 className="text-lg font-semibold text-slate-700 mb-2">
               No workouts yet
             </h3>
-            <p className="text-sm text-base-content/50 max-w-sm mb-6">
+            <p className="text-sm text-slate-500 max-w-sm mb-6">
               Configure your program settings in the left panel, then click "Generate Program" to create your personalized workout plan.
             </p>
             <button
-              className="btn btn-primary gap-2"
+              className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-6 py-2.5 rounded-xl font-medium shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 transition-all duration-200 flex items-center gap-2"
               onClick={handleGenerateClick}
               disabled={isGenerating}
             >
