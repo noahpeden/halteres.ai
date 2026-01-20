@@ -9,10 +9,13 @@ export default function TrialStatusBanner() {
     trialEndDate: trialEnd,
     generationsRemaining,
     loadingProfile,
+    isAthlete,
   } = useAuth();
 
+  // Never show trial banner for athletes - they don't have subscriptions
   if (
     loadingProfile ||
+    isAthlete ||
     !subscriptionStatus ||
     subscriptionStatus !== 'trialing'
   ) {

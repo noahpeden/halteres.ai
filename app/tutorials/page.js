@@ -2,11 +2,11 @@
 
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { 
-  BookOpen, 
-  Wand2, 
-  Search, 
-  Share2, 
+import {
+  BookOpen,
+  Wand2,
+  Search,
+  Share2,
   Sparkles,
   ChevronDown,
   ChevronRight,
@@ -15,7 +15,12 @@ import {
   Calendar,
   RefreshCw,
   Play,
-  Video
+  Video,
+  Trophy,
+  Dumbbell,
+  Users,
+  MessageSquare,
+  TrendingUp,
 } from 'lucide-react';
 
 const tutorials = [
@@ -292,6 +297,204 @@ const tutorials = [
         'Consider your equipment and skill level in requests'
       ]
     }
+  },
+  {
+    id: 'athlete-management',
+    title: 'Managing Athletes & Gym Invites',
+    icon: Users,
+    description: 'Learn how to invite athletes to your gym and manage their access.',
+    content: {
+      overview: 'HalteresAI connects coaches and athletes. Athletes join your gym with an invite code and get access to workouts, leaderboards, and AI feedback.',
+      sections: [
+        {
+          title: 'Creating Invite Codes',
+          description: 'Generate unique invite codes for your gym that athletes can use to join',
+          features: [
+            'Access invite codes from your gym settings',
+            'Share codes via text, email, or post in your gym',
+            'Codes link athletes to your gym automatically',
+            'Athletes see only your gym\'s programming'
+          ],
+          location: 'Dashboard > Gym Settings'
+        },
+        {
+          title: 'Athlete Onboarding',
+          description: 'When athletes join, they go through a quick onboarding flow',
+          features: [
+            'Athletes set their display name',
+            'Optional: Enter baseline metrics (1RMs, mile time)',
+            'Immediately get access to today\'s workout',
+            'Can update metrics anytime from their profile'
+          ]
+        },
+        {
+          title: 'Viewing Athlete Activity',
+          description: 'See which athletes are engaging with your programming',
+          features: [
+            'View logged workout results',
+            'See leaderboard standings',
+            'Track athlete engagement over time',
+            'Identify athletes who may need attention'
+          ]
+        }
+      ],
+      tips: [
+        'Share your invite code during class announcements',
+        'Post the code on your gym\'s whiteboard or member portal',
+        'Encourage athletes to complete their profile for personalized feedback'
+      ]
+    }
+  },
+  {
+    id: 'leaderboards',
+    title: 'Understanding Gym Leaderboards',
+    icon: Trophy,
+    description: 'Learn how the points system and leaderboards work to motivate athletes.',
+    content: {
+      overview: 'Leaderboards gamify your gym experience. Athletes earn points for participating, and rankings update in real-time across weekly and monthly periods.',
+      sections: [
+        {
+          title: 'How Points Work',
+          description: 'Athletes earn points through various actions',
+          features: [
+            '1st Place: +10 points',
+            '2nd Place: +7 points',
+            '3rd Place: +5 points',
+            'Logged Workout: +3 points',
+            'Personal Record: +2 points',
+            'RX Completion: +1 point'
+          ]
+        },
+        {
+          title: 'Leaderboard Types',
+          description: 'Multiple leaderboard views keep competition fresh',
+          features: [
+            'By Workout: Rankings for each specific workout',
+            'This Week: Aggregate points for the current week',
+            'This Month: Aggregate points for the current month',
+            'Points reset at the start of each period'
+          ]
+        },
+        {
+          title: 'Athlete Recognition',
+          description: 'Athletes get recognized for their achievements',
+          features: [
+            'Medal badges for top 3 finishers',
+            'PR badges when hitting personal records',
+            'RX badges for completing workouts as prescribed',
+            'Current user highlighting on the leaderboard'
+          ]
+        }
+      ],
+      tips: [
+        'Announce weekly winners during class',
+        'Encourage athletes to log all their workouts',
+        'Use leaderboards to identify your most engaged athletes'
+      ]
+    }
+  },
+  {
+    id: 'ai-feedback',
+    title: 'AI Feedback System',
+    icon: MessageSquare,
+    description: 'Learn how the AI feedback loop improves programming and athlete insights.',
+    content: {
+      overview: 'HalteresAI learns from everyone. Coach feedback improves program generation. Athlete feedback improves personalized insights. The more you use it, the smarter it gets.',
+      sections: [
+        {
+          title: 'Coach Feedback',
+          description: 'Rate and comment on generated workouts to train the AI',
+          features: [
+            'Rate workouts after reviewing them',
+            'Provide specific feedback on what you liked or didn\'t',
+            'AI uses this to improve future generations',
+            'Your preferences shape your gym\'s programming style'
+          ],
+          location: 'Program Writer > Generated Workouts'
+        },
+        {
+          title: 'Athlete Feedback',
+          description: 'Athletes can request AI insights after logging workouts',
+          features: [
+            'Available after logging workout results',
+            'AI analyzes performance relative to history',
+            'Provides personalized tips and observations',
+            'Considers athlete\'s metrics and goals'
+          ]
+        },
+        {
+          title: 'Weekly Trends',
+          description: 'Athletes see AI-generated insights about their progress',
+          features: [
+            'Analyzes workout patterns over time',
+            'Identifies improvement areas',
+            'Highlights achievements and PRs',
+            'Updates weekly based on logged data'
+          ]
+        }
+      ],
+      tips: [
+        'Encourage athletes to log detailed notes with their results',
+        'Rate generated workouts even if they\'re good—positive feedback matters',
+        'The AI gets smarter with consistent use over time'
+      ]
+    }
+  },
+  {
+    id: 'athlete-app',
+    title: 'Athlete Mobile App Guide',
+    icon: Dumbbell,
+    description: 'Help your athletes get the most out of the mobile app.',
+    content: {
+      overview: 'Athletes use the mobile app to access workouts, log results, check leaderboards, and track their progress. Share this guide with your members.',
+      sections: [
+        {
+          title: 'Daily Workout View',
+          description: 'Athletes see today\'s workout on their home screen',
+          features: [
+            'Today\'s workout displayed prominently',
+            'Tap to view full workout details',
+            'Log results directly from the workout view',
+            'Access upcoming workouts in the calendar'
+          ]
+        },
+        {
+          title: 'Logging Results',
+          description: 'Athletes record their performance after each workout',
+          features: [
+            'Enter time, reps, or weight as appropriate',
+            'Mark as RX or scaled',
+            'Add notes about the workout',
+            'Request AI feedback after logging'
+          ]
+        },
+        {
+          title: 'Profile & Metrics',
+          description: 'Athletes manage their personal data',
+          features: [
+            'Update display name',
+            'Enter and update 1RM lifts',
+            'Track body metrics (weight, height)',
+            'View personal workout history'
+          ]
+        },
+        {
+          title: 'Leaderboard Access',
+          description: 'Athletes compete and track standings',
+          features: [
+            'View workout-specific rankings',
+            'Check weekly and monthly standings',
+            'See points breakdown',
+            'Celebrate top performers'
+          ]
+        }
+      ],
+      tips: [
+        'Athletes should download the app from the App Store or Google Play',
+        'Have athletes join using your gym\'s invite code',
+        'Encourage profile completion for the best experience'
+      ]
+    }
   }
 ];
 
@@ -309,11 +512,11 @@ export default function TutorialsPage() {
         <div className="text-center mb-12">
           <BookOpen className="w-16 h-16 text-primary mx-auto mb-4" />
           <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            Training Tutorials
+            Platform Tutorials
           </h1>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Learn how to make the most of our AI-powered gym programming tools.
-            These tutorials cover everything from creating 8-week cycles to modifying workouts day-of.
+            Master the complete HalteresAI platform. Learn how to generate programming,
+            manage athletes, use leaderboards, and leverage AI feedback to improve your gym.
           </p>
         </div>
 
@@ -715,6 +918,55 @@ export default function TutorialsPage() {
                             </div>
                           </div>
 
+                        </div>
+                      )}
+
+                      {/* Athlete & Gym Management tutorials - uses sections format */}
+                      {['athlete-management', 'leaderboards', 'ai-feedback', 'athlete-app'].includes(tutorial.id) && (
+                        <div className="space-y-6">
+                          {tutorial.content.sections.map((section, index) => (
+                            <div key={index} className="border rounded-lg p-4">
+                              <h4 className="text-lg font-semibold text-gray-900 mb-2">
+                                {section.title}
+                              </h4>
+                              <p className="text-gray-600 text-sm mb-3">
+                                {section.description}
+                              </p>
+                              {section.location && (
+                                <p className="text-xs text-primary mb-3 font-medium">
+                                  📍 {section.location}
+                                </p>
+                              )}
+                              {section.features && (
+                                <ul className="text-sm text-gray-600 space-y-1 mb-3">
+                                  {section.features.map((feature, fIndex) => (
+                                    <li key={fIndex} className="flex items-center space-x-2">
+                                      <Target className="w-3 h-3 text-primary flex-shrink-0" />
+                                      <span>{feature}</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              )}
+                            </div>
+                          ))}
+
+                          {tutorial.content.tips && (
+                            <div>
+                              <h4 className="text-lg font-semibold text-gray-900 mb-3">
+                                Pro Tips
+                              </h4>
+                              <div className="bg-blue-50 rounded-lg p-4">
+                                <ul className="space-y-2">
+                                  {tutorial.content.tips.map((tip, index) => (
+                                    <li key={index} className="flex items-start space-x-2">
+                                      <Sparkles className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" />
+                                      <span className="text-sm text-blue-800">{tip}</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       )}
 

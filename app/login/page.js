@@ -513,7 +513,7 @@ export default function LoginPage() {
                           </div>
                           <div>
                             <h4 className="font-bold text-lg">Coach / Gym Owner</h4>
-                            <p className="text-sm opacity-70">Create programs, manage athletes, and run your gym</p>
+                            <p className="text-sm opacity-70">Generate AI programming, track athletes, and grow your gym</p>
                           </div>
                         </div>
                       </button>
@@ -530,7 +530,7 @@ export default function LoginPage() {
                           </div>
                           <div>
                             <h4 className="font-bold text-lg">Athlete</h4>
-                            <p className="text-sm opacity-70">Join your gym, track workouts, and compete on leaderboards</p>
+                            <p className="text-sm opacity-70">Access workouts, compete on leaderboards, and get AI feedback</p>
                           </div>
                         </div>
                       </button>

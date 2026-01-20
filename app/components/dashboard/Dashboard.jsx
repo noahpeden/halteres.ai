@@ -1,5 +1,6 @@
 'use client';
 import { useState, useMemo } from 'react';
+import Link from 'next/link';
 import {
   Plus,
   Users,
@@ -12,6 +13,18 @@ import {
   FileText,
   Clock,
   ArrowRight,
+  Building2,
+  Link2,
+  Copy,
+  Settings,
+  Sparkles,
+  Target,
+  Trophy,
+  ChevronRight,
+  Activity,
+  Zap,
+  BarChart3,
+  UserPlus,
 } from 'lucide-react';
 
 // Dashboard components
@@ -35,9 +48,10 @@ export default function Dashboard() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showThisWeeksWorkouts, setShowThisWeeksWorkouts] = useState(false);
   const [showTodaysWorkouts, setShowTodaysWorkouts] = useState(false);
+  const [copied, setCopied] = useState(false);
 
-  // Get subscription status for program duration limits
-  const { subscriptionStatus } = useAuth();
+  // Get subscription status and gym info
+  const { subscriptionStatus, currentGym } = useAuth();
 
   // Custom hooks for data and modal management
   const {
@@ -143,15 +157,20 @@ export default function Dashboard() {
     setFilterEntityId(entityId);
   };
 
+  const copyInviteLink = () => {
+    if (!currentGym?.invite_code) return;
+    const link = `${window.location.origin}/join/${currentGym.invite_code}`;
+    navigator.clipboard.writeText(link);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex justify-center items-center">
+      <div className="min-h-screen bg-base-200 flex justify-center items-center">
         <div className="flex flex-col items-center space-y-4">
-          <div className="relative">
-            <div className="w-14 h-14 border-4 border-slate-200 rounded-full"></div>
-            <div className="w-14 h-14 border-4 border-blue-600 border-t-transparent rounded-full animate-spin absolute top-0 left-0"></div>
-          </div>
-          <p className="text-slate-600 font-medium">
+          <span className="loading loading-spinner loading-lg text-primary"></span>
+          <p className="text-base-content/70 font-medium">
             Loading your dashboard...
           </p>
         </div>
@@ -160,142 +179,234 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100">
-      {/* Header with subtle gradient border */}
-      <div className="bg-white border-b border-slate-200/80 shadow-sm">
+    <div className="min-h-screen bg-base-200">
+      {/* Header */}
+      <div className="bg-base-100 border-b border-base-300 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center py-6 gap-4">
-            <div className="animate-fadeIn">
+            <div>
               <div className="flex items-center gap-3 mb-1">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
-                  <LayoutGrid className="w-5 h-5 text-white" />
+                <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center shadow-lg">
+                  <LayoutGrid className="w-5 h-5 text-primary-content" />
                 </div>
-                <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">
+                <h1 className="text-2xl sm:text-3xl font-bold text-base-content">
                   Coach Dashboard
                 </h1>
               </div>
-              <p className="text-slate-500 mt-1 text-sm sm:text-base ml-13">
-                Manage your programs and track client progress
+              <p className="text-base-content/60 mt-1 text-sm sm:text-base ml-13">
+                Your command center for gym management
               </p>
             </div>
 
-            {/* Action Buttons */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 w-full sm:w-auto animate-fadeIn" style={{ animationDelay: '0.1s' }}>
-              <button
-                onClick={() =>
-                  (window.location.href = '/dashboard/manage/entities')
-                }
-                className="inline-flex items-center justify-center px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 shadow-sm"
-              >
-                <Users className="w-4 h-4 mr-2 text-slate-500" />
-                Manage Clients & Classes
-              </button>
-              <button
-                onClick={handleCreateProgram}
-                className="inline-flex items-center justify-center px-6 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl text-sm font-medium hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Create Program
-              </button>
-            </div>
+            <button
+              onClick={handleCreateProgram}
+              className="btn btn-primary gap-2"
+            >
+              <Plus className="w-4 h-4" />
+              Create Program
+            </button>
           </div>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-        {/* Quick Stats */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <div className="bg-white rounded-xl border border-slate-200/80 p-4 hover:shadow-md hover:border-slate-300 transition-all duration-200 animate-fadeIn" style={{ animationDelay: '0.05s' }}>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-slate-500 font-medium">Programs</p>
-                <p className="text-2xl font-bold text-slate-900 mt-1">{dashboardStats.programs}</p>
+        {/* Quick Command Cards - GYM, ATHLETES, PROGRAMS */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          {/* GYM Card */}
+          <div className="card bg-base-100 shadow-md hover:shadow-lg transition-shadow border border-base-300">
+            <div className="card-body">
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <Building2 className="w-6 h-6 text-primary" />
+                </div>
+                <span className="badge badge-primary badge-outline">Gym</span>
               </div>
-              <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center">
-                <FileText className="w-5 h-5 text-blue-600" />
+              <h2 className="card-title text-xl">
+                {currentGym?.name || 'Your Gym'}
+              </h2>
+              <p className="text-base-content/60 text-sm mb-4">
+                Manage settings, invite athletes, and configure your gym
+              </p>
+
+              {/* Quick Invite Code */}
+              {currentGym?.invite_code && (
+                <div className="bg-base-200 rounded-lg p-3 mb-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs text-base-content/60 mb-1">Invite Code</p>
+                      <p className="font-mono font-bold text-primary">{currentGym.invite_code}</p>
+                    </div>
+                    <button
+                      onClick={copyInviteLink}
+                      className={`btn btn-sm btn-ghost ${copied ? 'text-success' : ''}`}
+                    >
+                      {copied ? 'Copied!' : <Copy className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <div className="card-actions">
+                <Link href="/dashboard/gym" className="btn btn-primary btn-block gap-2">
+                  <Settings className="w-4 h-4" />
+                  Manage Gym
+                  <ChevronRight className="w-4 h-4 ml-auto" />
+                </Link>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl border border-slate-200/80 p-4 hover:shadow-md hover:border-slate-300 transition-all duration-200 animate-fadeIn" style={{ animationDelay: '0.1s' }}>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-slate-500 font-medium">Clients</p>
-                <p className="text-2xl font-bold text-slate-900 mt-1">{dashboardStats.clients}</p>
+          {/* ATHLETES Card */}
+          <div className="card bg-base-100 shadow-md hover:shadow-lg transition-shadow border border-base-300">
+            <div className="card-body">
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center">
+                  <Users className="w-6 h-6 text-accent" />
+                </div>
+                <span className="badge badge-accent badge-outline">Athletes</span>
               </div>
-              <div className="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center">
-                <Users className="w-5 h-5 text-emerald-600" />
+              <h2 className="card-title text-xl">Clients & Classes</h2>
+              <p className="text-base-content/60 text-sm mb-4">
+                View athlete profiles, track engagement, and manage your roster
+              </p>
+
+              {/* Quick Stats */}
+              <div className="stats stats-vertical bg-base-200 rounded-lg mb-4">
+                <div className="stat py-2 px-3">
+                  <div className="stat-title text-xs">Individual Clients</div>
+                  <div className="stat-value text-2xl text-accent">{dashboardStats.clients}</div>
+                </div>
+                <div className="stat py-2 px-3">
+                  <div className="stat-title text-xs">Group Classes</div>
+                  <div className="stat-value text-2xl text-secondary">{dashboardStats.classes}</div>
+                </div>
+              </div>
+
+              <div className="card-actions">
+                <Link href="/dashboard/manage/entities" className="btn btn-accent btn-block gap-2">
+                  <UserPlus className="w-4 h-4" />
+                  Manage Athletes
+                  <ChevronRight className="w-4 h-4 ml-auto" />
+                </Link>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl border border-slate-200/80 p-4 hover:shadow-md hover:border-slate-300 transition-all duration-200 animate-fadeIn" style={{ animationDelay: '0.15s' }}>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-slate-500 font-medium">Classes</p>
-                <p className="text-2xl font-bold text-slate-900 mt-1">{dashboardStats.classes}</p>
+          {/* PROGRAMS Card */}
+          <div className="card bg-base-100 shadow-md hover:shadow-lg transition-shadow border border-base-300">
+            <div className="card-body">
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-12 h-12 rounded-xl bg-secondary/10 flex items-center justify-center">
+                  <FileText className="w-6 h-6 text-secondary" />
+                </div>
+                <span className="badge badge-secondary badge-outline">Programs</span>
               </div>
-              <div className="w-10 h-10 rounded-lg bg-purple-50 flex items-center justify-center">
-                <Dumbbell className="w-5 h-5 text-purple-600" />
-              </div>
-            </div>
-          </div>
+              <h2 className="card-title text-xl">Training Programs</h2>
+              <p className="text-base-content/60 text-sm mb-4">
+                Create AI-powered programs, edit workouts, and track progress
+              </p>
 
-          <div className="bg-white rounded-xl border border-slate-200/80 p-4 hover:shadow-md hover:border-slate-300 transition-all duration-200 animate-fadeIn" style={{ animationDelay: '0.2s' }}>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-slate-500 font-medium">This Week</p>
-                <p className="text-2xl font-bold text-slate-900 mt-1">Active</p>
+              {/* Quick Stats */}
+              <div className="bg-base-200 rounded-lg p-4 mb-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-base-content/60 mb-1">Active Programs</p>
+                    <p className="text-3xl font-bold text-secondary">{dashboardStats.programs}</p>
+                  </div>
+                  <div className="w-12 h-12 rounded-full bg-secondary/20 flex items-center justify-center">
+                    <Sparkles className="w-6 h-6 text-secondary" />
+                  </div>
+                </div>
               </div>
-              <div className="w-10 h-10 rounded-lg bg-amber-50 flex items-center justify-center">
-                <TrendingUp className="w-5 h-5 text-amber-600" />
+
+              <div className="card-actions">
+                <button
+                  onClick={handleCreateProgram}
+                  className="btn btn-secondary btn-block gap-2"
+                >
+                  <Plus className="w-4 h-4" />
+                  Create New Program
+                  <ChevronRight className="w-4 h-4 ml-auto" />
+                </button>
               </div>
             </div>
           </div>
         </div>
 
+        {/* Quick Actions Row */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+          <button
+            onClick={handleCreateProgram}
+            className="btn btn-outline btn-primary gap-2 h-auto py-4 flex-col"
+          >
+            <Zap className="w-5 h-5" />
+            <span className="text-xs">Quick Program</span>
+          </button>
+          <Link
+            href="/dashboard/manage/entities"
+            className="btn btn-outline btn-accent gap-2 h-auto py-4 flex-col"
+          >
+            <UserPlus className="w-5 h-5" />
+            <span className="text-xs">Add Client</span>
+          </Link>
+          <Link
+            href="/dashboard/gym"
+            className="btn btn-outline gap-2 h-auto py-4 flex-col"
+          >
+            <Link2 className="w-5 h-5" />
+            <span className="text-xs">Invite Athletes</span>
+          </Link>
+          <Link
+            href="/dashboard/analytics"
+            className="btn btn-outline btn-info gap-2 h-auto py-4 flex-col"
+          >
+            <BarChart3 className="w-5 h-5" />
+            <span className="text-xs">Gym Analytics</span>
+          </Link>
+        </div>
+
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
           {/* Programs Section - Takes up 2/3 of the space */}
-          <div className="lg:col-span-2 animate-fadeIn" style={{ animationDelay: '0.25s' }}>
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden">
-              <div className="p-5 sm:p-6 border-b border-slate-100">
+          <div className="lg:col-span-2">
+            <div className="card bg-base-100 shadow-md border border-base-300">
+              <div className="card-body">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-5 gap-3">
                   <div>
-                    <h2 className="text-lg sm:text-xl font-semibold text-slate-900">
+                    <h2 className="card-title text-lg sm:text-xl">
                       Your Programs
                     </h2>
-                    <p className="text-sm text-slate-500 mt-0.5">
+                    <p className="text-sm text-base-content/60 mt-0.5">
                       Manage and track your training programs
                     </p>
                   </div>
                   <button
                     onClick={handleCreateProgram}
-                    className="inline-flex items-center px-3.5 py-2 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-100 transition-colors duration-200 w-full sm:w-auto justify-center border border-blue-100"
+                    className="btn btn-primary btn-sm gap-2"
                   >
-                    <Plus className="w-4 h-4 mr-1.5" />
+                    <Plus className="w-4 h-4" />
                     New Program
                   </button>
                 </div>
 
                 {/* Search and Filter */}
-                <div className="flex flex-col sm:flex-row gap-3">
+                <div className="flex flex-col sm:flex-row gap-3 mb-4">
                   <div className="relative flex-1">
-                    <Search className="absolute left-3.5 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <Search className="absolute left-3.5 top-1/2 transform -translate-y-1/2 w-4 h-4 text-base-content/40" />
                     <input
                       type="text"
                       placeholder="Search programs..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 bg-slate-50/50 hover:bg-white"
+                      className="input input-bordered w-full pl-10"
                     />
                   </div>
                   <div className="relative">
-                    <Filter className="absolute left-3.5 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <Filter className="absolute left-3.5 top-1/2 transform -translate-y-1/2 w-4 h-4 text-base-content/40 pointer-events-none" />
                     <select
                       value={filterEntityId}
                       onChange={(e) => handleFilterChange(e.target.value)}
-                      className="pl-10 pr-10 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-slate-50/50 hover:bg-white transition-all duration-200 appearance-none cursor-pointer"
+                      className="select select-bordered pl-10"
                     >
                       <option value="all">All Programs</option>
                       <optgroup label="Clients">
@@ -319,9 +430,7 @@ export default function Dashboard() {
                     </select>
                   </div>
                 </div>
-              </div>
 
-              <div className="p-5 sm:p-6">
                 <ProgramsList
                   programs={programs}
                   entities={entities}
@@ -336,13 +445,13 @@ export default function Dashboard() {
           </div>
 
           {/* Upcoming Workouts Sidebar - Takes up 1/3 of the space */}
-          <div className="lg:col-span-1 animate-fadeIn" style={{ animationDelay: '0.3s' }}>
+          <div className="lg:col-span-1">
             <CollapsibleWorkoutsSection />
           </div>
         </div>
 
         {/* Feedback Section */}
-        <div className="mt-8 animate-fadeIn" style={{ animationDelay: '0.35s' }}>
+        <div className="mt-8">
           <FeedbackSection />
         </div>
 
@@ -395,54 +504,56 @@ export default function Dashboard() {
 
         {/* Today's Workouts Modal */}
         {showTodaysWorkouts && (
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden animate-scaleIn">
-              <div className="flex items-center justify-between p-6 border-b border-slate-200">
+          <div className="modal modal-open">
+            <div className="modal-box max-w-6xl w-full max-h-[90vh]">
+              <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
-                    <Calendar className="w-5 h-5 text-blue-600" />
+                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <Calendar className="w-5 h-5 text-primary" />
                   </div>
-                  <h2 className="text-xl font-semibold text-slate-900">Today's Workouts</h2>
+                  <h3 className="font-bold text-xl">Today's Workouts</h3>
                 </div>
                 <button
                   onClick={() => setShowTodaysWorkouts(false)}
-                  className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+                  className="btn btn-sm btn-circle btn-ghost"
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
+                  ✕
                 </button>
               </div>
-              <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+              <div className="overflow-y-auto max-h-[calc(90vh-120px)]">
                 <TodayWorkouts />
               </div>
+            </div>
+            <div className="modal-backdrop" onClick={() => setShowTodaysWorkouts(false)}>
+              <button>close</button>
             </div>
           </div>
         )}
 
         {/* This Week's Workouts Modal */}
         {showThisWeeksWorkouts && (
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden animate-scaleIn">
-              <div className="flex items-center justify-between p-6 border-b border-slate-200">
+          <div className="modal modal-open">
+            <div className="modal-box max-w-6xl w-full max-h-[90vh]">
+              <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
-                    <Clock className="w-5 h-5 text-blue-600" />
+                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <Clock className="w-5 h-5 text-primary" />
                   </div>
-                  <h2 className="text-xl font-semibold text-slate-900">This Week's Workouts</h2>
+                  <h3 className="font-bold text-xl">This Week's Workouts</h3>
                 </div>
                 <button
                   onClick={() => setShowThisWeeksWorkouts(false)}
-                  className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+                  className="btn btn-sm btn-circle btn-ghost"
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
+                  ✕
                 </button>
               </div>
-              <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+              <div className="overflow-y-auto max-h-[calc(90vh-120px)]">
                 <ThisWeeksWorkouts />
               </div>
+            </div>
+            <div className="modal-backdrop" onClick={() => setShowThisWeeksWorkouts(false)}>
+              <button>close</button>
             </div>
           </div>
         )}

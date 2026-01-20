@@ -400,3 +400,460 @@ function formatPRValue(pr) {
       return pr.custom_name || pr.category;
   }
 }
+
+// ============================================
+// PROGRAM ANALYTICS
+// ============================================
+
+// Get list of programs for analytics dropdown
+export async function getProgramsForAnalyticsAction(gymId) {
+  const supabase = await createSupabaseClient();
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return { success: false, error: 'Not authenticated' };
+  }
+
+  try {
+    // Get programs that belong to the gym or are owned by the user
+    const { data: programs, error } = await supabase
+      .from('programs')
+      .select(`
+        id,
+        name,
+        duration_weeks,
+        created_at,
+        entity:entities(id, name, type)
+      `)
+      .or(`gym_id.eq.${gymId},user_id.eq.${user.id}`)
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    // Get workout counts for each program
+    const programIds = (programs || []).map(p => p.id);
+
+    let workoutCounts = {};
+    if (programIds.length > 0) {
+      const { data: workouts } = await supabase
+        .from('program_workouts')
+        .select('program_id')
+        .in('program_id', programIds)
+        .is('deleted_at', null);
+
+      (workouts || []).forEach(w => {
+        workoutCounts[w.program_id] = (workoutCounts[w.program_id] || 0) + 1;
+      });
+    }
+
+    const formattedPrograms = (programs || []).map(p => ({
+      id: p.id,
+      name: p.name,
+      entityName: p.entity?.name || 'Unknown',
+      entityType: p.entity?.type || 'CLIENT',
+      durationWeeks: p.duration_weeks,
+      createdAt: p.created_at,
+      workoutCount: workoutCounts[p.id] || 0,
+    }));
+
+    return { success: true, data: formattedPrograms };
+  } catch (error) {
+    console.error('Error fetching programs for analytics:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+// Get detailed analytics for a specific program
+export async function getProgramAnalyticsAction(programId, gymId) {
+  const supabase = await createSupabaseClient();
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return { success: false, error: 'Not authenticated' };
+  }
+
+  try {
+    // Get program details
+    const { data: program, error: programError } = await supabase
+      .from('programs')
+      .select(`
+        id,
+        name,
+        duration_weeks,
+        created_at,
+        entity:entities(id, name, type)
+      `)
+      .eq('id', programId)
+      .single();
+
+    if (programError) throw programError;
+
+    // Get all workouts in this program
+    const { data: workouts, error: workoutsError } = await supabase
+      .from('program_workouts')
+      .select('id, title, scheduled_date, week_number')
+      .eq('program_id', programId)
+      .is('deleted_at', null)
+      .order('scheduled_date', { ascending: true });
+
+    if (workoutsError) throw workoutsError;
+
+    const workoutIds = (workouts || []).map(w => w.id);
+    const totalWorkouts = workoutIds.length;
+
+    if (totalWorkouts === 0) {
+      return {
+        success: true,
+        data: {
+          programName: program.name,
+          entityName: program.entity?.name,
+          totalWorkouts: 0,
+          completedWorkouts: 0,
+          completionRate: 0,
+          totalPRs: 0,
+          participationByAthlete: [],
+          prsInProgram: [],
+          workoutCompletionByWeek: [],
+        },
+      };
+    }
+
+    // Get all results for these workouts
+    const { data: results, error: resultsError } = await supabase
+      .from('workout_results')
+      .select(`
+        id,
+        user_id,
+        workout_id,
+        created_at,
+        is_pr,
+        user:profiles(id, display_name, full_name, profile_photo_url)
+      `)
+      .in('workout_id', workoutIds)
+      .is('deleted_at', null);
+
+    if (resultsError) throw resultsError;
+
+    // Calculate completion stats
+    const uniqueWorkoutsCompleted = new Set((results || []).map(r => r.workout_id)).size;
+
+    // Calculate participation by athlete
+    const athleteStats = {};
+    (results || []).forEach(r => {
+      if (!athleteStats[r.user_id]) {
+        athleteStats[r.user_id] = {
+          userId: r.user_id,
+          displayName: r.user?.display_name || r.user?.full_name || 'Athlete',
+          profilePhotoUrl: r.user?.profile_photo_url,
+          completedCount: 0,
+          prCount: 0,
+        };
+      }
+      athleteStats[r.user_id].completedCount++;
+      if (r.is_pr) {
+        athleteStats[r.user_id].prCount++;
+      }
+    });
+
+    const participationByAthlete = Object.values(athleteStats)
+      .sort((a, b) => b.completedCount - a.completedCount);
+
+    // Get PRs in this program
+    const { data: prs } = await supabase
+      .from('personal_records')
+      .select(`
+        id,
+        user_id,
+        category,
+        custom_name,
+        result_type,
+        time_seconds,
+        weight_kg,
+        reps,
+        achieved_at,
+        user:profiles(id, display_name, full_name, profile_photo_url)
+      `)
+      .in('workout_result_id', (results || []).filter(r => r.is_pr).map(r => r.id))
+      .order('achieved_at', { ascending: false })
+      .limit(20);
+
+    const prsInProgram = (prs || []).map(pr => ({
+      id: pr.id,
+      userId: pr.user_id,
+      displayName: pr.user?.display_name || pr.user?.full_name || 'Athlete',
+      profilePhotoUrl: pr.user?.profile_photo_url,
+      movement: pr.custom_name || pr.category,
+      value: formatPRValue(pr),
+      date: pr.achieved_at,
+    }));
+
+    // Calculate completion by week
+    const workoutsByWeek = {};
+    const completedByWeek = {};
+
+    (workouts || []).forEach(w => {
+      const week = w.week_number || 1;
+      workoutsByWeek[week] = (workoutsByWeek[week] || 0) + 1;
+    });
+
+    (results || []).forEach(r => {
+      const workout = workouts.find(w => w.id === r.workout_id);
+      if (workout) {
+        const week = workout.week_number || 1;
+        if (!completedByWeek[week]) {
+          completedByWeek[week] = new Set();
+        }
+        completedByWeek[week].add(r.workout_id);
+      }
+    });
+
+    const workoutCompletionByWeek = Object.keys(workoutsByWeek)
+      .sort((a, b) => Number(a) - Number(b))
+      .map(week => ({
+        week: `Week ${week}`,
+        total: workoutsByWeek[week],
+        completed: completedByWeek[week]?.size || 0,
+      }));
+
+    return {
+      success: true,
+      data: {
+        programName: program.name,
+        entityName: program.entity?.name,
+        totalWorkouts,
+        completedWorkouts: uniqueWorkoutsCompleted,
+        completionRate: totalWorkouts > 0 ? Math.round((uniqueWorkoutsCompleted / totalWorkouts) * 100) : 0,
+        totalPRs: prsInProgram.length,
+        participationByAthlete,
+        prsInProgram,
+        workoutCompletionByWeek,
+      },
+    };
+  } catch (error) {
+    console.error('Error fetching program analytics:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+// ============================================
+// ATHLETE ANALYTICS
+// ============================================
+
+// Get detailed analytics for a specific athlete
+export async function getAthleteAnalyticsAction(gymId, athleteId) {
+  const supabase = await createSupabaseClient();
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return { success: false, error: 'Not authenticated' };
+  }
+
+  try {
+    // Get athlete profile
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('id, display_name, full_name, profile_photo_url')
+      .eq('id', athleteId)
+      .single();
+
+    if (profileError) throw profileError;
+
+    // Get membership info
+    const { data: membership } = await supabase
+      .from('gym_memberships')
+      .select('joined_at')
+      .eq('gym_id', gymId)
+      .eq('user_id', athleteId)
+      .single();
+
+    // Get all workout results for this athlete
+    const { data: results, error: resultsError } = await supabase
+      .from('workout_results')
+      .select(`
+        id,
+        workout_id,
+        created_at,
+        result_type,
+        time_seconds,
+        rounds,
+        reps,
+        weight_kg,
+        is_pr,
+        perceived_effort,
+        workout:program_workouts(id, title, program_id)
+      `)
+      .eq('user_id', athleteId)
+      .eq('gym_id', gymId)
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false });
+
+    if (resultsError) throw resultsError;
+
+    // Calculate overall stats
+    const totalWorkouts = (results || []).length;
+    const totalPRs = (results || []).filter(r => r.is_pr).length;
+    const effortValues = (results || []).filter(r => r.perceived_effort).map(r => r.perceived_effort);
+    const avgEffort = effortValues.length > 0
+      ? Math.round(effortValues.reduce((a, b) => a + b, 0) / effortValues.length * 10) / 10
+      : null;
+
+    // Calculate current streak
+    let currentStreak = 0;
+    if (results && results.length > 0) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      let checkDate = new Date(today);
+      const resultDates = new Set(
+        results.map(r => new Date(r.created_at).toISOString().split('T')[0])
+      );
+
+      while (resultDates.has(checkDate.toISOString().split('T')[0])) {
+        currentStreak++;
+        checkDate.setDate(checkDate.getDate() - 1);
+      }
+    }
+
+    // Get workout history (last 30 days)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const workoutHistory = (results || [])
+      .filter(r => new Date(r.created_at) >= thirtyDaysAgo)
+      .slice(0, 20)
+      .map(r => ({
+        id: r.id,
+        date: r.created_at,
+        title: r.workout?.title || 'Workout',
+        result: formatResultValue(r),
+        isPR: r.is_pr || false,
+      }));
+
+    // Get PR history
+    const { data: prs } = await supabase
+      .from('personal_records')
+      .select('id, category, custom_name, result_type, time_seconds, weight_kg, reps, achieved_at, improvement_percentage')
+      .eq('user_id', athleteId)
+      .order('achieved_at', { ascending: false })
+      .limit(20);
+
+    const prHistory = (prs || []).map(pr => ({
+      id: pr.id,
+      movement: pr.custom_name || pr.category,
+      value: formatPRValue(pr),
+      date: pr.achieved_at,
+      improvement: pr.improvement_percentage,
+    }));
+
+    // Calculate participation by week (last 8 weeks)
+    const eightWeeksAgo = new Date();
+    eightWeeksAgo.setDate(eightWeeksAgo.getDate() - 56);
+
+    const participationByWeek = [];
+    for (let i = 7; i >= 0; i--) {
+      const weekStart = new Date();
+      weekStart.setDate(weekStart.getDate() - (i * 7) - 6);
+      weekStart.setHours(0, 0, 0, 0);
+
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekEnd.getDate() + 7);
+
+      const weekResults = (results || []).filter(r => {
+        const resultDate = new Date(r.created_at);
+        return resultDate >= weekStart && resultDate < weekEnd;
+      });
+
+      participationByWeek.push({
+        week: `Week ${8 - i}`,
+        weekStart: weekStart.toISOString().split('T')[0],
+        count: weekResults.length,
+      });
+    }
+
+    // Get program participation
+    const programResults = {};
+    (results || []).forEach(r => {
+      if (r.workout?.program_id) {
+        if (!programResults[r.workout.program_id]) {
+          programResults[r.workout.program_id] = {
+            programId: r.workout.program_id,
+            completedWorkouts: 0,
+          };
+        }
+        programResults[r.workout.program_id].completedWorkouts++;
+      }
+    });
+
+    const programIds = Object.keys(programResults);
+    let programParticipation = [];
+
+    if (programIds.length > 0) {
+      const { data: programs } = await supabase
+        .from('programs')
+        .select('id, name')
+        .in('id', programIds);
+
+      // Get total workout counts per program
+      const { data: allWorkouts } = await supabase
+        .from('program_workouts')
+        .select('program_id')
+        .in('program_id', programIds)
+        .is('deleted_at', null);
+
+      const totalByProgram = {};
+      (allWorkouts || []).forEach(w => {
+        totalByProgram[w.program_id] = (totalByProgram[w.program_id] || 0) + 1;
+      });
+
+      programParticipation = (programs || []).map(p => ({
+        programId: p.id,
+        programName: p.name,
+        completedWorkouts: programResults[p.id]?.completedWorkouts || 0,
+        totalWorkouts: totalByProgram[p.id] || 0,
+      }));
+    }
+
+    return {
+      success: true,
+      data: {
+        profile: {
+          displayName: profile.display_name || profile.full_name || 'Athlete',
+          photoUrl: profile.profile_photo_url,
+          joinedAt: membership?.joined_at,
+        },
+        overallStats: {
+          totalWorkouts,
+          totalPRs,
+          avgEffort,
+          currentStreak,
+        },
+        workoutHistory,
+        prHistory,
+        participationByWeek,
+        programParticipation,
+      },
+    };
+  } catch (error) {
+    console.error('Error fetching athlete analytics:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+function formatResultValue(result) {
+  switch (result.result_type) {
+    case 'time':
+      if (!result.time_seconds) return '-';
+      const mins = Math.floor(result.time_seconds / 60);
+      const secs = result.time_seconds % 60;
+      return `${mins}:${secs.toString().padStart(2, '0')}`;
+    case 'weight':
+      return `${result.weight_kg || 0} kg`;
+    case 'reps':
+      return `${result.reps || 0} reps`;
+    case 'rounds_reps':
+      return `${result.rounds || 0} + ${result.reps || 0}`;
+    default:
+      return '-';
+  }
+}

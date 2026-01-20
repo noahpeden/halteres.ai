@@ -182,7 +182,7 @@ export default function Navbar() {
                 </li>
               </>
             )}
-            {session && isCoach && (
+            {session && isCoach && !loadingProfile && (
               <>
                 <li>
                   <NavLink href="/dashboard">Dashboard</NavLink>
@@ -196,7 +196,7 @@ export default function Navbar() {
               </>
             )}
             {/* Hide navigation for athletes who need to complete setup */}
-            {session && isAthlete && !athleteNeedsSetup && (
+            {session && isAthlete && !athleteNeedsSetup && !loadingProfile && (
               <>
                 <li>
                   <NavLink href="/athlete">Today</NavLink>

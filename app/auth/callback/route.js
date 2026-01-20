@@ -72,13 +72,13 @@ export async function GET(request) {
         console.log('Profile role updated to:', signupRole);
       }
 
-      // If athlete with gym code, auto-join the gym
+      // If athlete with gym code, auto-join the gym (always auto-approve, no approval process)
       if (signupRole === 'athlete' && signupGymCode) {
         try {
           // Find gym by invite code
           const { data: gym, error: gymError } = await supabase
             .from('gyms')
-            .select('id, name, require_approval')
+            .select('id, name')
             .eq('invite_code', signupGymCode.toUpperCase())
             .is('deleted_at', null)
             .single();
@@ -93,15 +93,15 @@ export async function GET(request) {
               .single();
 
             if (!existingMembership) {
-              // Create membership
+              // Create membership - always active (no approval process)
               const { error: membershipError } = await supabase
                 .from('gym_memberships')
                 .insert([{
                   gym_id: gym.id,
                   user_id: user.id,
                   role: 'athlete',
-                  status: gym.require_approval ? 'pending' : 'active',
-                  joined_at: gym.require_approval ? null : new Date().toISOString(),
+                  status: 'active',
+                  joined_at: new Date().toISOString(),
                 }]);
 
               if (membershipError) {

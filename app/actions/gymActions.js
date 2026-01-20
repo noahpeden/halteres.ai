@@ -311,7 +311,7 @@ export async function joinGymAction(inviteCode) {
     // Find gym by invite code
     const { data: gym, error: gymError } = await supabase
       .from('gyms')
-      .select('id, name, require_approval')
+      .select('id, name')
       .eq('invite_code', inviteCode.toUpperCase())
       .is('deleted_at', null)
       .single();
@@ -335,19 +335,16 @@ export async function joinGymAction(inviteCode) {
       if (existingMembership.status === 'active') {
         return { success: false, error: 'You are already a member of this gym.' };
       }
-      if (existingMembership.status === 'pending') {
-        return { success: false, error: 'Your membership request is pending approval.' };
-      }
-      // If status is 'left' or 'suspended', allow rejoining
+      // Allow rejoining if status is 'pending', 'left', or 'suspended'
     }
 
-    // Create membership
+    // Create membership - always auto-approve (no approval process)
     const membershipData = {
       gym_id: gym.id,
       user_id: user.id,
       role: 'athlete',
-      status: gym.require_approval ? 'pending' : 'active',
-      joined_at: gym.require_approval ? null : new Date().toISOString(),
+      status: 'active',
+      joined_at: new Date().toISOString(),
     };
 
     const { data: membership, error: membershipError } = await supabase
@@ -361,9 +358,7 @@ export async function joinGymAction(inviteCode) {
     return {
       success: true,
       data: membership,
-      message: gym.require_approval
-        ? 'Membership request sent. Waiting for approval.'
-        : `Welcome to ${gym.name}!`,
+      message: `Welcome to ${gym.name}!`,
     };
   } catch (error) {
     console.error('Join Gym Error:', error);

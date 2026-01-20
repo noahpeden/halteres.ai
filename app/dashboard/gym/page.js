@@ -40,7 +40,6 @@ export default function GymManagementPage() {
     name: '',
     description: '',
     timezone: 'America/New_York',
-    require_approval: true,
   });
 
   useEffect(() => {
@@ -49,7 +48,6 @@ export default function GymManagementPage() {
         name: currentGym.name || '',
         description: currentGym.description || '',
         timezone: currentGym.timezone || 'America/New_York',
-        require_approval: currentGym.require_approval ?? true,
       });
       fetchMembers();
       fetchPendingMembers();
@@ -224,20 +222,6 @@ export default function GymManagementPage() {
                 </select>
               </div>
 
-              <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-lg border border-slate-200">
-                <input
-                  type="checkbox"
-                  id="require_approval"
-                  className="w-5 h-5 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
-                  checked={formData.require_approval}
-                  onChange={(e) => setFormData({ ...formData, require_approval: e.target.checked })}
-                />
-                <label htmlFor="require_approval" className="flex-1 cursor-pointer">
-                  <span className="block text-sm font-medium text-slate-700">Require approval for new members</span>
-                  <span className="block text-xs text-slate-500 mt-0.5">Review requests before athletes can join</span>
-                </label>
-              </div>
-
               <button
                 type="submit"
                 className="w-full inline-flex items-center justify-center px-6 py-3 bg-blue-600 text-white rounded-lg text-base font-medium hover:bg-blue-700 transition-colors duration-200 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
@@ -379,20 +363,6 @@ export default function GymManagementPage() {
                   <option value="America/Los_Angeles">Pacific Time</option>
                   <option value="UTC">UTC</option>
                 </select>
-              </div>
-
-              <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-lg border border-slate-200">
-                <input
-                  type="checkbox"
-                  id="require_approval_edit"
-                  className="w-5 h-5 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
-                  checked={formData.require_approval}
-                  onChange={(e) => setFormData({ ...formData, require_approval: e.target.checked })}
-                />
-                <label htmlFor="require_approval_edit" className="flex-1 cursor-pointer">
-                  <span className="block text-sm font-medium text-slate-700">Require approval for new members</span>
-                  <span className="block text-xs text-slate-500 mt-0.5">Review requests before athletes can join</span>
-                </label>
               </div>
 
               <div className="pt-4 border-t border-slate-200">
