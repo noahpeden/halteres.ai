@@ -114,7 +114,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
 
   // Two-phase generation state
   const [weekInputs, setWeekInputs] = useState({});
-  const [enhancingWeek, setEnhancingWeek] = useState(null);
+  const [enhancingWeeks, setEnhancingWeeks] = useState(new Set());
   const [showGenerationProgress, setShowGenerationProgress] = useState(false);
   const [skeletonProgress, setSkeletonProgress] = useState(null);
   
@@ -809,11 +809,18 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
     }));
   }, []);
 
-  // Handle week enhancement (Phase 2)
+  // Handle week enhancement (Phase 2) - supports concurrent enhancement of multiple weeks
   const handleEnhanceWeek = useCallback(async (weekNumber, weekInput) => {
     if (!programId) return;
 
-    setEnhancingWeek(weekNumber);
+    // Check if this week is already being enhanced
+    if (enhancingWeeks.has(weekNumber)) {
+      showToast(`Week ${weekNumber} is already being enhanced`, 'info');
+      return;
+    }
+
+    // Add this week to the enhancing set
+    setEnhancingWeeks(prev => new Set([...prev, weekNumber]));
 
     try {
       const weekWorkouts = workouts.filter(w => w.week_number === weekNumber);
@@ -842,18 +849,27 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
     } catch (error) {
       showToast(`Failed to enhance Week ${weekNumber}: ${error.message}`, 'error');
     } finally {
-      setEnhancingWeek(null);
+      // Remove this week from the enhancing set
+      setEnhancingWeeks(prev => {
+        const next = new Set(prev);
+        next.delete(weekNumber);
+        return next;
+      });
     }
-  }, [programId, workouts, formData, selectedEquipment, weekInputs, updateWorkout, showToast, supabase, setWeekInput]);
+  }, [programId, workouts, formData, selectedEquipment, weekInputs, updateWorkout, showToast, supabase, setWeekInput, enhancingWeeks]);
 
-  // Handle enhance all weeks
+  // Handle enhance all weeks - launches all enhancements concurrently
   const handleEnhanceAllWeeks = useCallback(async () => {
     const groupedWeeks = groupWorkoutsByWeek(workouts);
     const skeletonWeeks = groupedWeeks.filter(w => w.status === 'skeleton');
 
-    for (const week of skeletonWeeks) {
-      await handleEnhanceWeek(week.weekNumber, weekInputs[week.weekNumber] || '');
-    }
+    // Launch all week enhancements concurrently
+    const enhancePromises = skeletonWeeks.map(week =>
+      handleEnhanceWeek(week.weekNumber, weekInputs[week.weekNumber] || '')
+    );
+
+    // Wait for all to complete (each handles its own errors)
+    await Promise.allSettled(enhancePromises);
   }, [workouts, weekInputs, handleEnhanceWeek]);
 
   // Two-phase skeleton generation
@@ -1307,8 +1323,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
               weeklyData={groupWorkoutsByWeek(displayWorkouts)}
               onEnhanceWeek={handleEnhanceWeek}
               onEnhanceAll={handleEnhanceAllWeeks}
-              isEnhancing={enhancingWeek !== null}
-              enhancingWeek={enhancingWeek}
+              enhancingWeeks={enhancingWeeks}
               programContext={{
                 goal: formData?.goal,
                 difficulty: formData?.difficulty,
