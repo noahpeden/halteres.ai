@@ -12,13 +12,15 @@ import {
   Save,
   X,
   Share2,
+  MessageSquare,
+  Target,
 } from 'lucide-react';
 import TemplateFeedbackButton from '@/components/feedback/TemplateFeedbackButton';
 
 export default function WorkoutDetailsPage(props) {
   const params = use(props.params);
   const { programId, workoutId } = params;
-  const { supabase } = useAuth();
+  const { supabase, isCoach, isGymOwner } = useAuth();
   const router = useRouter();
   const [workout, setWorkout] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -33,6 +35,14 @@ export default function WorkoutDetailsPage(props) {
   const [pendingEnhancement, setPendingEnhancement] = useState(null);
   const [showSavePrompt, setShowSavePrompt] = useState(false);
   const enhanceInputRef = useRef(null);
+
+  // Coaching content generation state
+  const [isGeneratingCoaching, setIsGeneratingCoaching] = useState(false);
+  const [pendingCoachingContent, setPendingCoachingContent] = useState(null);
+  const [showCoachingSavePrompt, setShowCoachingSavePrompt] = useState(false);
+
+  // Check if user can generate coaching content (coach or gym owner only)
+  const canGenerateCoachingContent = isCoach || isGymOwner;
 
   useEffect(() => {
     async function fetchData() {
@@ -273,6 +283,80 @@ export default function WorkoutDetailsPage(props) {
     }
   };
 
+  // Generate coaching content (stimulus/strategy and coaching cues)
+  const handleGenerateCoachingContent = async () => {
+    if (!workout || !canGenerateCoachingContent) return;
+
+    setIsGeneratingCoaching(true);
+    try {
+      const res = await fetch('/api/generate-coaching-content', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          workoutId: workout.id,
+          programId,
+          contentType: 'both', // Generate both stimulus/strategy and coaching cues
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to generate coaching content');
+      }
+
+      const { content } = await res.json();
+
+      // Store the generated content for preview
+      setPendingCoachingContent(content);
+      setShowCoachingSavePrompt(true);
+    } catch (err) {
+      console.error('Error generating coaching content:', err);
+      alert(`Failed to generate coaching content: ${err.message}`);
+    } finally {
+      setIsGeneratingCoaching(false);
+    }
+  };
+
+  // Save coaching content by prepending to workout body
+  const handleSaveCoachingContent = async () => {
+    if (!pendingCoachingContent || !workout) return;
+
+    try {
+      // Prepend the coaching content to the existing body
+      const existingBody = workout.body || workout.body_skeleton || '';
+      const newBody = `${pendingCoachingContent}\n\n---\n\n${existingBody}`;
+
+      const { error } = await supabase
+        .from('program_workouts')
+        .update({
+          body: newBody,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', workout.id);
+
+      if (error) throw error;
+
+      // Update local state
+      setWorkout((prev) => ({
+        ...prev,
+        body: newBody,
+        updated_at: new Date().toISOString(),
+      }));
+      setEditedBody(newBody);
+
+      setPendingCoachingContent(null);
+      setShowCoachingSavePrompt(false);
+    } catch (err) {
+      console.error('Error saving coaching content:', err);
+      alert(`Failed to save coaching content: ${err.message}`);
+    }
+  };
+
+  const handleDiscardCoachingContent = () => {
+    setPendingCoachingContent(null);
+    setShowCoachingSavePrompt(false);
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-96">
@@ -473,6 +557,23 @@ export default function WorkoutDetailsPage(props) {
                           )}
                         </div>
 
+                        {/* Coaching Content Button - Only for coaches/owners */}
+                        {canGenerateCoachingContent && (
+                          <button
+                            onClick={handleGenerateCoachingContent}
+                            className="inline-flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-medium transition-colors shadow-sm disabled:opacity-50"
+                            disabled={isGeneratingCoaching}
+                            title="Generate stimulus/strategy and coaching cues"
+                          >
+                            {isGeneratingCoaching ? (
+                              <span className="w-4 h-4 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
+                            ) : (
+                              <Target className="w-4 h-4" />
+                            )}
+                            Add Coaching
+                          </button>
+                        )}
+
                         <button
                           onClick={handleStartEdit}
                           className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-colors"
@@ -544,7 +645,7 @@ export default function WorkoutDetailsPage(props) {
                 <div className="mb-6 p-4 bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-xl">
                   <div className="flex items-center justify-between mb-4">
                     <div className="font-semibold text-purple-900">
-                      ✨ Enhanced workout is ready! Would you like to save these
+                      Enhanced workout is ready! Would you like to save these
                       changes?
                     </div>
                   </div>
@@ -562,6 +663,39 @@ export default function WorkoutDetailsPage(props) {
                     >
                       <Save className="w-4 h-4" />
                       Save Enhanced Workout
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Show Save/Discard prompt for coaching content */}
+              {showCoachingSavePrompt && pendingCoachingContent && (
+                <div className="mb-6 p-4 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl">
+                  <div className="flex items-start gap-3 mb-4">
+                    <Target className="w-5 h-5 mt-0.5 flex-shrink-0 text-amber-600" />
+                    <div>
+                      <div className="font-semibold text-amber-900 mb-2">
+                        Coaching Content Generated
+                      </div>
+                      <div className="text-sm text-amber-800 mb-4 max-h-64 overflow-y-auto whitespace-pre-wrap bg-white/50 p-3 rounded-lg">
+                        {pendingCoachingContent}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex gap-3">
+                    <button
+                      className="inline-flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-gray-800 font-medium transition-colors"
+                      onClick={handleDiscardCoachingContent}
+                    >
+                      <X className="w-4 h-4" />
+                      Discard
+                    </button>
+                    <button
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-medium transition-colors"
+                      onClick={handleSaveCoachingContent}
+                    >
+                      <Save className="w-4 h-4" />
+                      Add to Workout
                     </button>
                   </div>
                 </div>

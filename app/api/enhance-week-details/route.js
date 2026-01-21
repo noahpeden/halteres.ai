@@ -389,11 +389,11 @@ ${clientMetricsContent}
 ` : ''}
 
 YOU MUST ADD:
-1. **Stimulus and Strategy** - Training focus, session context, approach notes
-2. **Warm-up** - Detailed 8-12 min progression from general to specific
-3. **Coaching Cues** - 3-5 specific technical cues for each main movement
-4. **Scaling Options** - For different fitness levels
-5. **Cool-down** - Specific stretches and recovery (5-8 min)
+1. **Warm-up** - Detailed 8-12 min progression from general to specific
+2. **Scaling Options** - For different fitness levels
+3. **Cool-down** - Specific stretches and recovery (5-8 min)
+
+NOTE: Do NOT include "Stimulus and Strategy" or "Coaching Cues" sections - these are generated on-demand separately.
 
 CRITICAL RULES:
 - DO NOT change exercises, sets, reps, weights, or percentages in the ${workoutSections.join('/')} sections
@@ -417,14 +417,14 @@ OUTPUT FORMAT (JSON):
 
 // Build the system prompt for enhancement
 function buildEnhancementSystemPrompt(workoutSections, useImperial) {
-  return `You are an expert strength and conditioning coach enhancing skeleton workouts with full details.
+  return `You are an expert strength and conditioning coach enhancing skeleton workouts with essential details.
 
-Your role is to ADD sections that are missing from the skeleton:
-- Stimulus and Strategy section
-- Warm-up section (8-12 minutes)
-- Coaching cues for each main movement
-- Scaling options for different levels
+Your role is to ADD only these sections that are missing from the skeleton:
+- Warm-up section (8-12 minutes, progressive from general to specific)
+- Scaling options for different fitness levels
 - Cool-down section (5-8 minutes)
+
+DO NOT ADD "Stimulus and Strategy" or "Coaching Cues" sections - these are generated on-demand separately by coaches.
 
 CRITICAL: You must NOT modify the ${workoutSections.join(' or ')} sections from the skeleton. Only ADD the new sections around them.
 
