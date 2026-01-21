@@ -73,11 +73,12 @@ export async function POST(request) {
     // Generate embedding for query
     const queryEmbedding = await generateQueryEmbedding(queryText);
 
-    // Use RPC function for similarity search
+    // Use RPC function for similarity search, scoped to gym
     const { data: similarWorkouts, error: searchError } = await supabaseAdmin.rpc(
       'match_feedback_workouts',
       {
         query_embedding: queryEmbedding,
+        p_gym_id: gymId || null,
         rating_filter: rating || null,
         match_threshold: matchThreshold,
         match_count: matchCount,

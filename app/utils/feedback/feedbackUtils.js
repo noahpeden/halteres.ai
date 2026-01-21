@@ -104,10 +104,11 @@ export async function fetchFeedbackPatterns(supabase, { gymId, methodology, limi
 
 /**
  * Query similar workouts with positive/negative feedback using RAG
+ * Scoped to a specific gym to maintain data isolation
  */
 export async function querySimilarFeedbackWorkouts(
   supabase,
-  { queryText, rating = 'thumbs_up', limit = 5 }
+  { queryText, gymId = null, rating = 'thumbs_up', limit = 5 }
 ) {
   try {
     if (!queryText) return [];
@@ -116,9 +117,10 @@ export async function querySimilarFeedbackWorkouts(
     const queryEmbedding = await generateEmbedding(queryText);
     if (!queryEmbedding) return [];
 
-    // Use RPC for similarity search
+    // Use RPC for similarity search, filtered by gym
     const { data: workouts, error } = await supabase.rpc('match_feedback_workouts', {
       query_embedding: queryEmbedding,
+      p_gym_id: gymId || null,
       rating_filter: rating,
       match_threshold: 0.25, // Lower threshold to get more results
       match_count: limit,
@@ -274,11 +276,12 @@ export async function getFeedbackContextForGeneration(supabase, {
   focusArea,
 }) {
   try {
-    // Fetch both in parallel
+    // Fetch both in parallel, scoped to the gym
     const [patterns, ragWorkouts] = await Promise.all([
       fetchFeedbackPatterns(supabase, { gymId, methodology }),
       querySimilarFeedbackWorkouts(supabase, {
         queryText: `${goal || ''} ${focusArea || ''} ${methodology || ''}`.trim(),
+        gymId,
         rating: 'thumbs_up',
         limit: 5,
       }),
