@@ -901,6 +901,9 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
     return workouts.some(w => w.generation_status === 'detailed' || !w.generation_status);
   }, [workouts]);
 
+  // Mobile config panel visibility state
+  const [showMobileConfig, setShowMobileConfig] = useState(false);
+
   if (loading && !formData) {
     return (
       <div className="flex justify-center items-center min-h-[400px]">
@@ -913,7 +916,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
   }
 
   return (
-    <div className="flex gap-0 min-h-[600px]">
+    <div className="flex flex-col lg:flex-row gap-0 min-h-[400px] lg:min-h-[600px]">
       {/* Generation Progress Overlay */}
       <GenerationProgress
         isVisible={showGenerationProgress}
@@ -939,10 +942,30 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
         <Toast message={toast.message} type={toast.type} onClose={() => {}} />
       )}
 
+      {/* Mobile Config Toggle Button */}
+      <div className="lg:hidden sticky top-0 z-20 bg-white border-b border-slate-200 p-3">
+        <button
+          onClick={() => setShowMobileConfig(!showMobileConfig)}
+          className="w-full flex items-center justify-between px-4 py-3 bg-slate-50 hover:bg-slate-100 rounded-xl transition-colors"
+        >
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 bg-blue-100 rounded-lg flex items-center justify-center">
+              <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+            </div>
+            <span className="text-sm font-semibold text-slate-700">Program Config</span>
+          </div>
+          <ChevronDown className={`w-5 h-5 text-slate-400 transition-transform ${showMobileConfig ? 'rotate-180' : ''}`} />
+        </button>
+      </div>
+
       {/* LEFT: Compact Config Panel */}
-      <div className="w-80 flex-shrink-0 border-r border-slate-200 bg-slate-50/50 overflow-y-auto max-h-[calc(100vh-180px)]">
-        {/* Config Header */}
-        <div className="flex items-center justify-between p-4 border-b border-slate-200 sticky top-0 bg-slate-50/95 backdrop-blur-sm z-10">
+      <div className={`
+        w-full lg:w-80 flex-shrink-0 border-b lg:border-b-0 lg:border-r border-slate-200 bg-slate-50/50
+        overflow-y-auto lg:max-h-[calc(100vh-180px)]
+        ${showMobileConfig ? 'block' : 'hidden lg:block'}
+      `}>
+        {/* Config Header - Hidden on mobile since we have the toggle */}
+        <div className="hidden lg:flex items-center justify-between p-4 border-b border-slate-200 sticky top-0 bg-slate-50/95 backdrop-blur-sm z-10">
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 bg-blue-100 rounded-lg flex items-center justify-center">
               <Sparkles className="w-3.5 h-3.5 text-blue-600" />
@@ -1200,9 +1223,22 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
 
         {/* Generate Button - Fixed at bottom */}
         <div className="p-4 border-t border-slate-200 sticky bottom-0 bg-slate-50/95 backdrop-blur-sm">
+          {/* Mobile Save Button */}
+          {programId && (
+            <button
+              className="lg:hidden w-full mb-2 px-4 py-2 bg-white border border-slate-200 hover:border-blue-300 hover:bg-blue-50 text-slate-700 hover:text-blue-700 rounded-xl text-sm font-medium transition-all"
+              onClick={handleSaveProgram}
+              disabled={loading}
+            >
+              {loading ? 'Saving...' : 'Save Config'}
+            </button>
+          )}
           <button
             className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white py-2.5 rounded-xl font-medium shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 transition-all duration-200 flex items-center justify-center gap-2"
-            onClick={handleGenerateClick}
+            onClick={() => {
+              handleGenerateClick();
+              setShowMobileConfig(false); // Collapse config on mobile after clicking generate
+            }}
             disabled={isGenerating}
           >
             {isGenerating ? (
@@ -1230,19 +1266,19 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
       </div>
 
       {/* RIGHT: Main Content Area - Workouts */}
-      <div className="flex-1 min-w-0 p-6 overflow-y-auto max-h-[calc(100vh-180px)]">
+      <div className="flex-1 min-w-0 p-4 lg:p-6 overflow-y-auto lg:max-h-[calc(100vh-180px)]">
         {/* Workouts Header */}
-        <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-200">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 lg:mb-6 pb-4 border-b border-slate-200 gap-3">
           <div>
-            <h2 className="text-lg font-semibold text-slate-800">Generated Workouts</h2>
-            <div className="flex items-center gap-3 mt-1">
-              <span className="inline-flex items-center px-2.5 py-1 bg-blue-50 text-blue-700 rounded-lg text-xs font-medium">
+            <h2 className="text-base lg:text-lg font-semibold text-slate-800">Generated Workouts</h2>
+            <div className="flex flex-wrap items-center gap-2 mt-1">
+              <span className="inline-flex items-center px-2 py-0.5 lg:px-2.5 lg:py-1 bg-blue-50 text-blue-700 rounded-lg text-xs font-medium">
                 {displayWorkouts.length} workouts
               </span>
-              <span className="inline-flex items-center px-2.5 py-1 bg-slate-100 text-slate-600 rounded-lg text-xs font-medium">
+              <span className="inline-flex items-center px-2 py-0.5 lg:px-2.5 lg:py-1 bg-slate-100 text-slate-600 rounded-lg text-xs font-medium">
                 {formData?.numberOfWeeks || 0} weeks
               </span>
-              <span className="inline-flex items-center px-2.5 py-1 bg-slate-100 text-slate-600 rounded-lg text-xs font-medium">
+              <span className="inline-flex items-center px-2 py-0.5 lg:px-2.5 lg:py-1 bg-slate-100 text-slate-600 rounded-lg text-xs font-medium">
                 {formData?.daysOfWeek?.length || 0} days/week
               </span>
             </div>

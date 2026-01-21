@@ -99,7 +99,7 @@ export default function SkeletonPreview({
       {/* Bulk Enhancement Action */}
       {skeletonWeeks > 0 && (
         <div className="card bg-base-200 p-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <div className="font-semibold">Enhance All Remaining Weeks</div>
               <div className="text-sm text-base-content/60">
@@ -107,7 +107,7 @@ export default function SkeletonPreview({
               </div>
             </div>
             <button
-              className="btn btn-outline btn-primary"
+              className="btn btn-outline btn-primary w-full sm:w-auto"
               onClick={onEnhanceAll}
               disabled={isEnhancing}
             >
