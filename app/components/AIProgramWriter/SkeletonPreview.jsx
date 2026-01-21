@@ -12,10 +12,11 @@ export default function SkeletonPreview({
   weeklyData,
   onEnhanceWeek,
   onEnhanceAll,
-  isEnhancing,
-  enhancingWeek,
+  enhancingWeeks = new Set(), // Set of week numbers currently being enhanced
   programContext,
 }) {
+  // Derive isEnhancing from the set (any week being enhanced)
+  const isEnhancing = enhancingWeeks.size > 0;
   const [weekNotes, setWeekNotes] = useState({});
   const [expandedWeeks, setExpandedWeeks] = useState({});
 
@@ -70,13 +71,26 @@ export default function SkeletonPreview({
           <h4 className="font-semibold">Enhancement Progress</h4>
           <span className="text-sm text-base-content/60">
             {detailedWeeks} of {totalWeeks} weeks detailed
+            {enhancingWeeks.size > 0 && (
+              <span className="ml-2 text-primary">
+                ({enhancingWeeks.size} in progress)
+              </span>
+            )}
           </span>
         </div>
-        <div className="w-full bg-gray-300 rounded-full h-3">
+        <div className="w-full bg-gray-300 rounded-full h-3 overflow-hidden">
+          {/* Completed (green) */}
           <div
-            className="bg-success h-3 rounded-full transition-all duration-300"
+            className="bg-success h-3 float-left transition-all duration-300"
             style={{ width: `${(detailedWeeks / totalWeeks) * 100}%` }}
           />
+          {/* In progress (animated blue) */}
+          {enhancingWeeks.size > 0 && (
+            <div
+              className="bg-primary h-3 float-left transition-all duration-300 animate-pulse"
+              style={{ width: `${(enhancingWeeks.size / totalWeeks) * 100}%` }}
+            />
+          )}
         </div>
       </div>
 
@@ -91,7 +105,7 @@ export default function SkeletonPreview({
             weekNote={weekNotes[week.weekNumber] || ''}
             onNoteChange={(note) => setWeekNote(week.weekNumber, note)}
             onEnhance={() => handleEnhanceWeek(week.weekNumber)}
-            isEnhancing={isEnhancing && enhancingWeek === week.weekNumber}
+            isEnhancing={enhancingWeeks.has(week.weekNumber)}
           />
         ))}
       </div>
@@ -103,7 +117,11 @@ export default function SkeletonPreview({
             <div>
               <div className="font-semibold">Enhance All Remaining Weeks</div>
               <div className="text-sm text-base-content/60">
-                {skeletonWeeks} weeks x ~2.5 min = ~{Math.round(skeletonWeeks * 2.5)} minutes total
+                {isEnhancing ? (
+                  <>Enhancing {enhancingWeeks.size} week{enhancingWeeks.size !== 1 ? 's' : ''}...</>
+                ) : (
+                  <>{skeletonWeeks} weeks x ~2.5 min = ~{Math.round(skeletonWeeks * 2.5)} minutes total</>
+                )}
               </div>
             </div>
             <button
@@ -114,7 +132,7 @@ export default function SkeletonPreview({
               {isEnhancing ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Enhancing...
+                  Enhancing {enhancingWeeks.size}/{skeletonWeeks + enhancingWeeks.size}...
                 </>
               ) : (
                 <>
