@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import OpenAI from 'openai';
+import Anthropic from '@anthropic-ai/sdk';
 import { createMobileCompatibleClient, corsHeaders } from '@/utils/supabase/mobile';
 
 // Handle OPTIONS for CORS preflight
@@ -50,14 +50,16 @@ export async function POST(req) {
       );
     }
 
-    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    const anthropic = new Anthropic({
+      apiKey: process.env.ANTHROPIC_API_KEY,
+    });
 
     // Compose the enhancement prompt
-    const systemPrompt = `
-You are an expert fitness coach who specializes in creating and enhancing effective, personalized workout programs. Always consider evidence-based training principles, safety, and client context.`;
+    const systemPrompt = `You are an expert fitness coach who specializes in creating and enhancing effective, personalized workout programs. Always consider evidence-based training principles, safety, and client context.
 
-    const userPrompt = `
-Enhance the following workout according to these user instructions: "${instructions}".
+You must respond with valid JSON only, no additional text or markdown.`;
+
+    const userPrompt = `Enhance the following workout according to these user instructions: "${instructions}".
 
 Context:
 - Training methodology: ${methodology}
@@ -86,26 +88,42 @@ Requirements:
   - title: (string, required)
   - description: (string, required, detailed workout plan)
   - notes: (string, optional, explain any key changes or rationale)
-`;
 
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4.1',
+Respond with ONLY the JSON object, no markdown code blocks or other text.`;
+
+    const response = await anthropic.messages.create({
+      model: 'claude-haiku-4-5-20250929',
+      max_tokens: 2000,
       messages: [
-        { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt },
       ],
-      temperature: 0.7,
-      response_format: { type: 'json_object' },
-      max_tokens: 1200,
+      system: systemPrompt,
     });
 
     let enhancedWorkout;
     try {
-      enhancedWorkout = JSON.parse(response.choices[0].message.content);
+      // Extract text content from Anthropic response
+      const textContent = response.content.find(block => block.type === 'text');
+      if (!textContent || !textContent.text) {
+        throw new Error('No text content in response');
+      }
+
+      let jsonContent = textContent.text.trim();
+
+      // Strip markdown code blocks if present
+      if (jsonContent.includes('```')) {
+        const jsonBlockMatch = jsonContent.match(/```(?:json)?\s*\n?([\s\S]*?)(?:\n```|$)/);
+        if (jsonBlockMatch && jsonBlockMatch[1]) {
+          jsonContent = jsonBlockMatch[1].trim();
+        }
+      }
+
+      enhancedWorkout = JSON.parse(jsonContent);
       if (!enhancedWorkout.title || !enhancedWorkout.description) {
         throw new Error('Invalid workout format');
       }
     } catch (err) {
+      console.error('Parse error:', err, 'Response:', response.content);
       return NextResponse.json(
         { error: 'Failed to parse enhanced workout from AI response.' },
         {
