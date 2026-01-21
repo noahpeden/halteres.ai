@@ -335,35 +335,28 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
     // Clear any previous streaming workouts
     clearStreamingWorkouts();
 
+    // Use two-phase skeleton generation for faster initial feedback
+    setShowGenerationProgress(true);
     startGeneration();
 
     try {
-      const result = await generateProgram({
+      await generateSkeletonProgram({
         programId,
         formData: { ...formData, equipment: selectedEquipment },
         setIsLoading: () => {},
         setSuggestions: saveGeneratedWorkouts,
-        addStreamingWorkout: addStreamingWorkout, // For streaming individual workouts without saving to DB
-        clearStreamingWorkouts: clearStreamingWorkouts,
+        addStreamingWorkout: (workout) => setStreamingWorkouts(prev => [...prev, workout]),
+        clearStreamingWorkouts: () => setStreamingWorkouts([]),
         showToastMessage: showToast,
         setGenerationStage: updateGenerationStage,
-        setFormData: updateFromFormData,
-        setGeneratedDescription: (desc) =>
-          updateFormField('program_overview', { generated_description: desc }),
-        setLoadingTimer: (timer) => (loadingTimer.current = timer),
         setServerStatus: setServerStatus,
         setLoadingDuration: setLoadingDuration,
-        setAiStreamingContent: () => {},
-        showAiStream: () => {},
-        hideAiStream: () => {},
-        triggerProgramRefreshAction: () => {},
-        setPreventFetch: () => {},
-        refetchProfile,
+        setLoadingTimer: (timer) => (loadingTimer.current = timer),
         refetchWorkouts: refetchWorkouts,
-        suggestions: workouts,
-        updateWizardData: () => {},
         abortControllerRef,
       });
+
+      setShowGenerationProgress(false);
     } catch (error) {
       if (error.name === 'AbortError' || error.isUserAbort) {
         showToast('Generation stopped by user', 'info');
@@ -372,6 +365,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
         showToast('Generation failed: ' + error.message, 'error');
         updateGenerationStage('error');
       }
+      setShowGenerationProgress(false);
       abortControllerRef.current = null;
     }
   }, [
@@ -379,15 +373,13 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
     formData,
     selectedEquipment,
     showToast,
-    refetchProfile,
     workouts,
     startGeneration,
     saveGeneratedWorkouts,
     updateGenerationStage,
-    updateFromFormData,
-    updateFormField,
     closeModal,
     clearNonReferenceWorkouts,
+    refetchWorkouts,
   ]);
 
   const handleSaveProgram = useCallback(async () => {
