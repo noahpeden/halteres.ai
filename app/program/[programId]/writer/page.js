@@ -138,7 +138,7 @@ export default function ProgramWriterPage() {
   };
 
   return (
-    <div className="w-full max-w-full overflow-hidden relative animate-fadeIn">
+    <div className="w-full max-w-full relative animate-fadeIn">
         {/* Enhanced Header Section */}
         <div className="mb-6 pb-4 border-b border-slate-200">
           {isEditingName ? (
@@ -227,10 +227,10 @@ export default function ProgramWriterPage() {
         )}
 
         {/* Main Content Area with Sidebar Layout */}
-        <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 w-full max-w-full overflow-hidden">
+        <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 w-full">
           {/* AI Program Writer (Main Content) */}
-          <div className={`flex-grow w-full ${isSidebarCollapsed ? 'lg:w-full' : 'lg:w-2/3'} transition-all duration-300 ease-in-out`}>
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 h-full w-full overflow-hidden">
+          <div className={`w-full ${isSidebarCollapsed ? 'lg:flex-1' : 'lg:flex-1 lg:min-w-0'} transition-all duration-300 ease-in-out`}>
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 h-full">
               <ProgramProvider programId={programId}>
                 <AIProgramWriter
                   programId={programId}
@@ -243,9 +243,9 @@ export default function ProgramWriterPage() {
           {/* Entity Metrics - Sidebar on desktop, below content on mobile */}
           <div
             className={`
-              w-full lg:w-1/3
+              w-full lg:w-80 lg:flex-shrink-0
               transition-all duration-300 ease-in-out
-              ${isSidebarCollapsed ? 'lg:w-0 lg:opacity-0 lg:pointer-events-none' : 'lg:opacity-100 lg:pointer-events-auto'}
+              ${isSidebarCollapsed ? 'lg:hidden' : 'lg:block'}
             `}
           >
             {clientType === 'CLASS' ? (
