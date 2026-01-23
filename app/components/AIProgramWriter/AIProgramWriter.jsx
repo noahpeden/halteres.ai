@@ -932,7 +932,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
   }
 
   return (
-    <div className="flex flex-col lg:flex-row gap-0 min-h-[400px] lg:min-h-[600px]">
+    <div className="flex flex-col lg:flex-row gap-0 min-h-[400px] lg:h-[calc(100vh-200px)] w-full">
       {/* Generation Progress Overlay */}
       <GenerationProgress
         isVisible={showGenerationProgress}
@@ -976,8 +976,8 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
 
       {/* LEFT: Compact Config Panel */}
       <div className={`
-        w-full lg:w-80 flex-shrink-0 border-b lg:border-b-0 lg:border-r border-slate-200 bg-slate-50/50
-        overflow-y-auto lg:max-h-[calc(100vh-180px)]
+        w-full lg:w-72 xl:w-80 flex-shrink-0 border-b lg:border-b-0 lg:border-r border-slate-200 bg-slate-50/50
+        lg:overflow-y-auto lg:h-full
         ${showMobileConfig ? 'block' : 'hidden lg:block'}
       `}>
         {/* Config Header - Hidden on mobile since we have the toggle */}
@@ -1282,7 +1282,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
       </div>
 
       {/* RIGHT: Main Content Area - Workouts */}
-      <div className="flex-1 min-w-0 p-4 lg:p-6 overflow-y-auto lg:max-h-[calc(100vh-180px)]">
+      <div className="flex-1 min-w-0 p-4 lg:p-6 lg:overflow-y-auto lg:h-full">
         {/* Workouts Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 lg:mb-6 pb-4 border-b border-slate-200 gap-3">
           <div>
