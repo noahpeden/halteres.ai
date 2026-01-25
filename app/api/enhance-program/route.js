@@ -17,15 +17,18 @@ export async function POST(req) {
       workoutFormats, // array of workout formats
     } = body;
 
-    if (!workouts || !instructions || !methodology || !gymEquipment) {
+    if (!workouts || !methodology || !gymEquipment) {
       return NextResponse.json(
         {
           error:
-            'Missing required fields: workouts, instructions, methodology, gymEquipment',
+            'Missing required fields: workouts, methodology, gymEquipment',
         },
         { status: 400 }
       );
     }
+
+    // Default instructions if none provided
+    const enhancementInstructions = instructions?.trim() || 'Enhance this program with more detail, better scaling options, and improved coaching cues while maintaining the original structure and intent.';
 
     const anthropic = new Anthropic({
       apiKey: process.env.ANTHROPIC_API_KEY,
@@ -56,7 +59,7 @@ ${w.body || w.description || 'No content'}
 `)
       .join('\n---\n');
 
-    const userPrompt = `Enhance the following program according to these user instructions: "${instructions}".
+    const userPrompt = `Enhance the following program according to these user instructions: "${enhancementInstructions}".
 
 Program Name: ${programName || 'Untitled Program'}
 Total Workouts: ${workouts.length}

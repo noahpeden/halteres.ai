@@ -16,6 +16,7 @@ import {
   Target,
 } from 'lucide-react';
 import TemplateFeedbackButton from '@/components/feedback/TemplateFeedbackButton';
+import { parseMarkdown } from '@/app/utils/markdownParser';
 
 export default function WorkoutDetailsPage(props) {
   const params = use(props.params);
@@ -702,12 +703,17 @@ export default function WorkoutDetailsPage(props) {
               )}
 
               <div className="prose prose-lg max-w-none prose-slate">
-                <div className="whitespace-pre-line text-gray-800 leading-relaxed">
-                  {pendingEnhancement?.body ||
-                    workout.body ||
-                    workout.description ||
-                    'No workout content available.'}
-                </div>
+                <div
+                  className="text-gray-800 leading-relaxed"
+                  dangerouslySetInnerHTML={{
+                    __html: parseMarkdown(
+                      pendingEnhancement?.body ||
+                      workout.body ||
+                      workout.description ||
+                      'No workout content available.'
+                    )
+                  }}
+                />
               </div>
             </div>
           )}

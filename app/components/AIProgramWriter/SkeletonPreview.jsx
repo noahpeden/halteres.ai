@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Sparkles, Check, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
+import { parseMarkdown } from '@/app/utils/markdownParser';
 
 /**
  * SkeletonPreview - Displays skeleton workouts grouped by week with enhancement controls
@@ -246,9 +247,12 @@ function WeekCard({
             {week.workouts.map((workout, i) => (
               <div key={workout.id || i} className="bg-base-200/30 p-4 rounded-lg">
                 <h4 className="font-semibold mb-2">{workout.title}</h4>
-                <div className="text-sm text-base-content/80 whitespace-pre-wrap">
-                  {workout.body_skeleton || workout.body}
-                </div>
+                <div
+                  className="text-sm text-base-content/80"
+                  dangerouslySetInnerHTML={{
+                    __html: parseMarkdown(workout.body_skeleton || workout.body || '')
+                  }}
+                />
                 {week.status === 'skeleton' && (
                   <div className="mt-2 p-2 bg-warning/10 rounded text-xs text-warning-content">
                     Skeleton version - Click "Add Full Details" to add coaching cues, warm-up, cool-down, and scaling options.

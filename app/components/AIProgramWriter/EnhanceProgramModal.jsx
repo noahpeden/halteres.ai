@@ -1,6 +1,7 @@
 'use client';
 import { useState, useCallback } from 'react';
 import { X, Sparkles, ChevronLeft, ChevronRight, Save } from 'lucide-react';
+import { parseMarkdown } from '@/app/utils/markdownParser';
 
 function EnhanceProgramModal({
   isOpen,
@@ -31,11 +32,6 @@ function EnhanceProgramModal({
 
   // Call the enhance API
   const handleEnhance = useCallback(async () => {
-    if (!instructions.trim()) {
-      showToast('Please enter enhancement instructions', 'error');
-      return;
-    }
-
     setIsEnhancing(true);
     try {
       const response = await fetch('/api/enhance-program', {
@@ -142,12 +138,12 @@ function EnhanceProgramModal({
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    How would you like to enhance this program?
+                    How would you like to enhance this program? (Optional)
                   </label>
                   <textarea
                     value={instructions}
                     onChange={(e) => setInstructions(e.target.value)}
-                    placeholder="e.g., Add more upper body work, increase conditioning intensity, focus on Olympic lifting, add more mobility work..."
+                    placeholder="Leave blank for general enhancements, or specify: add more upper body work, increase conditioning intensity, focus on Olympic lifting, add more mobility work..."
                     className="w-full h-32 p-4 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none resize-none"
                     disabled={isEnhancing}
                   />
@@ -221,11 +217,16 @@ function EnhanceProgramModal({
                       <h3 className="font-semibold text-gray-900 mb-2">
                         {currentOriginal?.title || 'Untitled'}
                       </h3>
-                      <div className="text-sm text-gray-700 whitespace-pre-line max-h-64 overflow-y-auto">
-                        {currentOriginal?.body ||
-                          currentOriginal?.description ||
-                          'No content'}
-                      </div>
+                      <div
+                        className="text-sm text-gray-700 max-h-64 overflow-y-auto"
+                        dangerouslySetInnerHTML={{
+                          __html: parseMarkdown(
+                            currentOriginal?.body ||
+                            currentOriginal?.description ||
+                            'No content'
+                          )
+                        }}
+                      />
                     </div>
                   </div>
 
@@ -240,9 +241,14 @@ function EnhanceProgramModal({
                       <h3 className="font-semibold text-gray-900 mb-2">
                         {currentEnhanced?.title || 'Untitled'}
                       </h3>
-                      <div className="text-sm text-gray-700 whitespace-pre-line max-h-64 overflow-y-auto">
-                        {currentEnhanced?.body || 'No content'}
-                      </div>
+                      <div
+                        className="text-sm text-gray-700 max-h-64 overflow-y-auto"
+                        dangerouslySetInnerHTML={{
+                          __html: parseMarkdown(
+                            currentEnhanced?.body || 'No content'
+                          )
+                        }}
+                      />
                     </div>
                   </div>
                 </div>
@@ -262,7 +268,7 @@ function EnhanceProgramModal({
                 </button>
                 <button
                   onClick={handleEnhance}
-                  disabled={isEnhancing || !instructions.trim()}
+                  disabled={isEnhancing}
                   className="px-4 py-2 text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 rounded-lg transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center gap-2"
                 >
                   {isEnhancing ? (
