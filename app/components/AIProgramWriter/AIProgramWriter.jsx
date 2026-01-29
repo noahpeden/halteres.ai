@@ -104,6 +104,18 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
   const [customSectionName, setCustomSectionName] = useState('');
   const [customSectionDuration, setCustomSectionDuration] = useState('');
   const [customSectionDescription, setCustomSectionDescription] = useState('');
+
+  // Local state for textarea inputs to prevent character deletion during typing
+  const [localDescription, setLocalDescription] = useState(formData?.description || '');
+  const [localReferenceInput, setLocalReferenceInput] = useState(formData?.referenceInput || formData?.personalization || '');
+
+  // Refs to track active editing state (prevents real-time sync overwrites)
+  const isEditingDescriptionRef = useRef(false);
+  const isEditingReferenceRef = useRef(false);
+
+  // Refs for debounce timeouts
+  const descriptionTimeoutRef = useRef(null);
+  const referenceTimeoutRef = useRef(null);
   
   // Local state for streaming workouts (UI-only, not saved to DB yet)
   const [streamingWorkouts, setStreamingWorkouts] = useState([]);
@@ -176,6 +188,27 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
       'success'
     );
   }, [wizardComplete, programId, showToast]);
+
+  // Sync local state with formData when it changes externally (not while editing)
+  useEffect(() => {
+    if (!isEditingDescriptionRef.current) {
+      setLocalDescription(formData?.description || '');
+    }
+  }, [formData?.description]);
+
+  useEffect(() => {
+    if (!isEditingReferenceRef.current) {
+      setLocalReferenceInput(formData?.referenceInput || formData?.personalization || '');
+    }
+  }, [formData?.referenceInput, formData?.personalization]);
+
+  // Cleanup debounce timeouts on unmount
+  useEffect(() => {
+    return () => {
+      if (descriptionTimeoutRef.current) clearTimeout(descriptionTimeoutRef.current);
+      if (referenceTimeoutRef.current) clearTimeout(referenceTimeoutRef.current);
+    };
+  }, []);
 
   // Validation helper
   const validateProgramData = useCallback(() => {
@@ -627,6 +660,48 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
     [updateFormField, updateFormFields, formData]
   );
 
+  // Debounced handler for description textarea
+  const handleDescriptionChange = useCallback((e) => {
+    const newValue = e.target.value;
+    isEditingDescriptionRef.current = true;
+    setLocalDescription(newValue);
+
+    if (descriptionTimeoutRef.current) clearTimeout(descriptionTimeoutRef.current);
+    descriptionTimeoutRef.current = setTimeout(() => {
+      handleFieldChange('description', newValue);
+    }, 500);
+  }, [handleFieldChange]);
+
+  const handleDescriptionBlur = useCallback(() => {
+    if (descriptionTimeoutRef.current) {
+      clearTimeout(descriptionTimeoutRef.current);
+      descriptionTimeoutRef.current = null;
+    }
+    handleFieldChange('description', localDescription);
+    setTimeout(() => { isEditingDescriptionRef.current = false; }, 100);
+  }, [handleFieldChange, localDescription]);
+
+  // Debounced handler for reference input textarea
+  const handleReferenceInputChange = useCallback((e) => {
+    const newValue = e.target.value;
+    isEditingReferenceRef.current = true;
+    setLocalReferenceInput(newValue);
+
+    if (referenceTimeoutRef.current) clearTimeout(referenceTimeoutRef.current);
+    referenceTimeoutRef.current = setTimeout(() => {
+      handleFieldChange('referenceInput', newValue);
+    }, 500);
+  }, [handleFieldChange]);
+
+  const handleReferenceInputBlur = useCallback(() => {
+    if (referenceTimeoutRef.current) {
+      clearTimeout(referenceTimeoutRef.current);
+      referenceTimeoutRef.current = null;
+    }
+    handleFieldChange('referenceInput', localReferenceInput);
+    setTimeout(() => { isEditingReferenceRef.current = false; }, 100);
+  }, [handleFieldChange, localReferenceInput]);
+
   const handleProgramTypeChange = useCallback(
     async (e) => {
       await updateFormFields({
@@ -932,7 +1007,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
   }
 
   return (
-    <div className="flex flex-col lg:flex-row gap-0 min-h-[400px] lg:flex-1 lg:h-0 w-full">
+    <div className="flex flex-col lg:flex-row gap-0 min-h-[400px] lg:h-full w-full">
       {/* Generation Progress Overlay */}
       <GenerationProgress
         isVisible={showGenerationProgress}
@@ -977,8 +1052,8 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
       {/* LEFT: Compact Config Panel */}
       <div className={`
         w-full lg:w-72 xl:w-80 flex-shrink-0 border-b lg:border-b-0 lg:border-r border-slate-200 bg-slate-50/50
-        lg:flex lg:flex-col lg:h-full
-        ${showMobileConfig ? 'block' : 'hidden lg:flex'}
+        flex flex-col
+        ${showMobileConfig ? 'flex' : 'hidden lg:flex'}
       `}>
         {/* Config Header - Hidden on mobile since we have the toggle */}
         <div className="hidden lg:flex items-center justify-between p-4 border-b border-slate-200 sticky top-0 bg-slate-50/95 backdrop-blur-sm z-10">
@@ -1000,7 +1075,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
         </div>
 
         {/* Collapsible Sections */}
-        <div className="p-4 space-y-1 lg:flex-1 lg:overflow-y-auto">
+        <div className="p-4 space-y-1 flex-1 overflow-y-auto min-h-0">
           {/* Methodology Section */}
           <details className="group" open>
             <summary className="flex items-center justify-between cursor-pointer py-2.5 px-3 hover:bg-slate-100 rounded-xl text-sm font-medium text-slate-700 transition-colors">
@@ -1214,8 +1289,9 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
               <textarea
                 className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm h-20 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                 placeholder="Program goals and notes..."
-                value={formData?.description || ''}
-                onChange={(e) => handleFieldChange('description', e.target.value)}
+                value={localDescription}
+                onChange={handleDescriptionChange}
+                onBlur={handleDescriptionBlur}
               />
             </div>
           </details>
@@ -1230,8 +1306,9 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
               <textarea
                 className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm h-20 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                 placeholder="Paste previous workout or program text..."
-                value={formData?.referenceInput || formData?.personalization || ''}
-                onChange={(e) => handleFieldChange('referenceInput', e.target.value)}
+                value={localReferenceInput}
+                onChange={handleReferenceInputChange}
+                onBlur={handleReferenceInputBlur}
               />
               <button
                 className="w-full px-3 py-2 text-xs font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
@@ -1244,7 +1321,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
         </div>
 
         {/* Generate Button - Fixed at bottom */}
-        <div className="p-4 border-t border-slate-200 bg-slate-50/95 lg:flex-shrink-0">
+        <div className="p-4 border-t border-slate-200 bg-slate-50/95 flex-shrink-0">
           {/* Mobile Save Button */}
           {programId && (
             <button
@@ -1288,7 +1365,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
       </div>
 
       {/* RIGHT: Main Content Area - Workouts */}
-      <div className="flex-1 min-w-0 p-4 lg:p-6 lg:overflow-y-auto lg:h-full">
+      <div className="flex-1 min-w-0 p-4 lg:p-6 overflow-y-auto">
         {/* Workouts Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 lg:mb-6 pb-4 border-b border-slate-200 gap-3">
           <div>
@@ -1387,17 +1464,9 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
             <h3 className="text-lg font-semibold text-slate-700 mb-2">
               No workouts yet
             </h3>
-            <p className="text-sm text-slate-500 max-w-sm mb-6">
+            <p className="text-sm text-slate-500 max-w-sm px-4">
               Configure your program settings in the left panel, then click "Generate Program" to create your personalized workout plan.
             </p>
-            <button
-              className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-6 py-2.5 rounded-xl font-medium shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 transition-all duration-200 flex items-center gap-2"
-              onClick={handleGenerateClick}
-              disabled={isGenerating}
-            >
-              <Sparkles className="w-4 h-4" />
-              Generate Program
-            </button>
           </div>
         )}
       </div>

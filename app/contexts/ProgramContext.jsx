@@ -167,7 +167,7 @@ export function ProgramProvider({ children, programId }) {
 
   const updateGenerationStage = useCallback((stage) => {
     setGenerationStage(stage);
-    if (stage === 'complete' || stage === 'error') {
+    if (stage === 'complete' || stage === 'error' || stage === 'skeleton_complete' || stage === null) {
       setIsGenerating(false);
     }
   }, []);

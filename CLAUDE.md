@@ -22,7 +22,12 @@ When making changes, always check both codebases and ensure feature parity. The 
 - `npm run dev` - Start Next.js development server
 - `npm run build` - Build for production
 - `npm run start` - Start production server
-- `npm run lint` - Run ESLint
+- `npm run lint` - Run Biome linter with auto-fix (use this for linting)
+- `npm run lint:check` - Run Biome linter without auto-fix (check only)
+- `npm run format` - Format code with Biome
+
+### Linting Note
+This project uses **Biome** for linting instead of ESLint. Biome is faster, has no Node.js version requirements, and works reliably across all environments. The ESLint packages remain installed for Next.js compatibility but are not used directly.
 
 ### Supabase Commands
 - `npx supabase db push` - Push database migrations
