@@ -1395,6 +1395,9 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
               }}
               formatDate={formatDate}
               gymId={currentGym?.id || program?.gym_id}
+              generatedDescription={
+                program?.program_overview?.generated_description
+              }
             />
           </div>
         )}
