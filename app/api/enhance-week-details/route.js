@@ -367,7 +367,12 @@ function buildEnhancementPrompt(skeletonWorkouts, weekNumber, context, weekSpeci
     `### Day ${i + 1}: ${w.title}\n${w.body_skeleton || ''}`
   ).join('\n\n---\n\n');
 
-  let prompt = `Enhance these skeleton workouts for Week ${weekNumber} with FULL details.
+  // Default instruction when no user input provided - ensures rich content generation
+  const defaultInstruction = `Generate comprehensive workout details with full coaching context. Include strategic intent for each session, detailed coaching cues for all main movements, and complete warm-up/cool-down protocols.`;
+
+  const effectiveInput = weekSpecificInput?.trim() || defaultInstruction;
+
+  let prompt = `Enhance these skeleton workouts for Week ${weekNumber} with FULL professional-grade details.
 
 SKELETON WORKOUTS:
 ${skeletonContent}
@@ -376,38 +381,63 @@ ${skeletonContent}
 
 SKELETON CONTAINS: ${workoutSections.join(', ')} sections
 
+ENHANCEMENT INSTRUCTIONS:
+"${effectiveInput}"
 ${weekSpecificInput ? `
-USER ADJUSTMENTS FOR THIS WEEK:
-"${weekSpecificInput}"
-
-IMPORTANT: Incorporate these adjustments into your enhancements. Modify exercises, add specific warm-ups, adjust volume/intensity, or add notes as requested.
-` : ''}
+IMPORTANT: Incorporate these specific adjustments into your enhancements.` : ''}
 
 ${clientMetricsContent ? `
 CLIENT CONTEXT:
 ${clientMetricsContent}
 ` : ''}
 
-YOU MUST ADD:
-1. **Warm-up** - Detailed 8-12 min progression from general to specific
-2. **Scaling Options** - For different fitness levels
-3. **Cool-down** - Specific stretches and recovery (5-8 min)
+YOU MUST ADD THESE SECTIONS TO EACH WORKOUT:
 
-NOTE: Do NOT include "Stimulus and Strategy" or "Coaching Cues" sections - these are generated on-demand separately.
+1. **Stimulus and Strategy** (at the TOP of each workout):
+   - Primary Focus: 1-2 sentences on the main training goal
+   - Session Context: How this fits into the weekly/program progression
+   - Bullet points explaining the intent behind each major component (strength, conditioning, etc.)
+   - Rest periods and pacing guidance
+
+2. **Warm-up** (12 minutes total):
+   - General Preparation (5 min): Light cardio, jumping jacks, high knees
+   - Specific Mobility (4 min): Foam rolling, targeted stretches, joint circles
+   - Movement Preparation (3 min): Build-up sets, technique primers, activation drills
+
+3. **Coaching Cues** (2-3 per main exercise):
+   - Technical focus points for each major lift/movement
+   - Common faults to avoid
+   - Breathing and bracing cues where relevant
+
+4. **Pacing Strategy** (for conditioning work):
+   - Target effort percentage (e.g., "70-75% effort")
+   - Expected rounds or time targets
+   - When to push vs. maintain steady pace
+
+5. **Scaling Options**:
+   - Weight modifications for different levels
+   - Movement substitutions
+   - Rep/round adjustments
+
+6. **Cool-down** (10 minutes):
+   - Light cardio (3-4 min)
+   - Foam rolling major muscle groups
+   - Static stretching for worked areas
+   - Breathing/recovery notes
 
 CRITICAL RULES:
 - DO NOT change exercises, sets, reps, weights, or percentages in the ${workoutSections.join('/')} sections
-- ONLY ADD the missing sections and details
-- Preserve the exact structure of core workout sections
+- ADD the enhancement sections around the existing workout structure
+- Preserve the exact exercises and prescriptions from the skeleton
 - Express weights in ${useImperial ? 'lbs' : 'kg'}
-- Output complete workouts with all sections
+- Make each workout feel like it was written by an expert coach
 
 OUTPUT FORMAT (JSON):
 {
   "workouts": [
     {
       "title": "Week ${weekNumber}, Day 1: [Focus]",
-      "body": "[Complete enhanced workout with all sections]"
+      "body": "[Complete enhanced workout with ALL sections listed above]"
     }
   ]
 }`;
@@ -417,18 +447,30 @@ OUTPUT FORMAT (JSON):
 
 // Build the system prompt for enhancement
 function buildEnhancementSystemPrompt(workoutSections, useImperial) {
-  return `You are an expert strength and conditioning coach enhancing skeleton workouts with essential details.
+  return `You are an elite strength and conditioning coach transforming skeleton workouts into comprehensive, professional-grade training sessions.
 
-Your role is to ADD only these sections that are missing from the skeleton:
-- Warm-up section (8-12 minutes, progressive from general to specific)
-- Scaling options for different fitness levels
-- Cool-down section (5-8 minutes)
+Your role is to ADD these sections to each workout while preserving the core exercises:
 
-DO NOT ADD "Stimulus and Strategy" or "Coaching Cues" sections - these are generated on-demand separately by coaches.
+1. **Stimulus and Strategy** - At the TOP of each workout. Explain the WHY behind the session: primary focus, how it fits the program, intent behind each component, rest/pacing guidance.
 
-CRITICAL: You must NOT modify the ${workoutSections.join(' or ')} sections from the skeleton. Only ADD the new sections around them.
+2. **Warm-up** - 12 minutes total with three phases:
+   - General Preparation (5 min): Cardio, dynamic movements
+   - Specific Mobility (4 min): Foam rolling, targeted stretches
+   - Movement Preparation (3 min): Build-up sets, activation drills
+
+3. **Coaching Cues** - 2-3 specific cues per main exercise. Include technical focus points, common faults, breathing cues.
+
+4. **Pacing Strategy** - For conditioning: target effort %, expected rounds, when to push vs. maintain pace.
+
+5. **Scaling Options** - Weight modifications, movement substitutions, rep adjustments for different fitness levels.
+
+6. **Cool-down** - 10 minutes: light cardio, foam rolling, static stretching, recovery notes.
+
+CRITICAL: You must NOT modify the ${workoutSections.join(' or ')} sections from the skeleton. Preserve all exercises, sets, reps, weights, and percentages exactly. Only ADD the enhancement sections around them.
 
 Express all weights in ${useImperial ? 'pounds (lbs)' : 'kilograms (kg)'}.
+
+Write like an expert coach who genuinely cares about the athlete's success. Make each workout feel complete and thoughtfully programmed.
 
 Output valid JSON with enhanced workouts.`;
 }
