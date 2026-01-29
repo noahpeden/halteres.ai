@@ -227,9 +227,9 @@ export default function ProgramWriterPage() {
         )}
 
         {/* Main Content Area with Sidebar Layout */}
-        <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 w-full">
+        <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 w-full lg:h-[calc(100vh-180px)]">
           {/* AI Program Writer (Main Content) */}
-          <div className={`w-full ${isSidebarCollapsed ? 'lg:flex-1' : 'lg:flex-1 lg:min-w-0'} transition-all duration-300 ease-in-out`}>
+          <div className={`w-full ${isSidebarCollapsed ? 'lg:flex-1' : 'lg:flex-1 lg:min-w-0'} transition-all duration-300 ease-in-out lg:overflow-hidden`}>
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 h-full overflow-hidden">
               <ProgramProvider programId={programId}>
                 <AIProgramWriter
@@ -243,7 +243,7 @@ export default function ProgramWriterPage() {
           {/* Entity Metrics - Sidebar on desktop, below content on mobile */}
           <div
             className={`
-              w-full lg:w-80 lg:flex-shrink-0
+              w-full lg:w-80 lg:flex-shrink-0 lg:overflow-y-auto
               transition-all duration-300 ease-in-out
               ${isSidebarCollapsed ? 'lg:hidden' : 'lg:block'}
             `}

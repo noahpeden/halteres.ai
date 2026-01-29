@@ -251,7 +251,7 @@ function WeekCard({
                 </div>
                 {week.status === 'skeleton' && (
                   <div className="mt-2 p-2 bg-warning/10 rounded text-xs text-warning-content">
-                    Skeleton version - Click "Add Full Details" to add coaching cues, warm-up, cool-down, and scaling options.
+                    Skeleton version - Click "Add Full Details" to add strategy, coaching cues, warm-up, cool-down, and scaling options.
                   </div>
                 )}
               </div>
@@ -264,7 +264,7 @@ function WeekCard({
       {week.status === 'skeleton' && (
         <div className="space-y-3 mt-4">
           <textarea
-            placeholder="Optional: Add notes for this week (e.g., 'Focus on upper body', 'Client has shoulder pain')"
+            placeholder="Optional adjustments (e.g., 'Focus on posterior chain', 'Avoid overhead movements'). Leave blank for full comprehensive details."
             value={weekNote}
             onChange={(e) => onNoteChange(e.target.value)}
             className="textarea textarea-bordered w-full text-sm"

@@ -932,7 +932,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
   }
 
   return (
-    <div className="flex flex-col lg:flex-row gap-0 min-h-[400px] lg:h-[calc(100vh-200px)] w-full">
+    <div className="flex flex-col lg:flex-row gap-0 min-h-[400px] lg:h-full w-full">
       {/* Generation Progress Overlay */}
       <GenerationProgress
         isVisible={showGenerationProgress}
