@@ -977,8 +977,8 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
       {/* LEFT: Compact Config Panel */}
       <div className={`
         w-full lg:w-72 xl:w-80 flex-shrink-0 border-b lg:border-b-0 lg:border-r border-slate-200 bg-slate-50/50
-        lg:overflow-y-auto lg:h-full
-        ${showMobileConfig ? 'block' : 'hidden lg:block'}
+        lg:flex lg:flex-col lg:h-full
+        ${showMobileConfig ? 'block' : 'hidden lg:flex'}
       `}>
         {/* Config Header - Hidden on mobile since we have the toggle */}
         <div className="hidden lg:flex items-center justify-between p-4 border-b border-slate-200 sticky top-0 bg-slate-50/95 backdrop-blur-sm z-10">
@@ -1000,7 +1000,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
         </div>
 
         {/* Collapsible Sections */}
-        <div className="p-4 space-y-1">
+        <div className="p-4 space-y-1 lg:flex-1 lg:overflow-y-auto">
           {/* Methodology Section */}
           <details className="group" open>
             <summary className="flex items-center justify-between cursor-pointer py-2.5 px-3 hover:bg-slate-100 rounded-xl text-sm font-medium text-slate-700 transition-colors">
@@ -1244,7 +1244,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
         </div>
 
         {/* Generate Button - Fixed at bottom */}
-        <div className="p-4 border-t border-slate-200 sticky bottom-0 bg-slate-50/95 backdrop-blur-sm">
+        <div className="p-4 border-t border-slate-200 bg-slate-50/95 lg:flex-shrink-0">
           {/* Mobile Save Button */}
           {programId && (
             <button
