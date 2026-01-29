@@ -1175,11 +1175,17 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
                   {[
                     { id: 'strength', label: 'Strength' },
                     { id: 'hypertrophy', label: 'Hypertrophy' },
+                    { id: 'power', label: 'Power' },
+                    { id: 'endurance', label: 'Endurance' },
                     { id: 'emom', label: 'EMOM' },
                     { id: 'amrap', label: 'AMRAP' },
                     { id: 'for_time', label: 'For Time' },
                     { id: 'tabata', label: 'Tabata' },
                     { id: 'circuit', label: 'Circuit' },
+                    { id: 'superset', label: 'Superset' },
+                    { id: 'complex', label: 'Complex' },
+                    { id: 'hiit', label: 'HIIT' },
+                    { id: 'metcon', label: 'MetCon' },
                   ].map(type => (
                     <button
                       key={type.id}
