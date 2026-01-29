@@ -227,10 +227,10 @@ export default function ProgramWriterPage() {
         )}
 
         {/* Main Content Area with Sidebar Layout */}
-        <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 w-full lg:h-[calc(100vh-180px)]">
+        <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 w-full lg:h-[calc(100vh-160px)]">
           {/* AI Program Writer (Main Content) */}
-          <div className={`w-full ${isSidebarCollapsed ? 'lg:flex-1' : 'lg:flex-1 lg:min-w-0'} transition-all duration-300 ease-in-out lg:overflow-hidden`}>
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 h-full overflow-hidden">
+          <div className={`w-full ${isSidebarCollapsed ? 'lg:flex-1' : 'lg:flex-1 lg:min-w-0'} transition-all duration-300 ease-in-out lg:h-full`}>
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 lg:h-full lg:flex lg:flex-col overflow-hidden">
               <ProgramProvider programId={programId}>
                 <AIProgramWriter
                   programId={programId}
