@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Sparkles, Check, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
+import { useState } from 'react';
+import { Sparkles, Check, Loader2, ChevronDown, ChevronUp, Eye, Pencil, Trash2, CheckCircle, Calendar } from 'lucide-react';
+import TemplateFeedbackButton from '@/components/feedback/TemplateFeedbackButton';
 
 /**
- * SkeletonPreview - Displays skeleton workouts grouped by week with enhancement controls
- * Used for the two-phase generation system
+ * SkeletonPreview - Displays workouts grouped by week with enhancement controls
+ * Used for both skeleton and detailed workouts in the two-phase generation system
  */
 export default function SkeletonPreview({
   workouts,
@@ -14,11 +15,20 @@ export default function SkeletonPreview({
   onEnhanceAll,
   enhancingWeeks = new Set(), // Set of week numbers currently being enhanced
   programContext,
+  // Action props for detailed workouts
+  onViewDetails,
+  onEditWorkout,
+  onDeleteWorkout,
+  onMarkComplete,
+  onDatePick,
+  formatDate,
+  gymId,
 }) {
   // Derive isEnhancing from the set (any week being enhanced)
   const isEnhancing = enhancingWeeks.size > 0;
   const [weekNotes, setWeekNotes] = useState({});
   const [expandedWeeks, setExpandedWeeks] = useState({});
+  const [showEnhanceAllConfirm, setShowEnhanceAllConfirm] = useState(false);
 
   // Group workouts by week
   const groupedWeeks = groupWorkoutsByWeek(workouts);
@@ -46,6 +56,17 @@ export default function SkeletonPreview({
       ...prev,
       [weekNumber]: note
     }));
+  };
+
+  // Handle "Enhance All" button click - shows confirmation if weeks already enhanced
+  const handleEnhanceAllClick = () => {
+    if (detailedWeeks > 0) {
+      // Show confirmation if some weeks are already enhanced
+      setShowEnhanceAllConfirm(true);
+    } else {
+      // No enhanced weeks, proceed directly
+      onEnhanceAll();
+    }
   };
 
   if (!workouts || workouts.length === 0) {
@@ -126,7 +147,7 @@ export default function SkeletonPreview({
             </div>
             <button
               className="btn btn-outline btn-primary w-full sm:w-auto"
-              onClick={onEnhanceAll}
+              onClick={handleEnhanceAllClick}
               disabled={isEnhancing}
             >
               {isEnhancing ? (
@@ -141,6 +162,45 @@ export default function SkeletonPreview({
                 </>
               )}
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Enhance All Confirmation Modal */}
+      {showEnhanceAllConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-base-100 rounded-xl p-6 max-w-md m-4 shadow-2xl">
+            <h3 className="font-bold text-lg mb-2">Enhance Remaining Weeks?</h3>
+            <p className="text-base-content/70 mb-4">
+              {detailedWeeks} week{detailedWeeks > 1 ? 's have' : ' has'} already been enhanced and will be preserved.
+              {' '}{skeletonWeeks} week{skeletonWeeks > 1 ? 's' : ''} will be enhanced.
+            </p>
+            <div className="flex flex-col gap-2">
+              <button
+                className="btn btn-primary w-full"
+                onClick={() => {
+                  setShowEnhanceAllConfirm(false);
+                  onEnhanceAll();
+                }}
+              >
+                Keep Enhanced, Enhance Rest ({skeletonWeeks} week{skeletonWeeks > 1 ? 's' : ''})
+              </button>
+              <button
+                className="btn btn-outline w-full"
+                onClick={() => {
+                  setShowEnhanceAllConfirm(false);
+                  onEnhanceAll({ includeEnhanced: true });
+                }}
+              >
+                Re-enhance All Weeks ({totalWeeks} week{totalWeeks > 1 ? 's' : ''})
+              </button>
+              <button
+                className="btn btn-ghost w-full"
+                onClick={() => setShowEnhanceAllConfirm(false)}
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         </div>
       )}

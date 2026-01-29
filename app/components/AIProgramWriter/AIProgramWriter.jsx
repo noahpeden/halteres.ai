@@ -24,7 +24,6 @@ import DatePickerModalComponent from './DatePickerModal';
 import RescheduleModalComponent from './RescheduleModal';
 import EditWorkoutModalComponent from './EditWorkoutModal';
 import ProgramGenerationModalComponent from './ProgramGenerationModal';
-import EnhanceProgramModalComponent from './EnhanceProgramModal';
 import ReferenceWorkoutSearchModal from './ReferenceWorkoutSearchModal';
 import EnhancedReferenceWorkoutSearchModal from './EnhancedReferenceWorkoutSearchModal';
 
@@ -48,7 +47,6 @@ const DatePickerModal = memo(DatePickerModalComponent);
 const RescheduleModal = memo(RescheduleModalComponent);
 const EditWorkoutModal = memo(EditWorkoutModalComponent);
 const ProgramGenerationModal = memo(ProgramGenerationModalComponent);
-const EnhanceProgramModal = memo(EnhanceProgramModalComponent);
 
 export default function AIProgramWriter({ programId, wizardComplete }) {
   const router = useRouter();
@@ -120,8 +118,6 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
   // Local state for streaming workouts (UI-only, not saved to DB yet)
   const [streamingWorkouts, setStreamingWorkouts] = useState([]);
 
-  // State for program enhancement
-  const [isEnhancingProgram, setIsEnhancingProgram] = useState(false);
 
 
   // Two-phase generation state
@@ -841,37 +837,6 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
     [updateWorkout, showToast]
   );
 
-  // Program enhancement handlers
-  const handleEnhanceProgram = useCallback(() => {
-    if (!workouts || workouts.length === 0) {
-      showToast('No workouts to enhance. Generate workouts first.', 'error');
-      return;
-    }
-    openModal('enhanceProgramModal');
-  }, [workouts, openModal, showToast]);
-
-  const handleSaveEnhancedProgram = useCallback(
-    async (enhancedWorkouts) => {
-      setIsEnhancingProgram(true);
-      try {
-        // Update each workout in the database
-        for (const enhanced of enhancedWorkouts) {
-          await updateWorkout(enhanced.id, {
-            title: enhanced.title,
-            body: enhanced.body,
-          });
-        }
-        closeModal('enhanceProgramModal');
-        showToast('Program enhanced successfully!', 'success');
-      } catch (error) {
-        showToast('Failed to save enhanced program: ' + error.message, 'error');
-      } finally {
-        setIsEnhancingProgram(false);
-      }
-    },
-    [updateWorkout, closeModal, showToast]
-  );
-
   // ============================================================================
   // TWO-PHASE GENERATION HANDLERS
   // ============================================================================
@@ -934,12 +899,18 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
   }, [programId, workouts, formData, selectedEquipment, weekInputs, updateWorkout, showToast, supabase, setWeekInput, enhancingWeeks]);
 
   // Handle enhance all weeks - launches all enhancements concurrently
-  const handleEnhanceAllWeeks = useCallback(async () => {
+  // Options: { includeEnhanced: boolean } - if true, re-enhances already-enhanced weeks
+  const handleEnhanceAllWeeks = useCallback(async (options = {}) => {
+    const { includeEnhanced = false } = options;
     const groupedWeeks = groupWorkoutsByWeek(workouts);
-    const skeletonWeeks = groupedWeeks.filter(w => w.status === 'skeleton');
+
+    // Filter based on options - either all weeks or just skeleton weeks
+    const weeksToEnhance = includeEnhanced
+      ? groupedWeeks
+      : groupedWeeks.filter(w => w.status === 'skeleton');
 
     // Launch all week enhancements concurrently
-    const enhancePromises = skeletonWeeks.map(week =>
+    const enhancePromises = weeksToEnhance.map(week =>
       handleEnhanceWeek(week.weekNumber, weekInputs[week.weekNumber] || '')
     );
 
@@ -1352,15 +1323,6 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
               </>
             )}
           </button>
-          {displayWorkouts.length > 0 && (
-            <button
-              className="w-full mt-2 px-4 py-2 bg-white border border-slate-200 hover:border-blue-300 hover:bg-blue-50 text-slate-700 hover:text-blue-700 rounded-xl text-sm font-medium transition-all"
-              onClick={handleEnhanceProgram}
-              disabled={isEnhancingProgram}
-            >
-              {isEnhancingProgram ? 'Enhancing...' : 'Enhance Program'}
-            </button>
-          )}
         </div>
       </div>
 
@@ -1398,8 +1360,8 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
           </div>
         )}
 
-        {/* Skeleton Preview for Two-Phase Generation */}
-        {hasSkeletonWorkouts && (
+        {/* Program Workouts - Using SkeletonPreview for both skeleton and detailed workouts */}
+        {displayWorkouts.length > 0 && (
           <div ref={generationAreaRef} className="scroll-mt-20">
             <SkeletonPreview
               workouts={displayWorkouts}
@@ -1412,17 +1374,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
                 difficulty: formData?.difficulty,
                 equipment: selectedEquipment,
               }}
-            />
-          </div>
-        )}
-
-        {/* Standard Workout List for Detailed Workouts */}
-        {displayWorkouts.length > 0 && !hasSkeletonWorkouts && (
-          <div ref={generationAreaRef} className="scroll-mt-20">
-            <WorkoutList
-              workouts={displayWorkouts}
-              daysPerWeek={formData?.daysPerWeek}
-              formatDate={formatDate}
+              // Action props for detailed workouts
               onViewDetails={(workout) => {
                 if (workout.id) {
                   router.push(`/program/${programId}/workout/${workout.id}`);
@@ -1430,6 +1382,9 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
                   openModal('workoutModal', { workout });
                 }
               }}
+              onEditWorkout={handleEditWorkout}
+              onDeleteWorkout={handleDeleteWorkout}
+              onMarkComplete={handleMarkComplete}
               onDatePick={(workout) => {
                 const initialDate =
                   workout.suggestedDate ||
@@ -1438,18 +1393,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
                   null;
                 openModal('datePickerModal', { workout, date: initialDate });
               }}
-              onSelectWorkout={handleSaveEnhancedWorkout}
-              onDeleteWorkout={handleDeleteWorkout}
-              onEditWorkout={handleEditWorkout}
-              onMarkComplete={handleMarkComplete}
-              isLoading={loading}
-              generatedDescription={
-                program?.program_overview?.generated_description
-              }
-              setFormData={(data) => updateFromFormData(data)}
-              showToastMessage={showToast}
-              generationStage={generationStage}
-              serverStatus={serverStatus}
+              formatDate={formatDate}
               gymId={currentGym?.id || program?.gym_id}
             />
           </div>
@@ -1529,18 +1473,6 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
           onClose={() => closeModal('confirmationModal')}
           onConfirm={handleConfirmGenerate}
           content={modals.confirmationModal.content}
-        />
-      )}
-
-      {modals.enhanceProgramModal?.isOpen && (
-        <EnhanceProgramModal
-          isOpen={modals.enhanceProgramModal.isOpen}
-          workouts={workouts}
-          formData={formData}
-          onClose={() => closeModal('enhanceProgramModal')}
-          onSave={handleSaveEnhancedProgram}
-          showToast={showToast}
-          isLoading={isEnhancingProgram}
         />
       )}
 
