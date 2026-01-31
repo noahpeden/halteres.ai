@@ -293,19 +293,42 @@ async function generateProgramChunked(
     }
 
     // Note: Workouts are already saved incrementally via saveWorkoutsBatch
-    // No need for a final batch save - just update program status
+    // No need for a final batch save - just update program status and description
     if (sharedData.programId) {
       try {
+        // First, fetch current program_overview to merge with
+        const { data: currentProgram } = await supabase
+          .from('programs')
+          .select('program_overview')
+          .eq('id', sharedData.programId)
+          .single();
+
+        const updateData = {
+          generation_status: 'completed',
+          generation_progress: {
+            total_weeks: numberOfWeeks,
+            workouts_saved: allWorkouts.length,
+            completed_at: new Date().toISOString(),
+          }
+        };
+
+        // Save the AI-generated program description to the database
+        if (programDescription) {
+          // Save to programs.description (for page header)
+          updateData.description = programDescription;
+          // Also save to program_overview.generated_description (for WorkoutList component)
+          updateData.program_overview = {
+            ...(currentProgram?.program_overview || {}),
+            generated_description: programDescription,
+          };
+          logWithTimestamp('Saving AI-generated description to database', {
+            descriptionLength: programDescription.length,
+          });
+        }
+
         await supabase
           .from('programs')
-          .update({
-            generation_status: 'completed',
-            generation_progress: {
-              total_weeks: numberOfWeeks,
-              workouts_saved: allWorkouts.length,
-              completed_at: new Date().toISOString(),
-            }
-          })
+          .update(updateData)
           .eq('id', sharedData.programId);
 
         logWithTimestamp(`Program generation completed, ${allWorkouts.length} workouts saved incrementally`);
