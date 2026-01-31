@@ -877,6 +877,8 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
           difficulty: formData?.difficulty,
           equipment: selectedEquipment,
           useImperial: true,
+          numberOfWeeks: parseInt(formData?.numberOfWeeks, 10) || 1,
+          trainingMethodology: formData?.trainingMethodology,
         },
         weekSpecificInput: weekInput || weekInputs[weekNumber] || '',
         updateWorkoutStatus: (workoutId, updates) => {

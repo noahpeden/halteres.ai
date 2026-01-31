@@ -367,10 +367,58 @@ function buildEnhancementPrompt(skeletonWorkouts, weekNumber, context, weekSpeci
     `### Day ${i + 1}: ${w.title}\n${w.body_skeleton || ''}`
   ).join('\n\n---\n\n');
 
+  // Extract context values
+  const numberOfWeeks = context?.numberOfWeeks || 4;
+  const difficulty = context?.difficulty || 'Intermediate';
+  const goal = context?.goal || '';
+  const trainingMethodology = context?.trainingMethodology || '';
+
+  // Check if athlete appears experienced based on client metrics
+  const hasExperiencedAthlete = clientMetricsContent && (
+    /\b[3-9]\s*(yrs?|years?)\b/i.test(clientMetricsContent) ||
+    /\b[1-9]\d+\s*(yrs?|years?)\b/i.test(clientMetricsContent) ||
+    /experience.*[3-9]/i.test(clientMetricsContent) ||
+    /advanced|elite|competitive|crossfit|olympic/i.test(clientMetricsContent)
+  );
+
+  const isShortProgram = numberOfWeeks <= 2;
+
   // Default instruction when no user input provided - ensures rich content generation
   const defaultInstruction = `Generate comprehensive workout details with full coaching context. Include strategic intent for each session, detailed coaching cues for all main movements, and complete warm-up/cool-down protocols.`;
 
   const effectiveInput = weekSpecificInput?.trim() || defaultInstruction;
+
+  // Build program context section
+  const programContextSection = `
+PROGRAM CONTEXT:
+- Total Program Length: ${numberOfWeeks} week(s)
+- Week Number: ${weekNumber} of ${numberOfWeeks}
+- Difficulty Level: ${difficulty}
+${goal ? `- Goal: ${goal}` : ''}
+${trainingMethodology ? `- Training Style: ${trainingMethodology.replace(/_/g, ' ')}` : ''}
+`;
+
+  // Build guidance for short programs
+  const shortProgramGuidance = isShortProgram ? `
+CRITICAL - SHORT PROGRAM RULES:
+This is a ${numberOfWeeks}-week program. DO NOT:
+- Refer to Week 1 as "orientation", "introduction", "foundation phase", or "ramp-up"
+- Mention "preparing for subsequent weeks" or "building up to later phases"
+- Use language suggesting this is preparation for something else
+- Treat early sessions as reduced-intensity "intro" sessions
+Instead, treat EVERY session as a full training session with appropriate intensity for the stated difficulty level (${difficulty}).
+` : '';
+
+  // Build guidance for experienced athletes
+  const experiencedAthleteGuidance = hasExperiencedAthlete ? `
+EXPERIENCED ATHLETE NOTICE:
+The client profile indicates significant training experience. DO NOT:
+- Include basic technique explanations for standard movements
+- Use reduced "beginner" or "intro" weights
+- Over-explain fundamental concepts they already know
+- Frame sessions as "teaching" or "learning" phases
+Instead, assume competency with standard movements and use appropriate intensity.
+` : '';
 
   let prompt = `Enhance these skeleton workouts for Week ${weekNumber} with FULL professional-grade details.
 
@@ -380,7 +428,8 @@ ${skeletonContent}
 ---
 
 SKELETON CONTAINS: ${workoutSections.join(', ')} sections
-
+${programContextSection}
+${shortProgramGuidance}${experiencedAthleteGuidance}
 ENHANCEMENT INSTRUCTIONS:
 "${effectiveInput}"
 ${weekSpecificInput ? `
@@ -395,7 +444,9 @@ YOU MUST ADD THESE SECTIONS TO EACH WORKOUT:
 
 1. **Stimulus and Strategy** (at the TOP of each workout):
    - Primary Focus: 1-2 sentences on the main training goal
-   - Session Context: How this fits into the weekly/program progression
+   - Session Context: ${isShortProgram
+     ? 'Brief note on how this session contributes to the program goal (do NOT use intro/orientation framing)'
+     : 'How this fits into the weekly/program progression'}
    - Bullet points explaining the intent behind each major component (strength, conditioning, etc.)
    - Rest periods and pacing guidance
 
