@@ -324,6 +324,7 @@ async function generateWeekSkeleton(
     useImperial,
     trainingMethodology,
     clientGender,
+    description,
   } = sharedData;
 
   // Calculate dates for this week
@@ -355,9 +356,13 @@ Periodization: ${programType || 'Linear'}
 Days/Week: ${daysPerWeek}
 Week: ${weekNumber} of ${numberOfWeeks}
 ${focusArea ? `Focus: ${focusArea}` : ''}
+${workoutFormats?.length > 0 ? `Workout Types: ${workoutFormats.join(', ')}` : ''}
 ${equipment?.length > 0 ? `Equipment: ${equipment.join(', ')}` : ''}
 ${clientMetricsContent ? `\n${clientMetricsContent}` : ''}${previousWeeksContext}
-
+${description ? `
+CRITICAL CLIENT REQUIREMENTS (these take precedence over all other guidelines):
+${description}
+` : ''}
 SKELETON REQUIREMENTS - Include ONLY:
 ${workoutSections.map(s => `- ${s}`).join('\n')}
 
@@ -370,9 +375,16 @@ DO NOT include:
 - Stimulus and strategy
 
 FORMAT: Concise exercise prescriptions only.
-Example output format for each workout:
+Choose sets/reps based on workout types selected:
+- Hypertrophy: 3-4 sets of 8-15 reps @ 65-75% 1RM
+- Strength: 4-6 sets of 3-6 reps @ 80-90% 1RM
+- Power: 3-5 sets of 1-3 reps @ 85-95% 1RM
+- Endurance: 2-3 sets of 15-20+ reps @ 50-65% 1RM
+- General Fitness: 3 sets of 8-12 reps @ 70-80% 1RM
+
+Example output format:
 ## Strength
-- Back Squat: 5x5 @ 75% 1RM
+- Back Squat: [sets]x[reps] @ [%] 1RM
 - ${useImperial ? '♀ 135 lbs / ♂ 185 lbs' : '♀ 60 kg / ♂ 85 kg'}
 
 ## Conditioning
@@ -606,6 +618,7 @@ async function extractSharedData(requestData, supabase) {
   const focusArea = requestData.focus_area || '';
   const workoutFormats = requestData.workout_format || [];
   const trainingMethodology = requestData.trainingMethodology || '';
+  const description = requestData.description || '';
 
   const numberOfWeeks = parseInt(requestData.duration_weeks || requestData.numberOfWeeks || 4);
   const daysPerWeek = parseInt(requestData.days_per_week || requestData.daysPerWeek || 3);
@@ -715,5 +728,6 @@ async function extractSharedData(requestData, supabase) {
     useImperial,
     trainingMethodology,
     clientGender,
+    description,
   };
 }
