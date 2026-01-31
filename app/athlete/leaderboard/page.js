@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
 import LeaderboardView from '@/components/athlete/LeaderboardView';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function AthleteLeaderboardPage() {
   const { currentGym, user } = useAuth();
@@ -50,7 +50,9 @@ export default function AthleteLeaderboardPage() {
 
     setAggregateLoading(true);
     try {
-      const res = await fetch(`/api/athlete/aggregate-leaderboard?gymId=${currentGym.id}&period=${period}`);
+      const res = await fetch(
+        `/api/athlete/aggregate-leaderboard?gymId=${currentGym.id}&period=${period}`
+      );
       const data = await res.json();
 
       if (data.success) {
@@ -76,9 +78,7 @@ export default function AthleteLeaderboardPage() {
       <div className="p-6 text-center">
         <div className="text-5xl mb-4">🏆</div>
         <h2 className="text-xl font-bold mb-2">Join a Gym First</h2>
-        <p className="text-base-content/60">
-          You need to join a gym to see leaderboards.
-        </p>
+        <p className="text-base-content/60">You need to join a gym to see leaderboards.</p>
       </div>
     );
   }
@@ -203,17 +203,13 @@ export default function AthleteLeaderboardPage() {
                   <div
                     key={entry.userId}
                     className={`card ${
-                      entry.isCurrentUser
-                        ? 'bg-primary/10 border-2 border-primary'
-                        : 'bg-base-100'
+                      entry.isCurrentUser ? 'bg-primary/10 border-2 border-primary' : 'bg-base-100'
                     } shadow-sm`}
                   >
                     <div className="card-body p-4">
                       <div className="flex items-center gap-3">
                         {/* Rank */}
-                        <div className="w-10 flex justify-center">
-                          {getRankBadge(entry.rank)}
-                        </div>
+                        <div className="w-10 flex justify-center">{getRankBadge(entry.rank)}</div>
 
                         {/* Avatar */}
                         <div className="avatar placeholder">
@@ -240,12 +236,8 @@ export default function AthleteLeaderboardPage() {
                           </p>
                           <div className="flex flex-wrap gap-1 text-xs text-base-content/60">
                             <span>{entry.workoutsLogged} workouts</span>
-                            {entry.firstPlaces > 0 && (
-                              <span>• {entry.firstPlaces} wins</span>
-                            )}
-                            {entry.prs > 0 && (
-                              <span>• {entry.prs} PRs</span>
-                            )}
+                            {entry.firstPlaces > 0 && <span>• {entry.firstPlaces} wins</span>}
+                            {entry.prs > 0 && <span>• {entry.prs} PRs</span>}
                           </div>
                         </div>
 

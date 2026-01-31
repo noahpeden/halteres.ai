@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function AthleteProgramsPage() {
   const { user, currentGym } = useAuth();
@@ -106,7 +106,9 @@ export default function AthleteProgramsPage() {
                 )}
                 <div className="flex gap-4 mt-2 text-sm opacity-80">
                   <span>{activeProgram.duration_weeks} weeks</span>
-                  <span>{formatDate(activeProgram.startDate)} - {formatDate(activeProgram.endDate)}</span>
+                  <span>
+                    {formatDate(activeProgram.startDate)} - {formatDate(activeProgram.endDate)}
+                  </span>
                 </div>
                 <div className="card-actions justify-end mt-2">
                   <span className="text-sm">View Full Program →</span>
@@ -136,16 +138,20 @@ export default function AthleteProgramsPage() {
         {filteredPrograms.length === 0 ? (
           <div className="card bg-base-100 shadow">
             <div className="card-body text-center">
-              <p className="text-base-content/60">No {filter !== 'all' ? filter : ''} programs found.</p>
+              <p className="text-base-content/60">
+                No {filter !== 'all' ? filter : ''} programs found.
+              </p>
             </div>
           </div>
         ) : (
           <div className="space-y-3">
             {filteredPrograms.map((program) => (
               <Link key={program.id} href={`/athlete/programs/${program.id}`}>
-                <div className={`card bg-base-100 shadow hover:shadow-lg transition-shadow ${
-                  program.status === 'active' ? 'border-2 border-primary' : ''
-                }`}>
+                <div
+                  className={`card bg-base-100 shadow hover:shadow-lg transition-shadow ${
+                    program.status === 'active' ? 'border-2 border-primary' : ''
+                  }`}
+                >
                   <div className="card-body p-4">
                     <div className="flex justify-between items-start">
                       <div className="flex-1">

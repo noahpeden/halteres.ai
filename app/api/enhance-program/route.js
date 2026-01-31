@@ -1,5 +1,5 @@
-import { NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
+import { NextResponse } from 'next/server';
 
 export const maxDuration = 300; // 5 minutes for enhanced thinking
 
@@ -20,8 +20,7 @@ export async function POST(req) {
     if (!workouts || !instructions || !methodology || !gymEquipment) {
       return NextResponse.json(
         {
-          error:
-            'Missing required fields: workouts, instructions, methodology, gymEquipment',
+          error: 'Missing required fields: workouts, instructions, methodology, gymEquipment',
         },
         { status: 400 }
       );
@@ -50,10 +49,12 @@ You must return your response as valid JSON with this exact structure:
 
     // Format workouts for the prompt
     const workoutsText = workouts
-      .map((w, index) => `
+      .map(
+        (w, index) => `
 Workout ${index + 1} - ${w.title || `Day ${index + 1}`} (ID: ${w.id || 'N/A'}):
 ${w.body || w.description || 'No content'}
-`)
+`
+      )
       .join('\n---\n');
 
     const userPrompt = `Enhance the following program according to these user instructions: "${instructions}".
@@ -64,9 +65,7 @@ Total Workouts: ${workouts.length}
 Context:
 - Training methodology: ${methodology}
 - Focus area: ${focusArea || 'General fitness'}
-- Equipment available: ${
-      Array.isArray(gymEquipment) ? gymEquipment.join(', ') : gymEquipment
-    }
+- Equipment available: ${Array.isArray(gymEquipment) ? gymEquipment.join(', ') : gymEquipment}
 - Workout formats preferred: ${
       Array.isArray(workoutFormats) ? workoutFormats.join(', ') : 'Standard'
     }
@@ -111,7 +110,7 @@ IMPORTANT: You must return exactly ${workouts.length} enhanced workouts, one for
     });
 
     // Extract text content from response (skip thinking blocks)
-    const textBlock = response.content.find(block => block.type === 'text');
+    const textBlock = response.content.find((block) => block.type === 'text');
     const responseContent = textBlock?.text || '';
 
     if (!responseContent) {
@@ -136,7 +135,9 @@ IMPORTANT: You must return exactly ${workouts.length} enhanced workouts, one for
       }
 
       if (enhancedProgram.enhancedWorkouts.length !== workouts.length) {
-        throw new Error(`Expected ${workouts.length} workouts but received ${enhancedProgram.enhancedWorkouts.length}`);
+        throw new Error(
+          `Expected ${workouts.length} workouts but received ${enhancedProgram.enhancedWorkouts.length}`
+        );
       }
 
       // Ensure all workouts have required fields
@@ -149,7 +150,6 @@ IMPORTANT: You must return exactly ${workouts.length} enhanced workouts, one for
           w.id = workouts[index].id;
         }
       });
-
     } catch (err) {
       console.error('Parse error:', err);
       console.error('Response content:', responseContent.substring(0, 500));

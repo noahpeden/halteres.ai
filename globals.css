@@ -1,4 +1,4 @@
-@import 'tailwindcss';
+@import "tailwindcss";
 
 /* Custom utilities for better text truncation */
 .line-clamp-1 {

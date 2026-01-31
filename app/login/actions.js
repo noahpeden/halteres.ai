@@ -69,8 +69,7 @@ export async function signup(formData) {
   return {
     success: true,
     data,
-    message:
-      'Registration successful! Please check your email to confirm your account.',
+    message: 'Registration successful! Please check your email to confirm your account.',
   };
 }
 
@@ -129,7 +128,6 @@ export async function updatePassword(formData) {
 
   return {
     success: true,
-    message:
-      'Password has been reset successfully! You can now login with your new password.',
+    message: 'Password has been reset successfully! You can now login with your new password.',
   };
 }

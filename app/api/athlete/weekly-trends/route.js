@@ -1,8 +1,8 @@
-import { createClient } from '@supabase/supabase-js';
 import Anthropic from '@anthropic-ai/sdk';
-import { NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
+import { createClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
+import { NextResponse } from 'next/server';
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -171,29 +171,31 @@ export async function GET(request) {
 }
 
 function buildTrendsPrompt(results, profile, prs, weekStart) {
-  const workoutSummaries = results.map((r) => {
-    let resultDisplay = '';
-    switch (r.result_type) {
-      case 'time':
-        const mins = Math.floor(r.time_seconds / 60);
-        const secs = r.time_seconds % 60;
-        resultDisplay = `${mins}:${secs.toString().padStart(2, '0')}`;
-        break;
-      case 'rounds_reps':
-        resultDisplay = `${r.rounds || 0}+${r.reps || 0}`;
-        break;
-      case 'weight':
-        resultDisplay = `${r.weight_kg}kg`;
-        break;
-      default:
-        resultDisplay = `${r.count || 0}`;
-    }
-    return `- ${r.workout?.title || 'Workout'} (${r.workout?.workout_type || 'General'}): ${resultDisplay} @ ${r.scale}${r.is_pr ? ' [PR!]' : ''}${r.perceived_effort ? ` (effort: ${r.perceived_effort}/10)` : ''}`;
-  }).join('\n');
+  const workoutSummaries = results
+    .map((r) => {
+      let resultDisplay = '';
+      switch (r.result_type) {
+        case 'time': {
+          const mins = Math.floor(r.time_seconds / 60);
+          const secs = r.time_seconds % 60;
+          resultDisplay = `${mins}:${secs.toString().padStart(2, '0')}`;
+          break;
+        }
+        case 'rounds_reps':
+          resultDisplay = `${r.rounds || 0}+${r.reps || 0}`;
+          break;
+        case 'weight':
+          resultDisplay = `${r.weight_kg}kg`;
+          break;
+        default:
+          resultDisplay = `${r.count || 0}`;
+      }
+      return `- ${r.workout?.title || 'Workout'} (${r.workout?.workout_type || 'General'}): ${resultDisplay} @ ${r.scale}${r.is_pr ? ' [PR!]' : ''}${r.perceived_effort ? ` (effort: ${r.perceived_effort}/10)` : ''}`;
+    })
+    .join('\n');
 
-  const prSummary = prs?.length > 0
-    ? `\nPRs this week: ${prs.map((p) => p.category).join(', ')}`
-    : '';
+  const prSummary =
+    prs?.length > 0 ? `\nPRs this week: ${prs.map((p) => p.category).join(', ')}` : '';
 
   return `You are a CrossFit coach providing a weekly performance analysis.
 

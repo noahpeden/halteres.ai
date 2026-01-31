@@ -1,5 +1,5 @@
-import { createClient } from '@/utils/supabase/server';
 import { NextResponse } from 'next/server';
+import { createClient } from '@/utils/supabase/server';
 
 export async function POST(req) {
   try {
@@ -7,10 +7,7 @@ export async function POST(req) {
     const { programId, weeks } = body;
 
     if (!programId || programId === 'undefined') {
-      return NextResponse.json(
-        { error: 'Invalid program ID' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Invalid program ID' }, { status: 400 });
     }
 
     const supabase = await createClient();
@@ -72,17 +69,11 @@ export async function POST(req) {
     }
 
     // Insert workouts into the program_workouts table
-    const { data, error } = await supabase
-      .from('program_workouts')
-      .insert(workouts)
-      .select();
+    const { data, error } = await supabase.from('program_workouts').insert(workouts).select();
 
     if (error) throw error;
 
-    return NextResponse.json(
-      { success: true, count: workouts.length },
-      { status: 200 }
-    );
+    return NextResponse.json({ success: true, count: workouts.length }, { status: 200 });
   } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

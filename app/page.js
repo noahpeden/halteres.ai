@@ -1,6 +1,7 @@
 /* eslint-disable react/no-unescaped-entities */
-import { metadata } from './metadata';
+
 import HomeClient from '@/components/home/HomeClient';
+import { metadata } from './metadata';
 
 // This overrides the default metadata for this route
 export const generateMetadata = () => {

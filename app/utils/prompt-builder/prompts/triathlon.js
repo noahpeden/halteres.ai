@@ -3,10 +3,7 @@
  * @param {Object} context - The full context for prompt generation
  * @returns {string} The assembled prompt string
  */
-import {
-  formatEquipmentRestrictions,
-  formatSchedulingRequirements,
-} from '../promptBuilder.js';
+import { formatEquipmentRestrictions, formatSchedulingRequirements } from '../promptBuilder.js';
 
 export function triathlonPrompt(context) {
   // Extract all relevant parameters with fallbacks
@@ -27,8 +24,7 @@ export function triathlonPrompt(context) {
   // Get more specific parameters
   const numberOfWeeks = context.numberOfWeeks;
   const daysPerWeek = context.daysPerWeek;
-  const programType =
-    periodization?.program_type || context.programType || 'linear';
+  const programType = periodization?.program_type || context.programType || 'linear';
   const equipment = gym_details?.equipment || context.equipment || [];
   const startDate = calendar_data?.start_date || context.startDate || '';
   const totalWorkouts = numberOfWeeks * daysPerWeek;
@@ -43,18 +39,8 @@ export function triathlonPrompt(context) {
       : 'Swim, Bike, Run, Brick, Strength, Recovery';
 
   // Get day names for better readability
-  const dayNames = [
-    'Sunday',
-    'Monday',
-    'Tuesday',
-    'Wednesday',
-    'Thursday',
-    'Friday',
-    'Saturday',
-  ];
-  const selectedDayNames = selectedDaysOfWeek
-    .map((dayNum) => dayNames[dayNum])
-    .join(', ');
+  const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const selectedDayNames = selectedDaysOfWeek.map((dayNum) => dayNames[dayNum]).join(', ');
 
   // Determine training volume and intensity based on athlete level
   const trainingGuidelines = getTrainingGuidelines(athleteLevel, numberOfWeeks);
@@ -94,9 +80,9 @@ ${periodization.why_appropriate}
 
   // Build the triathlon-specific prompt
   const isGeneratingSpecificWeek = context.isWeekSpecific;
-  const weekSpecificInfo = isGeneratingSpecificWeek ?
-    `Week ${context.weekNumber} of ${context.totalWeeks}` :
-    `${numberOfWeeks}-week`;
+  const weekSpecificInfo = isGeneratingSpecificWeek
+    ? `Week ${context.weekNumber} of ${context.totalWeeks}`
+    : `${numberOfWeeks}-week`;
 
   return `Generate a ${isGeneratingSpecificWeek ? 'single week' : numberOfWeeks + '-week'} Triathlon training program for ${goal}.
 
@@ -110,23 +96,31 @@ ${focus_area ? `Focus Area: ${focus_area}` : ''}
 Periodization: ${programType}
 </program_parameters>
 
-${description ? `<client_requirements priority="high">
+${
+  description
+    ? `<client_requirements priority="high">
 ${description}
 These requirements take precedence over general guidelines below.
 </client_requirements>
-` : ''}
+`
+    : ''
+}
 ${formatEquipmentRestrictions(equipment)}
 
 <workout_formats required="${formattedWorkoutFormats}">
-${workoutFormats.length > 0
+${
+  workoutFormats.length > 0
     ? `Use primarily these formats: ${formattedWorkoutFormats}. Only include other formats if essential for the stated goal.`
-    : 'Use standard triathlon mix: Swim, Bike, Run, Brick, Strength, Recovery'}
+    : 'Use standard triathlon mix: Swim, Bike, Run, Brick, Strength, Recovery'
+}
 </workout_formats>
 
 <output_quantity>
-${isGeneratingSpecificWeek
-  ? `Generate exactly ${context.workoutsThisWeek || daysPerWeek} workouts for Week ${context.weekNumber} only.`
-  : `Generate exactly ${totalWorkouts} workouts total (${numberOfWeeks} weeks × ${daysPerWeek} days).`}
+${
+  isGeneratingSpecificWeek
+    ? `Generate exactly ${context.workoutsThisWeek || daysPerWeek} workouts for Week ${context.weekNumber} only.`
+    : `Generate exactly ${totalWorkouts} workouts total (${numberOfWeeks} weeks × ${daysPerWeek} days).`
+}
 </output_quantity>
 
 <triathlon_guidelines>
@@ -155,14 +149,18 @@ ${context.clientMetrics ? `\n${context.clientMetrics}` : ''}
 ${context.referenceWorkouts ? `\n${context.referenceWorkouts}` : ''}
 ${customFormatSection}
 ${formattedPeriodizationGuidelines}
-${context.formattedDates ? `
+${
+  context.formattedDates
+    ? `
 <scheduling>
 Training Days: ${selectedDayNames || 'All available days'}
 Assign workouts to these exact dates:
 ${context.formattedDates}
 Each workout's "date" field must match one of these dates exactly.
 </scheduling>
-` : formatSchedulingRequirements(suggestedDates, daysPerWeek, selectedDayNames)}
+`
+    : formatSchedulingRequirements(suggestedDates, daysPerWeek, selectedDayNames)
+}
 
 <description_requirements>
 Include in the program description:
@@ -216,10 +214,14 @@ ${
 Session's primary training focus, physiological adaptations, and how it fits into weekly block
 Specific training stimulus for each discipline, pacing/effort guidance
 
-${hasInjuryHistory ? `## Injury Considerations and Modifications
+${
+  hasInjuryHistory
+    ? `## Injury Considerations and Modifications
 Modifications for limitations appropriate for ${difficulty} level
 Alternatives for problematic movements or positions
-` : ''}
+`
+    : ''
+}
 ## Warm-up
 Detailed warm-up protocol specific to primary discipline(s)
 Duration, intensity, specific movements for activation and preparation
@@ -245,9 +247,11 @@ Pre-workout fueling, during-workout needs (longer sessions), post-workout recove
 }
 </workout_body_structure>
 
-${isGeneratingSpecificWeek
-  ? `Generate exactly ${context.workoutsThisWeek || daysPerWeek} workouts for Week ${context.weekNumber}.`
-  : `Generate exactly ${totalWorkouts} workouts covering ${numberOfWeeks} week(s).`}
+${
+  isGeneratingSpecificWeek
+    ? `Generate exactly ${context.workoutsThisWeek || daysPerWeek} workouts for Week ${context.weekNumber}.`
+    : `Generate exactly ${totalWorkouts} workouts covering ${numberOfWeeks} week(s).`
+}
 `;
 }
 
@@ -262,7 +266,7 @@ function getTrainingGuidelines(athleteLevel, numberOfWeeks) {
 - Progress volume gradually (10% rule)
 - Prioritize consistency over intensity
 - Target volumes: Swim 1-2km, Bike 30-60km, Run 5-10km per session`,
-    
+
     intermediate: `
 - Balance base building with targeted intensity work
 - Include sport-specific interval training
@@ -270,7 +274,7 @@ function getTrainingGuidelines(athleteLevel, numberOfWeeks) {
 - Progress both volume and intensity systematically
 - Include competitive simulations
 - Target volumes: Swim 1.5-3km, Bike 45-90km, Run 8-16km per session`,
-    
+
     advanced: `
 - Emphasize race-specific training and peak performance
 - Include high-intensity intervals and threshold work
@@ -285,58 +289,58 @@ function getTrainingGuidelines(athleteLevel, numberOfWeeks) {
 - Precise periodization and peak management
 - Mental preparation and competitive strategy
 - Marginal gains focus across all aspects
-- Target volumes: Swim 2.5-5km, Bike 80-150km, Run 12-32km per session`
+- Target volumes: Swim 2.5-5km, Bike 80-150km, Run 12-32km per session`,
   };
-  
+
   return guidelines[athleteLevel] || guidelines.intermediate;
 }
 
 function getSwimGuidelines(athleteLevel, daysPerWeek) {
-  if (daysPerWeek <= 3) return "1-2 sessions focusing on technique and endurance";
-  if (daysPerWeek <= 5) return "2-3 sessions with technique, endurance, and speed work";
-  return "3-4 sessions including technique, endurance, speed, and race simulation";
+  if (daysPerWeek <= 3) return '1-2 sessions focusing on technique and endurance';
+  if (daysPerWeek <= 5) return '2-3 sessions with technique, endurance, and speed work';
+  return '3-4 sessions including technique, endurance, speed, and race simulation';
 }
 
 function getBikeGuidelines(athleteLevel, daysPerWeek) {
-  if (daysPerWeek <= 3) return "1-2 sessions focusing on endurance and basic intervals";
-  if (daysPerWeek <= 5) return "2-3 sessions with endurance, tempo, and interval work";
-  return "3-4 sessions including endurance, tempo, intervals, and race preparation";
+  if (daysPerWeek <= 3) return '1-2 sessions focusing on endurance and basic intervals';
+  if (daysPerWeek <= 5) return '2-3 sessions with endurance, tempo, and interval work';
+  return '3-4 sessions including endurance, tempo, intervals, and race preparation';
 }
 
 function getRunGuidelines(athleteLevel, daysPerWeek) {
-  if (daysPerWeek <= 3) return "1-2 sessions focusing on base building and form";
-  if (daysPerWeek <= 5) return "2-3 sessions with base, tempo, and speed development";
-  return "3-4 sessions including base, tempo, intervals, and brick preparation";
+  if (daysPerWeek <= 3) return '1-2 sessions focusing on base building and form';
+  if (daysPerWeek <= 5) return '2-3 sessions with base, tempo, and speed development';
+  return '3-4 sessions including base, tempo, intervals, and brick preparation';
 }
 
 function getStrengthGuidelines(athleteLevel, daysPerWeek) {
-  if (daysPerWeek <= 3) return "1 session focusing on core and functional strength";
-  if (daysPerWeek <= 5) return "1-2 sessions with functional strength and injury prevention";
-  return "2 sessions focusing on strength, power, and injury prevention";
+  if (daysPerWeek <= 3) return '1 session focusing on core and functional strength';
+  if (daysPerWeek <= 5) return '1-2 sessions with functional strength and injury prevention';
+  return '2 sessions focusing on strength, power, and injury prevention';
 }
 
 function getBrickGuidelines(athleteLevel, daysPerWeek) {
-  if (daysPerWeek <= 3) return "every other week";
-  if (daysPerWeek <= 5) return "weekly";
-  return "1-2 per week during peak phases";
+  if (daysPerWeek <= 3) return 'every other week';
+  if (daysPerWeek <= 5) return 'weekly';
+  return '1-2 per week during peak phases';
 }
 
 function getIntensityDistribution(athleteLevel) {
   const distributions = {
-    beginner: "80% easy/aerobic, 15% moderate/tempo, 5% hard/anaerobic",
-    intermediate: "70% easy/aerobic, 20% moderate/tempo, 10% hard/anaerobic", 
-    advanced: "65% easy/aerobic, 25% moderate/tempo, 10% hard/anaerobic"
+    beginner: '80% easy/aerobic, 15% moderate/tempo, 5% hard/anaerobic',
+    intermediate: '70% easy/aerobic, 20% moderate/tempo, 10% hard/anaerobic',
+    advanced: '65% easy/aerobic, 25% moderate/tempo, 10% hard/anaerobic',
   };
-  
+
   return distributions[athleteLevel] || distributions.intermediate;
 }
 
 function getBrickWorkoutSection(workoutFormats) {
-  const includesBrick = workoutFormats.some(format => 
-    format.toLowerCase().includes('brick') || 
-    format.toLowerCase().includes('transition')
+  const includesBrick = workoutFormats.some(
+    (format) =>
+      format.toLowerCase().includes('brick') || format.toLowerCase().includes('transition')
   );
-  
+
   if (includesBrick) {
     return `## Transition Practice (Brick Component)
 [Specific transition practice with bike-to-run or swim-to-bike elements]
@@ -346,6 +350,6 @@ function getBrickWorkoutSection(workoutFormats) {
 
 `;
   }
-  
+
   return '';
 }

@@ -1,8 +1,12 @@
-import { createClient } from '@/utils/supabase/server';
-import { createMobileCompatibleClient, corsHeaders } from '@/utils/supabase/mobile';
-import { NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
-import { formatClientMetrics, formatClassMetrics, isClassMetrics } from '@/utils/prompt-builder/promptBuilder.js';
+import { NextResponse } from 'next/server';
+import {
+  formatClassMetrics,
+  formatClientMetrics,
+  isClassMetrics,
+} from '@/utils/prompt-builder/promptBuilder.js';
+import { corsHeaders, createMobileCompatibleClient } from '@/utils/supabase/mobile';
+import { createClient } from '@/utils/supabase/server';
 
 export const maxDuration = 800; // Maximum for Vercel Pro plan (800 seconds)
 export const dynamic = 'force-dynamic';
@@ -11,7 +15,7 @@ export const dynamic = 'force-dynamic';
 export async function OPTIONS(request) {
   return new Response(null, {
     status: 200,
-    headers: corsHeaders()
+    headers: corsHeaders(),
   });
 }
 
@@ -66,7 +70,7 @@ export async function POST(request) {
       { error: 'Failed to generate skeleton program: ' + error.message },
       {
         status: 500,
-        headers: corsHeaders()
+        headers: corsHeaders(),
       }
     );
   }
@@ -79,25 +83,21 @@ async function handleSkeletonGeneration(requestData, anthropic, supabase) {
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     start(controller) {
-      generateSkeletonProgram(
-        requestData,
-        anthropic,
-        supabase,
-        controller,
-        encoder
-      ).catch((error) => {
-        logWithTimestamp('Skeleton generation error', { error: error.message });
-        try {
-          sendEvent(controller, encoder, 'error', { error: error.message });
-          if (controller && controller.desiredSize !== null) {
-            controller.close();
+      generateSkeletonProgram(requestData, anthropic, supabase, controller, encoder).catch(
+        (error) => {
+          logWithTimestamp('Skeleton generation error', { error: error.message });
+          try {
+            sendEvent(controller, encoder, 'error', { error: error.message });
+            if (controller && controller.desiredSize !== null) {
+              controller.close();
+            }
+          } catch (closeError) {
+            logWithTimestamp('Controller already closed during error handling', {
+              error: closeError.message,
+            });
           }
-        } catch (closeError) {
-          logWithTimestamp('Controller already closed during error handling', {
-            error: closeError.message,
-          });
         }
-      });
+      );
     },
   });
 
@@ -112,13 +112,7 @@ async function handleSkeletonGeneration(requestData, anthropic, supabase) {
 }
 
 // Main skeleton generation logic
-async function generateSkeletonProgram(
-  requestData,
-  anthropic,
-  supabase,
-  controller,
-  encoder
-) {
+async function generateSkeletonProgram(requestData, anthropic, supabase, controller, encoder) {
   try {
     // Extract shared data
     const sharedData = await extractSharedData(requestData, supabase);
@@ -142,7 +136,7 @@ async function generateSkeletonProgram(
         .from('programs')
         .update({
           generation_status: 'generating',
-          generation_progress: { current_week: 0, total_weeks: numberOfWeeks, workouts_saved: 0 }
+          generation_progress: { current_week: 0, total_weeks: numberOfWeeks, workouts_saved: 0 },
         })
         .eq('id', programId);
     }
@@ -192,7 +186,7 @@ async function generateSkeletonProgram(
                 current_week: currentWeek,
                 total_weeks: numberOfWeeks,
                 workouts_saved: allWorkouts.length,
-              }
+              },
             })
             .eq('id', programId);
         }
@@ -224,7 +218,13 @@ async function generateSkeletonProgram(
         allWorkouts.push(...placeholderWorkouts);
 
         if (programId) {
-          await saveSkeletonWorkouts(programId, placeholderWorkouts, currentWeek, sharedData, supabase);
+          await saveSkeletonWorkouts(
+            programId,
+            placeholderWorkouts,
+            currentWeek,
+            sharedData,
+            supabase
+          );
         }
 
         sendEvent(controller, encoder, 'warning', {
@@ -247,7 +247,7 @@ async function generateSkeletonProgram(
             total_weeks: numberOfWeeks,
             workouts_saved: allWorkouts.length,
             skeleton_completed_at: new Date().toISOString(),
-          }
+          },
         })
         .eq('id', programId);
     }
@@ -256,7 +256,9 @@ async function generateSkeletonProgram(
     sendEvent(controller, encoder, 'skeleton_complete', {
       message: 'Skeleton program generated successfully',
       title: `Training Program for ${sharedData.goal}`,
-      description: programDescription || `${numberOfWeeks}-week skeleton program, ${daysPerWeek} days per week`,
+      description:
+        programDescription ||
+        `${numberOfWeeks}-week skeleton program, ${daysPerWeek} days per week`,
       suggestions: allWorkouts,
       totalWorkouts: allWorkouts.length,
       generationType: 'skeleton',
@@ -331,21 +333,26 @@ async function generateWeekSkeleton(
   const weekDates = suggestedDates.slice(weekStartIndex, weekStartIndex + daysPerWeek);
 
   // Build minimal context from previous weeks for progression
-  const previousWeeksContext = existingWorkouts.length > 0
-    ? `\n\nPrevious week focus areas:\n${existingWorkouts
-        .slice(-3)
-        .map((w) => w.title)
-        .join(', ')}`
-    : '';
+  const previousWeeksContext =
+    existingWorkouts.length > 0
+      ? `\n\nPrevious week focus areas:\n${existingWorkouts
+          .slice(-3)
+          .map((w) => w.title)
+          .join(', ')}`
+      : '';
 
   // Determine workout sections based on training methodology
   const workoutSections = getWorkoutSections(trainingMethodology, workoutFormats);
 
   // SKELETON PROMPT - Minimal, structure-only
   const skeletonPrompt = `Generate MINIMAL workout structures for WEEK ${weekNumber} of a ${numberOfWeeks}-week program.
-${includeDescription ? `
+${
+  includeDescription
+    ? `
 Since this is Week 1, include a brief programDescription (2-3 sentences max) about the program approach.
-` : ''}
+`
+    : ''
+}
 
 Program Details:
 Goal: ${goal}
@@ -359,7 +366,7 @@ ${equipment?.length > 0 ? `Equipment: ${equipment.join(', ')}` : ''}
 ${clientMetricsContent ? `\n${clientMetricsContent}` : ''}${previousWeeksContext}
 
 SKELETON REQUIREMENTS - Include ONLY:
-${workoutSections.map(s => `- ${s}`).join('\n')}
+${workoutSections.map((s) => `- ${s}`).join('\n')}
 
 DO NOT include:
 - Warm-up section
@@ -385,8 +392,12 @@ Dates for week ${weekNumber}:
 ${weekDates.map((date, i) => `Day ${i + 1}: ${date}`).join('\n')}
 
 Output JSON:
-{${includeDescription ? `
-  "programDescription": "Brief 2-3 sentence program overview",` : ''}
+{${
+    includeDescription
+      ? `
+  "programDescription": "Brief 2-3 sentence program overview",`
+      : ''
+  }
   "workouts": [
     {
       "title": "Week ${weekNumber}, Day 1: [Focus]",
@@ -412,17 +423,17 @@ Output valid JSON only.`;
     // Use prompt caching for system prompt and client metrics
     const systemMessages = [
       {
-        type: "text",
+        type: 'text',
         text: systemPrompt,
-      }
+      },
     ];
 
     // Add client metrics with caching if available
     if (clientMetricsContent) {
       systemMessages.push({
-        type: "text",
+        type: 'text',
         text: clientMetricsContent,
-        cache_control: { type: "ephemeral" }
+        cache_control: { type: 'ephemeral' },
       });
     }
 
@@ -531,12 +542,12 @@ function getWorkoutSections(methodology, workoutFormats) {
   const defaultSections = ['Strength', 'Conditioning'];
 
   const methodologySections = {
-    'crossfit': ['Strength', 'Conditioning'],
-    'powerlifting': ['Main Lift', 'Accessory Work'],
-    'bodybuilding': ['Primary Exercises', 'Accessory Exercises'],
+    crossfit: ['Strength', 'Conditioning'],
+    powerlifting: ['Main Lift', 'Accessory Work'],
+    bodybuilding: ['Primary Exercises', 'Accessory Exercises'],
     'functional fitness': ['Strength', 'Conditioning'],
-    'hiit': ['Intervals'],
-    'calisthenics': ['Skill Work', 'Strength'],
+    hiit: ['Intervals'],
+    calisthenics: ['Skill Work', 'Strength'],
     'sport-specific': ['Strength', 'Sport Conditioning'],
   };
 
@@ -583,9 +594,7 @@ async function saveSkeletonWorkouts(programId, workouts, weekNumber, sharedData,
       },
     }));
 
-    const { error } = await supabase
-      .from('program_workouts')
-      .insert(workoutsToInsert);
+    const { error } = await supabase.from('program_workouts').insert(workoutsToInsert);
 
     if (error) {
       throw error;
@@ -609,7 +618,8 @@ async function extractSharedData(requestData, supabase) {
 
   const numberOfWeeks = parseInt(requestData.duration_weeks || requestData.numberOfWeeks || 4);
   const daysPerWeek = parseInt(requestData.days_per_week || requestData.daysPerWeek || 3);
-  const programType = requestData.periodization?.program_type || requestData.programType || 'linear';
+  const programType =
+    requestData.periodization?.program_type || requestData.programType || 'linear';
 
   const equipment = requestData.gym_details?.equipment || requestData.equipment || [];
   const startDate = requestData.calendar_data?.start_date || requestData.startDate || '';
@@ -630,7 +640,7 @@ async function extractSharedData(requestData, supabase) {
   // Generate suggested dates
   const suggestedDates = [];
   const startingDate = startDate ? new Date(startDate) : new Date();
-  let currentDate = new Date(startingDate);
+  const currentDate = new Date(startingDate);
   let workoutsAdded = 0;
   let daysChecked = 0;
   const maxDaysToCheck = 365;
@@ -646,7 +656,10 @@ async function extractSharedData(requestData, supabase) {
   }
 
   // Verify authentication
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
   if (authError || !user) {
     throw new Error('Authentication required');
   }

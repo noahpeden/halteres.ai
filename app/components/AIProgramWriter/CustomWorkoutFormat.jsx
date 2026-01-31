@@ -17,9 +17,7 @@ export default function CustomWorkoutFormat({
     <div className="flex flex-col gap-2">
       <div className="flex justify-between items-center">
         <label className="label">
-          <span className="text-sm font-medium">
-            Custom Workout Sections
-          </span>
+          <span className="text-sm font-medium">Custom Workout Sections</span>
         </label>
         <button
           type="button"
@@ -65,11 +63,7 @@ export default function CustomWorkoutFormat({
             />
           </div>
 
-          <button
-            type="button"
-            className="btn btn-secondary btn-sm"
-            onClick={addCustomSection}
-          >
+          <button type="button" className="btn btn-secondary btn-sm" onClick={addCustomSection}>
             Add Section
           </button>
 
@@ -85,9 +79,7 @@ export default function CustomWorkoutFormat({
                     <div>
                       <span className="font-medium">{section.name}</span>
                       {section.duration && (
-                        <span className="ml-2 text-sm text-base/70">
-                          ({section.duration})
-                        </span>
+                        <span className="ml-2 text-sm text-base/70">({section.duration})</span>
                       )}
                     </div>
                     <button

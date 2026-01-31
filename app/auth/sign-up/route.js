@@ -1,5 +1,5 @@
-import { createClient } from '../../utils/supabase/server';
 import { NextResponse } from 'next/server';
+import { createClient } from '../../utils/supabase/server';
 
 export async function POST(request) {
   const requestUrl = new URL(request.url);
@@ -17,12 +17,9 @@ export async function POST(request) {
   });
 
   if (error) {
-    return NextResponse.redirect(
-      `${requestUrl.origin}/login?error=Could not authenticate user`,
-      {
-        status: 301,
-      }
-    );
+    return NextResponse.redirect(`${requestUrl.origin}/login?error=Could not authenticate user`, {
+      status: 301,
+    });
   }
 
   return NextResponse.redirect(

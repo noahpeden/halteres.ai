@@ -1,8 +1,8 @@
 'use client';
-import { useState, useEffect, use, useRef } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
 import { useSearchParams } from 'next/navigation';
+import { use, useEffect, useRef, useState } from 'react';
 import ProgramCalendar from '@/components/ProgramCalendar';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function ProgramCalendarPage(props) {
   const params = use(props.params);
@@ -99,9 +99,7 @@ export default function ProgramCalendarPage(props) {
     };
   }, [programId, supabase]);
 
-  const calendarKey = `${programId}-cal-${
-    refreshRequired ? Date.now() : 'static'
-  }`; // Calculate key outside JSX
+  const calendarKey = `${programId}-cal-${refreshRequired ? Date.now() : 'static'}`; // Calculate key outside JSX
 
   if (isLoading && !program) {
     // Show loading only initially until program name is fetched
@@ -115,12 +113,9 @@ export default function ProgramCalendarPage(props) {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-primary">
-          {program?.name || 'Program Calendar'}
-        </h1>
+        <h1 className="text-2xl font-bold text-primary">{program?.name || 'Program Calendar'}</h1>
         <p className="text-practical-gray">
-          {program?.description ||
-            "Schedule and manage your program's workouts"}
+          {program?.description || "Schedule and manage your program's workouts"}
         </p>
       </div>
 

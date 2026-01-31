@@ -1,7 +1,7 @@
 'use client';
-import { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function ThisWeeksWorkouts() {
   const { supabase, user } = useAuth();
@@ -32,7 +32,7 @@ export default function ThisWeeksWorkouts() {
         const startOfWeek = new Date(today);
         startOfWeek.setDate(today.getDate() - today.getDay()); // Start of week (Sunday)
         startOfWeek.setHours(0, 0, 0, 0);
-        
+
         const endOfWeek = new Date(startOfWeek);
         endOfWeek.setDate(startOfWeek.getDate() + 6); // End of week (Saturday)
         endOfWeek.setHours(23, 59, 59, 999);
@@ -95,10 +95,11 @@ export default function ThisWeeksWorkouts() {
           const scheduledDate = workout.scheduled_date;
           const suggestedDate = workout.suggestedDate;
           const workoutDate = workout.date;
-          const tagDate = workout.tags?.suggestedDate || workout.tags?.scheduled_date || workout.tags?.date;
+          const tagDate =
+            workout.tags?.suggestedDate || workout.tags?.scheduled_date || workout.tags?.date;
 
           let finalDate = null;
-          
+
           // Try scheduled_date first
           if (scheduledDate) {
             try {
@@ -153,10 +154,11 @@ export default function ThisWeeksWorkouts() {
             const scheduledDate = workout.scheduled_date;
             const suggestedDate = workout.suggestedDate;
             const workoutDate = workout.date;
-            const tagDate = workout.tags?.suggestedDate || workout.tags?.scheduled_date || workout.tags?.date;
+            const tagDate =
+              workout.tags?.suggestedDate || workout.tags?.scheduled_date || workout.tags?.date;
 
             let finalDate = null;
-            
+
             if (scheduledDate) {
               try {
                 finalDate = new Date(scheduledDate);
@@ -208,11 +210,13 @@ export default function ThisWeeksWorkouts() {
               notes: '',
               scheduled_date: finalDate ? finalDate.toISOString() : workout.scheduled_date,
               completed: workout.completed || false,
-              displayDate: finalDate ? finalDate.toLocaleDateString('en-US', { 
-                weekday: 'short', 
-                month: 'short', 
-                day: 'numeric' 
-              }) : 'No Date',
+              displayDate: finalDate
+                ? finalDate.toLocaleDateString('en-US', {
+                    weekday: 'short',
+                    month: 'short',
+                    day: 'numeric',
+                  })
+                : 'No Date',
             };
           })
           .sort((a, b) => new Date(a.scheduled_date) - new Date(b.scheduled_date));
@@ -266,9 +270,7 @@ export default function ThisWeeksWorkouts() {
       // Update the workouts list
       setWorkouts(
         workouts.map((workout) =>
-          workout.id === workoutId
-            ? { ...workout, completed: newState }
-            : workout
+          workout.id === workoutId ? { ...workout, completed: newState } : workout
         )
       );
     } catch (error) {
@@ -304,9 +306,7 @@ export default function ThisWeeksWorkouts() {
     return (
       <div className="text-center p-6 bg-white rounded-lg shadow">
         <h3 className="text-lg font-medium mb-2">No Workouts This Week</h3>
-        <p className="text-gray-600">
-          You don't have any workouts scheduled for this week.
-        </p>
+        <p className="text-gray-600">You don't have any workouts scheduled for this week.</p>
       </div>
     );
   }
@@ -319,7 +319,7 @@ export default function ThisWeeksWorkouts() {
           {workouts.length} workout{workouts.length !== 1 ? 's' : ''} scheduled
         </p>
       </div>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {workouts.map((workout) => (
           <div
@@ -334,9 +334,7 @@ export default function ThisWeeksWorkouts() {
                 <span className="badge badge-primary text-xs">{workout.type}</span>
               </div>
 
-              <div className="text-xs text-gray-500 mb-2">
-                {workout.displayDate}
-              </div>
+              <div className="text-xs text-gray-500 mb-2">{workout.displayDate}</div>
 
               <div className="flex flex-wrap gap-1 text-gray-600 text-sm mb-2">
                 <span>Program: {workout.programName}</span>
@@ -354,15 +352,11 @@ export default function ThisWeeksWorkouts() {
 
               <div className="flex flex-wrap gap-2 mb-2">
                 {workout.difficulty && (
-                  <span className="badge badge-secondary text-xs">
-                    {workout.difficulty}
-                  </span>
+                  <span className="badge badge-secondary text-xs">{workout.difficulty}</span>
                 )}
                 <span
                   className={`badge text-xs ${
-                    completionStates[workout.id]
-                      ? 'badge-success'
-                      : 'badge-outline'
+                    completionStates[workout.id] ? 'badge-success' : 'badge-outline'
                   }`}
                 >
                   {completionStates[workout.id] ? 'Completed' : 'Not Completed'}

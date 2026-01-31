@@ -1,28 +1,28 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
-import { useAuth } from '@/contexts/AuthContext';
 import {
-  Dumbbell,
-  Target,
-  Zap,
-  Heart,
-  Users,
-  Flame,
   Activity,
-  Waves,
-  Mountain,
-  Building,
-  Home,
-  Scale,
-  TrendingUp,
   BarChart3,
-  Layers,
-  Repeat,
+  Building,
+  Dumbbell,
+  Flame,
   GitBranch,
+  Heart,
+  Home,
+  Layers,
+  Mountain,
+  Repeat,
+  Scale,
+  Target,
+  TrendingUp,
+  Users,
+  Waves,
   X,
+  Zap,
 } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect, useRef, useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 import WizardProgress from '../../components/ProgramWizard/WizardProgress';
 
 const trainingMethodologies = [
@@ -239,9 +239,7 @@ export default function Step1Page() {
 
       <div className="bg-base-200 rounded-lg p-6 max-w-6xl mx-auto">
         <div className="text-center mb-6">
-          <h2 className="text-2xl font-bold text-primary mb-2">
-            Training Foundation
-          </h2>
+          <h2 className="text-2xl font-bold text-primary mb-2">Training Foundation</h2>
           <p className="text-base-content/70">
             Choose your training methodology and progression model
           </p>
@@ -250,9 +248,7 @@ export default function Step1Page() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Training Methodologies */}
           <div>
-            <h3 className="text-xl font-semibold mb-4 text-primary">
-              Training Methodology
-            </h3>
+            <h3 className="text-xl font-semibold mb-4 text-primary">Training Methodology</h3>
             <p className="text-sm text-base-content/70 mb-4">
               Choose your primary training approach
             </p>
@@ -287,9 +283,7 @@ export default function Step1Page() {
                         <IconComponent className="w-5 h-5" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="font-medium text-sm">
-                          {method.label}
-                        </div>
+                        <div className="font-medium text-sm">{method.label}</div>
                         <div className="text-xs text-base-content/60 mt-1">
                           {method.description}
                         </div>
@@ -303,12 +297,8 @@ export default function Step1Page() {
 
           {/* Periodization Types */}
           <div>
-            <h3 className="text-xl font-semibold mb-4 text-primary">
-              Periodization Model
-            </h3>
-            <p className="text-sm text-base-content/70 mb-4">
-              Select your progression structure
-            </p>
+            <h3 className="text-xl font-semibold mb-4 text-primary">Periodization Model</h3>
+            <p className="text-sm text-base-content/70 mb-4">Select your progression structure</p>
             <div className="space-y-3">
               {periodizationTypes.map((type) => {
                 const IconComponent = type.icon;
@@ -341,9 +331,7 @@ export default function Step1Page() {
                       </div>
                       <div className="flex-1">
                         <div className="font-medium text-sm">{type.label}</div>
-                        <div className="text-xs text-base-content/60 mt-1">
-                          {type.description}
-                        </div>
+                        <div className="text-xs text-base-content/60 mt-1">{type.description}</div>
                       </div>
                     </div>
                   </label>
@@ -354,9 +342,7 @@ export default function Step1Page() {
         </div>
 
         <div className="flex justify-between items-center mt-8 pt-6 border-t border-base-300">
-          <div className="text-sm text-base-content/60">
-            Step 1 of 5 • Training Foundation
-          </div>
+          <div className="text-sm text-base-content/60">Step 1 of 5 • Training Foundation</div>
           <button
             onClick={handleNext}
             className="btn btn-primary px-6"
@@ -370,12 +356,7 @@ export default function Step1Page() {
             ) : (
               <>
                 Continue to Step 2
-                <svg
-                  className="w-4 h-4 ml-2"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
+                <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"

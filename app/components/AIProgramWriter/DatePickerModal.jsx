@@ -18,19 +18,14 @@ export default function DatePickerModal({
         <div className="p-6">
           <div className="flex justify-between items-start mb-4">
             <h3 className="text-xl font-bold">Adjust Workout Date</h3>
-            <button
-              onClick={onClose}
-              className="btn btn-sm btn-circle btn-ghost"
-            >
+            <button onClick={onClose} className="btn btn-sm btn-circle btn-ghost">
               ✕
             </button>
           </div>
 
           <div className="mb-4">
             <h4 className="font-medium mb-2">{workout.title}</h4>
-            <p className="text-sm text-gray-600">
-              Select a date for this workout
-            </p>
+            <p className="text-sm text-gray-600">Select a date for this workout</p>
           </div>
 
           <div className="w-full mb-6">

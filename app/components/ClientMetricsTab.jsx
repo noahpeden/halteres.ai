@@ -1,7 +1,21 @@
 'use client';
-import { useState, useEffect } from 'react';
+import {
+  Activity,
+  AlertCircle,
+  Calendar,
+  Check,
+  ChevronRight,
+  Dumbbell,
+  Edit2,
+  Heart,
+  Ruler,
+  Scale,
+  Timer,
+  User,
+  X,
+} from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { ChevronRight, User, Dumbbell, Activity, Heart, Timer, Ruler, Scale, Calendar, AlertCircle, Check, X, Edit2 } from 'lucide-react';
 
 // Conversion helpers
 const kgToLbs = (kg) => (kg ? kg * 2.20462 : 0);
@@ -92,7 +106,7 @@ export default function ClientMetricsTab({
         if (programError) throw programError;
 
         // Initialize with program data even if entity doesn't exist
-        let initialData = {
+        const initialData = {
           program: programData,
           metrics: {},
         };
@@ -206,13 +220,10 @@ export default function ClientMetricsTab({
         mile_time: editedData.metrics.mile_time,
         gender: editedData.metrics.gender,
         age: parseInt(editedData.metrics.age) || 0,
-        years_of_experience:
-          parseInt(editedData.metrics.years_of_experience) || 0,
+        years_of_experience: parseInt(editedData.metrics.years_of_experience) || 0,
         workout_experience_type: editedData.metrics.workout_experience_type,
         height_cm: Math.round(
-          useImperial
-            ? feetInchesToCm(heightFeet, heightInches)
-            : editedData.metrics.height_cm
+          useImperial ? feetInchesToCm(heightFeet, heightInches) : editedData.metrics.height_cm
         ),
         weight_kg: useImperial
           ? lbsToKg(editedData.metrics.weight_kg)
@@ -383,9 +394,7 @@ export default function ClientMetricsTab({
 
   // Determine grid classes based on viewMode
   const gridClasses =
-    viewMode === 'fullPage'
-      ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5'
-      : 'space-y-4';
+    viewMode === 'fullPage' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5' : 'space-y-4';
 
   return (
     <div
@@ -396,9 +405,11 @@ export default function ClientMetricsTab({
       {/* Header */}
       <div className="flex justify-between items-center p-4 border-b border-slate-100 flex-shrink-0">
         <div className="flex items-center gap-3 flex-1 min-w-0">
-          <div className={`w-9 h-9 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-sm ${
-            isCollapsed && viewMode === 'sidebar' ? 'mx-auto' : ''
-          }`}>
+          <div
+            className={`w-9 h-9 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-sm ${
+              isCollapsed && viewMode === 'sidebar' ? 'mx-auto' : ''
+            }`}
+          >
             <User className="w-4 h-4 text-white" />
           </div>
           {!(isCollapsed && viewMode === 'sidebar') && (
@@ -422,9 +433,7 @@ export default function ClientMetricsTab({
             aria-label="Collapse sidebar"
           >
             <ChevronRight
-              className={`h-4 w-4 transition-transform ${
-                !isCollapsed ? 'rotate-180' : ''
-              }`}
+              className={`h-4 w-4 transition-transform ${!isCollapsed ? 'rotate-180' : ''}`}
             />
           </button>
         )}
@@ -435,9 +444,7 @@ export default function ClientMetricsTab({
             <button
               onClick={toggleUnitSystem}
               className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                useImperial
-                  ? 'bg-blue-100 text-blue-700'
-                  : 'bg-slate-100 text-slate-600'
+                useImperial ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-600'
               }`}
             >
               {useImperial ? 'Imperial' : 'Metric'}
@@ -477,11 +484,7 @@ export default function ClientMetricsTab({
       </div>
 
       {!(isCollapsed && viewMode === 'sidebar') && (
-        <div
-          className={`p-4 ${
-            viewMode === 'sidebar' ? 'overflow-y-auto flex-grow min-h-0' : ''
-          }`}
-        >
+        <div className={`p-4 ${viewMode === 'sidebar' ? 'overflow-y-auto flex-grow min-h-0' : ''}`}>
           {showEditByDefault && (
             <div className="flex items-center gap-3 p-3 bg-blue-50 border border-blue-100 rounded-xl mb-4">
               <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0" />
@@ -510,9 +513,7 @@ export default function ClientMetricsTab({
                     <textarea
                       className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm h-20 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                       value={editedData.description || ''}
-                      onChange={(e) =>
-                        handleChange('description', e.target.value)
-                      }
+                      onChange={(e) => handleChange('description', e.target.value)}
                       placeholder="Program Description"
                     />
                   </div>
@@ -546,10 +547,7 @@ export default function ClientMetricsTab({
                       className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                       value={editedData.metrics.bench_1rm || ''}
                       onChange={(e) =>
-                        handleMetricsChange(
-                          'bench_1rm',
-                          parseInt(e.target.value) || 0
-                        )
+                        handleMetricsChange('bench_1rm', parseInt(e.target.value) || 0)
                       }
                     />
                   </div>
@@ -562,10 +560,7 @@ export default function ClientMetricsTab({
                       className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                       value={editedData.metrics.squat_1rm || ''}
                       onChange={(e) =>
-                        handleMetricsChange(
-                          'squat_1rm',
-                          parseInt(e.target.value) || 0
-                        )
+                        handleMetricsChange('squat_1rm', parseInt(e.target.value) || 0)
                       }
                     />
                   </div>
@@ -578,10 +573,7 @@ export default function ClientMetricsTab({
                       className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                       value={editedData.metrics.deadlift_1rm || ''}
                       onChange={(e) =>
-                        handleMetricsChange(
-                          'deadlift_1rm',
-                          parseInt(e.target.value) || 0
-                        )
+                        handleMetricsChange('deadlift_1rm', parseInt(e.target.value) || 0)
                       }
                     />
                   </div>
@@ -625,13 +617,13 @@ export default function ClientMetricsTab({
               {isEditing || showEditByDefault ? (
                 <div className="space-y-3">
                   <div>
-                    <label className="text-xs font-medium text-slate-500 mb-1.5 block">Gender</label>
+                    <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                      Gender
+                    </label>
                     <select
                       className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                       value={editedData.metrics.gender || ''}
-                      onChange={(e) =>
-                        handleMetricsChange('gender', e.target.value)
-                      }
+                      onChange={(e) => handleMetricsChange('gender', e.target.value)}
                     >
                       <option value="">Select Gender</option>
                       <option value="Male">Male</option>
@@ -647,12 +639,7 @@ export default function ClientMetricsTab({
                       max="120"
                       className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                       value={editedData.metrics.age || ''}
-                      onChange={(e) =>
-                        handleMetricsChange(
-                          'age',
-                          parseInt(e.target.value) || 0
-                        )
-                      }
+                      onChange={(e) => handleMetricsChange('age', parseInt(e.target.value) || 0)}
                       placeholder="Age in years"
                     />
                   </div>
@@ -672,10 +659,7 @@ export default function ClientMetricsTab({
                             onChange={(e) => {
                               const newFeet = parseInt(e.target.value) || 0;
                               setHeightFeet(newFeet);
-                              const newCm = feetInchesToCm(
-                                newFeet,
-                                heightInches
-                              );
+                              const newCm = feetInchesToCm(newFeet, heightInches);
                               handleMetricsChange('height_cm', newCm);
                             }}
                             placeholder="Feet"
@@ -694,10 +678,7 @@ export default function ClientMetricsTab({
                             onChange={(e) => {
                               const newInches = parseInt(e.target.value) || 0;
                               setHeightInches(newInches);
-                              const newCm = feetInchesToCm(
-                                heightFeet,
-                                newInches
-                              );
+                              const newCm = feetInchesToCm(heightFeet, newInches);
                               handleMetricsChange('height_cm', newCm);
                             }}
                             placeholder="Inches"
@@ -713,10 +694,7 @@ export default function ClientMetricsTab({
                         className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                         value={editedData.metrics.height_cm || ''}
                         onChange={(e) =>
-                          handleMetricsChange(
-                            'height_cm',
-                            parseInt(e.target.value) || 0
-                          )
+                          handleMetricsChange('height_cm', parseInt(e.target.value) || 0)
                         }
                       />
                     )}
@@ -731,22 +709,19 @@ export default function ClientMetricsTab({
                       className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                       value={editedData.metrics.weight_kg || ''}
                       onChange={(e) =>
-                        handleMetricsChange(
-                          'weight_kg',
-                          parseFloat(e.target.value) || 0
-                        )
+                        handleMetricsChange('weight_kg', parseFloat(e.target.value) || 0)
                       }
                     />
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-slate-500 mb-1.5 block">Mile Time (min:sec)</label>
+                    <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                      Mile Time (min:sec)
+                    </label>
                     <input
                       type="text"
                       className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                       value={editedData.metrics.mile_time || ''}
-                      onChange={(e) =>
-                        handleMetricsChange('mile_time', e.target.value)
-                      }
+                      onChange={(e) => handleMetricsChange('mile_time', e.target.value)}
                       placeholder="e.g. 7:30"
                     />
                   </div>
@@ -800,7 +775,9 @@ export default function ClientMetricsTab({
               {isEditing || showEditByDefault ? (
                 <div className="space-y-3">
                   <div>
-                    <label className="text-xs font-medium text-slate-500 mb-1.5 block">Years of Experience</label>
+                    <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                      Years of Experience
+                    </label>
                     <input
                       type="number"
                       min="0"
@@ -809,10 +786,7 @@ export default function ClientMetricsTab({
                       className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                       value={editedData.metrics.years_of_experience || ''}
                       onChange={(e) =>
-                        handleMetricsChange(
-                          'years_of_experience',
-                          parseFloat(e.target.value) || 0
-                        )
+                        handleMetricsChange('years_of_experience', parseFloat(e.target.value) || 0)
                       }
                       placeholder="Years of training experience"
                     />
@@ -825,16 +799,11 @@ export default function ClientMetricsTab({
                       className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                       value={editedData.metrics.workout_experience_type || ''}
                       onChange={(e) =>
-                        handleMetricsChange(
-                          'workout_experience_type',
-                          e.target.value
-                        )
+                        handleMetricsChange('workout_experience_type', e.target.value)
                       }
                     >
                       <option value="">Select Experience Type</option>
-                      <option value="Weightlifting/Powerlifting">
-                        Weightlifting/Powerlifting
-                      </option>
+                      <option value="Weightlifting/Powerlifting">Weightlifting/Powerlifting</option>
                       <option value="Bodybuilding">Bodybuilding</option>
                       <option value="CrossFit">CrossFit</option>
                       <option value="Running">Running</option>
@@ -845,9 +814,7 @@ export default function ClientMetricsTab({
                       <option value="Martial Arts">Martial Arts</option>
                       <option value="Team Sports">Team Sports</option>
                       <option value="General Fitness">General Fitness</option>
-                      <option value="Beginner/No Experience">
-                        Beginner/No Experience
-                      </option>
+                      <option value="Beginner/No Experience">Beginner/No Experience</option>
                     </select>
                   </div>
                 </div>
@@ -880,9 +847,13 @@ export default function ClientMetricsTab({
                 <h3 className="text-sm font-semibold text-slate-700">Recovery & Injuries</h3>
               </div>
               {isEditing || showEditByDefault ? (
-                <div className={`${viewMode === 'fullPage' ? 'grid grid-cols-1 md:grid-cols-2 gap-4' : 'space-y-3'}`}>
+                <div
+                  className={`${viewMode === 'fullPage' ? 'grid grid-cols-1 md:grid-cols-2 gap-4' : 'space-y-3'}`}
+                >
                   <div>
-                    <label className="text-xs font-medium text-slate-500 mb-1.5 block">Recovery Score (1-10)</label>
+                    <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                      Recovery Score (1-10)
+                    </label>
                     <input
                       type="number"
                       min="1"
@@ -890,15 +861,14 @@ export default function ClientMetricsTab({
                       className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                       value={editedData.metrics.recovery_score || ''}
                       onChange={(e) =>
-                        handleMetricsChange(
-                          'recovery_score',
-                          parseInt(e.target.value) || 0
-                        )
+                        handleMetricsChange('recovery_score', parseInt(e.target.value) || 0)
                       }
                     />
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-slate-500 mb-1.5 block">Injury History</label>
+                    <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                      Injury History
+                    </label>
                     <textarea
                       className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm h-20 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                       value={
@@ -919,7 +889,9 @@ export default function ClientMetricsTab({
                   </div>
                 </div>
               ) : (
-                <div className={`${viewMode === 'fullPage' ? 'grid grid-cols-1 md:grid-cols-2 gap-4' : 'space-y-3'}`}>
+                <div
+                  className={`${viewMode === 'fullPage' ? 'grid grid-cols-1 md:grid-cols-2 gap-4' : 'space-y-3'}`}
+                >
                   <div className="flex items-center gap-3">
                     <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center border border-slate-200">
                       <span className="text-lg font-bold text-slate-800">
@@ -933,8 +905,8 @@ export default function ClientMetricsTab({
                           ? clientData.metrics.recovery_score >= 7
                             ? 'Excellent'
                             : clientData.metrics.recovery_score >= 5
-                            ? 'Good'
-                            : 'Needs Attention'
+                              ? 'Good'
+                              : 'Needs Attention'
                           : 'Not Set'}
                       </p>
                     </div>
@@ -944,11 +916,7 @@ export default function ClientMetricsTab({
                     <p className="text-sm text-slate-700 bg-white rounded-lg p-2 border border-slate-200">
                       {clientData?.metrics?.injury_history
                         ? typeof clientData.metrics.injury_history === 'object'
-                          ? JSON.stringify(
-                              clientData.metrics.injury_history,
-                              null,
-                              2
-                            )
+                          ? JSON.stringify(clientData.metrics.injury_history, null, 2)
                           : clientData.metrics.injury_history
                         : 'None reported'}
                     </p>

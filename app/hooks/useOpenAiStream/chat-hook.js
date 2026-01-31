@@ -1,8 +1,5 @@
-import { useState, useCallback } from 'react';
-import {
-  getOpenAiRequestOptions,
-  openAiStreamingDataHandler,
-} from './chat-stream-handler';
+import { useCallback, useState } from 'react';
+import { getOpenAiRequestOptions, openAiStreamingDataHandler } from './chat-stream-handler';
 
 const MILLISECONDS_PER_SECOND = 1000;
 
@@ -75,8 +72,7 @@ export const useChatCompletion = (apiParams) => {
 
   const closeStream = (beforeTimestamp) => {
     const afterTimestamp = Date.now();
-    const diffInSeconds =
-      (afterTimestamp - beforeTimestamp) / MILLISECONDS_PER_SECOND;
+    const diffInSeconds = (afterTimestamp - beforeTimestamp) / MILLISECONDS_PER_SECOND;
     const formattedDiff = diffInSeconds.toFixed(2) + ' sec.';
 
     _setMessages(
@@ -128,11 +124,7 @@ export const useChatCompletion = (apiParams) => {
       );
 
       try {
-        await openAiStreamingDataHandler(
-          requestOpts,
-          handleNewData,
-          closeStream
-        );
+        await openAiStreamingDataHandler(requestOpts, handleNewData, closeStream);
       } catch (err) {
         if (signal.aborted) {
           console.error(`Request aborted`, err);

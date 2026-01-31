@@ -10,9 +10,7 @@ export default function ProgramWorkoutsPage(props) {
     <div>
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-primary">Workout Referencer</h1>
-        <p className="text-practical-gray">
-          Reference and manage workout details.
-        </p>
+        <p className="text-practical-gray">Reference and manage workout details.</p>
       </div>
 
       <div className="bg-white rounded-lg shadow p-4">

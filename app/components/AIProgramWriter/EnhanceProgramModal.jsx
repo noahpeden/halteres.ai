@@ -1,6 +1,6 @@
 'use client';
-import { useState, useCallback } from 'react';
-import { X, Sparkles, ChevronLeft, ChevronRight, Save } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Save, Sparkles, X } from 'lucide-react';
+import { useCallback, useState } from 'react';
 
 function EnhanceProgramModal({
   isOpen,
@@ -80,9 +80,7 @@ function EnhanceProgramModal({
   }, []);
 
   const goToNextWorkout = useCallback(() => {
-    setCurrentPreviewIndex((prev) =>
-      Math.min((enhancedWorkouts?.length || 1) - 1, prev + 1)
-    );
+    setCurrentPreviewIndex((prev) => Math.min((enhancedWorkouts?.length || 1) - 1, prev + 1));
   }, [enhancedWorkouts]);
 
   // Save all enhanced workouts
@@ -129,9 +127,7 @@ function EnhanceProgramModal({
               <div className="p-2 bg-purple-100 rounded-lg">
                 <Sparkles className="w-6 h-6 text-purple-600" />
               </div>
-              <h2 className="text-xl font-semibold text-gray-900">
-                Enhance Program
-              </h2>
+              <h2 className="text-xl font-semibold text-gray-900">Enhance Program</h2>
             </div>
           </div>
 
@@ -155,9 +151,9 @@ function EnhanceProgramModal({
 
                 <div className="p-4 bg-gray-50 border border-gray-200 rounded-xl">
                   <p className="text-sm text-gray-600">
-                    <strong>{workouts.length} workouts</strong> will be enhanced
-                    based on your instructions. The AI will maintain program
-                    progression and ensure all workouts complement each other.
+                    <strong>{workouts.length} workouts</strong> will be enhanced based on your
+                    instructions. The AI will maintain program progression and ensure all workouts
+                    complement each other.
                   </p>
                 </div>
               </div>
@@ -173,9 +169,7 @@ function EnhanceProgramModal({
                         <div className="font-semibold text-purple-900 mb-1">
                           Enhancement Summary
                         </div>
-                        <div className="text-purple-700 text-sm">
-                          {enhancementNotes}
-                        </div>
+                        <div className="text-purple-700 text-sm">{enhancementNotes}</div>
                       </div>
                     </div>
                   </div>
@@ -184,8 +178,7 @@ function EnhanceProgramModal({
                 {/* Navigation */}
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium text-gray-600">
-                    Workout {currentPreviewIndex + 1} of{' '}
-                    {enhancedWorkouts?.length || 0}
+                    Workout {currentPreviewIndex + 1} of {enhancedWorkouts?.length || 0}
                   </span>
                   <div className="flex items-center gap-2">
                     <button
@@ -197,10 +190,7 @@ function EnhanceProgramModal({
                     </button>
                     <button
                       onClick={goToNextWorkout}
-                      disabled={
-                        currentPreviewIndex ===
-                        (enhancedWorkouts?.length || 1) - 1
-                      }
+                      disabled={currentPreviewIndex === (enhancedWorkouts?.length || 1) - 1}
                       className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
                       <ChevronRight className="w-5 h-5 text-gray-600" />
@@ -213,18 +203,14 @@ function EnhanceProgramModal({
                   {/* Original */}
                   <div className="border border-gray-200 rounded-xl overflow-hidden">
                     <div className="bg-gray-50 px-4 py-2 border-b border-gray-200">
-                      <span className="text-sm font-medium text-gray-600">
-                        Original
-                      </span>
+                      <span className="text-sm font-medium text-gray-600">Original</span>
                     </div>
                     <div className="p-4">
                       <h3 className="font-semibold text-gray-900 mb-2">
                         {currentOriginal?.title || 'Untitled'}
                       </h3>
                       <div className="text-sm text-gray-700 whitespace-pre-line max-h-64 overflow-y-auto">
-                        {currentOriginal?.body ||
-                          currentOriginal?.description ||
-                          'No content'}
+                        {currentOriginal?.body || currentOriginal?.description || 'No content'}
                       </div>
                     </div>
                   </div>
@@ -232,9 +218,7 @@ function EnhanceProgramModal({
                   {/* Enhanced */}
                   <div className="border border-purple-200 rounded-xl overflow-hidden">
                     <div className="bg-purple-50 px-4 py-2 border-b border-purple-200">
-                      <span className="text-sm font-medium text-purple-700">
-                        Enhanced
-                      </span>
+                      <span className="text-sm font-medium text-purple-700">Enhanced</span>
                     </div>
                     <div className="p-4">
                       <h3 className="font-semibold text-gray-900 mb-2">

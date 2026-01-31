@@ -1,11 +1,11 @@
-import { createMobileCompatibleClient, corsHeaders } from '@/utils/supabase/mobile';
-import { stripe } from '@/utils/stripe';
 import { NextResponse } from 'next/server';
+import { stripe } from '@/utils/stripe';
+import { corsHeaders, createMobileCompatibleClient } from '@/utils/supabase/mobile';
 
 export async function OPTIONS(request) {
   return new Response(null, {
     status: 200,
-    headers: corsHeaders()
+    headers: corsHeaders(),
   });
 }
 
@@ -19,10 +19,7 @@ export async function POST(request) {
     } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401, headers: corsHeaders() }
-      );
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: corsHeaders() });
     }
 
     // Get the user's Stripe customer ID from the database

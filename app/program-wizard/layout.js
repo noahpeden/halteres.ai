@@ -13,9 +13,7 @@ export default function ProgramWizardLayout({ children }) {
           <div className="relative w-full">
             {programId && (
               <button
-                onClick={() =>
-                  (window.location.href = `/program/${programId}/writer`)
-                }
+                onClick={() => (window.location.href = `/program/${programId}/writer`)}
                 className="absolute top-4 right-4 btn btn-ghost btn-circle z-10"
                 title="Exit wizard and go to program writer"
               >

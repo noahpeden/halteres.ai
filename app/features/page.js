@@ -1,20 +1,20 @@
-import { metadata } from '../metadata';
-import Link from 'next/link';
 import {
-  Sparkles,
-  Settings,
-  Clock,
+  BarChart3,
+  Brain,
   CalendarDays,
+  Clock,
+  CloudUpload,
+  Dumbbell,
   MessageSquare,
   Repeat,
-  CloudUpload,
-  Trophy,
-  Brain,
-  Users,
+  Settings,
+  Sparkles,
   TrendingUp,
-  Dumbbell,
-  BarChart3,
+  Trophy,
+  Users,
 } from 'lucide-react';
+import Link from 'next/link';
+import { metadata } from '../metadata';
 
 export const generateMetadata = () => {
   return {
@@ -30,7 +30,7 @@ export default function FeaturesPage() {
     {
       name: '8-Week Program Generation',
       description:
-        "Generate entire programming cycles in minutes, not hours. Configure YOUR equipment, define YOUR training focus, and let AI handle the rest.",
+        'Generate entire programming cycles in minutes, not hours. Configure YOUR equipment, define YOUR training focus, and let AI handle the rest.',
       icon: Sparkles,
     },
     {
@@ -54,7 +54,7 @@ export default function FeaturesPage() {
     {
       name: 'Enhance Any Workout Day-Of',
       description:
-        'Equipment breaks? Class size changes? Modify any workout instantly—something generic programs can\'t do.',
+        "Equipment breaks? Class size changes? Modify any workout instantly—something generic programs can't do.",
       icon: MessageSquare,
     },
     {
@@ -152,10 +152,7 @@ export default function FeaturesPage() {
                 >
                   Start Free Trial
                 </Link>
-                <Link
-                  href="/pricing"
-                  className="text-sm font-semibold leading-6 text-white"
-                >
+                <Link href="/pricing" className="text-sm font-semibold leading-6 text-white">
                   View pricing <span aria-hidden="true">→</span>
                 </Link>
               </div>
@@ -173,8 +170,9 @@ export default function FeaturesPage() {
               Generate Smarter Programming, Faster
             </p>
             <p className="mt-6 text-lg leading-8 text-gray-600">
-              Stop spending Sunday nights writing programming. Generate 8 weeks
-              of equipment-specific workouts in 10 minutes—then watch the AI improve with your feedback.
+              Stop spending Sunday nights writing programming. Generate 8 weeks of
+              equipment-specific workouts in 10 minutes—then watch the AI improve with your
+              feedback.
             </p>
           </div>
           <div className="mx-auto mt-16 max-w-2xl sm:mt-20 lg:mt-24 lg:max-w-4xl">
@@ -183,16 +181,11 @@ export default function FeaturesPage() {
                 <div key={feature.name} className="relative pl-16">
                   <dt className="text-base font-semibold leading-7 text-gray-900">
                     <div className="absolute left-0 top-0 flex h-10 w-10 items-center justify-center rounded-lg bg-blue-600">
-                      <feature.icon
-                        className="h-6 w-6 text-white"
-                        aria-hidden="true"
-                      />
+                      <feature.icon className="h-6 w-6 text-white" aria-hidden="true" />
                     </div>
                     {feature.name}
                   </dt>
-                  <dd className="mt-2 text-base leading-7 text-gray-600">
-                    {feature.description}
-                  </dd>
+                  <dd className="mt-2 text-base leading-7 text-gray-600">{feature.description}</dd>
                 </div>
               ))}
             </dl>
@@ -203,15 +196,13 @@ export default function FeaturesPage() {
         <div className="bg-gray-50">
           <div className="mx-auto max-w-7xl px-6 lg:px-8 py-24 sm:py-32">
             <div className="mx-auto max-w-2xl lg:text-center">
-              <h2 className="text-base font-semibold leading-7 text-green-600">
-                For Athletes
-              </h2>
+              <h2 className="text-base font-semibold leading-7 text-green-600">For Athletes</h2>
               <p className="mt-2 text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
                 Train Smarter, Track Progress, Compete
               </p>
               <p className="mt-6 text-lg leading-8 text-gray-600">
-                Access your workouts, log results, and get AI-powered feedback.
-                Climb the leaderboard and see your progress over time.
+                Access your workouts, log results, and get AI-powered feedback. Climb the
+                leaderboard and see your progress over time.
               </p>
             </div>
             <div className="mx-auto mt-16 max-w-2xl sm:mt-20 lg:mt-24 lg:max-w-4xl">
@@ -220,10 +211,7 @@ export default function FeaturesPage() {
                   <div key={feature.name} className="relative pl-16">
                     <dt className="text-base font-semibold leading-7 text-gray-900">
                       <div className="absolute left-0 top-0 flex h-10 w-10 items-center justify-center rounded-lg bg-green-600">
-                        <feature.icon
-                          className="h-6 w-6 text-white"
-                          aria-hidden="true"
-                        />
+                        <feature.icon className="h-6 w-6 text-white" aria-hidden="true" />
                       </div>
                       {feature.name}
                     </dt>
@@ -240,9 +228,7 @@ export default function FeaturesPage() {
         {/* Platform Features Section */}
         <div className="mx-auto max-w-7xl px-6 lg:px-8 py-24 sm:py-32">
           <div className="mx-auto max-w-2xl lg:text-center">
-            <h2 className="text-base font-semibold leading-7 text-purple-600">
-              Platform Features
-            </h2>
+            <h2 className="text-base font-semibold leading-7 text-purple-600">Platform Features</h2>
             <p className="mt-2 text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
               One Connected Ecosystem
             </p>
@@ -256,16 +242,11 @@ export default function FeaturesPage() {
                 <div key={feature.name} className="relative pl-16">
                   <dt className="text-base font-semibold leading-7 text-gray-900">
                     <div className="absolute left-0 top-0 flex h-10 w-10 items-center justify-center rounded-lg bg-purple-600">
-                      <feature.icon
-                        className="h-6 w-6 text-white"
-                        aria-hidden="true"
-                      />
+                      <feature.icon className="h-6 w-6 text-white" aria-hidden="true" />
                     </div>
                     {feature.name}
                   </dt>
-                  <dd className="mt-2 text-base leading-7 text-gray-600">
-                    {feature.description}
-                  </dd>
+                  <dd className="mt-2 text-base leading-7 text-gray-600">{feature.description}</dd>
                 </div>
               ))}
             </dl>
@@ -281,8 +262,8 @@ export default function FeaturesPage() {
                   Ready to transform your gym?
                 </h2>
                 <p className="mt-6 text-lg leading-8 text-gray-300">
-                  Join gyms already using AI-powered programming, feedback, and
-                  leaderboards to engage athletes and deliver better results.
+                  Join gyms already using AI-powered programming, feedback, and leaderboards to
+                  engage athletes and deliver better results.
                 </p>
                 <div className="mt-10 flex items-center justify-center gap-x-6 lg:justify-start">
                   <Link
@@ -291,10 +272,7 @@ export default function FeaturesPage() {
                   >
                     Start Free Trial
                   </Link>
-                  <Link
-                    href="/pricing"
-                    className="text-sm font-semibold leading-6 text-white"
-                  >
+                  <Link href="/pricing" className="text-sm font-semibold leading-6 text-white">
                     View pricing <span aria-hidden="true">→</span>
                   </Link>
                 </div>

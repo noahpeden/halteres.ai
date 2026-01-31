@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function AthleteHistoryPage() {
   const { user } = useAuth();
@@ -91,7 +91,7 @@ export default function AthleteHistoryPage() {
           <div className="text-5xl mb-4">📊</div>
           <p className="text-base-content/60">
             {filter === 'all'
-              ? "No workouts logged yet. Get started!"
+              ? 'No workouts logged yet. Get started!'
               : `No ${filter === 'prs' ? 'PRs' : filter} results found.`}
           </p>
         </div>

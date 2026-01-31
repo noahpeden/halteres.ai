@@ -1,15 +1,9 @@
 'use client';
-import {
-  createContext,
-  useContext,
-  useState,
-  useCallback,
-  useEffect,
-} from 'react';
+import { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { gymEquipmentPresets } from '@/components/utils';
 import { useProgramData } from '@/hooks/useProgramData';
 import { useProgramWorkouts } from '@/hooks/useProgramWorkouts';
 import equipmentList from '@/utils/equipmentList';
-import { gymEquipmentPresets } from '@/components/utils';
 
 const ProgramContext = createContext(null);
 
@@ -99,9 +93,7 @@ export function ProgramProvider({ children, programId }) {
       // If no program data, ensure we use the default equipment from formData
       const defaultEquipment = formData?.equipment || [];
       setSelectedEquipment((prevEquipment) => {
-        if (
-          JSON.stringify(prevEquipment) !== JSON.stringify(defaultEquipment)
-        ) {
+        if (JSON.stringify(prevEquipment) !== JSON.stringify(defaultEquipment)) {
           return defaultEquipment;
         }
         return prevEquipment;
@@ -167,7 +159,12 @@ export function ProgramProvider({ children, programId }) {
 
   const updateGenerationStage = useCallback((stage) => {
     setGenerationStage(stage);
-    if (stage === 'complete' || stage === 'error' || stage === 'skeleton_complete' || stage === null) {
+    if (
+      stage === 'complete' ||
+      stage === 'error' ||
+      stage === 'skeleton_complete' ||
+      stage === null
+    ) {
       setIsGenerating(false);
     }
   }, []);
@@ -225,11 +222,7 @@ export function ProgramProvider({ children, programId }) {
     refetchWorkouts: workoutsData.refetch,
   };
 
-  return (
-    <ProgramContext.Provider value={contextValue}>
-      {children}
-    </ProgramContext.Provider>
-  );
+  return <ProgramContext.Provider value={contextValue}>{children}</ProgramContext.Provider>;
 }
 
 export function useProgram() {

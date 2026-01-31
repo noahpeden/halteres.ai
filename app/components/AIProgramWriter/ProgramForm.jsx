@@ -1,14 +1,14 @@
 'use client';
+import { Sparkles } from 'lucide-react';
 import { useCallback, useMemo } from 'react';
+import equipmentList from '@/utils/equipmentList';
 import { gymEquipmentPresets } from '../utils';
+import CustomWorkoutFormat from './CustomWorkoutFormat';
+import { handleFormChange as handleFormChangeUtil } from './formHandlers';
+import LoadingButton from './LoadingButton';
+import ProgramDetails from './ProgramDetails';
 import ProgramEssentials from './ProgramEssentials';
 import ProgramScheduling from './ProgramScheduling';
-import ProgramDetails from './ProgramDetails';
-import CustomWorkoutFormat from './CustomWorkoutFormat';
-import LoadingButton from './LoadingButton';
-import { handleFormChange as handleFormChangeUtil } from './formHandlers';
-import equipmentList from '@/utils/equipmentList';
-import { Sparkles } from 'lucide-react';
 
 const ProgramForm = ({
   formData,
@@ -100,12 +100,7 @@ const ProgramForm = ({
       isEligibleToGenerate: false,
       disabledReason: 'Please start a trial or subscribe to generate programs.',
     };
-  }, [
-    subscriptionStatus,
-    trialEndDate,
-    generationsRemaining,
-    lastGenerationDate,
-  ]);
+  }, [subscriptionStatus, trialEndDate, generationsRemaining, lastGenerationDate]);
 
   const isButtonDisabled = isLoading || generationStage === 'complete' || !isEligibleToGenerate;
   const buttonText = () => {
@@ -124,15 +119,12 @@ const ProgramForm = ({
   return (
     <div className="md:col-span-3 space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <ProgramEssentials
-          formData={formData}
-          handleChange={handleChange}
-          />
+        <ProgramEssentials formData={formData} handleChange={handleChange} />
         <ProgramScheduling
           formData={formData}
           handleChange={handleChange}
           handleDayOfWeekChange={handleDayOfWeekChange}
-            subscriptionStatus={subscriptionStatus}
+          subscriptionStatus={subscriptionStatus}
           calculatedEndDate={calculatedEndDate}
         />
       </div>
@@ -187,7 +179,7 @@ const ProgramForm = ({
           </button>
         )}
       </div>
-      
+
       {/* Show LoadingButton when generating */}
       {(isLoading || generationStage === 'complete') && (
         <div className="mt-6">
@@ -199,7 +191,7 @@ const ProgramForm = ({
           />
         </div>
       )}
-      
+
       {/* Optional: Display disabled reason clearly */}
       {/* {!isLoading && !isEligibleToGenerate && disabledReason && (
         <p className="text-center text-error mt-2">{disabledReason}</p>

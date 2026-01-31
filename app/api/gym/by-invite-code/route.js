@@ -12,10 +12,7 @@ export async function GET(request) {
   const inviteCode = searchParams.get('code');
 
   if (!inviteCode) {
-    return NextResponse.json(
-      { success: false, error: 'Invite code is required' },
-      { status: 400 }
-    );
+    return NextResponse.json({ success: false, error: 'Invite code is required' }, { status: 400 });
   }
 
   try {
@@ -28,10 +25,7 @@ export async function GET(request) {
 
     if (error) {
       if (error.code === 'PGRST116') {
-        return NextResponse.json(
-          { success: false, error: 'Invalid invite code' },
-          { status: 404 }
-        );
+        return NextResponse.json({ success: false, error: 'Invalid invite code' }, { status: 404 });
       }
       throw error;
     }
@@ -39,9 +33,6 @@ export async function GET(request) {
     return NextResponse.json({ success: true, data });
   } catch (error) {
     console.error('Gym lookup error:', error);
-    return NextResponse.json(
-      { success: false, error: 'Failed to find gym' },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, error: 'Failed to find gym' }, { status: 500 });
   }
 }

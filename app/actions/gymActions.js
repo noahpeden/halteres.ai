@@ -78,17 +78,15 @@ export async function createGymAction(formData) {
     if (gymError) throw gymError;
 
     // Create owner membership
-    const { error: membershipError } = await supabase
-      .from('gym_memberships')
-      .insert([
-        {
-          gym_id: gym.id,
-          user_id: user.id,
-          role: 'owner',
-          status: 'active',
-          joined_at: new Date().toISOString(),
-        },
-      ]);
+    const { error: membershipError } = await supabase.from('gym_memberships').insert([
+      {
+        gym_id: gym.id,
+        user_id: user.id,
+        role: 'owner',
+        status: 'active',
+        joined_at: new Date().toISOString(),
+      },
+    ]);
 
     if (membershipError) throw membershipError;
 

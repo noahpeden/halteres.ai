@@ -1,13 +1,7 @@
 'use client';
-import { AlertTriangle, CheckCircle, X, Sparkles, Info } from 'lucide-react';
+import { AlertTriangle, CheckCircle, Info, Sparkles, X } from 'lucide-react';
 
-function ProgramGenerationModal({
-  isOpen,
-  onClose,
-  onConfirm,
-  content,
-  isConfirming = false,
-}) {
+function ProgramGenerationModal({ isOpen, onClose, onConfirm, content, isConfirming = false }) {
   if (!isOpen) return null;
 
   // Extract content properties
@@ -78,23 +72,18 @@ function ProgramGenerationModal({
               <div className="space-y-4">
                 <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
                   <p className="text-sm font-medium text-amber-800 mb-3">
-                    Please complete these required fields before generating your
-                    program:
+                    Please complete these required fields before generating your program:
                   </p>
-                  {validation.missingFields &&
-                    validation.missingFields.length > 0 && (
-                      <div className="space-y-2">
-                        {validation.missingFields.map((field) => (
-                          <div
-                            key={field}
-                            className="flex items-center gap-2 text-sm text-amber-700"
-                          >
-                            <div className="w-1.5 h-1.5 bg-amber-400 rounded-full" />
-                            <span>{getFieldLabel(field)}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                  {validation.missingFields && validation.missingFields.length > 0 && (
+                    <div className="space-y-2">
+                      {validation.missingFields.map((field) => (
+                        <div key={field} className="flex items-center gap-2 text-sm text-amber-700">
+                          <div className="w-1.5 h-1.5 bg-amber-400 rounded-full" />
+                          <span>{getFieldLabel(field)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             ) : (
@@ -109,8 +98,7 @@ function ProgramGenerationModal({
                         <Info className="w-5 h-5 text-blue-600 mt-0.5" />
                         <div className="flex-1">
                           <p className="text-sm font-medium text-blue-800 mb-2">
-                            Consider adding these optional fields for better
-                            results:
+                            Consider adding these optional fields for better results:
                           </p>
                           <div className="space-y-1">
                             {validation.missingOptionalFields.map((field) => (

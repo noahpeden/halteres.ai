@@ -62,7 +62,7 @@ export default function ResultEntryForm({
 
     // Add type-specific values
     switch (resultType) {
-      case 'time':
+      case 'time': {
         const totalSeconds = (parseInt(minutes) || 0) * 60 + (parseInt(seconds) || 0);
         if (totalSeconds === 0) {
           setError('Please enter a valid time');
@@ -71,6 +71,7 @@ export default function ResultEntryForm({
         }
         formData.time_seconds = totalSeconds;
         break;
+      }
       case 'rounds_reps':
         formData.rounds = parseInt(rounds) || 0;
         formData.reps = parseInt(reps) || 0;
@@ -128,9 +129,7 @@ export default function ResultEntryForm({
               key={type.value}
               type="button"
               onClick={() => setResultType(type.value)}
-              className={`btn btn-sm ${
-                resultType === type.value ? 'btn-primary' : 'btn-outline'
-              }`}
+              className={`btn btn-sm ${resultType === type.value ? 'btn-primary' : 'btn-outline'}`}
             >
               {type.label}
             </button>
@@ -208,7 +207,13 @@ export default function ResultEntryForm({
           <div className="flex gap-2 items-center">
             <input
               type="number"
-              placeholder={resultType === 'distance' ? 'Meters' : resultType === 'calories' ? 'Calories' : 'Reps'}
+              placeholder={
+                resultType === 'distance'
+                  ? 'Meters'
+                  : resultType === 'calories'
+                    ? 'Calories'
+                    : 'Reps'
+              }
               className="input input-bordered w-32"
               value={count}
               onChange={(e) => setCount(e.target.value)}
@@ -312,11 +317,7 @@ export default function ResultEntryForm({
             Cancel
           </button>
         )}
-        <button
-          type="submit"
-          className="btn btn-primary flex-1"
-          disabled={loading}
-        >
+        <button type="submit" className="btn btn-primary flex-1" disabled={loading}>
           {loading ? (
             <>
               <span className="loading loading-spinner loading-sm"></span>

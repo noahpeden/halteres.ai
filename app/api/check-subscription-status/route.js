@@ -1,11 +1,11 @@
-import { createMobileCompatibleClient, corsHeaders } from '@/utils/supabase/mobile';
-import { stripe } from '@/utils/stripe';
 import { NextResponse } from 'next/server';
+import { stripe } from '@/utils/stripe';
+import { corsHeaders, createMobileCompatibleClient } from '@/utils/supabase/mobile';
 
 export async function OPTIONS(req) {
   return new NextResponse(null, {
     status: 200,
-    headers: corsHeaders()
+    headers: corsHeaders(),
   });
 }
 
@@ -39,14 +39,17 @@ export async function GET(request) {
     const subscription = await stripe.subscriptions.retrieve(subscriptionId);
 
     // Return the relevant subscription details
-    return NextResponse.json({
-      id: subscription.id,
-      status: subscription.status,
-      cancel_at_period_end: subscription.cancel_at_period_end,
-      current_period_end: subscription.current_period_end,
-      cancel_at: subscription.cancel_at,
-      canceled_at: subscription.canceled_at,
-    }, { headers: corsHeaders() });
+    return NextResponse.json(
+      {
+        id: subscription.id,
+        status: subscription.status,
+        cancel_at_period_end: subscription.cancel_at_period_end,
+        current_period_end: subscription.current_period_end,
+        cancel_at: subscription.cancel_at,
+        canceled_at: subscription.canceled_at,
+      },
+      { headers: corsHeaders() }
+    );
   } catch (error) {
     console.error('Error checking subscription status:', error);
     return NextResponse.json(

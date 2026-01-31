@@ -1,7 +1,11 @@
-import { createMobileCompatibleClient, corsHeaders } from '@/utils/supabase/mobile';
-import { NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
-import { formatClientMetrics, formatClassMetrics, isClassMetrics } from '@/utils/prompt-builder/promptBuilder.js';
+import { NextResponse } from 'next/server';
+import {
+  formatClassMetrics,
+  formatClientMetrics,
+  isClassMetrics,
+} from '@/utils/prompt-builder/promptBuilder.js';
+import { corsHeaders, createMobileCompatibleClient } from '@/utils/supabase/mobile';
 
 export const maxDuration = 300; // 5 minutes should be enough for a single week
 export const dynamic = 'force-dynamic';
@@ -10,7 +14,7 @@ export const dynamic = 'force-dynamic';
 export async function OPTIONS(request) {
   return new Response(null, {
     status: 200,
-    headers: corsHeaders()
+    headers: corsHeaders(),
   });
 }
 
@@ -69,18 +73,17 @@ async function handleWeekEnhancement(requestData, anthropic, supabase) {
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     start(controller) {
-      enhanceWeekWorkouts(requestData, anthropic, supabase, controller, encoder)
-        .catch((error) => {
-          logWithTimestamp('Enhancement error', { error: error.message });
-          try {
-            sendEvent(controller, encoder, 'error', { error: error.message });
-            if (controller && controller.desiredSize !== null) {
-              controller.close();
-            }
-          } catch (closeError) {
-            logWithTimestamp('Controller already closed during error', { error: closeError.message });
+      enhanceWeekWorkouts(requestData, anthropic, supabase, controller, encoder).catch((error) => {
+        logWithTimestamp('Enhancement error', { error: error.message });
+        try {
+          sendEvent(controller, encoder, 'error', { error: error.message });
+          if (controller && controller.desiredSize !== null) {
+            controller.close();
           }
-        });
+        } catch (closeError) {
+          logWithTimestamp('Controller already closed during error', { error: closeError.message });
+        }
+      });
     },
   });
 
@@ -100,7 +103,10 @@ async function enhanceWeekWorkouts(requestData, anthropic, supabase, controller,
 
   try {
     // Verify authentication
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
     if (authError || !user) {
       throw new Error('Authentication required');
     }
@@ -132,11 +138,14 @@ async function enhanceWeekWorkouts(requestData, anthropic, supabase, controller,
     await supabase
       .from('program_workouts')
       .update({ generation_status: 'enhancing' })
-      .in('id', skeletonWorkouts.map(w => w.id));
+      .in(
+        'id',
+        skeletonWorkouts.map((w) => w.id)
+      );
 
     // Fetch client/entity metrics for context
     let clientMetricsContent = '';
-    let useImperial = context?.useImperial !== undefined ? context.useImperial : true;
+    const useImperial = context?.useImperial !== undefined ? context.useImperial : true;
 
     if (skeletonWorkouts[0]?.entity_id) {
       try {
@@ -261,7 +270,11 @@ async function enhanceWeekWorkouts(requestData, anthropic, supabase, controller,
       }
 
       // Validate structure is preserved (basic check)
-      const isValid = validateStructurePreserved(skeleton.body_skeleton, enhanced.body, workoutSections);
+      const isValid = validateStructurePreserved(
+        skeleton.body_skeleton,
+        enhanced.body,
+        workoutSections
+      );
 
       if (!isValid) {
         logWithTimestamp(`Structure validation failed for workout ${i + 1}`, {
@@ -282,7 +295,9 @@ async function enhanceWeekWorkouts(requestData, anthropic, supabase, controller,
         .eq('id', skeleton.id);
 
       if (updateError) {
-        logWithTimestamp(`Failed to save enhanced workout ${i + 1}`, { error: updateError.message });
+        logWithTimestamp(`Failed to save enhanced workout ${i + 1}`, {
+          error: updateError.message,
+        });
       } else {
         enhancedCount++;
 
@@ -334,7 +349,7 @@ async function enhanceWeekWorkouts(requestData, anthropic, supabase, controller,
 
 // Detect which sections were used in skeleton workouts
 function detectWorkoutSections(skeletonWorkouts) {
-  const allContent = skeletonWorkouts.map(w => w.body_skeleton || '').join('\n');
+  const allContent = skeletonWorkouts.map((w) => w.body_skeleton || '').join('\n');
   const sections = [];
 
   // Common section headers to detect
@@ -362,17 +377,25 @@ function detectWorkoutSections(skeletonWorkouts) {
 }
 
 // Build the enhancement prompt
-function buildEnhancementPrompt(skeletonWorkouts, weekNumber, context, weekSpecificInput, workoutSections, clientMetricsContent, useImperial) {
-  const skeletonContent = skeletonWorkouts.map((w, i) =>
-    `### Day ${i + 1}: ${w.title}\n${w.body_skeleton || ''}`
-  ).join('\n\n---\n\n');
+function buildEnhancementPrompt(
+  skeletonWorkouts,
+  weekNumber,
+  context,
+  weekSpecificInput,
+  workoutSections,
+  clientMetricsContent,
+  useImperial
+) {
+  const skeletonContent = skeletonWorkouts
+    .map((w, i) => `### Day ${i + 1}: ${w.title}\n${w.body_skeleton || ''}`)
+    .join('\n\n---\n\n');
 
   // Default instruction when no user input provided - ensures rich content generation
   const defaultInstruction = `Generate comprehensive workout details with full coaching context. Include strategic intent for each session, detailed coaching cues for all main movements, and complete warm-up/cool-down protocols.`;
 
   const effectiveInput = weekSpecificInput?.trim() || defaultInstruction;
 
-  let prompt = `Enhance these skeleton workouts for Week ${weekNumber} with FULL professional-grade details.
+  const prompt = `Enhance these skeleton workouts for Week ${weekNumber} with FULL professional-grade details.
 
 SKELETON WORKOUTS:
 ${skeletonContent}
@@ -383,13 +406,21 @@ SKELETON CONTAINS: ${workoutSections.join(', ')} sections
 
 ENHANCEMENT INSTRUCTIONS:
 "${effectiveInput}"
-${weekSpecificInput ? `
-IMPORTANT: Incorporate these specific adjustments into your enhancements.` : ''}
+${
+  weekSpecificInput
+    ? `
+IMPORTANT: Incorporate these specific adjustments into your enhancements.`
+    : ''
+}
 
-${clientMetricsContent ? `
+${
+  clientMetricsContent
+    ? `
 CLIENT CONTEXT:
 ${clientMetricsContent}
-` : ''}
+`
+    : ''
+}
 
 YOU MUST ADD THESE SECTIONS TO EACH WORKOUT:
 
@@ -491,7 +522,7 @@ function validateStructurePreserved(skeleton, enhanced, sections) {
 
   // Check if skeleton exercises appear in enhanced
   const enhancedLower = enhanced.toLowerCase();
-  const missingExercises = skeletonExercises.filter(ex => !enhancedLower.includes(ex));
+  const missingExercises = skeletonExercises.filter((ex) => !enhancedLower.includes(ex));
 
   if (missingExercises.length > skeletonExercises.length * 0.3) {
     // More than 30% of exercises missing - likely structure changed
@@ -520,7 +551,7 @@ function attemptWorkoutExtraction(content, skeletonWorkouts) {
 
   // If extraction failed, return skeleton bodies as fallback
   if (extractedWorkouts.length === 0) {
-    return skeletonWorkouts.map(w => ({
+    return skeletonWorkouts.map((w) => ({
       title: w.title,
       body: w.body_skeleton,
     }));

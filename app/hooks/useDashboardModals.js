@@ -1,6 +1,6 @@
 'use client';
-import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 
 export function useDashboardModals() {
@@ -8,8 +8,7 @@ export function useDashboardModals() {
   const { user, supabase } = useAuth();
 
   // Modal states
-  const [showEntitySelectionModal, setShowEntitySelectionModal] =
-    useState(false);
+  const [showEntitySelectionModal, setShowEntitySelectionModal] = useState(false);
   const [showCreateEntityModal, setShowCreateEntityModal] = useState(false);
   const [showCreateProgramModal, setShowCreateProgramModal] = useState(false);
   const [showDeleteProgramModal, setShowDeleteProgramModal] = useState(false);
@@ -20,9 +19,7 @@ export function useDashboardModals() {
   const [entityType, setEntityType] = useState('CLIENT');
   const [programName, setProgramName] = useState('');
   const [programDuration, setProgramDuration] = useState(1);
-  const [startDate, setStartDate] = useState(
-    new Date().toISOString().split('T')[0]
-  );
+  const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
   const [daysOfWeek, setDaysOfWeek] = useState([1, 3, 5]);
   const [errorMessage, setErrorMessage] = useState('');
   const [selectedProgramId, setSelectedProgramId] = useState(null);
@@ -136,8 +133,7 @@ export function useDashboardModals() {
 
   const createProgram = async (event, entities, method = 'wizard') => {
     event.preventDefault();
-    if (!programName.trim() || daysOfWeek.length === 0 || !selectedEntityId)
-      return;
+    if (!programName.trim() || daysOfWeek.length === 0 || !selectedEntityId) return;
 
     if (!user || !user.id) {
       console.error('User not properly authenticated');
@@ -146,15 +142,23 @@ export function useDashboardModals() {
 
     try {
       // Convert numeric day indices to string day names
-      const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-      const daysOfWeekStrings = daysOfWeek.map(dayIndex => dayNames[dayIndex]);
-      
+      const dayNames = [
+        'sunday',
+        'monday',
+        'tuesday',
+        'wednesday',
+        'thursday',
+        'friday',
+        'saturday',
+      ];
+      const daysOfWeekStrings = daysOfWeek.map((dayIndex) => dayNames[dayIndex]);
+
       // Get the selected entity to include its name and type
-      const selectedEntity = entities.find(e => e.id === selectedEntityId);
-      
+      const selectedEntity = entities.find((e) => e.id === selectedEntityId);
+
       // Always create program immediately in Supabase
       const endDate = calculateEndDate();
-      
+
       const response = await fetch('/api/CreateProgram', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -187,10 +191,10 @@ export function useDashboardModals() {
 
       const result = await response.json();
       const program = result.data[0];
-      
+
       // Close the modal
       closeCreateProgramModal();
-      
+
       // Navigate based on method
       if (method === 'wizard') {
         // Navigate to step 1 of the programming wizard with program ID
@@ -227,9 +231,7 @@ export function useDashboardModals() {
       }
 
       // Update programs list by removing the deleted program
-      setPrograms(
-        programs.filter((program) => program.id !== selectedProgramId)
-      );
+      setPrograms(programs.filter((program) => program.id !== selectedProgramId));
 
       // Update stats
       setStats({

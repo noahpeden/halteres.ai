@@ -368,11 +368,12 @@ async function addLeaderboardMetadata(supabase, results, currentUserId) {
 
 function formatResultValue(result) {
   switch (result.result_type) {
-    case 'time':
+    case 'time': {
       if (!result.time_seconds) return '-';
       const mins = Math.floor(result.time_seconds / 60);
       const secs = result.time_seconds % 60;
       return `${mins}:${secs.toString().padStart(2, '0')}`;
+    }
     case 'rounds_reps':
       return `${result.rounds || 0} + ${result.reps || 0}`;
     case 'weight':
@@ -423,11 +424,14 @@ function findBestResult(results, resultType) {
 
     switch (resultType) {
       case 'time':
-        return (current.time_seconds || Infinity) < (best.time_seconds || Infinity) ? current : best;
-      case 'rounds_reps':
+        return (current.time_seconds || Infinity) < (best.time_seconds || Infinity)
+          ? current
+          : best;
+      case 'rounds_reps': {
         const currentScore = (current.rounds || 0) * 1000 + (current.reps || 0);
         const bestScore = (best.rounds || 0) * 1000 + (best.reps || 0);
         return currentScore > bestScore ? current : best;
+      }
       case 'weight':
         return (current.weight_kg || 0) > (best.weight_kg || 0) ? current : best;
       default:
@@ -442,10 +446,11 @@ function comparePRs(newResult, previousBest, resultType) {
   switch (resultType) {
     case 'time':
       return (newResult.time_seconds || Infinity) < (previousBest.time_seconds || Infinity);
-    case 'rounds_reps':
+    case 'rounds_reps': {
       const newScore = (newResult.rounds || 0) * 1000 + (newResult.reps || 0);
       const prevScore = (previousBest.rounds || 0) * 1000 + (previousBest.reps || 0);
       return newScore > prevScore;
+    }
     case 'weight':
       return (newResult.weight_kg || 0) > (previousBest.weight_kg || 0);
     default:
@@ -461,20 +466,27 @@ async function recordPR(supabase, userId, newResult, previousBest) {
     switch (newResult.result_type) {
       case 'time':
         previousValue = previousBest.time_seconds;
-        improvement = previousValue ? ((previousValue - newResult.time_seconds) / previousValue) * 100 : null;
+        improvement = previousValue
+          ? ((previousValue - newResult.time_seconds) / previousValue) * 100
+          : null;
         break;
       case 'weight':
         previousValue = previousBest.weight_kg;
-        improvement = previousValue ? ((newResult.weight_kg - previousValue) / previousValue) * 100 : null;
+        improvement = previousValue
+          ? ((newResult.weight_kg - previousValue) / previousValue) * 100
+          : null;
         break;
-      case 'rounds_reps':
+      case 'rounds_reps': {
         previousValue = (previousBest.rounds || 0) * 1000 + (previousBest.reps || 0);
         const newValue = (newResult.rounds || 0) * 1000 + (newResult.reps || 0);
         improvement = previousValue ? ((newValue - previousValue) / previousValue) * 100 : null;
         break;
+      }
       default:
         previousValue = previousBest.count;
-        improvement = previousValue ? ((newResult.count - previousValue) / previousValue) * 100 : null;
+        improvement = previousValue
+          ? ((newResult.count - previousValue) / previousValue) * 100
+          : null;
     }
   }
 
@@ -499,11 +511,7 @@ async function recordPR(supabase, userId, newResult, previousBest) {
     improvement_percentage: improvement,
   };
 
-  const { data: pr } = await supabase
-    .from('personal_records')
-    .insert([prData])
-    .select()
-    .single();
+  const { data: pr } = await supabase.from('personal_records').insert([prData]).select().single();
 
   return {
     isPR: true,
@@ -584,13 +592,13 @@ export async function toggleFistBumpAction(resultId) {
       return { success: true, action: 'removed' };
     } else {
       // Add fist bump
-      await supabase
-        .from('social_interactions')
-        .insert([{
+      await supabase.from('social_interactions').insert([
+        {
           workout_result_id: resultId,
           user_id: user.id,
           interaction_type: 'fist_bump',
-        }]);
+        },
+      ]);
 
       return { success: true, action: 'added' };
     }
@@ -618,12 +626,14 @@ export async function addCommentAction(resultId, content) {
   try {
     const { data, error } = await supabase
       .from('social_interactions')
-      .insert([{
-        workout_result_id: resultId,
-        user_id: user.id,
-        interaction_type: 'comment',
-        content,
-      }])
+      .insert([
+        {
+          workout_result_id: resultId,
+          user_id: user.id,
+          interaction_type: 'comment',
+          content,
+        },
+      ])
       .select(`
         *,
         user:profiles (

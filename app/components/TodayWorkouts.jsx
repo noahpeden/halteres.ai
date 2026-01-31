@@ -1,7 +1,7 @@
 'use client';
-import { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function TodayWorkouts() {
   const { supabase, user } = useAuth();
@@ -85,10 +85,11 @@ export default function TodayWorkouts() {
           const scheduledDate = workout.scheduled_date;
           const suggestedDate = workout.suggestedDate;
           const workoutDate = workout.date;
-          const tagDate = workout.tags?.suggestedDate || workout.tags?.scheduled_date || workout.tags?.date;
+          const tagDate =
+            workout.tags?.suggestedDate || workout.tags?.scheduled_date || workout.tags?.date;
 
           let finalDate = null;
-          
+
           // Try scheduled_date first
           if (scheduledDate) {
             try {
@@ -204,9 +205,7 @@ export default function TodayWorkouts() {
       // Update the workouts list
       setWorkouts(
         workouts.map((workout) =>
-          workout.id === workoutId
-            ? { ...workout, completed: newState }
-            : workout
+          workout.id === workoutId ? { ...workout, completed: newState } : workout
         )
       );
     } catch (error) {
@@ -242,9 +241,7 @@ export default function TodayWorkouts() {
     return (
       <div className="text-center p-6 bg-white rounded-lg shadow">
         <h3 className="text-lg font-medium mb-2">No Workouts Today</h3>
-        <p className="text-gray-600">
-          You don't have any workouts scheduled for today.
-        </p>
+        <p className="text-gray-600">You don't have any workouts scheduled for today.</p>
       </div>
     );
   }
@@ -281,15 +278,11 @@ export default function TodayWorkouts() {
 
               <div className="flex flex-wrap gap-2 mb-2">
                 {workout.difficulty && (
-                  <span className="badge badge-secondary">
-                    {workout.difficulty}
-                  </span>
+                  <span className="badge badge-secondary">{workout.difficulty}</span>
                 )}
                 <span
                   className={`badge ${
-                    completionStates[workout.id]
-                      ? 'badge-success'
-                      : 'badge-outline'
+                    completionStates[workout.id] ? 'badge-success' : 'badge-outline'
                   }`}
                 >
                   {completionStates[workout.id] ? 'Completed' : 'Not Completed'}

@@ -1,10 +1,10 @@
-import { createMobileCompatibleClient, corsHeaders } from '@/utils/supabase/mobile';
 import { NextResponse } from 'next/server';
+import { corsHeaders, createMobileCompatibleClient } from '@/utils/supabase/mobile';
 
 export async function OPTIONS(req) {
   return new NextResponse(null, {
     status: 200,
-    headers: corsHeaders()
+    headers: corsHeaders(),
   });
 }
 
@@ -15,9 +15,14 @@ export async function POST(req) {
     const supabase = await createMobileCompatibleClient(req);
 
     // Check authentication
-    const { data: { session } } = await supabase.auth.getSession();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
     if (!session) {
-      return NextResponse.json({ error: 'Not authenticated' }, { status: 401, headers: corsHeaders() });
+      return NextResponse.json(
+        { error: 'Not authenticated' },
+        { status: 401, headers: corsHeaders() }
+      );
     }
 
     // In a real implementation, you would call your AI service here

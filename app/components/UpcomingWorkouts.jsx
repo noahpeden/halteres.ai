@@ -1,9 +1,9 @@
 'use client';
-import { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
 import EditWorkoutModal from '@/components/AIProgramWriter/EditWorkoutModal';
 import WorkoutModal from '@/components/AIProgramWriter/WorkoutModal';
+import { useAuth } from '@/contexts/AuthContext';
 
 // Helper to format date as YYYY-MM-DD
 const formatDateKey = (date) => {
@@ -85,9 +85,7 @@ export default function UpcomingWorkouts() {
     setDateOptions(options);
 
     // Set initial filter to today's key
-    setSelectedDateFilter(
-      options.find((opt) => opt.key === 'today')?.dateKey || 'all'
-    );
+    setSelectedDateFilter(options.find((opt) => opt.key === 'today')?.dateKey || 'all');
   }, []);
 
   // Check if auth is ready
@@ -176,9 +174,7 @@ export default function UpcomingWorkouts() {
           const upcomingWorkouts = allWorkouts.filter((workout) => {
             const scheduledDate = workout.scheduled_date;
             const tagDate =
-              workout.tags?.scheduled_date ||
-              workout.tags?.suggestedDate ||
-              workout.tags?.date;
+              workout.tags?.scheduled_date || workout.tags?.suggestedDate || workout.tags?.date;
 
             let dateFromScheduled = null;
             let dateFromTags = null;
@@ -186,8 +182,7 @@ export default function UpcomingWorkouts() {
             if (scheduledDate) {
               try {
                 dateFromScheduled = new Date(scheduledDate);
-                if (isNaN(dateFromScheduled.getTime()))
-                  dateFromScheduled = null;
+                if (isNaN(dateFromScheduled.getTime())) dateFromScheduled = null;
               } catch (e) {
                 /* invalid date */
               }
@@ -231,9 +226,7 @@ export default function UpcomingWorkouts() {
         .map((workout) => {
           const scheduledDate = workout.scheduled_date;
           const tagDate =
-            workout.tags?.scheduled_date ||
-            workout.tags?.suggestedDate ||
-            workout.tags?.date;
+            workout.tags?.scheduled_date || workout.tags?.suggestedDate || workout.tags?.date;
 
           let workoutDate = null;
           if (scheduledDate) {
@@ -318,9 +311,7 @@ export default function UpcomingWorkouts() {
       // Update the workouts list
       setWorkouts(
         workouts.map((workout) =>
-          workout.id === workoutId
-            ? { ...workout, completed: newState }
-            : workout
+          workout.id === workoutId ? { ...workout, completed: newState } : workout
         )
       );
     } catch (error) {
@@ -522,13 +513,9 @@ export default function UpcomingWorkouts() {
             <a
               key={option.key}
               className={`tab ${
-                selectedDateFilter === (option.dateKey || option.key)
-                  ? 'tab-active'
-                  : ''
+                selectedDateFilter === (option.dateKey || option.key) ? 'tab-active' : ''
               }`}
-              onClick={() =>
-                setSelectedDateFilter(option.dateKey || option.key)
-              }
+              onClick={() => setSelectedDateFilter(option.dateKey || option.key)}
             >
               {option.display}
             </a>
@@ -537,9 +524,8 @@ export default function UpcomingWorkouts() {
         <div className="text-center py-8 bg-base-100 rounded-lg shadow">
           <p className="text-gray-500">
             No workouts scheduled for{' '}
-            {dateOptions.find(
-              (opt) => (opt.dateKey || opt.key) === selectedDateFilter
-            )?.display || 'this day'}
+            {dateOptions.find((opt) => (opt.dateKey || opt.key) === selectedDateFilter)?.display ||
+              'this day'}
             .
           </p>
         </div>
@@ -564,9 +550,7 @@ export default function UpcomingWorkouts() {
           <a
             key={option.key}
             className={`tab ${
-              selectedDateFilter === (option.dateKey || option.key)
-                ? 'tab-active'
-                : ''
+              selectedDateFilter === (option.dateKey || option.key) ? 'tab-active' : ''
             }`}
             onClick={() => setSelectedDateFilter(option.dateKey || option.key)}
           >
@@ -577,102 +561,88 @@ export default function UpcomingWorkouts() {
 
       {/* Replace horizontal scroll with vertical list grouped by date */}
       <div className="space-y-6">
-        {groupFilteredWorkoutsByDate().map(
-          ({ date, formattedDate, workouts: dateWorkouts }) => (
-            <div key={date}>
-              {/* Only show header if filtering by 'all' */}
-              {selectedDateFilter === 'all' && (
-                <h3 className="text-lg font-semibold mb-3 sticky top-0 bg-base-100/90 backdrop-blur py-2 z-10">
-                  {formattedDate}
-                </h3>
-              )}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {dateWorkouts.map((workout) => (
-                  <div
-                    key={workout.id}
-                    className="card bg-white shadow transition-shadow hover:shadow-md"
-                  >
-                    <div className="card-body p-4">
-                      <div className="flex justify-between items-start mb-2">
-                        <div>
-                          <h4 className="card-title text-base leading-tight">
-                            {workout.title}
-                          </h4>
-                          <p className="text-xs text-gray-500">
-                            {workout.entityName} ({workout.entityType})
-                          </p>
-                          <p className="text-xs text-gray-400 mt-1">
-                            Program: {workout.programName}
-                          </p>
-                        </div>
-                        <div className="dropdown dropdown-end">
-                          <label tabIndex={0} className="btn btn-ghost btn-xs">
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              className="inline-block w-4 h-4 stroke-current"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth="2"
-                                d="M5 12h.01M12 12h.01M19 12h.01M6 12a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z"
-                              ></path>
-                            </svg>
-                          </label>
-                          <ul
-                            tabIndex={0}
-                            className="dropdown-content z-[2] menu p-2 shadow bg-base-100 rounded-box w-32"
-                          >
-                            <li>
-                              <a onClick={() => handleEditWorkout(workout)}>
-                                Edit
-                              </a>
-                            </li>
-                            {/* Add other actions like Delete if needed */}
-                          </ul>
-                        </div>
+        {groupFilteredWorkoutsByDate().map(({ date, formattedDate, workouts: dateWorkouts }) => (
+          <div key={date}>
+            {/* Only show header if filtering by 'all' */}
+            {selectedDateFilter === 'all' && (
+              <h3 className="text-lg font-semibold mb-3 sticky top-0 bg-base-100/90 backdrop-blur py-2 z-10">
+                {formattedDate}
+              </h3>
+            )}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {dateWorkouts.map((workout) => (
+                <div
+                  key={workout.id}
+                  className="card bg-white shadow transition-shadow hover:shadow-md"
+                >
+                  <div className="card-body p-4">
+                    <div className="flex justify-between items-start mb-2">
+                      <div>
+                        <h4 className="card-title text-base leading-tight">{workout.title}</h4>
+                        <p className="text-xs text-gray-500">
+                          {workout.entityName} ({workout.entityType})
+                        </p>
+                        <p className="text-xs text-gray-400 mt-1">Program: {workout.programName}</p>
                       </div>
-
-                      {/* Optional: Add workout body preview if desired */}
-                      {/* <p className="text-xs mb-3 line-clamp-2">{workout.body}</p> */}
-
-                      <div className="card-actions justify-between items-center mt-2">
-                        <button
-                          onClick={() => handleViewWorkoutDetails(workout)}
-                          className="btn btn-primary btn-xs"
+                      <div className="dropdown dropdown-end">
+                        <label tabIndex={0} className="btn btn-ghost btn-xs">
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            className="inline-block w-4 h-4 stroke-current"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth="2"
+                              d="M5 12h.01M12 12h.01M19 12h.01M6 12a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z"
+                            ></path>
+                          </svg>
+                        </label>
+                        <ul
+                          tabIndex={0}
+                          className="dropdown-content z-[2] menu p-2 shadow bg-base-100 rounded-box w-32"
                         >
-                          View Details
-                        </button>
-                        <div className="w-full">
-                          <label className="label cursor-pointer p-0">
-                            <span className="text-sm text-xs mr-2">
-                              Completed
-                            </span>
-                            <input
-                              type="checkbox"
-                              className={`checkbox checkbox-success checkbox-xs ${
-                                updatingWorkout === workout.id
-                                  ? 'opacity-50'
-                                  : ''
-                              }`}
-                              checked={completionStates[workout.id] || false}
-                              onChange={() =>
-                                toggleWorkoutCompletion(workout.id)
-                              }
-                              disabled={updatingWorkout === workout.id}
-                            />
-                          </label>
-                        </div>
+                          <li>
+                            <a onClick={() => handleEditWorkout(workout)}>Edit</a>
+                          </li>
+                          {/* Add other actions like Delete if needed */}
+                        </ul>
+                      </div>
+                    </div>
+
+                    {/* Optional: Add workout body preview if desired */}
+                    {/* <p className="text-xs mb-3 line-clamp-2">{workout.body}</p> */}
+
+                    <div className="card-actions justify-between items-center mt-2">
+                      <button
+                        onClick={() => handleViewWorkoutDetails(workout)}
+                        className="btn btn-primary btn-xs"
+                      >
+                        View Details
+                      </button>
+                      <div className="w-full">
+                        <label className="label cursor-pointer p-0">
+                          <span className="text-sm text-xs mr-2">Completed</span>
+                          <input
+                            type="checkbox"
+                            className={`checkbox checkbox-success checkbox-xs ${
+                              updatingWorkout === workout.id ? 'opacity-50' : ''
+                            }`}
+                            checked={completionStates[workout.id] || false}
+                            onChange={() => toggleWorkoutCompletion(workout.id)}
+                            disabled={updatingWorkout === workout.id}
+                          />
+                        </label>
                       </div>
                     </div>
                   </div>
-                ))}
-              </div>
+                </div>
+              ))}
             </div>
-          )
-        )}
+          </div>
+        ))}
       </div>
 
       {/* Edit Workout Modal */}

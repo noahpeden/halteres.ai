@@ -1,32 +1,41 @@
 'use client';
-import img from '../assets/logo.png';
-import Link from 'next/link';
-import Image from 'next/image';
-import { useAuth } from '../contexts/AuthContext';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
-import { useState, useEffect } from 'react';
 import {
-  Menu,
-  Settings,
-  HelpCircle,
-  Phone,
-  Info,
-  Clock,
-  Newspaper,
-  Home,
-  LayoutDashboard,
-  Users,
-  User,
-  LogOut,
-  Building,
   BookOpen,
-  Trophy,
+  Building,
   Calendar,
+  Clock,
   Dumbbell,
+  HelpCircle,
+  Home,
+  Info,
+  LayoutDashboard,
+  LogOut,
+  Menu,
+  Newspaper,
+  Phone,
+  Settings,
+  Trophy,
+  User,
+  Users,
 } from 'lucide-react';
+import Image from 'next/image';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import img from '../assets/logo.png';
+import { useAuth } from '../contexts/AuthContext';
 export default function Navbar() {
-  const { session, user, isAthlete, isCoach, currentGym, athleteNeedsSetup, loadingProfile, loadingGym } = useAuth();
+  const {
+    session,
+    user,
+    isAthlete,
+    isCoach,
+    currentGym,
+    athleteNeedsSetup,
+    loadingProfile,
+    loadingGym,
+  } = useAuth();
   const supabase = createClientComponentClient();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userProfile, setUserProfile] = useState(null);
@@ -51,13 +60,13 @@ export default function Navbar() {
               message: error.message,
               details: error.details,
               hint: error.hint,
-              userId: user.id
+              userId: user.id,
             });
           }
           // Set default profile for new users or when profile doesn't exist
           setUserProfile({
             subscription_status: null,
-            subscription_plan: null
+            subscription_plan: null,
           });
           return;
         }
@@ -67,12 +76,12 @@ export default function Navbar() {
         console.error('Failed to fetch user profile:', {
           error: err.message || err,
           userId: user?.id,
-          userEmail: user?.email
+          userEmail: user?.email,
         });
         // Set default profile on error
         setUserProfile({
           subscription_status: null,
-          subscription_plan: null
+          subscription_plan: null,
         });
       }
     };
@@ -81,8 +90,7 @@ export default function Navbar() {
   }, [user, supabase]);
 
   const isPremiumUser =
-    userProfile?.subscription_status === 'active' &&
-    userProfile?.subscription_plan !== null;
+    userProfile?.subscription_status === 'active' && userProfile?.subscription_plan !== null;
 
   const handleLogout = async () => {
     router.push('/');
@@ -123,9 +131,7 @@ export default function Navbar() {
               width={40}
               className="block h-10 w-auto"
             />
-            <span className="text-xl font-bold text-[rgb(31,55,90)] ml-[-2]">
-              alteres.ai
-            </span>
+            <span className="text-xl font-bold text-[rgb(31,55,90)] ml-[-2]">alteres.ai</span>
           </Link>
         </div>
 
@@ -145,9 +151,7 @@ export default function Navbar() {
                         <li key={index}>
                           <NavLink href={item.href}>
                             <div className="flex items-center">
-                              {item.icon && (
-                                <item.icon className="mr-2 h-4 w-4" />
-                              )}
+                              {item.icon && <item.icon className="mr-2 h-4 w-4" />}
                               {item.label}
                             </div>
                           </NavLink>
@@ -215,9 +219,7 @@ export default function Navbar() {
         <div className="navbar-end">
           {/* Premium User Badge - Moved Here */}
           {session && isPremiumUser && (
-            <div className="badge badge-primary badge-sm mr-2 hidden sm:flex">
-              Premium
-            </div>
+            <div className="badge badge-primary badge-sm mr-2 hidden sm:flex">Premium</div>
           )}
 
           {/* Login Button for Desktop */}
@@ -247,7 +249,7 @@ export default function Navbar() {
 
                   {/* Navigation Items */}
                   <div className="space-y-2">
-                    <NavLink 
+                    <NavLink
                       href="/"
                       className="flex items-center p-3 rounded-xl hover:bg-gray-50 transition-all duration-200"
                     >
@@ -289,7 +291,7 @@ export default function Navbar() {
                       ))}
                     </div>
 
-                    <NavLink 
+                    <NavLink
                       href="/company"
                       className="flex items-center p-3 rounded-xl hover:bg-gray-50 transition-all duration-200"
                     >
@@ -301,9 +303,7 @@ export default function Navbar() {
                   {/* Login Button */}
                   <div className="pt-4 mt-4 border-t border-gray-100">
                     <Link href="/login" className="block">
-                      <button className="btn btn-primary text-white w-full">
-                        Get Started
-                      </button>
+                      <button className="btn btn-primary text-white w-full">Get Started</button>
                     </Link>
                   </div>
                 </div>
@@ -327,9 +327,7 @@ export default function Navbar() {
                     {user?.email && (
                       <p className="text-sm text-gray-600 mt-1 truncate">{user.email}</p>
                     )}
-                    {currentGym && (
-                      <p className="text-xs text-primary mt-1">{currentGym.name}</p>
-                    )}
+                    {currentGym && <p className="text-xs text-primary mt-1">{currentGym.name}</p>}
                   </div>
 
                   {/* Coach Navigation Items */}
@@ -444,7 +442,9 @@ export default function Navbar() {
                   {/* Show setup message for athletes who need to complete setup */}
                   {isAthlete && athleteNeedsSetup && (
                     <div className="p-4 bg-base-200 rounded-xl text-center">
-                      <p className="text-sm text-gray-600">Complete your setup to access all features</p>
+                      <p className="text-sm text-gray-600">
+                        Complete your setup to access all features
+                      </p>
                     </div>
                   )}
 

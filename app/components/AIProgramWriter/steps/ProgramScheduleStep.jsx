@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import { Calendar, Clock, CalendarDays } from 'lucide-react';
+import { Calendar, CalendarDays, Clock } from 'lucide-react';
+import { useMemo, useState } from 'react';
 
 const weekOptions = [4, 6, 8, 12];
 const dayLabels = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
@@ -22,19 +22,23 @@ export default function ProgramScheduleStep({
   const canProceed = selectedWeeks > 0 && selectedDays.length > 0 && startDate;
 
   // Format dates for display
-  const formattedStartDate = startDate ? new Date(startDate).toLocaleDateString('en-US', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  }) : '';
+  const formattedStartDate = startDate
+    ? new Date(startDate).toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      })
+    : '';
 
-  const formattedEndDate = calculatedEndDate ? new Date(calculatedEndDate).toLocaleDateString('en-US', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  }) : '';
+  const formattedEndDate = calculatedEndDate
+    ? new Date(calculatedEndDate).toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      })
+    : '';
 
   // Calculate total workouts
   const totalWorkouts = selectedWeeks * selectedDays.length;
@@ -42,9 +46,7 @@ export default function ProgramScheduleStep({
   return (
     <div className="space-y-8 animate-fadeIn">
       <div className="text-center mb-8">
-        <h2 className="text-2xl sm:text-3xl font-bold text-base-content">
-          When do you train?
-        </h2>
+        <h2 className="text-2xl sm:text-3xl font-bold text-base-content">When do you train?</h2>
         <p className="text-base-content/60 mt-2">
           Set your schedule and we'll plan workouts for your training days.
         </p>
@@ -59,16 +61,18 @@ export default function ProgramScheduleStep({
           </span>
         </label>
         <div className="flex gap-2 flex-wrap">
-          {weekOptions.map(weeks => (
+          {weekOptions.map((weeks) => (
             <button
               key={weeks}
               type="button"
               onClick={() => onFieldChange('numberOfWeeks', weeks)}
               className={`
                 px-6 py-3 rounded-full font-medium transition-all
-                ${selectedWeeks === weeks
-                  ? 'bg-primary text-white shadow-lg shadow-primary/30'
-                  : 'bg-base-200 hover:bg-base-300 text-base-content'}
+                ${
+                  selectedWeeks === weeks
+                    ? 'bg-primary text-white shadow-lg shadow-primary/30'
+                    : 'bg-base-200 hover:bg-base-300 text-base-content'
+                }
               `}
             >
               {weeks} weeks
@@ -96,9 +100,11 @@ export default function ProgramScheduleStep({
               onClick={() => onDayOfWeekChange(i)}
               className={`
                 w-10 h-10 sm:w-12 sm:h-12 rounded-full font-semibold transition-all
-                ${selectedDays.includes(i)
-                  ? 'bg-primary text-white shadow-lg shadow-primary/30'
-                  : 'bg-base-200 text-base-content/60 hover:bg-base-300'}
+                ${
+                  selectedDays.includes(i)
+                    ? 'bg-primary text-white shadow-lg shadow-primary/30'
+                    : 'bg-base-200 text-base-content/60 hover:bg-base-300'
+                }
               `}
             >
               {day}
@@ -108,9 +114,7 @@ export default function ProgramScheduleStep({
         <p className="text-sm text-base-content/60 mt-2">
           {selectedDays.length} days selected:
           {selectedDays.length > 0 && (
-            <span className="ml-1">
-              {selectedDays.map(d => dayNames[d]).join(', ')}
-            </span>
+            <span className="ml-1">{selectedDays.map((d) => dayNames[d]).join(', ')}</span>
           )}
         </p>
       </div>
@@ -131,9 +135,7 @@ export default function ProgramScheduleStep({
           min={new Date().toISOString().split('T')[0]}
         />
         {startDate && (
-          <p className="text-sm text-base-content/60 mt-2">
-            Starting {formattedStartDate}
-          </p>
+          <p className="text-sm text-base-content/60 mt-2">Starting {formattedStartDate}</p>
         )}
       </div>
 
@@ -156,7 +158,12 @@ export default function ProgramScheduleStep({
             </div>
             <div className="text-center p-3 bg-base-100 rounded-lg">
               <div className="text-sm font-bold text-base-content">
-                {calculatedEndDate ? new Date(calculatedEndDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '-'}
+                {calculatedEndDate
+                  ? new Date(calculatedEndDate).toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                    })
+                  : '-'}
               </div>
               <div className="text-xs text-base-content/60">End Date</div>
             </div>
@@ -166,23 +173,34 @@ export default function ProgramScheduleStep({
 
       {/* Navigation buttons */}
       <div className="flex justify-between pt-4">
-        <button
-          className="btn btn-outline"
-          onClick={onBack}
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
+        <button className="btn btn-outline" onClick={onBack}>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-5 w-5 mr-2"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+          >
+            <path
+              fillRule="evenodd"
+              d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z"
+              clipRule="evenodd"
+            />
           </svg>
           Back
         </button>
-        <button
-          className="btn btn-primary btn-lg"
-          onClick={onNext}
-          disabled={!canProceed}
-        >
+        <button className="btn btn-primary btn-lg" onClick={onNext} disabled={!canProceed}>
           Next Step
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-2" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-5 w-5 ml-2"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+          >
+            <path
+              fillRule="evenodd"
+              d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z"
+              clipRule="evenodd"
+            />
           </svg>
         </button>
       </div>

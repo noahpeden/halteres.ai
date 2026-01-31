@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import {
-  getGymOverviewAction,
-  getRecentPRsAction,
-  getParticipationStatsAction,
-  getTopPerformersAction,
   getAthleteListAction,
+  getGymOverviewAction,
+  getParticipationStatsAction,
+  getRecentPRsAction,
+  getTopPerformersAction,
 } from '@/actions/analyticsActions';
 
 export default function GymOverviewTab({ gymId }) {
@@ -113,7 +113,11 @@ export default function GymOverviewTab({ gymId }) {
                         style={{
                           height: `${Math.max(
                             4,
-                            (day.count / Math.max(...participation.participationByDay.map((d) => d.count || 1))) * 100
+                            (day.count /
+                              Math.max(
+                                ...participation.participationByDay.map((d) => d.count || 1)
+                              )) *
+                              100
                           )}%`,
                         }}
                       />
@@ -251,13 +255,21 @@ export default function GymOverviewTab({ gymId }) {
                         </div>
                       </td>
                       <td>
-                        <span className={athlete.workoutsThisWeek > 0 ? 'text-success font-medium' : 'text-base-content/50'}>
+                        <span
+                          className={
+                            athlete.workoutsThisWeek > 0
+                              ? 'text-success font-medium'
+                              : 'text-base-content/50'
+                          }
+                        >
                           {athlete.workoutsThisWeek}
                         </span>
                       </td>
                       <td>
                         {athlete.prsThisWeek > 0 ? (
-                          <span className="badge badge-warning badge-sm">{athlete.prsThisWeek}</span>
+                          <span className="badge badge-warning badge-sm">
+                            {athlete.prsThisWeek}
+                          </span>
                         ) : (
                           <span className="text-base-content/50">0</span>
                         )}
@@ -268,9 +280,7 @@ export default function GymOverviewTab({ gymId }) {
                           : 'Never'}
                       </td>
                       <td className="text-base-content/60">
-                        {athlete.joinedAt
-                          ? new Date(athlete.joinedAt).toLocaleDateString()
-                          : '-'}
+                        {athlete.joinedAt ? new Date(athlete.joinedAt).toLocaleDateString() : '-'}
                       </td>
                     </tr>
                   ))}

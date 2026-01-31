@@ -29,8 +29,7 @@ export const processWorkoutDescription = (description) => {
   sections.forEach((line) => {
     if (line.toLowerCase().includes('warm-up:')) {
       currentSection = 'warm-up';
-      formattedDescription +=
-        '\n## Warm-up\n\n' + line.split(':')[1].trim() + '\n';
+      formattedDescription += '\n## Warm-up\n\n' + line.split(':')[1].trim() + '\n';
     } else if (line.toLowerCase().includes('strength:')) {
       currentSection = 'strength';
       formattedDescription += '\n## Strength\n\n';
@@ -39,20 +38,15 @@ export const processWorkoutDescription = (description) => {
       formattedDescription += '\n## Conditioning\n\n';
     } else if (line.toLowerCase().includes('cool-down:')) {
       currentSection = 'cool-down';
-      formattedDescription +=
-        '\n## Cool-down\n\n' + line.split(':')[1].trim() + '\n';
+      formattedDescription += '\n## Cool-down\n\n' + line.split(':')[1].trim() + '\n';
     } else if (line.toLowerCase().includes('performance notes:')) {
       currentSection = 'notes';
       formattedDescription += '\n## Performance Notes\n\n';
     } else if (line.toLowerCase().includes('rx:')) {
       formattedDescription += '\n### RX\n' + line.split(':')[1].trim() + '\n';
     } else if (line.toLowerCase().includes('scaling:')) {
-      formattedDescription +=
-        '\n### Scaling Options\n' + line.split(':')[1].trim() + '\n';
-    } else if (
-      line.includes(':') &&
-      line.split(':')[0].trim().toLowerCase() === 'minute'
-    ) {
+      formattedDescription += '\n### Scaling Options\n' + line.split(':')[1].trim() + '\n';
+    } else if (line.includes(':') && line.split(':')[0].trim().toLowerCase() === 'minute') {
       // Handle EMOM format
       formattedDescription += line + '\n';
     } else if (line.startsWith('-')) {

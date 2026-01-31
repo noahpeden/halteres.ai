@@ -1,12 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import equipmentList from '@/utils/equipmentList';
 import {
-  goals,
   difficulties,
   focusAreas,
-  workoutFormats,
-  gymTypes,
+  goals,
   gymEquipmentPresets,
+  gymTypes,
+  workoutFormats,
 } from './utils';
 
 export default function AIWorkoutReferencer({ programId }) {
@@ -39,10 +39,7 @@ export default function AIWorkoutReferencer({ programId }) {
   }, [formInput.gymType]);
 
   useEffect(() => {
-    if (
-      equipmentList.length > 0 &&
-      formInput.equipment.length === equipmentList.length
-    ) {
+    if (equipmentList.length > 0 && formInput.equipment.length === equipmentList.length) {
       setAllEquipmentSelected(true);
     } else {
       setAllEquipmentSelected(false);
@@ -58,8 +55,7 @@ export default function AIWorkoutReferencer({ programId }) {
   };
 
   const handleEquipmentToggle = (event) => {
-    const equipmentValue =
-      event.target.value === '-1' ? -1 : parseInt(event.target.value);
+    const equipmentValue = event.target.value === '-1' ? -1 : parseInt(event.target.value);
     const isChecked = event.target.checked;
     if (equipmentValue === -1) {
       if (isChecked) {
@@ -101,9 +97,7 @@ export default function AIWorkoutReferencer({ programId }) {
       }
       return {
         ...previousInput,
-        workoutFormats: previousInput.workoutFormats.filter(
-          (format) => format !== formatValue
-        ),
+        workoutFormats: previousInput.workoutFormats.filter((format) => format !== formatValue),
       };
     });
   };
@@ -147,13 +141,10 @@ export default function AIWorkoutReferencer({ programId }) {
         let errorMessage;
         try {
           const errorData = await webResponse.json();
-          errorMessage =
-            errorData.error ||
-            `Error searching workouts (Status: ${statusCode})`;
+          errorMessage = errorData.error || `Error searching workouts (Status: ${statusCode})`;
         } catch (jsonError) {
           const textError = await webResponse.text().catch(() => null);
-          errorMessage =
-            textError || `Error searching workouts (Status: ${statusCode})`;
+          errorMessage = textError || `Error searching workouts (Status: ${statusCode})`;
         }
 
         throw new Error(errorMessage);
@@ -164,23 +155,16 @@ export default function AIWorkoutReferencer({ programId }) {
         webData = await webResponse.json();
       } catch (jsonError) {
         console.error('JSON parsing error:', jsonError);
-        throw new Error(
-          'Failed to parse workout results. The server might be overloaded.'
-        );
+        throw new Error('Failed to parse workout results. The server might be overloaded.');
       }
 
       setWebSearchWorkoutResults(webData.workouts || []);
     } catch (error) {
       console.error('Web search error:', error);
       if (error.name === 'AbortError') {
-        setErrorMessage(
-          'Web search timed out. Please try a more specific search.'
-        );
+        setErrorMessage('Web search timed out. Please try a more specific search.');
       } else {
-        setErrorMessage(
-          error.message ||
-            'An unexpected error occurred while searching workouts'
-        );
+        setErrorMessage(error.message || 'An unexpected error occurred while searching workouts');
       }
     } finally {
       setWebSearchLoading(false);
@@ -189,9 +173,7 @@ export default function AIWorkoutReferencer({ programId }) {
   };
 
   const handleAddWorkoutToProgram = async (workout, isReference = false) => {
-    const workoutKey = `${isReference ? 'ref' : 'prog'}-${
-      workout.id || workout.title
-    }`;
+    const workoutKey = `${isReference ? 'ref' : 'prog'}-${workout.id || workout.title}`;
     setAddingWorkoutStates((prev) => ({ ...prev, [workoutKey]: true }));
     setErrorMessage('');
     setSuccessMessage('');
@@ -212,9 +194,7 @@ export default function AIWorkoutReferencer({ programId }) {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(
-          errorData.error || 'Failed to add workout to the program'
-        );
+        throw new Error(errorData.error || 'Failed to add workout to the program');
       }
 
       setSuccessMessage(
@@ -255,10 +235,9 @@ export default function AIWorkoutReferencer({ programId }) {
           How Reference Workouts Work
         </h3>
         <p className="text-sm mt-1">
-          Reference workouts provide inspiration and context when generating
-          your program. Add workouts that have the style, format, and exercises
-          you'd like to see in your program. These will be used as examples for
-          the AI to follow when creating your custom program.
+          Reference workouts provide inspiration and context when generating your program. Add
+          workouts that have the style, format, and exercises you'd like to see in your program.
+          These will be used as examples for the AI to follow when creating your custom program.
         </p>
       </div>
 
@@ -296,10 +275,7 @@ export default function AIWorkoutReferencer({ programId }) {
                   onChange={handleInputChange}
                 >
                   {difficulties.map((difficultyOption) => (
-                    <option
-                      key={difficultyOption.value}
-                      value={difficultyOption.value}
-                    >
+                    <option key={difficultyOption.value} value={difficultyOption.value}>
                       {difficultyOption.label}
                     </option>
                   ))}
@@ -354,10 +330,7 @@ export default function AIWorkoutReferencer({ programId }) {
                   onChange={handleInputChange}
                 >
                   {gymTypes.map((gymTypeOption) => (
-                    <option
-                      key={gymTypeOption.value}
-                      value={gymTypeOption.value}
-                    >
+                    <option key={gymTypeOption.value} value={gymTypeOption.value}>
                       {gymTypeOption.label}
                     </option>
                   ))}
@@ -371,17 +344,12 @@ export default function AIWorkoutReferencer({ programId }) {
             </div>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
               {workoutFormats.map((formatOption) => (
-                <label
-                  key={formatOption.value}
-                  className="flex items-center gap-2"
-                >
+                <label key={formatOption.value} className="flex items-center gap-2">
                   <input
                     type="checkbox"
                     className="checkbox checkbox-sm"
                     value={formatOption.value}
-                    checked={formInput.workoutFormats.includes(
-                      formatOption.value
-                    )}
+                    checked={formInput.workoutFormats.includes(formatOption.value)}
                     onChange={handleWorkoutFormatToggle}
                   />
                   <span>{formatOption.label}</span>
@@ -414,17 +382,12 @@ export default function AIWorkoutReferencer({ programId }) {
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-40 overflow-y-auto">
                   {equipmentList.map((equipmentItem) => (
-                    <label
-                      key={equipmentItem.value}
-                      className="flex items-center gap-2"
-                    >
+                    <label key={equipmentItem.value} className="flex items-center gap-2">
                       <input
                         type="checkbox"
                         className="checkbox checkbox-xs"
                         value={equipmentItem.value}
-                        checked={formInput.equipment.includes(
-                          equipmentItem.value
-                        )}
+                        checked={formInput.equipment.includes(equipmentItem.value)}
                         onChange={handleEquipmentToggle}
                       />
                       <span className="text-sm">{equipmentItem.label}</span>
@@ -465,17 +428,13 @@ export default function AIWorkoutReferencer({ programId }) {
               )}
             </button>
             <div className="text-xs text-gray-500 mt-1">
-              Uses AI agents to find workouts online. May take up to 60 seconds.
-              Try specific search terms for better results.
+              Uses AI agents to find workouts online. May take up to 60 seconds. Try specific search
+              terms for better results.
             </div>
           </div>
 
-          {errorMessage && (
-            <div className="text-error mt-2">{errorMessage}</div>
-          )}
-          {successMessage && (
-            <div className="text-success mt-2">{successMessage}</div>
-          )}
+          {errorMessage && <div className="text-error mt-2">{errorMessage}</div>}
+          {successMessage && <div className="text-success mt-2">{successMessage}</div>}
         </div>
       </div>
 
@@ -483,9 +442,7 @@ export default function AIWorkoutReferencer({ programId }) {
         <div className="mt-6">
           <h3 className="text-lg font-medium mb-3 flex items-center">
             AI-Powered Workout Search Results
-            {webSearchLoading && (
-              <span className="loading loading-spinner loading-sm ml-2"></span>
-            )}
+            {webSearchLoading && <span className="loading loading-spinner loading-sm ml-2"></span>}
           </h3>
           {webSearchWorkoutResults.length > 0 && (
             <div className="grid grid-cols-1 gap-4">
@@ -493,10 +450,7 @@ export default function AIWorkoutReferencer({ programId }) {
                 const workoutKey = workoutItem.id || `web-${index}`;
                 const isAdding = addingWorkoutStates[`ref-${workoutKey}`];
                 return (
-                  <div
-                    key={workoutKey}
-                    className="border rounded-md p-4 border-blue-200"
-                  >
+                  <div key={workoutKey} className="border rounded-md p-4 border-blue-200">
                     <div className="flex justify-between items-start">
                       <h4 className="font-semibold">
                         {workoutItem.title || `Web Workout ${index + 1}`}

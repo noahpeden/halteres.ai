@@ -100,9 +100,7 @@ export default function AthleteOnboardingModal({ profile, gymName, onComplete })
         return (
           <div className="py-4">
             <h2 className="text-xl font-bold mb-2">Set Up Your Profile</h2>
-            <p className="text-base-content/70 mb-6">
-              How would you like to be known in the gym?
-            </p>
+            <p className="text-base-content/70 mb-6">How would you like to be known in the gym?</p>
             <div className="form-control">
               <label className="label">
                 <span className="label-text">Display Name</span>
@@ -116,7 +114,9 @@ export default function AthleteOnboardingModal({ profile, gymName, onComplete })
                 className="input input-bordered w-full"
               />
               <label className="label">
-                <span className="label-text-alt">This is what others will see on the leaderboard</span>
+                <span className="label-text-alt">
+                  This is what others will see on the leaderboard
+                </span>
               </label>
             </div>
           </div>
@@ -251,10 +251,7 @@ export default function AthleteOnboardingModal({ profile, gymName, onComplete })
         {/* Progress Steps */}
         <ul className="steps steps-horizontal w-full mb-6">
           {ONBOARDING_STEPS.map((step, index) => (
-            <li
-              key={step.id}
-              className={`step ${index <= currentStep ? 'step-primary' : ''}`}
-            >
+            <li key={step.id} className={`step ${index <= currentStep ? 'step-primary' : ''}`}>
               <span className="hidden sm:inline">{step.title}</span>
             </li>
           ))}
@@ -276,11 +273,7 @@ export default function AthleteOnboardingModal({ profile, gymName, onComplete })
               {currentStep === ONBOARDING_STEPS.length - 2 ? 'Almost Done' : 'Next'}
             </button>
           ) : (
-            <button
-              className="btn btn-primary"
-              onClick={handleComplete}
-              disabled={saving}
-            >
+            <button className="btn btn-primary" onClick={handleComplete} disabled={saving}>
               {saving ? (
                 <>
                   <span className="loading loading-spinner loading-sm" />

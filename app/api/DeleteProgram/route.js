@@ -1,10 +1,10 @@
-import { createMobileCompatibleClient, corsHeaders } from '@/utils/supabase/mobile';
 import { NextResponse } from 'next/server';
+import { corsHeaders, createMobileCompatibleClient } from '@/utils/supabase/mobile';
 
 export async function OPTIONS(req) {
   return new NextResponse(null, {
     status: 200,
-    headers: corsHeaders()
+    headers: corsHeaders(),
   });
 }
 
@@ -28,7 +28,10 @@ export async function DELETE(req) {
     } = await supabase.auth.getSession();
 
     if (!session) {
-      return NextResponse.json({ error: 'Not authenticated' }, { status: 401, headers: corsHeaders() });
+      return NextResponse.json(
+        { error: 'Not authenticated' },
+        { status: 401, headers: corsHeaders() }
+      );
     }
 
     // Verify that the program belongs to an entity owned by this user
@@ -47,7 +50,10 @@ export async function DELETE(req) {
     }
 
     if (!programData) {
-      return NextResponse.json({ error: 'Program not found' }, { status: 404, headers: corsHeaders() });
+      return NextResponse.json(
+        { error: 'Program not found' },
+        { status: 404, headers: corsHeaders() }
+      );
     }
 
     // Check if the entity belongs to the current user
@@ -59,7 +65,10 @@ export async function DELETE(req) {
 
     if (entityError) {
       console.error('Error fetching entity:', entityError);
-      return NextResponse.json({ error: entityError.message }, { status: 500, headers: corsHeaders() });
+      return NextResponse.json(
+        { error: entityError.message },
+        { status: 500, headers: corsHeaders() }
+      );
     }
 
     if (entityData.user_id !== session.user.id) {

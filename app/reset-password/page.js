@@ -1,8 +1,8 @@
 'use client';
-import { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function ResetPasswordPage() {
   const { session, supabase } = useAuth();
@@ -48,9 +48,7 @@ export default function ResetPasswordPage() {
 
       if (error) throw error;
 
-      setMessage(
-        'Password has been reset successfully! You will be redirected to login...'
-      );
+      setMessage('Password has been reset successfully! You will be redirected to login...');
       // Clear the password fields
       setPassword('');
       setConfirmPassword('');
@@ -66,8 +64,7 @@ export default function ResetPasswordPage() {
     } catch (error) {
       console.error('Error resetting password:', error);
       setError(
-        error.message ||
-          'Failed to reset password. Please try again or request a new reset link.'
+        error.message || 'Failed to reset password. Please try again or request a new reset link.'
       );
     } finally {
       setLoading(false);

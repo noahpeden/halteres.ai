@@ -1,13 +1,13 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import equipmentList from '@/utils/equipmentList';
 import {
-  goals,
   difficulties,
   focusAreas,
-  workoutFormats,
-  gymTypes,
+  goals,
   gymEquipmentPresets,
+  gymTypes,
+  workoutFormats,
 } from '../utils';
 
 export default function EnhancedReferenceWorkoutSearchModal({
@@ -94,12 +94,12 @@ export default function EnhancedReferenceWorkoutSearchModal({
 
   const handleSelectWorkout = (workout) => {
     const workoutId = getWorkoutId(workout);
-    const isSelected = localSelectedWorkouts.some(w => getWorkoutId(w) === workoutId);
-    
+    const isSelected = localSelectedWorkouts.some((w) => getWorkoutId(w) === workoutId);
+
     if (isSelected) {
-      setLocalSelectedWorkouts(prev => prev.filter(w => getWorkoutId(w) !== workoutId));
+      setLocalSelectedWorkouts((prev) => prev.filter((w) => getWorkoutId(w) !== workoutId));
     } else {
-      setLocalSelectedWorkouts(prev => [...prev, workout]);
+      setLocalSelectedWorkouts((prev) => [...prev, workout]);
     }
   };
 
@@ -113,7 +113,7 @@ export default function EnhancedReferenceWorkoutSearchModal({
   };
 
   const handleCriteriaChange = (field, value) => {
-    setSearchCriteria(prev => ({ ...prev, [field]: value }));
+    setSearchCriteria((prev) => ({ ...prev, [field]: value }));
   };
 
   const isValidUrl = (string) => {
@@ -160,8 +160,10 @@ export default function EnhancedReferenceWorkoutSearchModal({
                   onChange={(e) => handleCriteriaChange('goal', e.target.value)}
                   className="select select-bordered select-sm w-32"
                 >
-                  {goals.map(goal => (
-                    <option key={goal.value} value={goal.value}>{goal.label}</option>
+                  {goals.map((goal) => (
+                    <option key={goal.value} value={goal.value}>
+                      {goal.label}
+                    </option>
                   ))}
                 </select>
                 <select
@@ -169,8 +171,10 @@ export default function EnhancedReferenceWorkoutSearchModal({
                   onChange={(e) => handleCriteriaChange('difficulty', e.target.value)}
                   className="select select-bordered select-sm w-32"
                 >
-                  {difficulties.map(diff => (
-                    <option key={diff.value} value={diff.value}>{diff.label}</option>
+                  {difficulties.map((diff) => (
+                    <option key={diff.value} value={diff.value}>
+                      {diff.label}
+                    </option>
                   ))}
                 </select>
                 <input
@@ -194,19 +198,20 @@ export default function EnhancedReferenceWorkoutSearchModal({
                   )}
                 </button>
               </div>
-              
-              {errorMessage && (
-                <div className="text-error text-sm mt-1">{errorMessage}</div>
-              )}
+
+              {errorMessage && <div className="text-error text-sm mt-1">{errorMessage}</div>}
             </div>
 
             {/* Compact Selected Workouts */}
             {localSelectedWorkouts.length > 0 && (
               <div className="mb-2 p-2 bg-primary/5 border border-primary/20 rounded text-sm">
-                <span className="font-medium text-primary">Selected ({localSelectedWorkouts.length}):</span>
+                <span className="font-medium text-primary">
+                  Selected ({localSelectedWorkouts.length}):
+                </span>
                 {localSelectedWorkouts.map((workout, index) => (
                   <span key={getWorkoutId(workout)} className="ml-1">
-                    {workout.title}{index < localSelectedWorkouts.length - 1 ? ',' : ''}
+                    {workout.title}
+                    {index < localSelectedWorkouts.length - 1 ? ',' : ''}
                   </span>
                 ))}
               </div>
@@ -218,29 +223,33 @@ export default function EnhancedReferenceWorkoutSearchModal({
                 <div className="space-y-2">
                   {searchResults.map((workout, index) => {
                     const workoutId = getWorkoutId(workout);
-                    const isSelected = localSelectedWorkouts.some(w => getWorkoutId(w) === workoutId);
-                    
+                    const isSelected = localSelectedWorkouts.some(
+                      (w) => getWorkoutId(w) === workoutId
+                    );
+
                     return (
                       <div
                         key={workoutId}
                         className={`border rounded-lg transition-all ${
-                          isSelected 
-                            ? 'border-primary bg-primary/5' 
+                          isSelected
+                            ? 'border-primary bg-primary/5'
                             : 'border-base-300 hover:border-primary/50'
                         }`}
                       >
                         {/* Compact Card Header */}
-                        <div 
+                        <div
                           className="p-3 cursor-pointer flex items-center justify-between"
                           onClick={() => handleSelectWorkout(workout)}
                         >
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
-                              <div className={`w-4 h-4 rounded border flex items-center justify-center text-xs ${
-                                isSelected 
-                                  ? 'bg-primary border-primary text-white' 
-                                  : 'border-base-300'
-                              }`}>
+                              <div
+                                className={`w-4 h-4 rounded border flex items-center justify-center text-xs ${
+                                  isSelected
+                                    ? 'bg-primary border-primary text-white'
+                                    : 'border-base-300'
+                                }`}
+                              >
                                 {isSelected && '✓'}
                               </div>
                               <h5 className="font-medium text-sm truncate">{workout.title}</h5>
@@ -249,19 +258,29 @@ export default function EnhancedReferenceWorkoutSearchModal({
                               {(workout.body || workout.description || '').substring(0, 120)}...
                             </p>
                           </div>
-                          
+
                           <div className="flex items-center gap-2 ml-2">
                             {isValidUrl(workout.source) && (
-                              <a 
-                                href={workout.source} 
-                                target="_blank" 
+                              <a
+                                href={workout.source}
+                                target="_blank"
                                 rel="noopener noreferrer"
                                 className="text-xs text-primary hover:underline"
                                 onClick={(e) => e.stopPropagation()}
                                 title="View Source"
                               >
-                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                <svg
+                                  className="w-3 h-3"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                                  />
                                 </svg>
                               </a>
                             )}
@@ -273,12 +292,14 @@ export default function EnhancedReferenceWorkoutSearchModal({
                             </button>
                           </div>
                         </div>
-                        
+
                         {/* Expandable Details */}
                         {isWorkoutExpanded(workout) && (
                           <div className="border-t border-base-300 p-3 bg-base-50">
                             <div className="text-xs leading-relaxed text-base-content/80 max-h-32 overflow-y-auto mb-2">
-                              {workout.body || workout.description || 'No workout details available.'}
+                              {workout.body ||
+                                workout.description ||
+                                'No workout details available.'}
                             </div>
                             <div className="flex gap-2">
                               <button
@@ -286,16 +307,14 @@ export default function EnhancedReferenceWorkoutSearchModal({
                                   e.stopPropagation();
                                   handleSelectWorkout(workout);
                                 }}
-                                className={`btn btn-xs ${
-                                  isSelected ? 'btn-error' : 'btn-primary'
-                                }`}
+                                className={`btn btn-xs ${isSelected ? 'btn-error' : 'btn-primary'}`}
                               >
                                 {isSelected ? 'Remove' : 'Add'}
                               </button>
                               {isValidUrl(workout.source) && (
-                                <a 
-                                  href={workout.source} 
-                                  target="_blank" 
+                                <a
+                                  href={workout.source}
+                                  target="_blank"
                                   rel="noopener noreferrer"
                                   className="btn btn-outline btn-xs"
                                   onClick={(e) => e.stopPropagation()}
@@ -328,7 +347,6 @@ export default function EnhancedReferenceWorkoutSearchModal({
           </div>
         </div>
       </dialog>
-
     </>
   );
 }

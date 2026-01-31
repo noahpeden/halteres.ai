@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
-import { createMobileCompatibleClient, corsHeaders } from '@/utils/supabase/mobile';
 import OpenAI from 'openai';
+import { corsHeaders, createMobileCompatibleClient } from '@/utils/supabase/mobile';
 
 // Service role client for RPC calls
 const supabaseAdmin = createClient(
@@ -64,10 +64,7 @@ export async function POST(request) {
     } = body;
 
     if (!queryText) {
-      return Response.json(
-        { error: 'Missing queryText' },
-        { status: 400, headers: corsHeaders() }
-      );
+      return Response.json({ error: 'Missing queryText' }, { status: 400, headers: corsHeaders() });
     }
 
     // Generate embedding for query

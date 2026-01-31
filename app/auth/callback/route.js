@@ -1,5 +1,5 @@
-import { createClient } from '@/utils/supabase/server';
 import { NextResponse } from 'next/server';
+import { createClient } from '@/utils/supabase/server';
 
 export async function GET(request) {
   const requestUrl = new URL(request.url);
@@ -36,13 +36,13 @@ export async function GET(request) {
   // For password reset requests, redirect to reset-password page
   if (isReset) {
     console.log('Password reset flow detected, redirecting to reset-password');
-    return NextResponse.redirect(
-      new URL('/reset-password?auth=success', request.url)
-    );
+    return NextResponse.redirect(new URL('/reset-password?auth=success', request.url));
   }
 
   // Get the user to determine their role
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   if (user) {
     // Check if this is a new signup with role metadata
@@ -94,15 +94,15 @@ export async function GET(request) {
 
             if (!existingMembership) {
               // Create membership - always active (no approval process)
-              const { error: membershipError } = await supabase
-                .from('gym_memberships')
-                .insert([{
+              const { error: membershipError } = await supabase.from('gym_memberships').insert([
+                {
                   gym_id: gym.id,
                   user_id: user.id,
                   role: 'athlete',
                   status: 'active',
                   joined_at: new Date().toISOString(),
-                }]);
+                },
+              ]);
 
               if (membershipError) {
                 console.error('Error creating gym membership:', membershipError);

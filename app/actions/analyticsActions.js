@@ -28,7 +28,9 @@ async function createSupabaseClient() {
 export async function getGymOverviewAction(gymId) {
   const supabase = await createSupabaseClient();
 
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) {
     return { success: false, error: 'Not authenticated' };
   }
@@ -56,11 +58,14 @@ export async function getGymOverviewAction(gymId) {
     weekAgo.setDate(weekAgo.getDate() - 7);
     const { count: prsThisWeek } = await supabase
       .from('personal_records')
-      .select(`
+      .select(
+        `
         *,
         user:profiles!inner(id),
         membership:gym_memberships!inner(gym_id)
-      `, { count: 'exact', head: true })
+      `,
+        { count: 'exact', head: true }
+      )
       .eq('membership.gym_id', gymId)
       .gte('achieved_at', weekAgo.toISOString());
 
@@ -91,7 +96,9 @@ export async function getGymOverviewAction(gymId) {
 export async function getRecentPRsAction(gymId, limit = 10) {
   const supabase = await createSupabaseClient();
 
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) {
     return { success: false, error: 'Not authenticated' };
   }
@@ -140,7 +147,9 @@ export async function getRecentPRsAction(gymId, limit = 10) {
 export async function getParticipationStatsAction(gymId, days = 7) {
   const supabase = await createSupabaseClient();
 
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) {
     return { success: false, error: 'Not authenticated' };
   }
@@ -159,7 +168,10 @@ export async function getParticipationStatsAction(gymId, days = 7) {
     const memberIds = memberships?.map((m) => m.user_id) || [];
 
     if (memberIds.length === 0) {
-      return { success: true, data: { participationByDay: [], activeAthletes: 0, totalAthletes: 0 } };
+      return {
+        success: true,
+        data: { participationByDay: [], activeAthletes: 0, totalAthletes: 0 },
+      };
     }
 
     // Get results grouped by day
@@ -205,9 +217,8 @@ export async function getParticipationStatsAction(gymId, days = 7) {
         participationByDay,
         activeAthletes: activeAthleteIds.size,
         totalAthletes: memberIds.length,
-        participationRate: memberIds.length > 0
-          ? Math.round((activeAthleteIds.size / memberIds.length) * 100)
-          : 0,
+        participationRate:
+          memberIds.length > 0 ? Math.round((activeAthleteIds.size / memberIds.length) * 100) : 0,
       },
     };
   } catch (error) {
@@ -220,7 +231,9 @@ export async function getParticipationStatsAction(gymId, days = 7) {
 export async function getTopPerformersAction(gymId, limit = 5) {
   const supabase = await createSupabaseClient();
 
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) {
     return { success: false, error: 'Not authenticated' };
   }
@@ -309,7 +322,9 @@ export async function getTopPerformersAction(gymId, limit = 5) {
 export async function getAthleteListAction(gymId) {
   const supabase = await createSupabaseClient();
 
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) {
     return { success: false, error: 'Not authenticated' };
   }
@@ -351,7 +366,10 @@ export async function getAthleteListAction(gymId) {
     const lastActivityByUser = {};
     (results || []).forEach((r) => {
       resultCountByUser[r.user_id] = (resultCountByUser[r.user_id] || 0) + 1;
-      if (!lastActivityByUser[r.user_id] || new Date(r.created_at) > new Date(lastActivityByUser[r.user_id])) {
+      if (
+        !lastActivityByUser[r.user_id] ||
+        new Date(r.created_at) > new Date(lastActivityByUser[r.user_id])
+      ) {
         lastActivityByUser[r.user_id] = r.created_at;
       }
     });
@@ -387,11 +405,12 @@ export async function getAthleteListAction(gymId) {
 
 function formatPRValue(pr) {
   switch (pr.result_type) {
-    case 'time':
+    case 'time': {
       if (!pr.time_seconds) return '-';
       const mins = Math.floor(pr.time_seconds / 60);
       const secs = pr.time_seconds % 60;
       return `${mins}:${secs.toString().padStart(2, '0')}`;
+    }
     case 'weight':
       return `${pr.weight_kg || 0} kg`;
     case 'reps':
@@ -409,7 +428,9 @@ function formatPRValue(pr) {
 export async function getProgramsForAnalyticsAction(gymId) {
   const supabase = await createSupabaseClient();
 
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) {
     return { success: false, error: 'Not authenticated' };
   }
@@ -432,9 +453,9 @@ export async function getProgramsForAnalyticsAction(gymId) {
     if (error) throw error;
 
     // Get workout counts for each program
-    const programIds = (programs || []).map(p => p.id);
+    const programIds = (programs || []).map((p) => p.id);
 
-    let workoutCounts = {};
+    const workoutCounts = {};
     if (programIds.length > 0) {
       const { data: workouts } = await supabase
         .from('program_workouts')
@@ -442,12 +463,12 @@ export async function getProgramsForAnalyticsAction(gymId) {
         .in('program_id', programIds)
         .is('deleted_at', null);
 
-      (workouts || []).forEach(w => {
+      (workouts || []).forEach((w) => {
         workoutCounts[w.program_id] = (workoutCounts[w.program_id] || 0) + 1;
       });
     }
 
-    const formattedPrograms = (programs || []).map(p => ({
+    const formattedPrograms = (programs || []).map((p) => ({
       id: p.id,
       name: p.name,
       entityName: p.entity?.name || 'Unknown',
@@ -468,7 +489,9 @@ export async function getProgramsForAnalyticsAction(gymId) {
 export async function getProgramAnalyticsAction(programId, gymId) {
   const supabase = await createSupabaseClient();
 
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) {
     return { success: false, error: 'Not authenticated' };
   }
@@ -499,7 +522,7 @@ export async function getProgramAnalyticsAction(programId, gymId) {
 
     if (workoutsError) throw workoutsError;
 
-    const workoutIds = (workouts || []).map(w => w.id);
+    const workoutIds = (workouts || []).map((w) => w.id);
     const totalWorkouts = workoutIds.length;
 
     if (totalWorkouts === 0) {
@@ -536,11 +559,11 @@ export async function getProgramAnalyticsAction(programId, gymId) {
     if (resultsError) throw resultsError;
 
     // Calculate completion stats
-    const uniqueWorkoutsCompleted = new Set((results || []).map(r => r.workout_id)).size;
+    const uniqueWorkoutsCompleted = new Set((results || []).map((r) => r.workout_id)).size;
 
     // Calculate participation by athlete
     const athleteStats = {};
-    (results || []).forEach(r => {
+    (results || []).forEach((r) => {
       if (!athleteStats[r.user_id]) {
         athleteStats[r.user_id] = {
           userId: r.user_id,
@@ -556,8 +579,9 @@ export async function getProgramAnalyticsAction(programId, gymId) {
       }
     });
 
-    const participationByAthlete = Object.values(athleteStats)
-      .sort((a, b) => b.completedCount - a.completedCount);
+    const participationByAthlete = Object.values(athleteStats).sort(
+      (a, b) => b.completedCount - a.completedCount
+    );
 
     // Get PRs in this program
     const { data: prs } = await supabase
@@ -574,11 +598,14 @@ export async function getProgramAnalyticsAction(programId, gymId) {
         achieved_at,
         user:profiles(id, display_name, full_name, profile_photo_url)
       `)
-      .in('workout_result_id', (results || []).filter(r => r.is_pr).map(r => r.id))
+      .in(
+        'workout_result_id',
+        (results || []).filter((r) => r.is_pr).map((r) => r.id)
+      )
       .order('achieved_at', { ascending: false })
       .limit(20);
 
-    const prsInProgram = (prs || []).map(pr => ({
+    const prsInProgram = (prs || []).map((pr) => ({
       id: pr.id,
       userId: pr.user_id,
       displayName: pr.user?.display_name || pr.user?.full_name || 'Athlete',
@@ -592,13 +619,13 @@ export async function getProgramAnalyticsAction(programId, gymId) {
     const workoutsByWeek = {};
     const completedByWeek = {};
 
-    (workouts || []).forEach(w => {
+    (workouts || []).forEach((w) => {
       const week = w.week_number || 1;
       workoutsByWeek[week] = (workoutsByWeek[week] || 0) + 1;
     });
 
-    (results || []).forEach(r => {
-      const workout = workouts.find(w => w.id === r.workout_id);
+    (results || []).forEach((r) => {
+      const workout = workouts.find((w) => w.id === r.workout_id);
       if (workout) {
         const week = workout.week_number || 1;
         if (!completedByWeek[week]) {
@@ -610,7 +637,7 @@ export async function getProgramAnalyticsAction(programId, gymId) {
 
     const workoutCompletionByWeek = Object.keys(workoutsByWeek)
       .sort((a, b) => Number(a) - Number(b))
-      .map(week => ({
+      .map((week) => ({
         week: `Week ${week}`,
         total: workoutsByWeek[week],
         completed: completedByWeek[week]?.size || 0,
@@ -623,7 +650,8 @@ export async function getProgramAnalyticsAction(programId, gymId) {
         entityName: program.entity?.name,
         totalWorkouts,
         completedWorkouts: uniqueWorkoutsCompleted,
-        completionRate: totalWorkouts > 0 ? Math.round((uniqueWorkoutsCompleted / totalWorkouts) * 100) : 0,
+        completionRate:
+          totalWorkouts > 0 ? Math.round((uniqueWorkoutsCompleted / totalWorkouts) * 100) : 0,
         totalPRs: prsInProgram.length,
         participationByAthlete,
         prsInProgram,
@@ -644,7 +672,9 @@ export async function getProgramAnalyticsAction(programId, gymId) {
 export async function getAthleteAnalyticsAction(gymId, athleteId) {
   const supabase = await createSupabaseClient();
 
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) {
     return { success: false, error: 'Not authenticated' };
   }
@@ -692,11 +722,14 @@ export async function getAthleteAnalyticsAction(gymId, athleteId) {
 
     // Calculate overall stats
     const totalWorkouts = (results || []).length;
-    const totalPRs = (results || []).filter(r => r.is_pr).length;
-    const effortValues = (results || []).filter(r => r.perceived_effort).map(r => r.perceived_effort);
-    const avgEffort = effortValues.length > 0
-      ? Math.round(effortValues.reduce((a, b) => a + b, 0) / effortValues.length * 10) / 10
-      : null;
+    const totalPRs = (results || []).filter((r) => r.is_pr).length;
+    const effortValues = (results || [])
+      .filter((r) => r.perceived_effort)
+      .map((r) => r.perceived_effort);
+    const avgEffort =
+      effortValues.length > 0
+        ? Math.round((effortValues.reduce((a, b) => a + b, 0) / effortValues.length) * 10) / 10
+        : null;
 
     // Calculate current streak
     let currentStreak = 0;
@@ -704,9 +737,9 @@ export async function getAthleteAnalyticsAction(gymId, athleteId) {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
-      let checkDate = new Date(today);
+      const checkDate = new Date(today);
       const resultDates = new Set(
-        results.map(r => new Date(r.created_at).toISOString().split('T')[0])
+        results.map((r) => new Date(r.created_at).toISOString().split('T')[0])
       );
 
       while (resultDates.has(checkDate.toISOString().split('T')[0])) {
@@ -720,9 +753,9 @@ export async function getAthleteAnalyticsAction(gymId, athleteId) {
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
     const workoutHistory = (results || [])
-      .filter(r => new Date(r.created_at) >= thirtyDaysAgo)
+      .filter((r) => new Date(r.created_at) >= thirtyDaysAgo)
       .slice(0, 20)
-      .map(r => ({
+      .map((r) => ({
         id: r.id,
         date: r.created_at,
         title: r.workout?.title || 'Workout',
@@ -733,12 +766,14 @@ export async function getAthleteAnalyticsAction(gymId, athleteId) {
     // Get PR history
     const { data: prs } = await supabase
       .from('personal_records')
-      .select('id, category, custom_name, result_type, time_seconds, weight_kg, reps, achieved_at, improvement_percentage')
+      .select(
+        'id, category, custom_name, result_type, time_seconds, weight_kg, reps, achieved_at, improvement_percentage'
+      )
       .eq('user_id', athleteId)
       .order('achieved_at', { ascending: false })
       .limit(20);
 
-    const prHistory = (prs || []).map(pr => ({
+    const prHistory = (prs || []).map((pr) => ({
       id: pr.id,
       movement: pr.custom_name || pr.category,
       value: formatPRValue(pr),
@@ -753,13 +788,13 @@ export async function getAthleteAnalyticsAction(gymId, athleteId) {
     const participationByWeek = [];
     for (let i = 7; i >= 0; i--) {
       const weekStart = new Date();
-      weekStart.setDate(weekStart.getDate() - (i * 7) - 6);
+      weekStart.setDate(weekStart.getDate() - i * 7 - 6);
       weekStart.setHours(0, 0, 0, 0);
 
       const weekEnd = new Date(weekStart);
       weekEnd.setDate(weekEnd.getDate() + 7);
 
-      const weekResults = (results || []).filter(r => {
+      const weekResults = (results || []).filter((r) => {
         const resultDate = new Date(r.created_at);
         return resultDate >= weekStart && resultDate < weekEnd;
       });
@@ -773,7 +808,7 @@ export async function getAthleteAnalyticsAction(gymId, athleteId) {
 
     // Get program participation
     const programResults = {};
-    (results || []).forEach(r => {
+    (results || []).forEach((r) => {
       if (r.workout?.program_id) {
         if (!programResults[r.workout.program_id]) {
           programResults[r.workout.program_id] = {
@@ -802,11 +837,11 @@ export async function getAthleteAnalyticsAction(gymId, athleteId) {
         .is('deleted_at', null);
 
       const totalByProgram = {};
-      (allWorkouts || []).forEach(w => {
+      (allWorkouts || []).forEach((w) => {
         totalByProgram[w.program_id] = (totalByProgram[w.program_id] || 0) + 1;
       });
 
-      programParticipation = (programs || []).map(p => ({
+      programParticipation = (programs || []).map((p) => ({
         programId: p.id,
         programName: p.name,
         completedWorkouts: programResults[p.id]?.completedWorkouts || 0,
@@ -842,11 +877,12 @@ export async function getAthleteAnalyticsAction(gymId, athleteId) {
 
 function formatResultValue(result) {
   switch (result.result_type) {
-    case 'time':
+    case 'time': {
       if (!result.time_seconds) return '-';
       const mins = Math.floor(result.time_seconds / 60);
       const secs = result.time_seconds % 60;
       return `${mins}:${secs.toString().padStart(2, '0')}`;
+    }
     case 'weight':
       return `${result.weight_kg || 0} kg`;
     case 'reps':

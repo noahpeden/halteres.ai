@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 
 export function useProgramData(programId) {
@@ -115,10 +115,7 @@ export function useProgramData(programId) {
   // Fetch on mount and when programId changes
   useEffect(() => {
     // Fetch if programId changed OR if we don't have program data yet
-    if (
-      programId !== previousProgramIdRef.current ||
-      (!program && programId && supabase)
-    ) {
+    if (programId !== previousProgramIdRef.current || (!program && programId && supabase)) {
       previousProgramIdRef.current = programId;
       fetchProgram();
     }
@@ -201,9 +198,7 @@ export function useProgramData(programId) {
       };
     }
 
-    const convertedDaysOfWeek = convertDaysOfWeek(
-      program.calendar_data?.days_of_week
-    );
+    const convertedDaysOfWeek = convertDaysOfWeek(program.calendar_data?.days_of_week);
 
     return {
       name: program.name || '',
@@ -217,12 +212,10 @@ export function useProgramData(programId) {
       workoutFormats: Array.isArray(program.workout_format?.formats)
         ? program.workout_format.formats
         : Array.isArray(program.workout_format)
-        ? program.workout_format
-        : [],
+          ? program.workout_format
+          : [],
       numberOfWeeks: String(program.duration_weeks || 4),
-      daysPerWeek: String(
-        convertedDaysOfWeek?.length || program.calendar_data?.days_per_week || 3
-      ),
+      daysPerWeek: String(convertedDaysOfWeek?.length || program.calendar_data?.days_per_week || 3),
       daysOfWeek: convertedDaysOfWeek,
       programType: program.periodization?.program_type || 'linear',
       gymType: convertGymType(program.gym_details?.gym_type),
@@ -247,10 +240,7 @@ export function useProgramData(programId) {
       outdoor: 'outdoor',
     };
 
-    return (
-      gymTypeMap[gymType.toLowerCase()] ||
-      gymType.toLowerCase().replace(/\s+/g, '_')
-    );
+    return gymTypeMap[gymType.toLowerCase()] || gymType.toLowerCase().replace(/\s+/g, '_');
   }, []);
 
   // Helper to transform form data to database format
@@ -264,9 +254,7 @@ export function useProgramData(programId) {
         difficulty: formData.difficulty,
         focus_area: formData.focusArea,
         workout_format: {
-          formats: Array.isArray(formData.workoutFormats)
-            ? formData.workoutFormats
-            : [],
+          formats: Array.isArray(formData.workoutFormats) ? formData.workoutFormats : [],
         },
         duration_weeks: parseInt(formData.numberOfWeeks) || 4,
         periodization: {

@@ -1,47 +1,45 @@
 'use client';
-import { useState, useMemo } from 'react';
-import Link from 'next/link';
 import {
-  Plus,
-  Users,
-  Calendar,
-  TrendingUp,
-  Dumbbell,
-  Filter,
-  Search,
-  LayoutGrid,
-  FileText,
-  Clock,
+  Activity,
   ArrowRight,
+  BarChart3,
   Building2,
-  Link2,
+  Calendar,
+  ChevronRight,
+  Clock,
   Copy,
+  Dumbbell,
+  FileText,
+  Filter,
+  LayoutGrid,
+  Link2,
+  Plus,
+  Search,
   Settings,
   Sparkles,
   Target,
+  TrendingUp,
   Trophy,
-  ChevronRight,
-  Activity,
-  Zap,
-  BarChart3,
   UserPlus,
+  Users,
+  Zap,
 } from 'lucide-react';
-
-// Dashboard components
-import ProgramsList from './ProgramsList';
-import FeedbackSection from './FeedbackSection';
-import EntitySelectionModal from './EntitySelectionModal';
-import CreateEntityModal from './CreateEntityModal';
-import CreateProgramModal from './CreateProgramModal';
-import DeleteProgramModal from './DeleteProgramModal';
-import CollapsibleWorkoutsSection from './CollapsibleWorkoutsSection';
-import ThisWeeksWorkouts from '../ThisWeeksWorkouts';
-import TodayWorkouts from '../TodayWorkouts';
-
+import Link from 'next/link';
+import { useMemo, useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 // Custom hooks
 import { useDashboardData } from '@/hooks/useDashboardData';
 import { useDashboardModals } from '@/hooks/useDashboardModals';
-import { useAuth } from '@/contexts/AuthContext';
+import ThisWeeksWorkouts from '../ThisWeeksWorkouts';
+import TodayWorkouts from '../TodayWorkouts';
+import CollapsibleWorkoutsSection from './CollapsibleWorkoutsSection';
+import CreateEntityModal from './CreateEntityModal';
+import CreateProgramModal from './CreateProgramModal';
+import DeleteProgramModal from './DeleteProgramModal';
+import EntitySelectionModal from './EntitySelectionModal';
+import FeedbackSection from './FeedbackSection';
+// Dashboard components
+import ProgramsList from './ProgramsList';
 
 export default function Dashboard() {
   const [filterEntityId, setFilterEntityId] = useState('all');
@@ -54,15 +52,8 @@ export default function Dashboard() {
   const { subscriptionStatus, currentGym } = useAuth();
 
   // Custom hooks for data and modal management
-  const {
-    programs,
-    entities,
-    stats,
-    isLoading,
-    setPrograms,
-    setEntities,
-    setStats,
-  } = useDashboardData();
+  const { programs, entities, stats, isLoading, setPrograms, setEntities, setStats } =
+    useDashboardData();
 
   const {
     // Modal states
@@ -111,8 +102,8 @@ export default function Dashboard() {
 
   // Calculate stats
   const dashboardStats = useMemo(() => {
-    const clientCount = entities.filter(e => e.type === 'CLIENT').length;
-    const classCount = entities.filter(e => e.type === 'CLASS').length;
+    const clientCount = entities.filter((e) => e.type === 'CLIENT').length;
+    const classCount = entities.filter((e) => e.type === 'CLASS').length;
     const activePrograms = programs.length;
 
     return {
@@ -170,9 +161,7 @@ export default function Dashboard() {
       <div className="min-h-screen bg-base-200 flex justify-center items-center">
         <div className="flex flex-col items-center space-y-4">
           <span className="loading loading-spinner loading-lg text-primary"></span>
-          <p className="text-base-content/70 font-medium">
-            Loading your dashboard...
-          </p>
+          <p className="text-base-content/70 font-medium">Loading your dashboard...</p>
         </div>
       </div>
     );
@@ -198,10 +187,7 @@ export default function Dashboard() {
               </p>
             </div>
 
-            <button
-              onClick={handleCreateProgram}
-              className="btn btn-primary gap-2"
-            >
+            <button onClick={handleCreateProgram} className="btn btn-primary gap-2">
               <Plus className="w-4 h-4" />
               Create Program
             </button>
@@ -221,9 +207,7 @@ export default function Dashboard() {
                 </div>
                 <span className="badge badge-primary badge-outline">Gym</span>
               </div>
-              <h2 className="card-title text-xl">
-                {currentGym?.name || 'Your Gym'}
-              </h2>
+              <h2 className="card-title text-xl">{currentGym?.name || 'Your Gym'}</h2>
               <p className="text-base-content/60 text-sm mb-4">
                 Manage settings, invite athletes, and configure your gym
               </p>
@@ -247,7 +231,10 @@ export default function Dashboard() {
               )}
 
               <div className="card-actions">
-                <Link href="/dashboard/gym" className="btn btn-primary text-primary-content btn-block gap-2">
+                <Link
+                  href="/dashboard/gym"
+                  className="btn btn-primary text-primary-content btn-block gap-2"
+                >
                   <Settings className="w-4 h-4" />
                   Manage Gym
                   <ChevronRight className="w-4 h-4 ml-auto" />
@@ -283,7 +270,10 @@ export default function Dashboard() {
               </div>
 
               <div className="card-actions">
-                <Link href="/dashboard/manage/entities" className="btn btn-accent text-accent-content btn-block gap-2">
+                <Link
+                  href="/dashboard/manage/entities"
+                  className="btn btn-accent text-accent-content btn-block gap-2"
+                >
                   <Target className="w-4 h-4" />
                   Manage Clients & Classes
                   <ChevronRight className="w-4 h-4 ml-auto" />
@@ -366,17 +356,12 @@ export default function Dashboard() {
               <div className="card-body">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-5 gap-3">
                   <div>
-                    <h2 className="card-title text-lg sm:text-xl">
-                      Your Programs
-                    </h2>
+                    <h2 className="card-title text-lg sm:text-xl">Your Programs</h2>
                     <p className="text-sm text-base-content/60 mt-0.5">
                       Manage and track your training programs
                     </p>
                   </div>
-                  <button
-                    onClick={handleCreateProgram}
-                    className="btn btn-primary btn-sm gap-2"
-                  >
+                  <button onClick={handleCreateProgram} className="btn btn-primary btn-sm gap-2">
                     <Plus className="w-4 h-4" />
                     New Program
                   </button>

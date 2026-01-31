@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
-import { useAuth } from '@/contexts/AuthContext';
 import { X } from 'lucide-react';
-import WizardProgress from '../../components/ProgramWizard/WizardProgress';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import WorkoutFormatSelector from '@/components/selectors/WorkoutFormatSelector';
-import { gymEquipmentPresets } from '../../components/utils';
+import { useAuth } from '@/contexts/AuthContext';
 import equipmentList from '@/utils/equipmentList';
+import WizardProgress from '../../components/ProgramWizard/WizardProgress';
+import { gymEquipmentPresets } from '../../components/utils';
 
 const gymTypes = [
   { value: 'Crossfit Box', label: 'CrossFit Box', icon: '🏋️' },
@@ -42,7 +42,9 @@ export default function Step4Page() {
   const programId = searchParams.get('programId');
 
   // Initialize with Crossfit Box equipment preset
-  const [selectedEquipment, setSelectedEquipment] = useState(gymEquipmentPresets['Crossfit Box'] || []);
+  const [selectedEquipment, setSelectedEquipment] = useState(
+    gymEquipmentPresets['Crossfit Box'] || []
+  );
   const [selectedGymType, setSelectedGymType] = useState('Crossfit Box');
   const [hasLoadedEquipment, setHasLoadedEquipment] = useState(false);
 
@@ -76,20 +78,26 @@ export default function Step4Page() {
             const gymTypeFromDb = program.gym_details?.gym_type || program.gym_type;
             if (gymTypeFromDb) {
               // Convert from snake_case to Title Case
-              const gymType = gymTypes.find(g => 
-                g.value.toLowerCase().replace(/\s+/g, '_').replace(/\//g, '_') === gymTypeFromDb
-              )?.value || 'Crossfit Box';
+              const gymType =
+                gymTypes.find(
+                  (g) =>
+                    g.value.toLowerCase().replace(/\s+/g, '_').replace(/\//g, '_') === gymTypeFromDb
+                )?.value || 'Crossfit Box';
               setSelectedGymType(gymType);
-              
+
               // Auto-set equipment based on gym type
               const preset = gymEquipmentPresets[gymType];
               if (preset) {
                 setSelectedEquipment(preset);
               }
             }
-            
+
             // Override with specific equipment if stored (convert names to IDs)
-            if (program.gym_details?.equipment && Array.isArray(program.gym_details.equipment) && program.gym_details.equipment.length > 0) {
+            if (
+              program.gym_details?.equipment &&
+              Array.isArray(program.gym_details.equipment) &&
+              program.gym_details.equipment.length > 0
+            ) {
               const equipmentIds = program.gym_details.equipment
                 .map((name) => {
                   const equipment = equipmentList.find((item) => item.label === name);
@@ -99,17 +107,22 @@ export default function Step4Page() {
               setSelectedEquipment(equipmentIds);
               setHasLoadedEquipment(true);
             }
-            
+
             setDifficultyLevel(program.difficulty || 'intermediate');
             setFocusArea(program.focus_area || 'full_body');
             setWorkoutDuration(
-              program.session_details?.duration_minutes || 
-              program.session_details?.main_workout_duration || 
-              60
+              program.session_details?.duration_minutes ||
+                program.session_details?.main_workout_duration ||
+                60
             );
             setSelectedFormats(
-              program.workout_format?.formats || 
-              ['strength', 'hypertrophy', 'endurance', 'power', 'metcon']
+              program.workout_format?.formats || [
+                'strength',
+                'hypertrophy',
+                'endurance',
+                'power',
+                'metcon',
+              ]
             );
           }
         } catch (error) {
@@ -137,25 +150,24 @@ export default function Step4Page() {
   const handleGymTypeChange = async (gymType) => {
     // Update gym type
     setSelectedGymType(gymType);
-    
+
     // Always apply the preset when user manually changes gym type
     const preset = gymEquipmentPresets[gymType];
     if (preset) {
       setSelectedEquipment(preset);
-      
+
       // Save the new equipment selection immediately
       if (programId) {
         try {
-          const gymTypeSnakeCase = gymType
-            .toLowerCase()
-            .replace(/\s+/g, '_')
-            .replace(/\//g, '_');
+          const gymTypeSnakeCase = gymType.toLowerCase().replace(/\s+/g, '_').replace(/\//g, '_');
 
           // Convert equipment IDs to names for database storage
-          const equipmentNames = preset.map((id) => {
-            const equipment = equipmentList.find((item) => item.value === id);
-            return equipment ? equipment.label : null;
-          }).filter(Boolean);
+          const equipmentNames = preset
+            .map((id) => {
+              const equipment = equipmentList.find((item) => item.value === id);
+              return equipment ? equipment.label : null;
+            })
+            .filter(Boolean);
 
           await supabase
             .from('programs')
@@ -175,22 +187,18 @@ export default function Step4Page() {
 
   const handleFormatToggle = (format) => {
     setSelectedFormats((prev) =>
-      prev.includes(format)
-        ? prev.filter((f) => f !== format)
-        : [...prev, format]
+      prev.includes(format) ? prev.filter((f) => f !== format) : [...prev, format]
     );
   };
 
   const handleEquipmentToggle = async (equipmentValue) => {
     const value = equipmentValue === '-1' ? -1 : parseInt(equipmentValue);
-    
+
     let newEquipment;
     if (value === -1) {
       // Toggle all equipment
       const allSelected = selectedEquipment.length === equipmentList.length;
-      newEquipment = allSelected
-        ? []
-        : equipmentList.map((item) => item.value);
+      newEquipment = allSelected ? [] : equipmentList.map((item) => item.value);
       setSelectedEquipment(newEquipment);
     } else {
       const isSelected = selectedEquipment.includes(value);
@@ -209,10 +217,12 @@ export default function Step4Page() {
           .replace(/\//g, '_');
 
         // Convert equipment IDs to names for database storage
-        const equipmentNames = newEquipment.map((id) => {
-          const equipment = equipmentList.find((item) => item.value === id);
-          return equipment ? equipment.label : null;
-        }).filter(Boolean);
+        const equipmentNames = newEquipment
+          .map((id) => {
+            const equipment = equipmentList.find((item) => item.value === id);
+            return equipment ? equipment.label : null;
+          })
+          .filter(Boolean);
 
         await supabase
           .from('programs')
@@ -246,16 +256,15 @@ export default function Step4Page() {
     if (!programId) return;
 
     // Convert gym type to snake_case for database storage
-    const gymTypeSnakeCase = selectedGymType
-      .toLowerCase()
-      .replace(/\s+/g, '_')
-      .replace(/\//g, '_');
+    const gymTypeSnakeCase = selectedGymType.toLowerCase().replace(/\s+/g, '_').replace(/\//g, '_');
 
     // Convert equipment IDs to names for database storage
-    const equipmentNames = selectedEquipment.map((id) => {
-      const equipment = equipmentList.find((item) => item.value === id);
-      return equipment ? equipment.label : null;
-    }).filter(Boolean);
+    const equipmentNames = selectedEquipment
+      .map((id) => {
+        const equipment = equipmentList.find((item) => item.value === id);
+        return equipment ? equipment.label : null;
+      })
+      .filter(Boolean);
 
     const { error } = await supabase
       .from('programs')
@@ -311,9 +320,7 @@ export default function Step4Page() {
       {/* Exit button when there's a programId */}
       {programId && (
         <button
-          onClick={() =>
-            (window.location.href = `/program/${programId}/writer`)
-          }
+          onClick={() => (window.location.href = `/program/${programId}/writer`)}
           className="absolute top-4 right-4 btn btn-ghost btn-circle z-10"
           title="Exit wizard and go to program writer"
         >
@@ -331,9 +338,7 @@ export default function Step4Page() {
 
       <div className="bg-base-200 rounded-lg p-6">
         <div className="text-center mb-6">
-          <h2 className="text-2xl font-bold text-primary mb-2">
-            Gym Setup & Preferences
-          </h2>
+          <h2 className="text-2xl font-bold text-primary mb-2">Gym Setup & Preferences</h2>
           <p className="text-base-content/70">
             Configure equipment, difficulty, and workout preferences
           </p>
@@ -348,9 +353,7 @@ export default function Step4Page() {
                 <label
                   key={gym.value}
                   className={`card bg-base-100 p-4 cursor-pointer transition-all hover:shadow-md ${
-                    selectedGymType === gym.value
-                      ? 'ring-2 ring-primary bg-primary/5'
-                      : ''
+                    selectedGymType === gym.value ? 'ring-2 ring-primary bg-primary/5' : ''
                   }`}
                 >
                   <input
@@ -392,10 +395,7 @@ export default function Step4Page() {
             </div>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 max-h-64 overflow-y-auto p-2 bg-base-100 rounded-lg">
               {equipmentList.map((equipment) => (
-                <label
-                  key={equipment.value}
-                  className="flex items-center space-x-2 cursor-pointer"
-                >
+                <label key={equipment.value} className="flex items-center space-x-2 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={selectedEquipment.includes(equipment.value)}
@@ -449,17 +449,13 @@ export default function Step4Page() {
 
             <div>
               <label className="label">
-                <span className="label-text font-medium">
-                  Workout Duration (minutes)
-                </span>
+                <span className="label-text font-medium">Workout Duration (minutes)</span>
               </label>
               <input
                 type="number"
                 value={workoutDuration}
                 onChange={(e) =>
-                  setWorkoutDuration(
-                    e.target.value === '' ? '' : parseInt(e.target.value)
-                  )
+                  setWorkoutDuration(e.target.value === '' ? '' : parseInt(e.target.value))
                 }
                 min="15"
                 max="120"
@@ -483,17 +479,8 @@ export default function Step4Page() {
         </div>
 
         <div className="flex justify-between mt-8">
-          <button 
-            onClick={handlePrevious} 
-            className="btn btn-outline"
-            disabled={isSaving}
-          >
-            <svg
-              className="w-5 h-5 mr-2"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
+          <button onClick={handlePrevious} className="btn btn-outline" disabled={isSaving}>
+            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -504,9 +491,7 @@ export default function Step4Page() {
             Back to Step 3
           </button>
 
-          <div className="text-sm text-base-content/60">
-            Step 4 of 5 • Gym Setup
-          </div>
+          <div className="text-sm text-base-content/60">Step 4 of 5 • Gym Setup</div>
 
           <button
             onClick={handleNext}
@@ -521,12 +506,7 @@ export default function Step4Page() {
             ) : (
               <>
                 Continue to Step 5
-                <svg
-                  className="w-4 h-4 ml-2"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
+                <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"

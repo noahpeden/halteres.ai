@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 
 // --- Unit Conversion Helpers (copied from ClientMetricsTab) ---
 const kgToLbs = (kg) => (kg ? Math.round(kg * 2.20462 * 10) / 10 : 0);
@@ -61,21 +61,15 @@ const CreateEditEntityModal = ({
         const initialImperial = true; // Or derive from user preferences if stored
         setUseImperial(initialImperial);
         const initialMetrics = {
-          bench_1rm: initialImperial
-            ? kgToLbs(entityToEdit.bench_1rm)
-            : entityToEdit.bench_1rm,
+          bench_1rm: initialImperial ? kgToLbs(entityToEdit.bench_1rm) : entityToEdit.bench_1rm,
           deadlift_1rm: initialImperial
             ? kgToLbs(entityToEdit.deadlift_1rm)
             : entityToEdit.deadlift_1rm,
-          squat_1rm: initialImperial
-            ? kgToLbs(entityToEdit.squat_1rm)
-            : entityToEdit.squat_1rm,
+          squat_1rm: initialImperial ? kgToLbs(entityToEdit.squat_1rm) : entityToEdit.squat_1rm,
           mile_time: entityToEdit.mile_time || '',
           gender: entityToEdit.gender || '', // Added gender
           height_cm: entityToEdit.height_cm || 0,
-          weight_kg: initialImperial
-            ? kgToLbs(entityToEdit.weight_kg)
-            : entityToEdit.weight_kg,
+          weight_kg: initialImperial ? kgToLbs(entityToEdit.weight_kg) : entityToEdit.weight_kg,
           recovery_score: entityToEdit.recovery_score || 0, // Added recovery
           injury_history: entityToEdit.injury_history || '', // Added injury
         };
@@ -152,21 +146,17 @@ const CreateEditEntityModal = ({
       classMetrics.skill_distribution[otherLevels[0]] +
       classMetrics.skill_distribution[otherLevels[1]];
 
-    let newDistribution = { ...classMetrics.skill_distribution, [level]: numValue };
+    const newDistribution = { ...classMetrics.skill_distribution, [level]: numValue };
 
     if (currentOtherTotal > 0) {
-      const ratio0 =
-        classMetrics.skill_distribution[otherLevels[0]] / currentOtherTotal;
-      const ratio1 =
-        classMetrics.skill_distribution[otherLevels[1]] / currentOtherTotal;
+      const ratio0 = classMetrics.skill_distribution[otherLevels[0]] / currentOtherTotal;
+      const ratio1 = classMetrics.skill_distribution[otherLevels[1]] / currentOtherTotal;
       newDistribution[otherLevels[0]] = Math.round(remaining * ratio0);
       newDistribution[otherLevels[1]] = Math.round(remaining * ratio1);
 
       // Adjust for rounding errors
       const total =
-        newDistribution.beginner +
-        newDistribution.intermediate +
-        newDistribution.advanced;
+        newDistribution.beginner + newDistribution.intermediate + newDistribution.advanced;
       if (total !== 100) {
         newDistribution[otherLevels[1]] += 100 - total;
       }
@@ -185,18 +175,10 @@ const CreateEditEntityModal = ({
     // Convert metric values when toggling units
     setMetrics((prev) => ({
       ...prev,
-      bench_1rm: newImperialValue
-        ? kgToLbs(prev.bench_1rm)
-        : lbsToKg(prev.bench_1rm),
-      deadlift_1rm: newImperialValue
-        ? kgToLbs(prev.deadlift_1rm)
-        : lbsToKg(prev.deadlift_1rm),
-      squat_1rm: newImperialValue
-        ? kgToLbs(prev.squat_1rm)
-        : lbsToKg(prev.squat_1rm),
-      weight_kg: newImperialValue
-        ? kgToLbs(prev.weight_kg)
-        : lbsToKg(prev.weight_kg),
+      bench_1rm: newImperialValue ? kgToLbs(prev.bench_1rm) : lbsToKg(prev.bench_1rm),
+      deadlift_1rm: newImperialValue ? kgToLbs(prev.deadlift_1rm) : lbsToKg(prev.deadlift_1rm),
+      squat_1rm: newImperialValue ? kgToLbs(prev.squat_1rm) : lbsToKg(prev.squat_1rm),
+      weight_kg: newImperialValue ? kgToLbs(prev.weight_kg) : lbsToKg(prev.weight_kg),
     }));
 
     // Handle height conversion separately
@@ -227,16 +209,12 @@ const CreateEditEntityModal = ({
     if (isClientType) {
       const metricsToSave = {
         bench_1rm: useImperial ? lbsToKg(metrics.bench_1rm) : metrics.bench_1rm,
-        deadlift_1rm: useImperial
-          ? lbsToKg(metrics.deadlift_1rm)
-          : metrics.deadlift_1rm,
+        deadlift_1rm: useImperial ? lbsToKg(metrics.deadlift_1rm) : metrics.deadlift_1rm,
         squat_1rm: useImperial ? lbsToKg(metrics.squat_1rm) : metrics.squat_1rm,
         mile_time: metrics.mile_time,
         gender: metrics.gender,
         height_cm: Math.round(
-          useImperial
-            ? feetInchesToCm(heightFeet, heightInches)
-            : metrics.height_cm
+          useImperial ? feetInchesToCm(heightFeet, heightInches) : metrics.height_cm
         ),
         weight_kg: useImperial ? lbsToKg(metrics.weight_kg) : metrics.weight_kg,
         recovery_score: Math.round(metrics.recovery_score),
@@ -275,9 +253,7 @@ const CreateEditEntityModal = ({
 
   if (!isOpen) return null;
 
-  const modalTitle = entityToEdit
-    ? 'Edit Client/Class'
-    : 'Create New Client/Class';
+  const modalTitle = entityToEdit ? 'Edit Client/Class' : 'Create New Client/Class';
   const submitButtonText = entityToEdit ? 'Update' : 'Create';
 
   return (
@@ -329,10 +305,7 @@ const CreateEditEntityModal = ({
                 className="select select-bordered w-full"
                 value={type}
                 onChange={(e) => setType(e.target.value)}
-                disabled={
-                  isSubmitting ||
-                  !!entityToEdit /* Disable type change when editing */
-                }
+                disabled={isSubmitting || !!entityToEdit /* Disable type change when editing */}
               >
                 <option value="CLIENT">Client (Individual)</option>
                 <option value="CLASS">Class (Group)</option>
@@ -347,9 +320,7 @@ const CreateEditEntityModal = ({
                 <h4 className="text-md font-semibold">Client Metrics</h4>
                 <div className="w-full">
                   <label className="label cursor-pointer">
-                    <span className="text-sm mr-2">
-                      {useImperial ? 'Imperial' : 'Metric'}
-                    </span>
+                    <span className="text-sm mr-2">{useImperial ? 'Imperial' : 'Metric'}</span>
                     <input
                       type="checkbox"
                       className="toggle toggle-primary toggle-sm"
@@ -387,9 +358,7 @@ const CreateEditEntityModal = ({
                   </div>
                   <div className="w-full">
                     <label className="label py-1">
-                      <span className="text-sm text-xs">
-                        Squat ({useImperial ? 'lbs' : 'kg'})
-                      </span>
+                      <span className="text-sm text-xs">Squat ({useImperial ? 'lbs' : 'kg'})</span>
                     </label>
                     <input
                       type="number"
@@ -444,7 +413,8 @@ const CreateEditEntityModal = ({
                             className="input input-bordered input-sm w-full pr-8"
                             value={heightFeet}
                             onChange={(e) => {
-                              const newFeet = e.target.value === '' ? '' : parseInt(e.target.value) || 0;
+                              const newFeet =
+                                e.target.value === '' ? '' : parseInt(e.target.value) || 0;
                               setHeightFeet(newFeet);
                             }}
                             disabled={isSubmitting}
@@ -460,7 +430,8 @@ const CreateEditEntityModal = ({
                             className="input input-bordered input-sm w-full pr-8"
                             value={heightInches}
                             onChange={(e) => {
-                              const newInches = e.target.value === '' ? '' : parseInt(e.target.value) || 0;
+                              const newInches =
+                                e.target.value === '' ? '' : parseInt(e.target.value) || 0;
                               setHeightInches(newInches);
                             }}
                             disabled={isSubmitting}
@@ -486,9 +457,7 @@ const CreateEditEntityModal = ({
                   </div>
                   <div className="w-full">
                     <label className="label py-1">
-                      <span className="text-sm text-xs">
-                        Weight ({useImperial ? 'lbs' : 'kg'})
-                      </span>
+                      <span className="text-sm text-xs">Weight ({useImperial ? 'lbs' : 'kg'})</span>
                     </label>
                     <input
                       type="number"
@@ -506,17 +475,13 @@ const CreateEditEntityModal = ({
                   </div>
                   <div className="w-full">
                     <label className="label py-1">
-                      <span className="text-sm text-xs">
-                        Mile Time (min:sec)
-                      </span>
+                      <span className="text-sm text-xs">Mile Time (min:sec)</span>
                     </label>
                     <input
                       type="text"
                       className="input input-bordered input-sm w-full"
                       value={metrics.mile_time || ''}
-                      onChange={(e) =>
-                        handleMetricsChange('mile_time', e.target.value)
-                      }
+                      onChange={(e) => handleMetricsChange('mile_time', e.target.value)}
                       placeholder="e.g. 7:30"
                       disabled={isSubmitting}
                     />
@@ -528,9 +493,7 @@ const CreateEditEntityModal = ({
                   <h5 className="font-medium mb-1 text-sm">Other</h5>
                   <div className="w-full">
                     <label className="label py-1">
-                      <span className="text-sm text-xs">
-                        Recovery Score (1-10)
-                      </span>
+                      <span className="text-sm text-xs">Recovery Score (1-10)</span>
                     </label>
                     <input
                       type="number"
@@ -554,9 +517,7 @@ const CreateEditEntityModal = ({
                     <textarea
                       className="textarea textarea-bordered textarea-sm w-full"
                       value={metrics.injury_history || ''}
-                      onChange={(e) =>
-                        handleMetricsChange('injury_history', e.target.value)
-                      }
+                      onChange={(e) => handleMetricsChange('injury_history', e.target.value)}
                       placeholder="List any relevant injuries"
                       disabled={isSubmitting}
                     ></textarea>
@@ -568,9 +529,7 @@ const CreateEditEntityModal = ({
                     <select
                       className="select select-bordered select-sm w-full"
                       value={metrics.gender || ''}
-                      onChange={(e) =>
-                        handleMetricsChange('gender', e.target.value)
-                      }
+                      onChange={(e) => handleMetricsChange('gender', e.target.value)}
                       disabled={isSubmitting}
                     >
                       <option value="">Prefer not to say</option>
@@ -602,9 +561,7 @@ const CreateEditEntityModal = ({
                       min="1"
                       className="input input-bordered input-sm w-full"
                       value={classMetrics.class_size}
-                      onChange={(e) =>
-                        handleClassMetricsChange('class_size', e.target.value)
-                      }
+                      onChange={(e) => handleClassMetricsChange('class_size', e.target.value)}
                       placeholder="Number of athletes"
                       disabled={isSubmitting}
                     />
@@ -619,9 +576,7 @@ const CreateEditEntityModal = ({
                       max="100"
                       className="input input-bordered input-sm w-full"
                       value={classMetrics.average_age}
-                      onChange={(e) =>
-                        handleClassMetricsChange('average_age', e.target.value)
-                      }
+                      onChange={(e) => handleClassMetricsChange('average_age', e.target.value)}
                       placeholder="Average age of class"
                       disabled={isSubmitting}
                     />
@@ -656,9 +611,7 @@ const CreateEditEntityModal = ({
                       />
                       <span className="text-sm">Elite Athletes Present</span>
                     </label>
-                    <p className="text-xs text-gray-500 ml-7">
-                      Enable RX+ scaling options
-                    </p>
+                    <p className="text-xs text-gray-500 ml-7">Enable RX+ scaling options</p>
                   </div>
                 </div>
 
@@ -677,9 +630,7 @@ const CreateEditEntityModal = ({
                       max="100"
                       className="range range-primary range-sm"
                       value={classMetrics.skill_distribution.beginner}
-                      onChange={(e) =>
-                        handleSkillDistributionChange('beginner', e.target.value)
-                      }
+                      onChange={(e) => handleSkillDistributionChange('beginner', e.target.value)}
                       disabled={isSubmitting}
                     />
                   </div>
@@ -713,9 +664,7 @@ const CreateEditEntityModal = ({
                       max="100"
                       className="range range-accent range-sm"
                       value={classMetrics.skill_distribution.advanced}
-                      onChange={(e) =>
-                        handleSkillDistributionChange('advanced', e.target.value)
-                      }
+                      onChange={(e) => handleSkillDistributionChange('advanced', e.target.value)}
                       disabled={isSubmitting}
                     />
                   </div>
@@ -794,11 +743,7 @@ const CreateEditEntityModal = ({
               className={`btn btn-primary ${isSubmitting ? 'loading' : ''}`}
               disabled={isSubmitting}
             >
-              {isSubmitting
-                ? entityToEdit
-                  ? 'Updating...'
-                  : 'Creating...'
-                : submitButtonText}
+              {isSubmitting ? (entityToEdit ? 'Updating...' : 'Creating...') : submitButtonText}
             </button>
           </div>
         </form>

@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function WorkoutSelection({ onSelectWorkout }) {
@@ -76,11 +76,7 @@ export default function WorkoutSelection({ onSelectWorkout }) {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
-          <button
-            className="btn btn-primary"
-            onClick={searchWorkouts}
-            disabled={isLoading}
-          >
+          <button className="btn btn-primary" onClick={searchWorkouts} disabled={isLoading}>
             Search
           </button>
         </div>
@@ -136,27 +132,18 @@ export default function WorkoutSelection({ onSelectWorkout }) {
                     difficulty: 'intermediate',
                     focus: workout.tags?.focus || '',
                   };
-                  e.dataTransfer.setData(
-                    'text/plain',
-                    JSON.stringify(formattedWorkout)
-                  );
+                  e.dataTransfer.setData('text/plain', JSON.stringify(formattedWorkout));
                   handleSelectWorkout(formattedWorkout);
                 }}
               >
-                <div className="font-medium">
-                  {workout.title || 'Untitled Workout'}
-                </div>
+                <div className="font-medium">{workout.title || 'Untitled Workout'}</div>
                 <div className="text-sm text-gray-600 mt-1">
                   {workout.body.substring(0, 100)}...
                 </div>
                 <div className="flex gap-2 mt-2">
-                  <span className="badge badge-primary">
-                    {workout.workout_type || 'Custom'}
-                  </span>
+                  <span className="badge badge-primary">{workout.workout_type || 'Custom'}</span>
                   {workout.time_domain && (
-                    <span className="badge badge-secondary">
-                      {workout.time_domain}
-                    </span>
+                    <span className="badge badge-secondary">{workout.time_domain}</span>
                   )}
                 </div>
               </div>

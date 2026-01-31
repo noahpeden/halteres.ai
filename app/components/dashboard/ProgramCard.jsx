@@ -1,12 +1,12 @@
 'use client';
+import { Calendar, ExternalLink, Share2, Trash2, User, Users } from 'lucide-react';
 import Link from 'next/link';
-import { Calendar, User, Users, ExternalLink, Trash2, Share2 } from 'lucide-react';
 
 export default function ProgramCard({ program, entityDisplayName, onDelete }) {
   const handleShareProgram = async (e) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     try {
       const shareUrl = `${window.location.origin}/program/${program.id}/share`;
       await navigator.clipboard.writeText(shareUrl);
@@ -62,9 +62,7 @@ export default function ProgramCard({ program, entityDisplayName, onDelete }) {
 
           {/* Description - only show if exists and keep it very compact */}
           {program.description && (
-            <p className="text-xs text-slate-600 line-clamp-1 mt-2">
-              {program.description}
-            </p>
+            <p className="text-xs text-slate-600 line-clamp-1 mt-2">{program.description}</p>
           )}
         </div>
 

@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useAuth } from '../contexts/AuthContext';
-import { createClient } from '@/utils/supabase/client';
-import { useRouter } from 'next/navigation';
-import { Crown, ArrowUpRight, AlertTriangle } from 'lucide-react';
+import { AlertTriangle, ArrowUpRight, Crown } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { createClient } from '@/utils/supabase/client';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function ProfilePage() {
   const { user } = useAuth();
@@ -57,10 +57,7 @@ export default function ProfilePage() {
         }));
 
         // Check subscription status from Stripe directly if we have a subscription ID
-        if (
-          data.subscription_status === 'active' &&
-          data.stripe_subscription_id
-        ) {
+        if (data.subscription_status === 'active' && data.stripe_subscription_id) {
           try {
             const response = await fetch(
               `/api/check-subscription-status?subscription_id=${data.stripe_subscription_id}`,
@@ -311,9 +308,7 @@ export default function ProfilePage() {
       <div className="max-w-4xl mx-auto space-y-6">
         {/* Page Header */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-base-content">
-            Account Settings
-          </h1>
+          <h1 className="text-3xl font-bold text-base-content">Account Settings</h1>
           <p className="text-base-content/70 mt-2">
             Manage your account and subscription preferences
           </p>
@@ -325,9 +320,7 @@ export default function ProfilePage() {
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-4">
                 <div>
-                  <h2 className="text-xl font-semibold">
-                    {formData.full_name || 'Welcome!'}
-                  </h2>
+                  <h2 className="text-xl font-semibold">{formData.full_name || 'Welcome!'}</h2>
                   <p className="text-base-content/70">{formData.email}</p>
                   <div className="flex items-center gap-2 mt-2">
                     {profile?.subscription_status === 'active' ? (
@@ -335,9 +328,7 @@ export default function ProfilePage() {
                         <Crown className="h-4 w-4 text-primary" />
                         <span className="badge badge-primary">Premium</span>
                         {isSubscriptionCanceled && (
-                          <span className="badge badge-warning">
-                            Ending Soon
-                          </span>
+                          <span className="badge badge-warning">Ending Soon</span>
                         )}
                       </>
                     ) : profile?.subscription_status === 'trialing' ? (
@@ -370,8 +361,7 @@ export default function ProfilePage() {
                     ? Math.max(
                         0,
                         Math.ceil(
-                          (new Date(profile.trial_end_date) - new Date()) /
-                            (1000 * 60 * 60 * 24)
+                          (new Date(profile.trial_end_date) - new Date()) / (1000 * 60 * 60 * 24)
                         )
                       )
                     : 0}
@@ -393,9 +383,7 @@ export default function ProfilePage() {
                   : profile?.generations_remaining || 0}
               </div>
               <div className="stat-desc">
-                {profile?.subscription_status === 'active'
-                  ? 'Unlimited'
-                  : 'Remaining in trial'}
+                {profile?.subscription_status === 'active' ? 'Unlimited' : 'Remaining in trial'}
               </div>
             </div>
           </div>
@@ -413,16 +401,12 @@ export default function ProfilePage() {
                     {isSubscriptionCanceled ? (
                       <span className="text-error">
                         Your subscription will end on{' '}
-                        {new Date(
-                          profile.current_period_end
-                        ).toLocaleDateString()}
+                        {new Date(profile.current_period_end).toLocaleDateString()}
                       </span>
                     ) : (
                       <span>
                         Next billing date:{' '}
-                        {new Date(
-                          profile.current_period_end
-                        ).toLocaleDateString()}
+                        {new Date(profile.current_period_end).toLocaleDateString()}
                       </span>
                     )}
                   </p>
@@ -509,9 +493,7 @@ export default function ProfilePage() {
 
                 <div>
                   <label className="label">
-                    <span className="text-sm font-medium">
-                      Confirm Password
-                    </span>
+                    <span className="text-sm font-medium">Confirm Password</span>
                   </label>
                   <input
                     type="password"
@@ -525,21 +507,13 @@ export default function ProfilePage() {
               </div>
 
               {message.text && (
-                <div
-                  className={`alert alert-${
-                    message.type === 'error' ? 'error' : 'success'
-                  }`}
-                >
+                <div className={`alert alert-${message.type === 'error' ? 'error' : 'success'}`}>
                   <span>{message.text}</span>
                 </div>
               )}
 
               <div className="card-actions justify-end pt-4">
-                <button
-                  type="submit"
-                  className="btn btn-primary"
-                  disabled={loading}
-                >
+                <button type="submit" className="btn btn-primary" disabled={loading}>
                   {loading ? (
                     <>
                       <span className="loading loading-spinner loading-sm"></span>
@@ -565,20 +539,15 @@ export default function ProfilePage() {
             <div className="space-y-4">
               <div className="alert alert-warning">
                 <AlertTriangle className="h-4 w-4" />
-                <span className="text-sm">
-                  These actions are permanent and cannot be undone.
-                </span>
+                <span className="text-sm">These actions are permanent and cannot be undone.</span>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="card bg-warning/10 border border-warning/20">
                   <div className="card-body p-4">
-                    <h4 className="font-semibold text-warning mb-2">
-                      Deactivate Account
-                    </h4>
+                    <h4 className="font-semibold text-warning mb-2">Deactivate Account</h4>
                     <p className="text-sm mb-3 text-base-content/80">
-                      Temporarily disable your account. You can reactivate by
-                      logging in again.
+                      Temporarily disable your account. You can reactivate by logging in again.
                     </p>
                     <button
                       onClick={() => setShowDeactivateModal(true)}
@@ -592,9 +561,7 @@ export default function ProfilePage() {
 
                 <div className="card bg-error/10 border border-error/20">
                   <div className="card-body p-4">
-                    <h4 className="font-semibold text-error mb-2">
-                      Delete Account
-                    </h4>
+                    <h4 className="font-semibold text-error mb-2">Delete Account</h4>
                     <p className="text-sm mb-3 text-base-content/80">
                       Permanently delete your account and all associated data.
                     </p>
@@ -621,9 +588,8 @@ export default function ProfilePage() {
         <div className="modal-box">
           <h3 className="font-bold text-lg">Cancel Subscription</h3>
           <p className="py-4">
-            Are you sure you want to cancel your subscription? You'll lose
-            access to premium features at the end of your current billing
-            period.
+            Are you sure you want to cancel your subscription? You'll lose access to premium
+            features at the end of your current billing period.
           </p>
           <div className="modal-action">
             <button className="btn" onClick={() => setShowCancelModal(false)}>
@@ -651,9 +617,8 @@ export default function ProfilePage() {
         <div className="modal-box">
           <h3 className="font-bold text-lg">Resume Subscription</h3>
           <p className="py-4">
-            Would you like to resume your subscription? You'll continue to have
-            access to all premium features and your subscription will renew as
-            scheduled.
+            Would you like to resume your subscription? You'll continue to have access to all
+            premium features and your subscription will renew as scheduled.
           </p>
           <div className="modal-action">
             <button className="btn" onClick={() => setShowResumeModal(false)}>
@@ -681,15 +646,11 @@ export default function ProfilePage() {
         <div className="modal-box">
           <h3 className="font-bold text-lg">Deactivate Account</h3>
           <p className="py-4">
-            Are you sure you want to deactivate your account? You can reactivate
-            it later by logging in again, but you won't be able to use the app
-            while deactivated.
+            Are you sure you want to deactivate your account? You can reactivate it later by logging
+            in again, but you won't be able to use the app while deactivated.
           </p>
           <div className="modal-action">
-            <button
-              className="btn"
-              onClick={() => setShowDeactivateModal(false)}
-            >
+            <button className="btn" onClick={() => setShowDeactivateModal(false)}>
               Cancel
             </button>
             <button
@@ -707,27 +668,22 @@ export default function ProfilePage() {
       </dialog>
 
       {/* Delete Account Modal */}
-      <dialog
-        id="delete_account_modal"
-        className={`modal ${showDeleteModal ? 'modal-open' : ''}`}
-      >
+      <dialog id="delete_account_modal" className={`modal ${showDeleteModal ? 'modal-open' : ''}`}>
         <div className="modal-box">
-          <h3 className="font-bold text-lg text-error">
-            Account Deletion Process
-          </h3>
+          <h3 className="font-bold text-lg text-error">Account Deletion Process</h3>
           <div className="py-4">
             <p className="mb-3">
-              <strong>Step 1:</strong> Deactivate your account (happens
-              immediately when you click the button below)
+              <strong>Step 1:</strong> Deactivate your account (happens immediately when you click
+              the button below)
             </p>
             <p>
-              <strong>Step 2:</strong> For permanent data deletion, please
-              email: <span className="font-medium">noah@halteres.ai</span>
+              <strong>Step 2:</strong> For permanent data deletion, please email:{' '}
+              <span className="font-medium">noah@halteres.ai</span>
             </p>
           </div>
           <p className="mb-4">
-            To confirm you want to start this process, please type{' '}
-            <strong>DELETE</strong> in the field below:
+            To confirm you want to start this process, please type <strong>DELETE</strong> in the
+            field below:
           </p>
           <input
             type="text"

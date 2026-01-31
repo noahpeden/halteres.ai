@@ -1,6 +1,6 @@
-import { createClient } from '@/utils/supabase/server';
-import { NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
+import { NextResponse } from 'next/server';
+import { createClient } from '@/utils/supabase/server';
 
 export async function POST(request) {
   const anthropic = new Anthropic({
@@ -26,10 +26,7 @@ export async function POST(request) {
 
   const { data: sessionData } = await supabaseClient.auth.getSession();
   if (!sessionData.session) {
-    return NextResponse.json(
-      { error: 'Authentication required' },
-      { status: 401 }
-    );
+    return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
   }
 
   try {
@@ -42,11 +39,7 @@ Difficulty Level: ${difficulty}
 Duration: ${duration} minutes
 ${focusArea ? `Focus Area: ${focusArea}` : ''}
 ${gymType ? `Gym Type: ${gymType}` : ''}
-${
-  equipment && equipment.length > 0
-    ? `Available Equipment: ${equipment.join(', ')}`
-    : ''
-}
+${equipment && equipment.length > 0 ? `Available Equipment: ${equipment.join(', ')}` : ''}
 ${
   workoutFormats && workoutFormats.length > 0
     ? `Preferred Formats: ${workoutFormats.join(', ')}`
@@ -103,10 +96,7 @@ CRITICAL: Use web search to find real, current workout content from fitness webs
 
     // Extract the response content directly
     const searchResults = response.content[0]?.text || '';
-    console.log(
-      'Search results preview:',
-      searchResults.substring(0, 200) + '...'
-    );
+    console.log('Search results preview:', searchResults.substring(0, 200) + '...');
 
     // Parse the JSON response
     let workouts = [];
@@ -149,9 +139,7 @@ CRITICAL: Use web search to find real, current workout content from fitness webs
 
       // Fallback: try to extract individual workout objects
       try {
-        const workoutMatches = searchResults.match(
-          /\{[^{}]*"title"[^{}]*"body"[^{}]*\}/g
-        );
+        const workoutMatches = searchResults.match(/\{[^{}]*"title"[^{}]*"body"[^{}]*\}/g);
         if (workoutMatches && workoutMatches.length > 0) {
           workouts = workoutMatches
             .map((match) => {
@@ -163,11 +151,7 @@ CRITICAL: Use web search to find real, current workout content from fitness webs
               }
             })
             .filter(Boolean);
-          console.log(
-            'Extracted',
-            workouts.length,
-            'workouts from regex fallback'
-          );
+          console.log('Extracted', workouts.length, 'workouts from regex fallback');
         } else {
           // Final fallback: return raw content as a single workout
           workouts = [
@@ -202,19 +186,14 @@ CRITICAL: Use web search to find real, current workout content from fitness webs
     workouts = workouts.map((workout, index) => ({
       title: workout.title || `Workout ${index + 1}`,
       body:
-        workout.body ||
-        workout.description ||
-        workout.content ||
-        'Workout details not available',
+        workout.body || workout.description || workout.content || 'Workout details not available',
       source: workout.source || workout.url || 'Anthropic Web Search',
       tags: Array.isArray(workout.tags)
         ? workout.tags
         : [goal, difficulty, focusArea].filter(Boolean),
       difficulty: workout.difficulty || difficulty || 'intermediate',
       duration: workout.duration || duration || '45',
-      equipment: Array.isArray(workout.equipment)
-        ? workout.equipment
-        : equipment || [],
+      equipment: Array.isArray(workout.equipment) ? workout.equipment : equipment || [],
     }));
 
     console.log(`Returning ${workouts.length} formatted workouts`);

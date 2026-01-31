@@ -1,12 +1,12 @@
-import { createMobileCompatibleClient, corsHeaders } from '@/utils/supabase/mobile';
 import { NextResponse } from 'next/server';
+import { corsHeaders, createMobileCompatibleClient } from '@/utils/supabase/mobile';
 
 export const dynamic = 'force-dynamic';
 
 export async function OPTIONS(req) {
   return new NextResponse(null, {
     status: 200,
-    headers: corsHeaders()
+    headers: corsHeaders(),
   });
 }
 
@@ -14,14 +14,18 @@ export async function POST(request) {
   const supabase = await createMobileCompatibleClient(request);
 
   // Check authentication
-  const { data: { session } } = await supabase.auth.getSession();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
   if (!session) {
-    return NextResponse.json({ error: 'Not authenticated' }, { status: 401, headers: corsHeaders() });
+    return NextResponse.json(
+      { error: 'Not authenticated' },
+      { status: 401, headers: corsHeaders() }
+    );
   }
 
   try {
-    const { programId, title, description, tags, source, markAsReference } =
-      await request.json();
+    const { programId, title, description, tags, source, markAsReference } = await request.json();
 
     if (!programId || !title || !description) {
       return NextResponse.json(

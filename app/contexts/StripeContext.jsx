@@ -1,7 +1,7 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
 import { loadStripe } from '@stripe/stripe-js';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 
 // Create a context for the Stripe instance
 const StripeContext = createContext(null);
@@ -14,18 +14,14 @@ export const StripeProvider = ({ children }) => {
     const publicKey = process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY;
     if (publicKey) {
       // Initialize Stripe only once with the publishable key
-      // @ts-ignore - loadStripe type might expect specific options not used here
+      // @ts-expect-error - loadStripe type might expect specific options not used here
       setStripePromise(loadStripe(publicKey));
     } else {
       console.warn('StripeContext: NEXT_PUBLIC_STRIPE_PUBLIC_KEY is not set.');
     }
   }, []); // Empty dependency array ensures this runs only once on mount
 
-  return (
-    <StripeContext.Provider value={stripePromise}>
-      {children}
-    </StripeContext.Provider>
-  );
+  return <StripeContext.Provider value={stripePromise}>{children}</StripeContext.Provider>;
 };
 
 // Custom hook to use the Stripe context

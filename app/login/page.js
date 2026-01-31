@@ -1,9 +1,9 @@
 'use client';
-import { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { Building, Dumbbell, Users } from 'lucide-react';
 import Link from 'next/link';
-import { Dumbbell, Users, Building } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function LoginPage() {
   const { session, supabase, loadingProfile, isAthlete } = useAuth();
@@ -176,9 +176,10 @@ export default function LoginPage() {
 
     try {
       // Determine redirect URL based on role
-      const redirectUrl = role === 'athlete'
-        ? `${window.location.origin}/auth/callback?role=athlete${gymInviteCode ? `&gymCode=${gymInviteCode}` : ''}`
-        : `${window.location.origin}/auth/callback?role=coach`;
+      const redirectUrl =
+        role === 'athlete'
+          ? `${window.location.origin}/auth/callback?role=athlete${gymInviteCode ? `&gymCode=${gymInviteCode}` : ''}`
+          : `${window.location.origin}/auth/callback?role=coach`;
 
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -346,9 +347,7 @@ export default function LoginPage() {
               <div className="w-full mt-4">
                 <button
                   type="submit"
-                  className={`btn btn-primary w-full ${
-                    loading ? 'loading' : ''
-                  }`}
+                  className={`btn btn-primary w-full ${loading ? 'loading' : ''}`}
                   disabled={loading}
                 >
                   Send Reset Link
@@ -425,9 +424,7 @@ export default function LoginPage() {
                 <div className="w-full mt-4">
                   <button
                     type="submit"
-                    className={`btn btn-primary w-full ${
-                      loading ? 'loading' : ''
-                    }`}
+                    className={`btn btn-primary w-full ${loading ? 'loading' : ''}`}
                     disabled={loading}
                   >
                     Login
@@ -482,10 +479,7 @@ export default function LoginPage() {
                     </div>
 
                     <div className="w-full mt-4">
-                      <button
-                        type="submit"
-                        className="btn btn-primary w-full"
-                      >
+                      <button type="submit" className="btn btn-primary w-full">
                         Continue
                       </button>
                     </div>
@@ -513,7 +507,9 @@ export default function LoginPage() {
                           </div>
                           <div>
                             <h4 className="font-bold text-lg">Coach / Gym Owner</h4>
-                            <p className="text-sm opacity-70">Generate AI programming, track athletes, and grow your gym</p>
+                            <p className="text-sm opacity-70">
+                              Generate AI programming, track athletes, and grow your gym
+                            </p>
                           </div>
                         </div>
                       </button>
@@ -530,7 +526,9 @@ export default function LoginPage() {
                           </div>
                           <div>
                             <h4 className="font-bold text-lg">Athlete</h4>
-                            <p className="text-sm opacity-70">Access workouts, compete on leaderboards, and get AI feedback</p>
+                            <p className="text-sm opacity-70">
+                              Access workouts, compete on leaderboards, and get AI feedback
+                            </p>
                           </div>
                         </div>
                       </button>
@@ -553,12 +551,16 @@ export default function LoginPage() {
                       {comingFromJoinLink && gymInfo ? (
                         <>
                           <h3 className="text-lg font-semibold">Join {gymInfo.name}</h3>
-                          <p className="text-sm text-gray-500">Complete your account to join this gym</p>
+                          <p className="text-sm text-gray-500">
+                            Complete your account to join this gym
+                          </p>
                         </>
                       ) : (
                         <>
                           <h3 className="text-lg font-semibold">Enter Your Gym Code</h3>
-                          <p className="text-sm text-gray-500">Get this code from your coach or gym</p>
+                          <p className="text-sm text-gray-500">
+                            Get this code from your coach or gym
+                          </p>
                         </>
                       )}
                     </div>
@@ -605,7 +607,11 @@ export default function LoginPage() {
                         }`}
                         disabled={loading || validatingGymCode || !gymCode}
                       >
-                        {validatingGymCode ? 'Validating...' : comingFromJoinLink ? 'Create Account & Join' : 'Complete Sign Up'}
+                        {validatingGymCode
+                          ? 'Validating...'
+                          : comingFromJoinLink
+                            ? 'Create Account & Join'
+                            : 'Complete Sign Up'}
                       </button>
                     </div>
 

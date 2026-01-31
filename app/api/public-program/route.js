@@ -1,5 +1,5 @@
-import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { NextResponse } from 'next/server';
 
 // Create a Supabase client with the service role key to bypass RLS
 const supabaseServiceRole = createClient(
@@ -8,8 +8,8 @@ const supabaseServiceRole = createClient(
   {
     auth: {
       autoRefreshToken: false,
-      persistSession: false
-    }
+      persistSession: false,
+    },
   }
 );
 
@@ -19,32 +19,25 @@ export async function GET(request) {
     const programId = searchParams.get('programId');
 
     if (!programId) {
-      return NextResponse.json(
-        { error: 'Missing programId' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Missing programId' }, { status: 400 });
     }
 
     // Fetch program data using service role to bypass RLS
     const { data: program, error: programError } = await supabaseServiceRole
       .from('programs')
-      .select('id, name, description, duration_weeks, difficulty, goal, session_details, program_overview')
+      .select(
+        'id, name, description, duration_weeks, difficulty, goal, session_details, program_overview'
+      )
       .eq('id', programId)
       .maybeSingle();
 
     if (programError) {
       console.error('Program fetch error:', programError);
-      return NextResponse.json(
-        { error: 'Failed to fetch program' },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: 'Failed to fetch program' }, { status: 500 });
     }
 
     if (!program) {
-      return NextResponse.json(
-        { error: 'Program not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Program not found' }, { status: 404 });
     }
 
     // Fetch all workouts for this program
@@ -56,16 +49,12 @@ export async function GET(request) {
 
     if (workoutsError) {
       console.error('Workouts fetch error:', workoutsError);
-      return NextResponse.json(
-        { error: 'Failed to fetch workouts' },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: 'Failed to fetch workouts' }, { status: 500 });
     }
 
     // Extract days per week from session_details
-    const daysPerWeek = program.session_details?.sessions_per_week || 
-                       program.session_details?.daysPerWeek || 
-                       7; // Default to 7 if not specified
+    const daysPerWeek =
+      program.session_details?.sessions_per_week || program.session_details?.daysPerWeek || 7; // Default to 7 if not specified
 
     return NextResponse.json({
       program: {
@@ -76,15 +65,12 @@ export async function GET(request) {
         difficulty: program.difficulty,
         goal: program.goal,
         daysPerWeek: daysPerWeek,
-        overview: program.program_overview
+        overview: program.program_overview,
       },
-      workouts: workouts || []
+      workouts: workouts || [],
     });
   } catch (error) {
     console.error('Error in public program API:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

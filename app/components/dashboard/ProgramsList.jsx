@@ -12,8 +12,7 @@ export default function ProgramsList({
 }) {
   // Filter programs based on selected entity and search query
   const filteredPrograms = programs.filter((program) => {
-    const matchesEntity =
-      filterEntityId === 'all' || program.entity_id === filterEntityId;
+    const matchesEntity = filterEntityId === 'all' || program.entity_id === filterEntityId;
     const matchesSearch =
       searchQuery === '' ||
       program.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -40,23 +39,15 @@ export default function ProgramsList({
             />
           </svg>
         </div>
-        <h3 className="text-lg font-semibold text-slate-900 mb-2">
-          No Programs Yet
-        </h3>
+        <h3 className="text-lg font-semibold text-slate-900 mb-2">No Programs Yet</h3>
         <p className="text-slate-600 mb-6 max-w-sm mx-auto">
-          Create your first training program to get started with managing your
-          clients' workouts
+          Create your first training program to get started with managing your clients' workouts
         </p>
         <button
           onClick={onCreateProgram}
           className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors duration-200 shadow-sm"
         >
-          <svg
-            className="w-5 h-5 mr-2"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
+          <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -88,9 +79,7 @@ export default function ProgramsList({
             />
           </svg>
         </div>
-        <h3 className="text-lg font-semibold text-slate-900 mb-2">
-          No Programs Found
-        </h3>
+        <h3 className="text-lg font-semibold text-slate-900 mb-2">No Programs Found</h3>
         <p className="text-slate-600 mb-4">
           {searchQuery
             ? `No programs match "${searchQuery}"`
@@ -100,12 +89,7 @@ export default function ProgramsList({
           onClick={onCreateProgram}
           className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors duration-200"
         >
-          <svg
-            className="w-4 h-4 mr-2"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
+          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -124,8 +108,7 @@ export default function ProgramsList({
       {/* Results count */}
       <div className="flex items-center justify-between text-sm text-slate-600">
         <span>
-          {filteredPrograms.length}{' '}
-          {filteredPrograms.length === 1 ? 'program' : 'programs'}
+          {filteredPrograms.length} {filteredPrograms.length === 1 ? 'program' : 'programs'}
           {searchQuery && ` matching "${searchQuery}"`}
         </span>
       </div>

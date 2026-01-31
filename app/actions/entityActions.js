@@ -69,11 +69,7 @@ export async function createEntityAction(formData) {
       });
     }
 
-    const { data, error } = await supabase
-      .from('entities')
-      .insert([entityData])
-      .select()
-      .single();
+    const { data, error } = await supabase.from('entities').insert([entityData]).select().single();
 
     if (error) throw error;
 

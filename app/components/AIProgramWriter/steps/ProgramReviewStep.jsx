@@ -1,6 +1,15 @@
 'use client';
 
-import { Sparkles, Calendar, Clock, Target, Dumbbell, Edit2, AlertCircle, CheckCircle2 } from 'lucide-react';
+import {
+  AlertCircle,
+  Calendar,
+  CheckCircle2,
+  Clock,
+  Dumbbell,
+  Edit2,
+  Sparkles,
+  Target,
+} from 'lucide-react';
 
 const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
@@ -22,7 +31,7 @@ export default function ProgramReviewStep({
         weekday: 'short',
         month: 'short',
         day: 'numeric',
-        year: 'numeric'
+        year: 'numeric',
       })
     : '-';
 
@@ -31,19 +40,19 @@ export default function ProgramReviewStep({
         weekday: 'short',
         month: 'short',
         day: 'numeric',
-        year: 'numeric'
+        year: 'numeric',
       })
     : '-';
 
   // Check if can generate
-  const canGenerate = subscriptionStatus === 'active' || (subscriptionStatus === 'trialing' && generationsRemaining > 0);
+  const canGenerate =
+    subscriptionStatus === 'active' ||
+    (subscriptionStatus === 'trialing' && generationsRemaining > 0);
 
   return (
     <div className="space-y-6 animate-fadeIn">
       <div className="text-center mb-8">
-        <h2 className="text-2xl sm:text-3xl font-bold text-base-content">
-          Ready to generate!
-        </h2>
+        <h2 className="text-2xl sm:text-3xl font-bold text-base-content">Ready to generate!</h2>
         <p className="text-base-content/60 mt-2">
           Review your program settings before we create your personalized workouts.
         </p>
@@ -64,24 +73,29 @@ export default function ProgramReviewStep({
                   <p className="text-sm text-base-content/60">Goal & methodology</p>
                 </div>
               </div>
-              <button
-                onClick={() => onEditStep(0)}
-                className="btn btn-ghost btn-sm"
-              >
+              <button onClick={() => onEditStep(0)} className="btn btn-ghost btn-sm">
                 <Edit2 className="w-4 h-4" />
               </button>
             </div>
             <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-4">
               <div>
                 <div className="text-xs text-base-content/60 uppercase tracking-wide">Goal</div>
-                <div className="font-medium capitalize">{formData?.goal?.replace(/_/g, ' ') || '-'}</div>
+                <div className="font-medium capitalize">
+                  {formData?.goal?.replace(/_/g, ' ') || '-'}
+                </div>
               </div>
               <div>
-                <div className="text-xs text-base-content/60 uppercase tracking-wide">Methodology</div>
-                <div className="font-medium capitalize">{formData?.trainingMethodology?.replace(/_/g, ' ') || '-'}</div>
+                <div className="text-xs text-base-content/60 uppercase tracking-wide">
+                  Methodology
+                </div>
+                <div className="font-medium capitalize">
+                  {formData?.trainingMethodology?.replace(/_/g, ' ') || '-'}
+                </div>
               </div>
               <div>
-                <div className="text-xs text-base-content/60 uppercase tracking-wide">Difficulty</div>
+                <div className="text-xs text-base-content/60 uppercase tracking-wide">
+                  Difficulty
+                </div>
                 <div className="font-medium capitalize">{formData?.difficulty || '-'}</div>
               </div>
             </div>
@@ -101,10 +115,7 @@ export default function ProgramReviewStep({
                   <p className="text-sm text-base-content/60">Duration & timing</p>
                 </div>
               </div>
-              <button
-                onClick={() => onEditStep(1)}
-                className="btn btn-ghost btn-sm"
-              >
+              <button onClick={() => onEditStep(1)} className="btn btn-ghost btn-sm">
                 <Edit2 className="w-4 h-4" />
               </button>
             </div>
@@ -114,7 +125,9 @@ export default function ProgramReviewStep({
                 <div className="font-medium">{formData?.numberOfWeeks || 4} weeks</div>
               </div>
               <div>
-                <div className="text-xs text-base-content/60 uppercase tracking-wide">Days/Week</div>
+                <div className="text-xs text-base-content/60 uppercase tracking-wide">
+                  Days/Week
+                </div>
                 <div className="font-medium">{formData?.daysOfWeek?.length || 3} days</div>
               </div>
               <div>
@@ -127,7 +140,7 @@ export default function ProgramReviewStep({
               </div>
             </div>
             <div className="mt-3 flex gap-1">
-              {formData?.daysOfWeek?.map(day => (
+              {formData?.daysOfWeek?.map((day) => (
                 <span key={day} className="badge badge-primary badge-sm">
                   {dayNames[day]?.substring(0, 3)}
                 </span>
@@ -149,18 +162,17 @@ export default function ProgramReviewStep({
                   <p className="text-sm text-base-content/60">Formats & equipment</p>
                 </div>
               </div>
-              <button
-                onClick={() => onEditStep(2)}
-                className="btn btn-ghost btn-sm"
-              >
+              <button onClick={() => onEditStep(2)} className="btn btn-ghost btn-sm">
                 <Edit2 className="w-4 h-4" />
               </button>
             </div>
             <div className="mt-4 space-y-3">
               <div>
-                <div className="text-xs text-base-content/60 uppercase tracking-wide">Workout Formats</div>
+                <div className="text-xs text-base-content/60 uppercase tracking-wide">
+                  Workout Formats
+                </div>
                 <div className="flex flex-wrap gap-1 mt-1">
-                  {(formData?.workoutFormats || []).map(format => (
+                  {(formData?.workoutFormats || []).map((format) => (
                     <span key={format} className="badge badge-outline capitalize">
                       {format.replace(/_/g, ' ')}
                     </span>
@@ -172,12 +184,18 @@ export default function ProgramReviewStep({
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <div className="text-xs text-base-content/60 uppercase tracking-wide">Gym Type</div>
-                  <div className="font-medium capitalize">{formData?.gymType?.replace(/_/g, ' ') || '-'}</div>
+                  <div className="text-xs text-base-content/60 uppercase tracking-wide">
+                    Gym Type
+                  </div>
+                  <div className="font-medium capitalize">
+                    {formData?.gymType?.replace(/_/g, ' ') || '-'}
+                  </div>
                 </div>
                 <div>
                   <div className="text-xs text-base-content/60 uppercase tracking-wide">Focus</div>
-                  <div className="font-medium capitalize">{formData?.focusArea?.replace(/_/g, ' ') || 'Full Body'}</div>
+                  <div className="font-medium capitalize">
+                    {formData?.focusArea?.replace(/_/g, ' ') || 'Full Body'}
+                  </div>
                 </div>
               </div>
             </div>
@@ -227,8 +245,14 @@ export default function ProgramReviewStep({
               <div className="text-sm">
                 <div className="font-medium">How generation works:</div>
                 <ol className="list-decimal list-inside text-base-content/70 mt-1 space-y-1">
-                  <li><span className="font-medium">Structure first</span> (~8-10 min): Core exercises, sets, reps</li>
-                  <li><span className="font-medium">Add details</span> (~2-3 min/week): Coaching cues, warm-ups, scaling</li>
+                  <li>
+                    <span className="font-medium">Structure first</span> (~8-10 min): Core
+                    exercises, sets, reps
+                  </li>
+                  <li>
+                    <span className="font-medium">Add details</span> (~2-3 min/week): Coaching cues,
+                    warm-ups, scaling
+                  </li>
                 </ol>
               </div>
             </div>
@@ -253,13 +277,18 @@ export default function ProgramReviewStep({
 
       {/* Navigation buttons */}
       <div className="flex justify-between pt-4">
-        <button
-          className="btn btn-outline"
-          onClick={onBack}
-          disabled={isGenerating}
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
+        <button className="btn btn-outline" onClick={onBack} disabled={isGenerating}>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-5 w-5 mr-2"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+          >
+            <path
+              fillRule="evenodd"
+              d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z"
+              clipRule="evenodd"
+            />
           </svg>
           Back
         </button>

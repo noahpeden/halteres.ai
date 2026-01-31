@@ -12,10 +12,7 @@ export default function DashboardHeader({ onCreateProgram }) {
         >
           Manage Clients/Classes
         </Link>
-        <button
-          onClick={onCreateProgram}
-          className="btn btn-primary text-white"
-        >
+        <button onClick={onCreateProgram} className="btn btn-primary text-white">
           Create New Program
         </button>
       </div>

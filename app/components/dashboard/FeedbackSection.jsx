@@ -1,5 +1,5 @@
 'use client';
-import { MessageSquare, Phone, Mail, ExternalLink } from 'lucide-react';
+import { ExternalLink, Mail, MessageSquare, Phone } from 'lucide-react';
 
 export default function FeedbackSection() {
   return (
@@ -10,13 +10,10 @@ export default function FeedbackSection() {
             <div className="p-2 bg-blue-100 rounded-lg mr-3">
               <MessageSquare className="w-5 h-5 text-blue-600" />
             </div>
-            <h3 className="text-lg font-semibold text-slate-900">
-              We Value Your Feedback
-            </h3>
+            <h3 className="text-lg font-semibold text-slate-900">We Value Your Feedback</h3>
           </div>
           <p className="text-slate-600 mb-4 max-w-md">
-            Help us improve Halteres.ai by sharing your thoughts and suggestions
-            about our platform.
+            Help us improve Halteres.ai by sharing your thoughts and suggestions about our platform.
           </p>
           <a
             href="https://docs.google.com/forms/d/e/1FAIpQLScwKMmjHLqIq4bmOlFKaVHFIowqX1-CwZ3HRNXWZyxpBb3VVw/viewform?usp=dialog"
@@ -40,8 +37,7 @@ export default function FeedbackSection() {
             <div className="flex items-center">
               <Phone className="w-4 h-4 text-slate-400 mr-2" />
               <span className="text-slate-600">
-                <span className="font-medium text-slate-900">Phone:</span> (314)
-                827-4744
+                <span className="font-medium text-slate-900">Phone:</span> (314) 827-4744
               </span>
             </div>
             <div className="flex items-start">

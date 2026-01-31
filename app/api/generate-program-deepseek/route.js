@@ -1,6 +1,6 @@
-import { createClient } from '@/utils/supabase/server';
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
+import { createClient } from '@/utils/supabase/server';
 
 export const maxDuration = 300;
 export const dynamic = 'force-dynamic';
@@ -38,24 +38,15 @@ export async function POST(request) {
     const workoutFormats = requestData.workout_format || [];
 
     // Critical parameters - ensure they have fallback values
-    const numberOfWeeks = parseInt(
-      requestData.duration_weeks || requestData.numberOfWeeks || 4
-    );
-    const daysPerWeek = parseInt(
-      requestData.days_per_week || requestData.daysPerWeek || 3
-    );
+    const numberOfWeeks = parseInt(requestData.duration_weeks || requestData.numberOfWeeks || 4);
+    const daysPerWeek = parseInt(requestData.days_per_week || requestData.daysPerWeek || 3);
     const programType =
-      requestData.periodization?.program_type ||
-      requestData.programType ||
-      'linear';
+      requestData.periodization?.program_type || requestData.programType || 'linear';
 
     // Optional parameters
-    const equipment =
-      requestData.gym_details?.equipment || requestData.equipment || [];
-    const gymType =
-      requestData.gym_details?.gym_type || requestData.gymType || '';
-    const startDate =
-      requestData.calendar_data?.start_date || requestData.startDate || '';
+    const equipment = requestData.gym_details?.equipment || requestData.equipment || [];
+    const gymType = requestData.gym_details?.gym_type || requestData.gymType || '';
+    const startDate = requestData.calendar_data?.start_date || requestData.startDate || '';
 
     logWithTimestamp('Parsed parameters', {
       numberOfWeeks,
@@ -78,7 +69,7 @@ export async function POST(request) {
 
     // If we have selected days, use them to generate dates
     if (selectedDaysOfWeek.length > 0) {
-      let currentDate = new Date(startingDate);
+      const currentDate = new Date(startingDate);
       let workoutsAdded = 0;
 
       // Keep going until we have enough workouts
@@ -108,10 +99,7 @@ export async function POST(request) {
     } = await supabase.auth.getSession();
     if (!session) {
       logWithTimestamp('Authentication failed');
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
     logWithTimestamp('Authentication successful', { userId: session.user.id });
 
@@ -159,11 +147,7 @@ ${entityData.bench_1rm ? `Bench Press 1RM: ${entityData.bench_1rm} kg` : ''}
 ${entityData.squat_1rm ? `Squat 1RM: ${entityData.squat_1rm} kg` : ''}
 ${entityData.deadlift_1rm ? `Deadlift 1RM: ${entityData.deadlift_1rm} kg` : ''}
 ${entityData.mile_time ? `Mile Time: ${entityData.mile_time}` : ''}
-${
-  entityData.recovery_score
-    ? `Recovery Score: ${entityData.recovery_score}/10`
-    : ''
-}
+${entityData.recovery_score ? `Recovery Score: ${entityData.recovery_score}/10` : ''}
 ${
   entityData.injury_history
     ? `Injury History: ${
@@ -188,12 +172,7 @@ If client metrics indicate specific limitations, provide appropriate scaling opt
 
     // Check if injury history exists and is meaningful
     let hasInjuryHistory = false;
-    if (
-      programId &&
-      typeof entityData !== 'undefined' &&
-      entityData &&
-      entityData.injury_history
-    ) {
+    if (programId && typeof entityData !== 'undefined' && entityData && entityData.injury_history) {
       if (
         typeof entityData.injury_history === 'string' &&
         entityData.injury_history.trim() !== ''
@@ -216,13 +195,12 @@ If client metrics indicate specific limitations, provide appropriate scaling opt
       try {
         logWithTimestamp('Fetching reference workouts', { programId });
 
-        const { data: referenceWorkouts, error: referenceError } =
-          await supabase
-            .from('program_workouts')
-            .select('title, body, tags')
-            .eq('program_id', programId)
-            .eq('is_reference', true)
-            .order('created_at', { ascending: false });
+        const { data: referenceWorkouts, error: referenceError } = await supabase
+          .from('program_workouts')
+          .select('title, body, tags')
+          .eq('program_id', programId)
+          .eq('is_reference', true)
+          .order('created_at', { ascending: false });
 
         if (referenceError) {
           logWithTimestamp('Error fetching reference workouts', {
@@ -257,18 +235,8 @@ Draw inspiration from these reference workouts when designing this program. Use 
     }
 
     // Get the day names from the day numbers for the prompt
-    const dayNames = [
-      'Sunday',
-      'Monday',
-      'Tuesday',
-      'Wednesday',
-      'Thursday',
-      'Friday',
-      'Saturday',
-    ];
-    const selectedDayNames = selectedDaysOfWeek
-      .map((dayNum) => dayNames[dayNum])
-      .join(', ');
+    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const selectedDayNames = selectedDaysOfWeek.map((dayNum) => dayNames[dayNum]).join(', ');
 
     // Conditionally build scaling options sections
     const includeScaling = ['Beginner', 'Intermediate'].includes(difficulty);
@@ -282,11 +250,7 @@ Draw inspiration from these reference workouts when designing this program. Use 
 6. Scaling Options:
    - Intermediate level scaling with specific weights and movement modifications
    - Beginner level scaling with specific weights and movement modifications
-   ${
-     hasInjuryHistory
-       ? '- Injury considerations with alternative movements'
-       : ''
-   }`;
+   ${hasInjuryHistory ? '- Injury considerations with alternative movements' : ''}`;
 
       scalingBodyStructure = `
 ## Scaling Options
@@ -317,11 +281,7 @@ Days Per Week: ${daysPerWeek} days
 Selected Training Days: ${selectedDayNames}
 Total Length: ${numberOfWeeks} weeks
 ${focusArea ? `Focus Area: ${focusArea}` : ''}
-${
-  equipment && equipment.length > 0
-    ? `Available Equipment: ${equipment.join(', ')}`
-    : ''
-}
+${equipment && equipment.length > 0 ? `Available Equipment: ${equipment.join(', ')}` : ''}
 ${
   workoutFormats && workoutFormats.length > 0
     ? `Workout Formats to Include: ${workoutFormats.join(', ')}`
@@ -371,8 +331,8 @@ Your response MUST be in this exact JSON format:
 {
   "title": "Training Program for ${goal}",
   "description": "A comprehensive ${numberOfWeeks}-week ${difficulty} training program focused on ${
-      focusArea || goal
-    } that includes detailed weekly progression, nutrition guidance, and recovery recommendations",
+    focusArea || goal
+  } that includes detailed weekly progression, nutrition guidance, and recovery recommendations",
   "overview": "A detailed explanation of the program methodology, periodization approach, expected outcomes, and supplementary recommendations",
   "workouts": [
     {
@@ -452,11 +412,7 @@ IMPORTANT: Each workout MUST be assigned to one of the above dates. These dates 
 
       logWithTimestamp('Received response from Deepseek');
 
-      if (
-        !response.choices ||
-        !response.choices[0] ||
-        !response.choices[0].message
-      ) {
+      if (!response.choices || !response.choices[0] || !response.choices[0].message) {
         logWithTimestamp('Invalid response format from Deepseek', response);
         return NextResponse.json(
           { error: 'Failed to generate a valid program: Invalid API response' },
@@ -498,15 +454,13 @@ IMPORTANT: Each workout MUST be assigned to one of the above dates. These dates 
         workouts = parsedContent.workouts;
         programTitle = parsedContent.title || `Training Program for ${goal}`;
         programDescription =
-          parsedContent.description || `${numberOfWeeks}-week program, ${daysPerWeek} days per week`;
+          parsedContent.description ||
+          `${numberOfWeeks}-week program, ${daysPerWeek} days per week`;
       } else if (Array.isArray(parsedContent)) {
         // Legacy format - just an array
         logWithTimestamp('Found legacy array format');
         workouts = parsedContent;
-      } else if (
-        parsedContent.training_program &&
-        Array.isArray(parsedContent.training_program)
-      ) {
+      } else if (parsedContent.training_program && Array.isArray(parsedContent.training_program)) {
         logWithTimestamp('Found training_program array format');
         workouts = parsedContent.training_program;
       } else {
@@ -525,10 +479,7 @@ IMPORTANT: Each workout MUST be assigned to one of the above dates. These dates 
           logWithTimestamp('Found single workout in response');
           workouts = [parsedContent];
         } else {
-          logWithTimestamp(
-            'Unable to find workouts in response',
-            parsedContent
-          );
+          logWithTimestamp('Unable to find workouts in response', parsedContent);
           return NextResponse.json(
             { error: 'Invalid response format: could not find workouts array' },
             { status: 500 }
@@ -542,8 +493,7 @@ IMPORTANT: Each workout MUST be assigned to one of the above dates. These dates 
       workouts = workouts.map((workout, index) => {
         return {
           title: workout.title || `Workout ${index + 1}`,
-          body:
-            workout.body || workout.description || 'No description provided',
+          body: workout.body || workout.description || 'No description provided',
           date:
             workout.date ||
             workout.suggestedDate ||

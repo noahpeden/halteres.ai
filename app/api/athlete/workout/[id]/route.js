@@ -1,5 +1,5 @@
-import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
 
 async function getSupabaseClient() {
   const cookieStore = await cookies();
@@ -41,7 +41,10 @@ export async function GET(request, { params }) {
 
     if (workoutError) {
       console.error('Workout fetch error:', workoutError);
-      return Response.json({ error: 'Workout not found', details: workoutError.message }, { status: 404 });
+      return Response.json(
+        { error: 'Workout not found', details: workoutError.message },
+        { status: 404 }
+      );
     }
 
     if (!workout) {
@@ -89,11 +92,12 @@ export async function GET(request, { params }) {
 
 function formatResult(result) {
   switch (result.result_type) {
-    case 'time':
+    case 'time': {
       if (!result.time_seconds) return '-';
       const mins = Math.floor(result.time_seconds / 60);
       const secs = result.time_seconds % 60;
       return `${mins}:${secs.toString().padStart(2, '0')}`;
+    }
     case 'rounds_reps':
       return `${result.rounds || 0} + ${result.reps || 0}`;
     case 'weight':

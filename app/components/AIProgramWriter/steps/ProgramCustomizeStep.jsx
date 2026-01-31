@@ -1,7 +1,7 @@
 'use client';
 
+import { Building2, ChevronDown, ChevronUp, Dumbbell, Layers, Target } from 'lucide-react';
 import { useState } from 'react';
-import { Dumbbell, Target, Layers, Building2, ChevronDown, ChevronUp } from 'lucide-react';
 
 const workoutFormats = [
   { id: 'strength', label: 'Strength', description: 'Compound lifts, progressive overload' },
@@ -15,7 +15,11 @@ const workoutFormats = [
 ];
 
 const focusAreas = [
-  { id: 'full_body', label: 'Full Body', description: 'Balanced training across all muscle groups' },
+  {
+    id: 'full_body',
+    label: 'Full Body',
+    description: 'Balanced training across all muscle groups',
+  },
   { id: 'upper_body', label: 'Upper Body', description: 'Focus on push/pull movements' },
   { id: 'lower_body', label: 'Lower Body', description: 'Emphasis on legs and posterior chain' },
   { id: 'core', label: 'Core', description: 'Midline stability and strength' },
@@ -57,7 +61,7 @@ export default function ProgramCustomizeStep({
 
   const handleFormatToggle = (formatId) => {
     const newFormats = selectedFormats.includes(formatId)
-      ? selectedFormats.filter(f => f !== formatId)
+      ? selectedFormats.filter((f) => f !== formatId)
       : [...selectedFormats, formatId];
     onWorkoutFormatChange(newFormats);
   };
@@ -85,20 +89,24 @@ export default function ProgramCustomizeStep({
           <span className="label-text-alt">{selectedFormats.length} selected</span>
         </label>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          {workoutFormats.map(format => (
+          {workoutFormats.map((format) => (
             <button
               key={format.id}
               type="button"
               onClick={() => handleFormatToggle(format.id)}
               className={`
                 p-3 rounded-lg border-2 text-left transition-all
-                ${selectedFormats.includes(format.id)
-                  ? 'border-primary bg-primary/10'
-                  : 'border-base-300 hover:border-primary/50'}
+                ${
+                  selectedFormats.includes(format.id)
+                    ? 'border-primary bg-primary/10'
+                    : 'border-base-300 hover:border-primary/50'
+                }
               `}
             >
               <div className="font-medium text-sm">{format.label}</div>
-              <div className="text-xs text-base-content/60 mt-1 hidden sm:block">{format.description}</div>
+              <div className="text-xs text-base-content/60 mt-1 hidden sm:block">
+                {format.description}
+              </div>
             </button>
           ))}
         </div>
@@ -118,7 +126,7 @@ export default function ProgramCustomizeStep({
           onChange={(e) => onFieldChange('focusArea', e.target.value)}
         >
           <option value="">Select a focus area (optional)...</option>
-          {focusAreas.map(focus => (
+          {focusAreas.map((focus) => (
             <option key={focus.id} value={focus.id}>
               {focus.label} - {focus.description}
             </option>
@@ -135,16 +143,18 @@ export default function ProgramCustomizeStep({
           </span>
         </label>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          {gymTypes.map(gym => (
+          {gymTypes.map((gym) => (
             <button
               key={gym.id}
               type="button"
               onClick={() => onFieldChange('gymType', gym.id)}
               className={`
                 p-4 rounded-lg border-2 text-center transition-all
-                ${selectedGymType === gym.id
-                  ? 'border-primary bg-primary/10'
-                  : 'border-base-300 hover:border-primary/50'}
+                ${
+                  selectedGymType === gym.id
+                    ? 'border-primary bg-primary/10'
+                    : 'border-base-300 hover:border-primary/50'
+                }
               `}
             >
               <div className="font-medium">{gym.label}</div>
@@ -190,7 +200,7 @@ export default function ProgramCustomizeStep({
                 value={selectedPeriodization}
                 onChange={(e) => onFieldChange('programType', e.target.value)}
               >
-                {periodizationTypes.map(type => (
+                {periodizationTypes.map((type) => (
                   <option key={type.id} value={type.id}>
                     {type.label} - {type.description}
                   </option>
@@ -220,23 +230,34 @@ export default function ProgramCustomizeStep({
 
       {/* Navigation buttons */}
       <div className="flex justify-between pt-4">
-        <button
-          className="btn btn-outline"
-          onClick={onBack}
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
+        <button className="btn btn-outline" onClick={onBack}>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-5 w-5 mr-2"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+          >
+            <path
+              fillRule="evenodd"
+              d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z"
+              clipRule="evenodd"
+            />
           </svg>
           Back
         </button>
-        <button
-          className="btn btn-primary btn-lg"
-          onClick={onNext}
-          disabled={!canProceed}
-        >
+        <button className="btn btn-primary btn-lg" onClick={onNext} disabled={!canProceed}>
           Review Program
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-2" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-5 w-5 ml-2"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+          >
+            <path
+              fillRule="evenodd"
+              d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z"
+              clipRule="evenodd"
+            />
           </svg>
         </button>
       </div>

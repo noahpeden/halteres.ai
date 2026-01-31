@@ -3,10 +3,7 @@
  * @param {Object} context - The full context for prompt generation
  * @returns {string} The assembled prompt string
  */
-import {
-  formatEquipmentRestrictions,
-  formatSchedulingRequirements,
-} from '../promptBuilder.js';
+import { formatEquipmentRestrictions, formatSchedulingRequirements } from '../promptBuilder.js';
 
 export function calisthenicsPrompt(context) {
   // Extract all relevant parameters with fallbacks
@@ -34,8 +31,7 @@ export function calisthenicsPrompt(context) {
   // Get more specific parameters
   const numberOfWeeks = parseInt(duration_weeks || context.numberOfWeeks || 4);
   const daysPerWeek = parseInt(days_per_week || context.daysPerWeek || 4);
-  const programType =
-    periodization?.program_type || context.programType || 'linear';
+  const programType = periodization?.program_type || context.programType || 'linear';
   const equipment = gym_details?.equipment || context.equipment || []; // Usually minimal, but can include bars, rings
   const startDate = calendar_data?.start_date || context.startDate || '';
   const totalWorkouts = numberOfWeeks * daysPerWeek;
@@ -49,18 +45,8 @@ export function calisthenicsPrompt(context) {
       : 'Calisthenics Focus (Skills, Strength, Endurance)';
 
   // Get day names for better readability
-  const dayNames = [
-    'Sunday',
-    'Monday',
-    'Tuesday',
-    'Wednesday',
-    'Thursday',
-    'Friday',
-    'Saturday',
-  ];
-  const selectedDayNames = selectedDaysOfWeek
-    .map((dayNum) => dayNames[dayNum])
-    .join(', ');
+  const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const selectedDayNames = selectedDaysOfWeek.map((dayNum) => dayNames[dayNum]).join(', ');
 
   // Determine if scaling options should be included
   const includeScaling = ['Beginner', 'Intermediate'].includes(difficulty);
@@ -68,9 +54,9 @@ export function calisthenicsPrompt(context) {
 
   // Build the Calisthenics prompt
   const isGeneratingSpecificWeek = context.isWeekSpecific;
-  const weekSpecificInfo = isGeneratingSpecificWeek ?
-    `Week ${context.weekNumber} of ${context.totalWeeks}` :
-    `${numberOfWeeks}-week`;
+  const weekSpecificInfo = isGeneratingSpecificWeek
+    ? `Week ${context.weekNumber} of ${context.totalWeeks}`
+    : `${numberOfWeeks}-week`;
 
   return `Generate a ${isGeneratingSpecificWeek ? 'single week' : numberOfWeeks + '-week'} calisthenics (bodyweight training) program for ${goal}.
 
@@ -84,11 +70,15 @@ ${focus_area ? `Focus Area/Skills: ${focus_area}` : ''}
 Periodization: ${programType}
 </program_parameters>
 
-${description ? `<client_requirements priority="high">
+${
+  description
+    ? `<client_requirements priority="high">
 ${description}
 These requirements take precedence over general guidelines below.
 </client_requirements>
-` : ''}
+`
+    : ''
+}
 ${formatEquipmentRestrictions(equipment)}
 
 <workout_formats required="${formattedWorkoutFormats}">
@@ -96,9 +86,11 @@ Focus primarily on progressive bodyweight exercises. Include skill work, strengt
 </workout_formats>
 
 <output_quantity>
-${isGeneratingSpecificWeek
-  ? `Generate exactly ${context.workoutsThisWeek || daysPerWeek} workouts for Week ${context.weekNumber} only.`
-  : `Generate exactly ${totalWorkouts} workouts total (${numberOfWeeks} weeks × ${daysPerWeek} days).`}
+${
+  isGeneratingSpecificWeek
+    ? `Generate exactly ${context.workoutsThisWeek || daysPerWeek} workouts for Week ${context.weekNumber} only.`
+    : `Generate exactly ${totalWorkouts} workouts total (${numberOfWeeks} weeks × ${daysPerWeek} days).`
+}
 </output_quantity>
 
 ${personalization ? `<personalization>${personalization}</personalization>` : ''}
@@ -108,14 +100,18 @@ ${clientMetrics ? `\n${clientMetrics}` : ''}
 ${referenceWorkouts ? `\n${referenceWorkouts}` : ''}
 ${additionalNotes ? `\nAdditional Notes: ${additionalNotes}` : ''}
 ${formattedPeriodizationGuidelines}
-${context.formattedDates ? `
+${
+  context.formattedDates
+    ? `
 <scheduling>
 Training Days: ${selectedDayNames || 'All available days'}
 Assign workouts to these exact dates:
 ${context.formattedDates}
 Each workout's "date" field must match one of these dates exactly.
 </scheduling>
-` : formatSchedulingRequirements(suggestedDates, daysPerWeek, selectedDayNames)}
+`
+    : formatSchedulingRequirements(suggestedDates, daysPerWeek, selectedDayNames)
+}
 
 <description_requirements>
 Include in the program description:
@@ -160,14 +156,18 @@ Example: "Week 3, Day 1: [Skill/Strength Focus] Calisthenics"
 ## Workout Focus: [Target Skill/Strength Element]
 Brief explanation of this session's purpose, specific progressions being worked, form guidance, and how it contributes to bodyweight mastery
 
-${includeScaling ? `## Scaling Options
+${
+  includeScaling
+    ? `## Scaling Options
 ### Easier Progression
 Exercise regressions or modifications to reduce difficulty
 
 ### Harder Progression
 Exercise progressions or added difficulty for advanced individuals
 ${hasInjuryHistory ? `\n### Injury Considerations\nAlternative exercises or modifications for limitations` : ''}
-` : ''}
+`
+    : ''
+}
 ## Warm-up
 Dynamic warm-up with joint mobility and movement preparation
 - Wrist, shoulder, hip, and spine mobility drills
@@ -202,8 +202,10 @@ Static stretching for major muscle groups
 3-5 technical cues for key movements: body alignment, muscle engagement, common errors to avoid
 </workout_body_structure>
 
-${isGeneratingSpecificWeek
-  ? `Generate exactly ${context.workoutsThisWeek || daysPerWeek} workouts for Week ${context.weekNumber}.`
-  : `Generate exactly ${totalWorkouts} workouts covering ${numberOfWeeks} week(s).`}
+${
+  isGeneratingSpecificWeek
+    ? `Generate exactly ${context.workoutsThisWeek || daysPerWeek} workouts for Week ${context.weekNumber}.`
+    : `Generate exactly ${totalWorkouts} workouts covering ${numberOfWeeks} week(s).`
+}
 `;
 }

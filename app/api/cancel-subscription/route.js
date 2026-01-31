@@ -1,11 +1,11 @@
-import { createMobileCompatibleClient, corsHeaders } from '@/utils/supabase/mobile';
-import { stripe } from '@/utils/stripe';
 import { NextResponse } from 'next/server';
+import { stripe } from '@/utils/stripe';
+import { corsHeaders, createMobileCompatibleClient } from '@/utils/supabase/mobile';
 
 export async function OPTIONS(request) {
   return new Response(null, {
     status: 200,
-    headers: corsHeaders()
+    headers: corsHeaders(),
   });
 }
 
@@ -56,10 +56,13 @@ export async function POST(req) {
     });
 
     // Return success response
-    return NextResponse.json({
-      success: true,
-      message: 'Subscription canceled successfully',
-    }, { headers: corsHeaders() });
+    return NextResponse.json(
+      {
+        success: true,
+        message: 'Subscription canceled successfully',
+      },
+      { headers: corsHeaders() }
+    );
   } catch (error) {
     console.error('Error canceling subscription:', error);
     return NextResponse.json(

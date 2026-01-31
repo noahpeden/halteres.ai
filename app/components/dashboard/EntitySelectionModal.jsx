@@ -62,9 +62,7 @@ export default function EntitySelectionModal({
           )}
 
           <div className="flex justify-between items-center mb-2">
-            <span className="text-sm font-medium">
-              Or create a new client/class:
-            </span>
+            <span className="text-sm font-medium">Or create a new client/class:</span>
             <button onClick={onCreateNew} className="btn btn-sm btn-outline">
               Create New
             </button>

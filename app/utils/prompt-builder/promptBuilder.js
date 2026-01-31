@@ -5,20 +5,20 @@
  * Easily extensible for new training styles.
  */
 
-// Import prompt templates from separate files
-import { crossfitPrompt } from './prompts/crossfit.js';
-import { generalGymPrompt } from './prompts/commercial-gym.js';
-import { minimalEquipmentPrompt } from './prompts/minimal-equipment.js';
+import { formatPeriodizationGuidelines } from './periodizationUtils.js';
 import { balancedFitnessPrompt } from './prompts/balanced-fitness.js';
 import { bodybuildingPrompt } from './prompts/bodybuilding.js';
-import { powerliftingPrompt } from './prompts/powerlifting.js';
+import { calisthenicsPrompt } from './prompts/calisthenics.js';
+import { generalGymPrompt } from './prompts/commercial-gym.js';
+// Import prompt templates from separate files
+import { crossfitPrompt } from './prompts/crossfit.js';
 import { functionalFitnessPrompt } from './prompts/functional-fitness.js';
 import { hiitMetabolicPrompt } from './prompts/hiit-metabolic.js';
-import { calisthenicsPrompt } from './prompts/calisthenics.js';
+import { ironmanPrompt } from './prompts/ironman.js';
+import { minimalEquipmentPrompt } from './prompts/minimal-equipment.js';
+import { powerliftingPrompt } from './prompts/powerlifting.js';
 import { sportSpecificPrompt } from './prompts/sport-specific.js';
 import { triathlonPrompt } from './prompts/triathlon.js';
-import { ironmanPrompt } from './prompts/ironman.js';
-import { formatPeriodizationGuidelines } from './periodizationUtils.js';
 
 /**
  * Creates equipment restriction notice using Claude 4.5 best practices
@@ -27,9 +27,7 @@ import { formatPeriodizationGuidelines } from './periodizationUtils.js';
  */
 export function formatEquipmentRestrictions(equipment) {
   const equipmentList =
-    Array.isArray(equipment) && equipment.length > 0
-      ? equipment.join(', ')
-      : 'Bodyweight only';
+    Array.isArray(equipment) && equipment.length > 0 ? equipment.join(', ') : 'Bodyweight only';
 
   return `
 <equipment_restrictions>
@@ -48,11 +46,7 @@ Context: Users have specific equipment access, so including exercises requiring 
  * @param {string} selectedDayNames - Names of selected days of the week
  * @returns {string} Formatted string with scheduling requirements
  */
-export function formatSchedulingRequirements(
-  suggestedDates,
-  daysPerWeek,
-  selectedDayNames
-) {
+export function formatSchedulingRequirements(suggestedDates, daysPerWeek, selectedDayNames) {
   if (!Array.isArray(suggestedDates) || suggestedDates.length === 0) {
     return '';
   }
@@ -95,15 +89,15 @@ export default function promptBuilder(context, trainingType) {
     // If client metrics is provided as an object, convert to string format for the prompt
     // Use formatClassMetrics for CLASS entities, formatClientMetrics for CLIENT entities
     clientMetrics:
-      context.clientMetrics || (isClass
+      context.clientMetrics ||
+      (isClass
         ? formatClassMetrics(context.clientMetricsData, context.useImperial)
         : formatClientMetrics(context.clientMetricsData, context.useImperial)),
     // Flag to indicate if this is a class workout
     isClassWorkout: isClass,
     // If reference workouts is provided as an array, convert to string format for the prompt
     referenceWorkouts:
-      context.referenceWorkouts ||
-      formatReferenceWorkouts(context.referenceWorkoutsData),
+      context.referenceWorkouts || formatReferenceWorkouts(context.referenceWorkoutsData),
     // Add formatted reference input if provided by the user
     formattedReferenceInput: context.referenceInput
       ? formatReferenceInput(context.referenceInput)
@@ -241,19 +235,25 @@ export function formatClientMetrics(clientMetricsData, useImperial = false) {
     clientMetricsData.age && `Age: ${clientMetricsData.age} years`,
     clientMetricsData.height_cm && `Height: ${formatHeight(clientMetricsData.height_cm)}`,
     clientMetricsData.weight_kg && `Weight: ${formatWeight(clientMetricsData.weight_kg)}`,
-    clientMetricsData.years_of_experience && `Training Experience: ${clientMetricsData.years_of_experience} years`,
-    clientMetricsData.workout_experience_type && `Primary Experience: ${clientMetricsData.workout_experience_type}`,
+    clientMetricsData.years_of_experience &&
+      `Training Experience: ${clientMetricsData.years_of_experience} years`,
+    clientMetricsData.workout_experience_type &&
+      `Primary Experience: ${clientMetricsData.workout_experience_type}`,
     clientMetricsData.bench_1rm && `Bench Press 1RM: ${formatWeight(clientMetricsData.bench_1rm)}`,
     clientMetricsData.squat_1rm && `Squat 1RM: ${formatWeight(clientMetricsData.squat_1rm)}`,
-    clientMetricsData.deadlift_1rm && `Deadlift 1RM: ${formatWeight(clientMetricsData.deadlift_1rm)}`,
+    clientMetricsData.deadlift_1rm &&
+      `Deadlift 1RM: ${formatWeight(clientMetricsData.deadlift_1rm)}`,
     clientMetricsData.mile_time && `Mile Time: ${clientMetricsData.mile_time}`,
     clientMetricsData.recovery_score && `Recovery Score: ${clientMetricsData.recovery_score}/10`,
-    clientMetricsData.injury_history && `Injury History: ${
-      typeof clientMetricsData.injury_history === 'object'
-        ? JSON.stringify(clientMetricsData.injury_history)
-        : clientMetricsData.injury_history
-    }`,
-  ].filter(Boolean).join('\n');
+    clientMetricsData.injury_history &&
+      `Injury History: ${
+        typeof clientMetricsData.injury_history === 'object'
+          ? JSON.stringify(clientMetricsData.injury_history)
+          : clientMetricsData.injury_history
+      }`,
+  ]
+    .filter(Boolean)
+    .join('\n');
 
   return `
 <client_metrics unit_preference="${weightUnit}">
@@ -306,8 +306,7 @@ function formatCustomWorkoutFormat(workoutFormats) {
   if (
     !workoutFormats ||
     (Array.isArray(workoutFormats) && workoutFormats.length === 0) ||
-    (typeof workoutFormats === 'object' &&
-      Object.keys(workoutFormats).length === 0)
+    (typeof workoutFormats === 'object' && Object.keys(workoutFormats).length === 0)
   ) {
     return null;
   }
@@ -363,11 +362,7 @@ function formatCustomWorkoutFormat(workoutFormats) {
  * @returns {string} Formatted string for the prompt or empty string if no input
  */
 function formatReferenceInput(referenceInput) {
-  if (
-    !referenceInput ||
-    typeof referenceInput !== 'string' ||
-    referenceInput.trim() === ''
-  ) {
+  if (!referenceInput || typeof referenceInput !== 'string' || referenceInput.trim() === '') {
     return '';
   }
 
@@ -396,10 +391,7 @@ function formatRagMatchedWorkouts(ragMatchedWorkouts) {
   return `
 Database-Matched Workouts (Based on Reference Input):
 ${ragMatchedWorkouts
-  .map(
-    (workout, index) =>
-      `Matched Workout ${index + 1}: ${workout.title}\n${workout.body}\n---`
-  )
+  .map((workout, index) => `Matched Workout ${index + 1}: ${workout.title}\n${workout.body}\n---`)
   .join('\n')}
 
 Consider these workouts found in our database that closely match the user's provided reference material. They may offer further examples of structure, exercises, or style.`;
@@ -416,10 +408,7 @@ function isNotEmptyInjuryHistory(injuryHistory) {
   if (typeof injuryHistory === 'string') {
     return injuryHistory.trim() !== '';
   } else if (typeof injuryHistory === 'object') {
-    return (
-      Object.keys(injuryHistory).length > 0 &&
-      JSON.stringify(injuryHistory) !== '{}'
-    );
+    return Object.keys(injuryHistory).length > 0 && JSON.stringify(injuryHistory) !== '{}';
   }
 
   return false;
@@ -480,12 +469,16 @@ Every workout needs ${hasEliteAthletes ? 'three' : 'two'} scaling levels:
    - Clear substitutions for technical movements
 
 2. RX: Standard prescribed weights and movements
-   - Appropriate for intermediate athletes${hasEliteAthletes ? `
+   - Appropriate for intermediate athletes${
+     hasEliteAthletes
+       ? `
 
 3. RX+: For elite/competitive athletes in this class
    - Heavier loads (20-40% above RX)
    - More demanding variations (strict vs kipping, deficit movements)
-   - Increased volume or competition-standard movements` : ''}
+   - Increased volume or competition-standard movements`
+       : ''
+   }
 
 Format weights like: Back Squat: Scaled 95/65${weightUnit} | RX 135/95${weightUnit}${hasEliteAthletes ? ` | RX+ 185/135${weightUnit}` : ''}
 </scaling_requirements>`;
@@ -496,9 +489,13 @@ Format weights like: Back Squat: Scaled 95/65${weightUnit} | RX 135/95${weightUn
 
 <equipment_management athletes="${classSize}">
 Consider equipment sharing rotations and sufficient barbell/rig access.
-Include partner or group options where appropriate.${classSize > 15 ? `
+Include partner or group options where appropriate.${
+      classSize > 15
+        ? `
 For this large class, prioritize movements not requiring specialized equipment.
-Consider wave starts or heat structures for time-domain workouts.` : ''}
+Consider wave starts or heat structures for time-domain workouts.`
+        : ''
+    }
 </equipment_management>`;
   }
 

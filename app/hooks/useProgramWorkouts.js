@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 
 export function useProgramWorkouts(programId) {
@@ -107,9 +107,7 @@ export function useProgramWorkouts(programId) {
 
         // Update local state
         if (data.is_reference) {
-          setReferenceWorkouts((prev) =>
-            prev.map((w) => (w.id === workoutId ? data : w))
-          );
+          setReferenceWorkouts((prev) => prev.map((w) => (w.id === workoutId ? data : w)));
         } else {
           setWorkouts((prev) =>
             prev
@@ -143,18 +141,13 @@ export function useProgramWorkouts(programId) {
           workouts.find((w) => w.id === workoutId) ||
           referenceWorkouts.find((w) => w.id === workoutId);
 
-        const { error } = await supabase
-          .from('program_workouts')
-          .delete()
-          .eq('id', workoutId);
+        const { error } = await supabase.from('program_workouts').delete().eq('id', workoutId);
 
         if (error) throw error;
 
         // Update local state
         if (workout?.is_reference) {
-          setReferenceWorkouts((prev) =>
-            prev.filter((w) => w.id !== workoutId)
-          );
+          setReferenceWorkouts((prev) => prev.filter((w) => w.id !== workoutId));
         } else {
           setWorkouts((prev) => prev.filter((w) => w.id !== workoutId));
         }
@@ -175,9 +168,7 @@ export function useProgramWorkouts(programId) {
       if (!programId || !supabase || !generatedWorkouts) return [];
 
       // Ensure generatedWorkouts is an array
-      const workoutsArray = Array.isArray(generatedWorkouts)
-        ? generatedWorkouts
-        : [];
+      const workoutsArray = Array.isArray(generatedWorkouts) ? generatedWorkouts : [];
       if (workoutsArray.length === 0) return [];
 
       try {
@@ -186,8 +177,7 @@ export function useProgramWorkouts(programId) {
           title: workout.title,
           body: workout.body || workout.description,
           tags: workout.tags,
-          scheduled_date:
-            workout.scheduled_date || workout.suggestedDate || workout.date,
+          scheduled_date: workout.scheduled_date || workout.suggestedDate || workout.date,
           is_reference: false,
         }));
 
@@ -253,7 +243,7 @@ export function useProgramWorkouts(programId) {
             if (payload.new.is_reference) {
               setReferenceWorkouts((prev) => {
                 // Check if workout already exists
-                if (prev.some(w => w.id === payload.new.id)) {
+                if (prev.some((w) => w.id === payload.new.id)) {
                   return prev;
                 }
                 return [...prev, payload.new];
@@ -261,16 +251,14 @@ export function useProgramWorkouts(programId) {
             } else {
               setWorkouts((prev) => {
                 // Check if workout already exists
-                if (prev.some(w => w.id === payload.new.id)) {
+                if (prev.some((w) => w.id === payload.new.id)) {
                   return prev;
                 }
                 return [...prev, payload.new].sort((a, b) => {
                   if (!a.scheduled_date && !b.scheduled_date) return 0;
                   if (!a.scheduled_date) return 1;
                   if (!b.scheduled_date) return -1;
-                  return (
-                    new Date(a.scheduled_date) - new Date(b.scheduled_date)
-                  );
+                  return new Date(a.scheduled_date) - new Date(b.scheduled_date);
                 });
               });
             }
@@ -287,17 +275,13 @@ export function useProgramWorkouts(programId) {
                     if (!a.scheduled_date && !b.scheduled_date) return 0;
                     if (!a.scheduled_date) return 1;
                     if (!b.scheduled_date) return -1;
-                    return (
-                      new Date(a.scheduled_date) - new Date(b.scheduled_date)
-                    );
+                    return new Date(a.scheduled_date) - new Date(b.scheduled_date);
                   })
               );
             }
           } else if (payload.eventType === 'DELETE') {
             setWorkouts((prev) => prev.filter((w) => w.id !== payload.old.id));
-            setReferenceWorkouts((prev) =>
-              prev.filter((w) => w.id !== payload.old.id)
-            );
+            setReferenceWorkouts((prev) => prev.filter((w) => w.id !== payload.old.id));
           }
         }
       )

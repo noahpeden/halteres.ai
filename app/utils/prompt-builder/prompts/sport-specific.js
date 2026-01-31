@@ -3,10 +3,7 @@
  * @param {Object} context - The full context for prompt generation
  * @returns {string} The assembled prompt string
  */
-import {
-  formatEquipmentRestrictions,
-  formatSchedulingRequirements,
-} from '../promptBuilder.js';
+import { formatEquipmentRestrictions, formatSchedulingRequirements } from '../promptBuilder.js';
 
 export function sportSpecificPrompt(context) {
   // Extract all relevant parameters with fallbacks
@@ -32,8 +29,7 @@ export function sportSpecificPrompt(context) {
   // Get more specific parameters
   const numberOfWeeks = parseInt(duration_weeks || context.numberOfWeeks || 4);
   const daysPerWeek = parseInt(days_per_week || context.daysPerWeek || 4);
-  const programType =
-    periodization?.program_type || context.programType || 'linear';
+  const programType = periodization?.program_type || context.programType || 'linear';
   const equipment = gym_details?.equipment || context.equipment || [];
   const startDate = calendar_data?.start_date || context.startDate || '';
   const totalWorkouts = numberOfWeeks * daysPerWeek;
@@ -47,18 +43,8 @@ export function sportSpecificPrompt(context) {
       : 'Sport-Specific Mix (Strength, Power, Speed, Agility, Endurance)';
 
   // Get day names for better readability
-  const dayNames = [
-    'Sunday',
-    'Monday',
-    'Tuesday',
-    'Wednesday',
-    'Thursday',
-    'Friday',
-    'Saturday',
-  ];
-  const selectedDayNames = selectedDaysOfWeek
-    .map((dayNum) => dayNames[dayNum])
-    .join(', ');
+  const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const selectedDayNames = selectedDaysOfWeek.map((dayNum) => dayNames[dayNum]).join(', ');
 
   // Determine if scaling options should be included
   const includeScaling = ['Beginner', 'Intermediate'].includes(difficulty);
@@ -66,9 +52,9 @@ export function sportSpecificPrompt(context) {
 
   // Build the Sport-Specific prompt
   const isGeneratingSpecificWeek = context.isWeekSpecific;
-  const weekSpecificInfo = isGeneratingSpecificWeek ?
-    `Week ${context.weekNumber} of ${context.totalWeeks}` :
-    `${numberOfWeeks}-week`;
+  const weekSpecificInfo = isGeneratingSpecificWeek
+    ? `Week ${context.weekNumber} of ${context.totalWeeks}`
+    : `${numberOfWeeks}-week`;
 
   return `Generate a ${isGeneratingSpecificWeek ? 'single week' : numberOfWeeks + '-week'} sport-specific training program for ${sport || 'general athletics'}.
 
@@ -83,23 +69,31 @@ ${focus_area ? `Focus Area: ${focus_area}` : ''}
 Periodization: ${programType}
 </program_parameters>
 
-${description ? `<client_requirements priority="high">
+${
+  description
+    ? `<client_requirements priority="high">
 ${description}
 These requirements take precedence over general guidelines below.
 </client_requirements>
-` : ''}
+`
+    : ''
+}
 ${formatEquipmentRestrictions(equipment)}
 
 <workout_formats required="${formattedWorkoutFormats}">
-${workoutFormats.length > 0
+${
+  workoutFormats.length > 0
     ? `Use primarily these formats: ${formattedWorkoutFormats}. Only include other formats if essential for the stated goal.`
-    : 'Use sport-specific mix: Strength, Power, Speed, Agility, Endurance work'}
+    : 'Use sport-specific mix: Strength, Power, Speed, Agility, Endurance work'
+}
 </workout_formats>
 
 <output_quantity>
-${isGeneratingSpecificWeek
-  ? `Generate exactly ${context.workoutsThisWeek || daysPerWeek} workouts for Week ${context.weekNumber} only.`
-  : `Generate exactly ${totalWorkouts} workouts total (${numberOfWeeks} weeks × ${daysPerWeek} days).`}
+${
+  isGeneratingSpecificWeek
+    ? `Generate exactly ${context.workoutsThisWeek || daysPerWeek} workouts for Week ${context.weekNumber} only.`
+    : `Generate exactly ${totalWorkouts} workouts total (${numberOfWeeks} weeks × ${daysPerWeek} days).`
+}
 </output_quantity>
 
 ${personalization ? `<personalization>${personalization}</personalization>` : ''}
@@ -108,14 +102,18 @@ ${context.formattedRagMatchedWorkouts}
 ${clientMetrics ? `\n${clientMetrics}` : ''}
 ${referenceWorkouts ? `\n${referenceWorkouts}` : ''}
 ${formattedPeriodizationGuidelines}
-${context.formattedDates ? `
+${
+  context.formattedDates
+    ? `
 <scheduling>
 Training Days: ${selectedDayNames || 'All available days'}
 Assign workouts to these exact dates:
 ${context.formattedDates}
 Each workout's "date" field must match one of these dates exactly.
 </scheduling>
-` : formatSchedulingRequirements(suggestedDates, daysPerWeek, selectedDayNames)}
+`
+    : formatSchedulingRequirements(suggestedDates, daysPerWeek, selectedDayNames)
+}
 
 <description_requirements>
 Include in the program description:
@@ -164,14 +162,18 @@ Purpose of this session for ${sport} performance:
 - Intent and effort level guidance
 - Contribution to overall athletic development
 
-${includeScaling ? `## Scaling Options
+${
+  includeScaling
+    ? `## Scaling Options
 ### Intermediate Option
 Specific modifications for intermediate athletes
 
 ### Beginner Option
 Simplified variations for beginners
 ${hasInjuryHistory ? `\n### Injury Considerations\nModifications for sport-specific injury risks or existing limitations` : ''}
-` : ''}
+`
+    : ''
+}
 ## Warm-up
 Dynamic warm-up for sport-specific movements:
 - Movement prep, activation drills, low-intensity plyometrics/speed drills
@@ -208,8 +210,10 @@ Recovery protocol:
 - Posture, force production, movement efficiency
 </workout_body_structure>
 
-${isGeneratingSpecificWeek
-  ? `Generate exactly ${context.workoutsThisWeek || daysPerWeek} workouts for Week ${context.weekNumber}.`
-  : `Generate exactly ${totalWorkouts} workouts covering ${numberOfWeeks} week(s).`}
+${
+  isGeneratingSpecificWeek
+    ? `Generate exactly ${context.workoutsThisWeek || daysPerWeek} workouts for Week ${context.weekNumber}.`
+    : `Generate exactly ${totalWorkouts} workouts covering ${numberOfWeeks} week(s).`
+}
 `;
 }

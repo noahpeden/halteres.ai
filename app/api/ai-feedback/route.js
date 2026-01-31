@@ -1,5 +1,5 @@
-import { createClient } from '@supabase/supabase-js';
 import Anthropic from '@anthropic-ai/sdk';
+import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -15,10 +15,7 @@ export async function POST(request) {
     const { workoutResultId, userId } = await request.json();
 
     if (!workoutResultId || !userId) {
-      return Response.json(
-        { error: 'Missing workoutResultId or userId' },
-        { status: 400 }
-      );
+      return Response.json({ error: 'Missing workoutResultId or userId' }, { status: 400 });
     }
 
     // Fetch the workout result with related data
@@ -38,18 +35,11 @@ export async function POST(request) {
       .single();
 
     if (resultError || !result) {
-      return Response.json(
-        { error: 'Workout result not found' },
-        { status: 404 }
-      );
+      return Response.json({ error: 'Workout result not found' }, { status: 404 });
     }
 
     // Fetch user's profile and recent history
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .single();
+    const { data: profile } = await supabase.from('profiles').select('*').eq('id', userId).single();
 
     // Get recent results for context (last 10 workouts)
     const { data: recentResults } = await supabase
@@ -121,10 +111,7 @@ export async function POST(request) {
     });
   } catch (error) {
     console.error('AI feedback error:', error);
-    return Response.json(
-      { error: 'Failed to generate feedback' },
-      { status: 500 }
-    );
+    return Response.json({ error: 'Failed to generate feedback' }, { status: 500 });
   }
 }
 
@@ -136,11 +123,12 @@ function buildFeedbackPrompt(result, profile, recentResults, prs) {
   // Format the result
   let resultDisplay = '';
   switch (result.result_type) {
-    case 'time':
+    case 'time': {
       const mins = Math.floor(result.time_seconds / 60);
       const secs = result.time_seconds % 60;
       resultDisplay = `${mins}:${secs.toString().padStart(2, '0')}`;
       break;
+    }
     case 'rounds_reps':
       resultDisplay = `${result.rounds || 0} rounds + ${result.reps || 0} reps`;
       break;
@@ -248,10 +236,7 @@ export async function GET(request) {
     const userId = searchParams.get('userId');
 
     if (!workoutResultId || !userId) {
-      return Response.json(
-        { error: 'Missing workoutResultId or userId' },
-        { status: 400 }
-      );
+      return Response.json({ error: 'Missing workoutResultId or userId' }, { status: 400 });
     }
 
     const { data: feedback, error } = await supabase
@@ -270,9 +255,6 @@ export async function GET(request) {
     return Response.json({ feedback });
   } catch (error) {
     console.error('Error fetching feedback:', error);
-    return Response.json(
-      { error: 'Failed to fetch feedback' },
-      { status: 500 }
-    );
+    return Response.json({ error: 'Failed to fetch feedback' }, { status: 500 });
   }
 }

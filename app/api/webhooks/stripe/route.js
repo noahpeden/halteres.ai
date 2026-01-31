@@ -1,7 +1,7 @@
-import { NextResponse } from 'next/server';
-import { headers } from 'next/headers';
-import { stripe } from '@/utils/stripe';
 import { createClient } from '@supabase/supabase-js';
+import { headers } from 'next/headers';
+import { NextResponse } from 'next/server';
+import { stripe } from '@/utils/stripe';
 
 // Disable Next.js body parsing for this route
 export const config = {
@@ -81,16 +81,11 @@ async function updateSubscriptionStatus(
       };
     }
     userId = profileData.id;
-    console.log(
-      `Webhook Info: Found user ID ${userId} for customer ${stripeCustomerId}`
-    );
+    console.log(`Webhook Info: Found user ID ${userId} for customer ${stripeCustomerId}`);
   }
 
   // Always update using the Supabase user ID (which is profile.id in our case)
-  console.log(
-    `Webhook Info: Updating profile ${userId} with data:`,
-    profileUpdateData
-  );
+  console.log(`Webhook Info: Updating profile ${userId} with data:`, profileUpdateData);
   const { error: updateError } = await supabaseAdmin
     .from('profiles')
     .update(profileUpdateData)
@@ -101,14 +96,16 @@ async function updateSubscriptionStatus(
       `Webhook Error: Failed to update profile for user ${userId} (Stripe Customer ${stripeCustomerId})`,
       updateError
     );
-    
+
     // Retry logic for transient errors
-    if (retryCount < maxRetries && 
-        (updateError.code === 'PGRST301' || // Connection error
-         updateError.code === '40001' || // Serialization error
-         updateError.message?.includes('timeout'))) {
+    if (
+      retryCount < maxRetries &&
+      (updateError.code === 'PGRST301' || // Connection error
+        updateError.code === '40001' || // Serialization error
+        updateError.message?.includes('timeout'))
+    ) {
       console.log(`Webhook: Retrying update for user ${userId} in 1 second...`);
-      await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
+      await new Promise((resolve) => setTimeout(resolve, 1000 * (retryCount + 1)));
       return updateSubscriptionStatus(
         stripeCustomerId,
         subscriptionId,
@@ -121,7 +118,7 @@ async function updateSubscriptionStatus(
         retryCount + 1
       );
     }
-    
+
     return { error: `Webhook handler error: ${updateError.message}` };
   }
 
@@ -136,10 +133,9 @@ export async function POST(req) {
 
   if (!signature || !webhookSecret) {
     console.error('Webhook Error: Missing Stripe signature or webhook secret.');
-    return new NextResponse(
-      JSON.stringify({ error: 'Webhook configuration error.' }),
-      { status: 400 }
-    );
+    return new NextResponse(JSON.stringify({ error: 'Webhook configuration error.' }), {
+      status: 400,
+    });
   }
 
   let event;
@@ -151,10 +147,9 @@ export async function POST(req) {
     event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
   } catch (err) {
     console.error(`Webhook signature verification failed: ${err.message}`);
-    return new NextResponse(
-      JSON.stringify({ error: `Webhook error: ${err.message}` }),
-      { status: 400 }
-    );
+    return new NextResponse(JSON.stringify({ error: `Webhook error: ${err.message}` }), {
+      status: 400,
+    });
   }
 
   if (relevantEvents.has(event.type)) {
@@ -162,16 +157,16 @@ export async function POST(req) {
     try {
       let subscription = null;
       let customerId = null;
-      let userIdFromMetadata = undefined;
+      let userIdFromMetadata;
       let requiresUpdate = false;
       let statusToUpdate = null;
       let planToUpdate = null;
       let periodEndToUpdate = null;
 
       switch (event.type) {
-        case 'checkout.session.completed':
+        case 'checkout.session.completed': {
           const checkoutSession = event.data.object;
-          
+
           // Only handle subscription checkouts
           const checkoutSubscriptionId = checkoutSession.subscription;
           if (
@@ -182,9 +177,7 @@ export async function POST(req) {
             console.log(
               `Webhook Info: Processing checkout.session.completed for session ${checkoutSession.id}`
             );
-            subscription = await stripe.subscriptions.retrieve(
-              checkoutSubscriptionId
-            );
+            subscription = await stripe.subscriptions.retrieve(checkoutSubscriptionId);
 
             // Add detailed logging about the subscription
             console.log(
@@ -204,8 +197,7 @@ export async function POST(req) {
 
             customerId = checkoutSession.customer;
             userIdFromMetadata =
-              checkoutSession.client_reference_id ??
-              checkoutSession.metadata?.supabaseUserId;
+              checkoutSession.client_reference_id ?? checkoutSession.metadata?.supabaseUserId;
 
             // If we have a user ID, update their profile with the customer ID
             if (userIdFromMetadata) {
@@ -222,6 +214,7 @@ export async function POST(req) {
             );
           }
           break;
+        }
 
         case 'customer.subscription.updated':
           subscription = event.data.object;
@@ -244,14 +237,12 @@ export async function POST(req) {
           planToUpdate = null;
           break;
 
-        case 'invoice.paid':
+        case 'invoice.paid': {
           subscription = event.data.object.subscription;
           customerId = event.data.object.customer;
 
           // Retrieve full subscription details to get the current price/plan
-          const paidSubscription = await stripe.subscriptions.retrieve(
-            subscription
-          );
+          const paidSubscription = await stripe.subscriptions.retrieve(subscription);
           const lookupKey = paidSubscription.items.data[0]?.price?.lookup_key;
 
           // Update subscription details
@@ -259,26 +250,23 @@ export async function POST(req) {
           planToUpdate = mapLookupKeyToPlan(lookupKey);
           statusToUpdate = 'active';
           break;
+        }
 
-        case 'invoice.payment_failed':
+        case 'invoice.payment_failed': {
           const invoiceFailed = event.data.object;
           const failedSubscriptionId = invoiceFailed.subscription;
           if (failedSubscriptionId && invoiceFailed.customer) {
             console.log(
               `Webhook Info: Processing invoice.payment_failed for invoice ${invoiceFailed.id}, sub ${failedSubscriptionId}`
             );
-            subscription = await stripe.subscriptions.retrieve(
-              failedSubscriptionId
-            );
+            subscription = await stripe.subscriptions.retrieve(failedSubscriptionId);
             customerId = invoiceFailed.customer;
             userIdFromMetadata = subscription?.metadata?.supabaseUserId;
             requiresUpdate = true;
             statusToUpdate = 'past_due';
             const currentPeriodEndTimestamp = subscription.current_period_end;
             if (subscription && typeof currentPeriodEndTimestamp === 'number') {
-              planToUpdate = mapLookupKeyToPlan(
-                subscription.items.data[0]?.price?.lookup_key
-              );
+              planToUpdate = mapLookupKeyToPlan(subscription.items.data[0]?.price?.lookup_key);
               periodEndToUpdate = new Date(currentPeriodEndTimestamp * 1000);
               console.log(
                 `Webhook: Payment failed for subscription ${subscription.id}, customer ${customerId}. Status: ${subscription.status}. Will set DB status to: ${statusToUpdate}`
@@ -295,15 +283,13 @@ export async function POST(req) {
             );
           }
           break;
+        }
 
         default:
-          console.warn(
-            `Webhook: Unhandled relevant event type in switch: ${event.type}`
-          );
-          return new NextResponse(
-            JSON.stringify({ message: 'Unhandled event type' }),
-            { status: 400 }
-          );
+          console.warn(`Webhook: Unhandled relevant event type in switch: ${event.type}`);
+          return new NextResponse(JSON.stringify({ message: 'Unhandled event type' }), {
+            status: 400,
+          });
       }
 
       // Common logic for subscription updates
@@ -314,8 +300,7 @@ export async function POST(req) {
         // Check if the timestamp is valid
         if (typeof currentPeriodEndTimestamp === 'number') {
           // If a specific periodEndToUpdate was set (e.g., for failed payment), use it, otherwise use the subscription's
-          finalPeriodEnd =
-            periodEndToUpdate ?? new Date(currentPeriodEndTimestamp * 1000);
+          finalPeriodEnd = periodEndToUpdate ?? new Date(currentPeriodEndTimestamp * 1000);
         } else {
           // Timestamp is invalid (undefined, null, etc.)
           if (event.type === 'checkout.session.completed') {
@@ -343,13 +328,11 @@ export async function POST(req) {
         }
 
         // Determine final status and plan (logic remains the same)
-        const finalStatus =
-          statusToUpdate ?? mapStripeStatus(subscription.status);
+        const finalStatus = statusToUpdate ?? mapStripeStatus(subscription.status);
         const finalPlan =
           event.type === 'customer.subscription.deleted'
             ? null
-            : planToUpdate ??
-              mapLookupKeyToPlan(subscription.items.data[0]?.price?.lookup_key);
+            : (planToUpdate ?? mapLookupKeyToPlan(subscription.items.data[0]?.price?.lookup_key));
         // const finalPeriodEnd = <-- This is now handled above
         //   periodEndToUpdate ?? new Date(currentPeriodEndTimestamp * 1000);
 
@@ -394,10 +377,9 @@ export async function POST(req) {
       }
     } catch (err) {
       console.error(`Webhook Error: Unhandled error: ${err.message}`);
-      return new NextResponse(
-        JSON.stringify({ error: `Webhook error: ${err.message}` }),
-        { status: 500 }
-      );
+      return new NextResponse(JSON.stringify({ error: `Webhook error: ${err.message}` }), {
+        status: 500,
+      });
     }
   } else {
     console.log(`Webhook: Received irrelevant event: ${event.type}`);
@@ -437,9 +419,7 @@ function mapStripeStatus(stripeStatus) {
     case 'unpaid':
       return 'past_due'; // Map unpaid to past_due as well
     default:
-      console.warn(
-        `Webhook Warning: Unrecognized Stripe subscription status: ${stripeStatus}`
-      );
+      console.warn(`Webhook Warning: Unrecognized Stripe subscription status: ${stripeStatus}`);
       return null;
   }
 }

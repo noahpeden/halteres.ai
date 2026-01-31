@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
-import { createMobileCompatibleClient, corsHeaders } from '@/utils/supabase/mobile';
 import OpenAI from 'openai';
+import { corsHeaders, createMobileCompatibleClient } from '@/utils/supabase/mobile';
 
 // Service role client for embedding operations
 const supabaseAdmin = createClient(
@@ -93,10 +93,7 @@ export async function POST(request) {
     } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      return Response.json(
-        { error: 'Unauthorized' },
-        { status: 401, headers: corsHeaders() }
-      );
+      return Response.json({ error: 'Unauthorized' }, { status: 401, headers: corsHeaders() });
     }
 
     // Fetch workout details for context and embedding
@@ -120,10 +117,7 @@ export async function POST(request) {
       .single();
 
     if (workoutError || !workout) {
-      return Response.json(
-        { error: 'Workout not found' },
-        { status: 404, headers: corsHeaders() }
-      );
+      return Response.json({ error: 'Workout not found' }, { status: 404, headers: corsHeaders() });
     }
 
     // Build feedback context
@@ -135,11 +129,7 @@ export async function POST(request) {
     };
 
     // Generate embedding for the feedback (async, don't wait)
-    const embedding = await generateFeedbackEmbedding(
-      workout.body,
-      notes,
-      feedbackContext
-    );
+    const embedding = await generateFeedbackEmbedding(workout.body, notes, feedbackContext);
 
     // Upsert feedback (insert or update if exists)
     const { data: feedback, error: upsertError } = await supabaseAdmin
@@ -208,10 +198,7 @@ export async function GET(request) {
     const workoutId = searchParams.get('workoutId');
 
     if (!workoutId) {
-      return Response.json(
-        { error: 'Missing workoutId' },
-        { status: 400, headers: corsHeaders() }
-      );
+      return Response.json({ error: 'Missing workoutId' }, { status: 400, headers: corsHeaders() });
     }
 
     // Get authenticated user
@@ -273,10 +260,7 @@ export async function DELETE(request) {
     const workoutId = searchParams.get('workoutId');
 
     if (!workoutId) {
-      return Response.json(
-        { error: 'Missing workoutId' },
-        { status: 400, headers: corsHeaders() }
-      );
+      return Response.json({ error: 'Missing workoutId' }, { status: 400, headers: corsHeaders() });
     }
 
     // Get authenticated user
@@ -286,10 +270,7 @@ export async function DELETE(request) {
     } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      return Response.json(
-        { error: 'Unauthorized' },
-        { status: 401, headers: corsHeaders() }
-      );
+      return Response.json({ error: 'Unauthorized' }, { status: 401, headers: corsHeaders() });
     }
 
     // Delete user's feedback
@@ -307,10 +288,7 @@ export async function DELETE(request) {
       );
     }
 
-    return Response.json(
-      { success: true },
-      { headers: corsHeaders() }
-    );
+    return Response.json({ success: true }, { headers: corsHeaders() });
   } catch (error) {
     console.error('Error deleting template feedback:', error);
     return Response.json(

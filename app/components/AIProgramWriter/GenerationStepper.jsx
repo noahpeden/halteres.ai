@@ -1,6 +1,6 @@
 'use client';
 
-import { Check, Loader2, Clock, FileText, Sparkles, CheckCircle2 } from 'lucide-react';
+import { Check, CheckCircle2, Clock, FileText, Loader2, Sparkles } from 'lucide-react';
 
 /**
  * GenerationStepper - Shows the two-phase generation progress
@@ -66,16 +66,20 @@ export default function GenerationStepper({
                   className={`
                     w-12 h-12 rounded-full flex items-center justify-center
                     transition-all duration-300
-                    ${status === 'completed'
-                      ? 'bg-success text-white'
-                      : status === 'active'
-                        ? 'bg-primary text-white animate-pulse'
-                        : 'bg-base-200 text-base-content/50'}
+                    ${
+                      status === 'completed'
+                        ? 'bg-success text-white'
+                        : status === 'active'
+                          ? 'bg-primary text-white animate-pulse'
+                          : 'bg-base-200 text-base-content/50'
+                    }
                   `}
                 >
                   {status === 'completed' ? (
                     <Check className="w-6 h-6" />
-                  ) : status === 'active' && (generationStage?.includes('generating') || generationStage?.includes('enhancing')) ? (
+                  ) : status === 'active' &&
+                    (generationStage?.includes('generating') ||
+                      generationStage?.includes('enhancing')) ? (
                     <Loader2 className="w-6 h-6 animate-spin" />
                   ) : (
                     <Icon className="w-6 h-6" />
@@ -84,12 +88,12 @@ export default function GenerationStepper({
 
                 {/* Step Info */}
                 <div className="absolute top-14 left-1/2 -translate-x-1/2 w-max text-center">
-                  <div className={`font-medium text-sm ${status === 'pending' ? 'text-base-content/50' : ''}`}>
+                  <div
+                    className={`font-medium text-sm ${status === 'pending' ? 'text-base-content/50' : ''}`}
+                  >
                     {step.label}
                   </div>
-                  <div className="text-xs text-base-content/40">
-                    {step.estimatedTime}
-                  </div>
+                  <div className="text-xs text-base-content/40">{step.estimatedTime}</div>
                 </div>
               </div>
 
@@ -147,7 +151,7 @@ export default function GenerationStepper({
             <div
               className="bg-primary h-2 rounded-full transition-all duration-300"
               style={{
-                width: `${(skeletonProgress.currentWeek / skeletonProgress.totalWeeks) * 100}%`
+                width: `${(skeletonProgress.currentWeek / skeletonProgress.totalWeeks) * 100}%`,
               }}
             />
           </div>
@@ -159,14 +163,15 @@ export default function GenerationStepper({
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium">Enhancing workouts...</span>
             <span className="text-sm text-base-content/60">
-              Week {enhancementProgress.currentWeek}: {enhancementProgress.currentWorkout} / {enhancementProgress.totalWorkoutsInWeek}
+              Week {enhancementProgress.currentWeek}: {enhancementProgress.currentWorkout} /{' '}
+              {enhancementProgress.totalWorkoutsInWeek}
             </span>
           </div>
           <div className="w-full bg-base-300 rounded-full h-2">
             <div
               className="bg-primary h-2 rounded-full transition-all duration-300"
               style={{
-                width: `${(enhancementProgress.currentWorkout / enhancementProgress.totalWorkoutsInWeek) * 100}%`
+                width: `${(enhancementProgress.currentWorkout / enhancementProgress.totalWorkoutsInWeek) * 100}%`,
               }}
             />
           </div>

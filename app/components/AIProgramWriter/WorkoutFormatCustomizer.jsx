@@ -1,7 +1,7 @@
 'use client';
-import { useState, useEffect } from 'react';
-import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
-import { Plus, Trash2, GripVertical, Save, X, Check } from 'lucide-react';
+import { Check, GripVertical, Plus, Save, Trash2, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { DragDropContext, Draggable, Droppable } from 'react-beautiful-dnd';
 
 // Default workout sections by gym type
 const DEFAULT_SECTIONS = {
@@ -124,13 +124,8 @@ export default function WorkoutFormatCustomizer({
       setNewTemplateName('');
 
       // Save to localStorage for persistence
-      const existingTemplates = JSON.parse(
-        localStorage.getItem('workoutTemplates') || '[]'
-      );
-      localStorage.setItem(
-        'workoutTemplates',
-        JSON.stringify([...existingTemplates, newTemplate])
-      );
+      const existingTemplates = JSON.parse(localStorage.getItem('workoutTemplates') || '[]');
+      localStorage.setItem('workoutTemplates', JSON.stringify([...existingTemplates, newTemplate]));
     }
   };
 
@@ -165,15 +160,12 @@ export default function WorkoutFormatCustomizer({
         <>
           <div className="mb-4">
             <p className="text-sm text-gray-600 mb-2">
-              Customize your workout format by adding, removing, or rearranging
-              sections. Set durations in minutes for each section.
+              Customize your workout format by adding, removing, or rearranging sections. Set
+              durations in minutes for each section.
             </p>
 
             <div className="flex space-x-2 mb-4">
-              <button
-                className="btn btn-sm btn-outline"
-                onClick={handleResetToDefaults}
-              >
+              <button className="btn btn-sm btn-outline" onClick={handleResetToDefaults}>
                 Reset to Default
               </button>
               <button
@@ -229,17 +221,9 @@ export default function WorkoutFormatCustomizer({
             <DragDropContext onDragEnd={onDragEnd}>
               <Droppable droppableId="workout-sections">
                 {(provided) => (
-                  <div
-                    {...provided.droppableProps}
-                    ref={provided.innerRef}
-                    className="space-y-2"
-                  >
+                  <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-2">
                     {sections.map((section, index) => (
-                      <Draggable
-                        key={section.id}
-                        draggableId={section.id}
-                        index={index}
-                      >
+                      <Draggable key={section.id} draggableId={section.id} index={index}>
                         {(provided) => (
                           <div
                             ref={provided.innerRef}
@@ -256,13 +240,7 @@ export default function WorkoutFormatCustomizer({
                               type="text"
                               className="input input-sm flex-grow"
                               value={section.name}
-                              onChange={(e) =>
-                                handleUpdateSection(
-                                  index,
-                                  'name',
-                                  e.target.value
-                                )
-                              }
+                              onChange={(e) => handleUpdateSection(index, 'name', e.target.value)}
                               placeholder="Section name"
                             />
                             <div className="flex items-center">
@@ -271,11 +249,7 @@ export default function WorkoutFormatCustomizer({
                                 className="input input-sm w-16"
                                 value={section.duration}
                                 onChange={(e) =>
-                                  handleUpdateSection(
-                                    index,
-                                    'duration',
-                                    e.target.value
-                                  )
+                                  handleUpdateSection(index, 'duration', e.target.value)
                                 }
                                 min="1"
                                 max="120"
@@ -299,10 +273,7 @@ export default function WorkoutFormatCustomizer({
               </Droppable>
             </DragDropContext>
 
-            <button
-              className="btn btn-sm btn-outline mt-4 w-full"
-              onClick={handleAddSection}
-            >
+            <button className="btn btn-sm btn-outline mt-4 w-full" onClick={handleAddSection}>
               <Plus size={16} className="mr-1" />
               Add Section
             </button>
@@ -312,19 +283,13 @@ export default function WorkoutFormatCustomizer({
         <div className="p-4 bg-base-100 rounded-md">
           <p className="text-sm">Using default workout format for {gymType}:</p>
           <ul className="list-disc pl-5 mt-2">
-            {(DEFAULT_SECTIONS[gymType] || DEFAULT_SECTIONS.default).map(
-              (section) => (
-                <li key={section.id} className="text-sm">
-                  <span className="font-medium">{section.name}:</span>{' '}
-                  {section.duration} minutes
-                </li>
-              )
-            )}
+            {(DEFAULT_SECTIONS[gymType] || DEFAULT_SECTIONS.default).map((section) => (
+              <li key={section.id} className="text-sm">
+                <span className="font-medium">{section.name}:</span> {section.duration} minutes
+              </li>
+            ))}
           </ul>
-          <button
-            className="btn btn-sm btn-outline mt-4"
-            onClick={handleToggleCustomFormat}
-          >
+          <button className="btn btn-sm btn-outline mt-4" onClick={handleToggleCustomFormat}>
             Customize Format
           </button>
         </div>

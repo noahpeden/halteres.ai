@@ -1,7 +1,11 @@
-import { createMobileCompatibleClient, corsHeaders } from '@/utils/supabase/mobile';
-import { NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
-import { formatClientMetrics, formatClassMetrics, isClassMetrics } from '@/utils/prompt-builder/promptBuilder.js';
+import { NextResponse } from 'next/server';
+import {
+  formatClassMetrics,
+  formatClientMetrics,
+  isClassMetrics,
+} from '@/utils/prompt-builder/promptBuilder.js';
+import { corsHeaders, createMobileCompatibleClient } from '@/utils/supabase/mobile';
 
 export const maxDuration = 120; // 2 minutes should be enough for a single workout
 export const dynamic = 'force-dynamic';
@@ -10,7 +14,7 @@ export const dynamic = 'force-dynamic';
 export async function OPTIONS(request) {
   return new Response(null, {
     status: 200,
-    headers: corsHeaders()
+    headers: corsHeaders(),
   });
 }
 
@@ -32,7 +36,10 @@ export async function POST(request) {
     const supabase = await createMobileCompatibleClient(request);
 
     // Verify authentication
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
     if (authError || !user) {
       return NextResponse.json(
         { error: 'Authentication required' },
@@ -54,7 +61,7 @@ export async function POST(request) {
       .eq('user_id', user.id);
 
     const isCoach = profile?.role === 'coach' || !profile?.role;
-    const isGymOwner = memberships?.some(m => m.role === 'owner');
+    const isGymOwner = memberships?.some((m) => m.role === 'owner');
 
     if (!isCoach && !isGymOwner) {
       return NextResponse.json(
@@ -128,13 +135,16 @@ export async function POST(request) {
 
     if (type === 'stimulus_strategy') {
       prompt = buildStimulusPrompt(workout.title, workoutBody, clientMetricsContent);
-      systemPrompt = 'You are an expert strength and conditioning coach. Generate a detailed Stimulus and Strategy section for the workout provided.';
+      systemPrompt =
+        'You are an expert strength and conditioning coach. Generate a detailed Stimulus and Strategy section for the workout provided.';
     } else if (type === 'coaching_cues') {
       prompt = buildCoachingCuesPrompt(workout.title, workoutBody, clientMetricsContent);
-      systemPrompt = 'You are an expert strength and conditioning coach. Generate specific coaching cues for the main movements in the workout provided.';
+      systemPrompt =
+        'You are an expert strength and conditioning coach. Generate specific coaching cues for the main movements in the workout provided.';
     } else {
       prompt = buildBothPrompt(workout.title, workoutBody, clientMetricsContent);
-      systemPrompt = 'You are an expert strength and conditioning coach. Generate both a Stimulus and Strategy section AND specific coaching cues for the workout provided.';
+      systemPrompt =
+        'You are an expert strength and conditioning coach. Generate both a Stimulus and Strategy section AND specific coaching cues for the workout provided.';
     }
 
     // Call Anthropic
@@ -169,7 +179,6 @@ export async function POST(request) {
       },
       { headers: corsHeaders() }
     );
-
   } catch (error) {
     logWithTimestamp('Error generating coaching content', {
       error: error.message,

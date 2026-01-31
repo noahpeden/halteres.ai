@@ -1,6 +1,6 @@
-import { metadata } from '../metadata';
-import Link from 'next/link';
 import { Mail, Phone } from 'lucide-react';
+import Link from 'next/link';
+import { metadata } from '../metadata';
 
 export const generateMetadata = () => {
   return {
@@ -23,9 +23,8 @@ export default function ContactPage() {
                 Get in Touch
               </h1>
               <p className="mt-6 text-lg leading-8 text-blue-100">
-                We're here to help with any questions you might have about
-                HalteresAI. Reach out to our team and we'll get back to you as
-                soon as possible.
+                We're here to help with any questions you might have about HalteresAI. Reach out to
+                our team and we'll get back to you as soon as possible.
               </p>
             </div>
           </div>
@@ -34,35 +33,25 @@ export default function ContactPage() {
         {/* Contact section */}
         <div className="mx-auto max-w-7xl px-6 lg:px-8 py-24 sm:py-32">
           <div className="mx-auto max-w-2xl lg:mx-0">
-            <h2 className="text-3xl font-bold tracking-tight text-gray-900">
-              Contact Us
-            </h2>
+            <h2 className="text-3xl font-bold tracking-tight text-gray-900">Contact Us</h2>
             <p className="mt-6 text-lg leading-8 text-gray-600">
-              Have questions about how HalteresAI can help your gym take back
-              its programming? Our team is ready to assist.
+              Have questions about how HalteresAI can help your gym take back its programming? Our
+              team is ready to assist.
             </p>
           </div>
           <div className="mx-auto mt-16 grid max-w-2xl grid-cols-1 gap-8 text-base leading-7 sm:grid-cols-2 sm:gap-y-16 lg:mx-0 lg:max-w-none lg:grid-cols-4">
             <div>
-              <h3 className="border-l border-blue-600 pl-6 font-semibold text-gray-900">
-                Support
-              </h3>
+              <h3 className="border-l border-blue-600 pl-6 font-semibold text-gray-900">Support</h3>
               <address className="pt-2 pl-6 not-italic">
                 <p>support@halteres.ai</p>
-                <p className="mt-2">
-                  Our support team is available Monday-Friday, 9am-5pm EST
-                </p>
+                <p className="mt-2">Our support team is available Monday-Friday, 9am-5pm EST</p>
               </address>
             </div>
             <div>
-              <h3 className="border-l border-blue-600 pl-6 font-semibold text-gray-900">
-                Sales
-              </h3>
+              <h3 className="border-l border-blue-600 pl-6 font-semibold text-gray-900">Sales</h3>
               <address className="pt-2 pl-6 not-italic">
                 <p>sales@halteres.ai</p>
-                <p className="mt-2">
-                  Interested in HalteresAI for your gym?
-                </p>
+                <p className="mt-2">Interested in HalteresAI for your gym?</p>
               </address>
             </div>
             <div>
@@ -75,9 +64,7 @@ export default function ContactPage() {
               </address>
             </div>
             <div>
-              <h3 className="border-l border-blue-600 pl-6 font-semibold text-gray-900">
-                Press
-              </h3>
+              <h3 className="border-l border-blue-600 pl-6 font-semibold text-gray-900">Press</h3>
               <address className="pt-2 pl-6 not-italic">
                 <p>press@halteres.ai</p>
                 <p className="mt-2">Media inquiries and press kit requests.</p>
@@ -89,9 +76,7 @@ export default function ContactPage() {
         {/* Contact form */}
         <div className="mx-auto max-w-7xl px-6 lg:px-8 py-24 sm:py-32 bg-gray-50">
           <div className="mx-auto max-w-2xl">
-            <h2 className="text-3xl font-bold tracking-tight text-gray-900">
-              Send us a message
-            </h2>
+            <h2 className="text-3xl font-bold tracking-tight text-gray-900">Send us a message</h2>
             <p className="mt-2 text-lg leading-8 text-gray-600">
               We'll get back to you as soon as possible.
             </p>
@@ -212,9 +197,8 @@ export default function ContactPage() {
                   How quickly will you respond to my inquiry?
                 </dt>
                 <dd className="mt-2 text-base leading-7 text-gray-600">
-                  We typically respond to all inquiries within 24 business
-                  hours. For urgent matters, please mark your email as high
-                  priority.
+                  We typically respond to all inquiries within 24 business hours. For urgent
+                  matters, please mark your email as high priority.
                 </dd>
               </div>
               <div className="pt-6">
@@ -222,8 +206,8 @@ export default function ContactPage() {
                   Do you offer onboarding assistance?
                 </dt>
                 <dd className="mt-2 text-base leading-7 text-gray-600">
-                  Yes, we provide personalized onboarding sessions for all new
-                  gyms to help you get the most out of HalteresAI.
+                  Yes, we provide personalized onboarding sessions for all new gyms to help you get
+                  the most out of HalteresAI.
                 </dd>
               </div>
               <div className="pt-6">
@@ -231,8 +215,8 @@ export default function ContactPage() {
                   Can I schedule a demo before signing up?
                 </dt>
                 <dd className="mt-2 text-base leading-7 text-gray-600">
-                  Absolutely! Contact our sales team at sales@halteres.ai to
-                  schedule a personalized demo of the platform.
+                  Absolutely! Contact our sales team at sales@halteres.ai to schedule a personalized
+                  demo of the platform.
                 </dd>
               </div>
             </dl>

@@ -1,6 +1,6 @@
 'use client';
-import { useEffect, useState, useRef } from 'react';
-import { Trash2, Pencil } from 'lucide-react';
+import { Pencil, Trash2 } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 
 export default function CalendarWorkoutModal({
   isOpen,
@@ -122,9 +122,7 @@ export default function CalendarWorkoutModal({
           {workout.notes && (
             <div className="mt-4">
               <h4 className="font-medium text-gray-500 mb-2">Notes</h4>
-              <div className="prose prose-sm max-w-none">
-                {renderWorkoutContent(workout.notes)}
-              </div>
+              <div className="prose prose-sm max-w-none">{renderWorkoutContent(workout.notes)}</div>
             </div>
           )}
         </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 /**
  * Feedback card for workout results
@@ -173,17 +173,13 @@ export default function ResultFeedbackCard({
           <div className="flex items-center gap-2 mb-2">
             <span
               className={`text-xl ${
-                userFeedback.rating === 'thumbs_up'
-                  ? 'text-success'
-                  : 'text-error'
+                userFeedback.rating === 'thumbs_up' ? 'text-success' : 'text-error'
               }`}
             >
               {userFeedback.rating === 'thumbs_up' ? '👍' : '👎'}
             </span>
             {userFeedback.notes && (
-              <span className="text-sm text-base-content/70 italic">
-                "{userFeedback.notes}"
-              </span>
+              <span className="text-sm text-base-content/70 italic">"{userFeedback.notes}"</span>
             )}
           </div>
         )}
@@ -194,8 +190,8 @@ export default function ResultFeedbackCard({
             {userFeedback
               ? 'Change your rating:'
               : isOwnResult
-              ? 'How did this workout go?'
-              : 'How did the athlete do?'}
+                ? 'How did this workout go?'
+                : 'How did the athlete do?'}
           </span>
           <div className="flex gap-1">
             <button
@@ -211,11 +207,7 @@ export default function ResultFeedbackCard({
               }`}
               disabled={loading}
             >
-              {loading ? (
-                <span className="loading loading-spinner loading-xs"></span>
-              ) : (
-                '👍'
-              )}
+              {loading ? <span className="loading loading-spinner loading-xs"></span> : '👍'}
             </button>
             <button
               onClick={() => handleFeedback('thumbs_down')}
@@ -230,11 +222,7 @@ export default function ResultFeedbackCard({
               }`}
               disabled={loading}
             >
-              {loading ? (
-                <span className="loading loading-spinner loading-xs"></span>
-              ) : (
-                '👎'
-              )}
+              {loading ? <span className="loading loading-spinner loading-xs"></span> : '👎'}
             </button>
           </div>
         </div>
@@ -242,9 +230,7 @@ export default function ResultFeedbackCard({
         {/* Show coach feedback if viewing own result */}
         {isOwnResult && showCoachFeedback && coachFeedback.length > 0 && (
           <div className="mt-3 pt-3 border-t border-base-300">
-            <h4 className="text-xs font-semibold text-base-content/60 mb-2">
-              Coach Feedback
-            </h4>
+            <h4 className="text-xs font-semibold text-base-content/60 mb-2">Coach Feedback</h4>
             {coachFeedback.map((fb) => (
               <div key={fb.id} className="flex items-start gap-2 text-sm">
                 <span className={fb.rating === 'thumbs_up' ? 'text-success' : 'text-error'}>
@@ -254,9 +240,7 @@ export default function ResultFeedbackCard({
                   {fb.from_user?.display_name && (
                     <span className="font-medium">{fb.from_user.display_name}: </span>
                   )}
-                  {fb.notes && (
-                    <span className="text-base-content/70">{fb.notes}</span>
-                  )}
+                  {fb.notes && <span className="text-base-content/70">{fb.notes}</span>}
                 </div>
               </div>
             ))}
@@ -280,16 +264,7 @@ export default function ResultFeedbackCard({
 }
 
 // Notes Modal Component
-function NotesModal({
-  isOpen,
-  onClose,
-  rating,
-  notes,
-  setNotes,
-  onSubmit,
-  loading,
-  isOwnResult,
-}) {
+function NotesModal({ isOpen, onClose, rating, notes, setNotes, onSubmit, loading, isOwnResult }) {
   return (
     <dialog
       className={`modal ${isOpen ? 'modal-open' : ''}`}
@@ -298,17 +273,15 @@ function NotesModal({
       }}
     >
       <div className="modal-box">
-        <h3 className="font-bold text-lg mb-4">
-          {rating === 'thumbs_up' ? '👍' : '👎'} Add Notes
-        </h3>
+        <h3 className="font-bold text-lg mb-4">{rating === 'thumbs_up' ? '👍' : '👎'} Add Notes</h3>
         <p className="text-sm text-base-content/70 mb-4">
           {isOwnResult
             ? rating === 'thumbs_up'
               ? 'What went well in this workout?'
               : 'What was challenging or could be improved?'
             : rating === 'thumbs_up'
-            ? 'What did the athlete do well?'
-            : 'What should the athlete focus on improving?'}
+              ? 'What did the athlete do well?'
+              : 'What should the athlete focus on improving?'}
         </p>
         <textarea
           className="textarea textarea-bordered w-full h-24"
@@ -325,11 +298,7 @@ function NotesModal({
             onClick={onSubmit}
             disabled={loading}
           >
-            {loading ? (
-              <span className="loading loading-spinner loading-sm"></span>
-            ) : (
-              'Submit'
-            )}
+            {loading ? <span className="loading loading-spinner loading-sm"></span> : 'Submit'}
           </button>
         </div>
       </div>

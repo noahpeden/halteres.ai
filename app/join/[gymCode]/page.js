@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import { useAuth } from '@/contexts/AuthContext';
-import { joinGymAction } from '@/actions/gymActions';
 import Link from 'next/link';
+import { useParams, useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { joinGymAction } from '@/actions/gymActions';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function JoinGymPage() {
   const { gymCode } = useParams();
@@ -121,9 +121,7 @@ export default function JoinGymPage() {
 
           <h2 className="card-title justify-center text-2xl">{gym?.name}</h2>
 
-          {gym?.description && (
-            <p className="text-base-content/70 mt-2">{gym.description}</p>
-          )}
+          {gym?.description && <p className="text-base-content/70 mt-2">{gym.description}</p>}
 
           <div className="divider"></div>
 
@@ -191,10 +189,7 @@ export default function JoinGymPage() {
                       You need an account to join this gym.
                     </p>
                     <div className="flex gap-2 justify-center">
-                      <Link
-                        href={`/login?redirect=/join/${gymCode}`}
-                        className="btn btn-primary"
-                      >
+                      <Link href={`/login?redirect=/join/${gymCode}`} className="btn btn-primary">
                         Sign In
                       </Link>
                       <Link
