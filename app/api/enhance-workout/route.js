@@ -96,18 +96,25 @@ Requirements:
       ],
       temperature: 0.7,
       response_format: { type: 'json_object' },
-      max_tokens: 1200,
+      max_tokens: 2500,
     });
 
     let enhancedWorkout;
+    const rawContent = response.choices[0]?.message?.content;
     try {
-      enhancedWorkout = JSON.parse(response.choices[0].message.content);
+      if (!rawContent) {
+        console.error('No content in AI response:', JSON.stringify(response.choices[0]));
+        throw new Error('No content in AI response');
+      }
+      enhancedWorkout = JSON.parse(rawContent);
       if (!enhancedWorkout.title || !enhancedWorkout.description) {
-        throw new Error('Invalid workout format');
+        console.error('Missing required fields in AI response:', rawContent);
+        throw new Error('Invalid workout format - missing title or description');
       }
     } catch (err) {
+      console.error('Error parsing AI response:', err.message, 'Raw content:', rawContent);
       return NextResponse.json(
-        { error: 'Failed to parse enhanced workout from AI response.' },
+        { error: `Failed to parse enhanced workout from AI response: ${err.message}` },
         {
           status: 500,
           headers: corsHeaders()
