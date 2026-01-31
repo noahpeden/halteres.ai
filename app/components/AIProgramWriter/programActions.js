@@ -1847,6 +1847,7 @@ export async function generateSkeletonProgram({
   setServerStatus,
   setLoadingDuration,
   setLoadingTimer,
+  setGeneratedDescription,
   refetchWorkouts,
   abortControllerRef,
 }) {
@@ -1888,6 +1889,7 @@ export async function generateSkeletonProgram({
 
       const requestBody = {
         programId,
+        description: formData.description, // User requirements/instructions
         goal: formData.goal,
         difficulty: formData.difficulty,
         focus_area: formData.focusArea,
@@ -1973,6 +1975,12 @@ export async function generateSkeletonProgram({
                 setGenerationStage('skeleton_complete');
                 setIsLoading(false);
 
+                // Set the AI-generated program description
+                if (data.description && setGeneratedDescription) {
+                  console.log('[Skeleton] Setting program description');
+                  setGeneratedDescription(data.description);
+                }
+
                 if (clearStreamingWorkouts) {
                   clearStreamingWorkouts();
                 }
@@ -1982,7 +1990,7 @@ export async function generateSkeletonProgram({
                 }
 
                 clearInterval(timer);
-                resolve({ success: true, totalWorkouts: data.totalWorkouts });
+                resolve({ success: true, totalWorkouts: data.totalWorkouts, description: data.description });
               } else if (data.type === 'error') {
                 throw new Error(data.error);
               }
