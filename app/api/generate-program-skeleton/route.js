@@ -236,19 +236,42 @@ async function generateSkeletonProgram(
       }
     }
 
-    // Mark program as skeleton complete
+    // Mark program as skeleton complete and save AI-generated description
     if (programId) {
+      // First, fetch current program_overview to merge with
+      const { data: currentProgram } = await supabase
+        .from('programs')
+        .select('program_overview')
+        .eq('id', programId)
+        .single();
+
+      const updateData = {
+        generation_status: 'skeleton_complete',
+        generation_progress: {
+          current_week: numberOfWeeks,
+          total_weeks: numberOfWeeks,
+          workouts_saved: allWorkouts.length,
+          skeleton_completed_at: new Date().toISOString(),
+        }
+      };
+
+      // Save the AI-generated program description to the database
+      if (programDescription) {
+        // Save to programs.description (for page header)
+        updateData.description = programDescription;
+        // Also save to program_overview.generated_description (for WorkoutList component)
+        updateData.program_overview = {
+          ...(currentProgram?.program_overview || {}),
+          generated_description: programDescription,
+        };
+        logWithTimestamp('Saving AI-generated description to database', {
+          descriptionLength: programDescription.length,
+        });
+      }
+
       await supabase
         .from('programs')
-        .update({
-          generation_status: 'skeleton_complete',
-          generation_progress: {
-            current_week: numberOfWeeks,
-            total_weeks: numberOfWeeks,
-            workouts_saved: allWorkouts.length,
-            skeleton_completed_at: new Date().toISOString(),
-          }
-        })
+        .update(updateData)
         .eq('id', programId);
     }
 

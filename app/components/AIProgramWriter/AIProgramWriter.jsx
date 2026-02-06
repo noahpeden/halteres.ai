@@ -118,7 +118,8 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
   // Local state for streaming workouts (UI-only, not saved to DB yet)
   const [streamingWorkouts, setStreamingWorkouts] = useState([]);
 
-
+  // Local state for AI-generated program description (for immediate display)
+  const [localGeneratedDescription, setLocalGeneratedDescription] = useState(null);
 
   // Two-phase generation state
   const [weekInputs, setWeekInputs] = useState({});
@@ -343,6 +344,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
 
   const clearStreamingWorkouts = useCallback(() => {
     setStreamingWorkouts([]);
+    setLocalGeneratedDescription(null); // Clear description when starting new generation
   }, []);
 
   const handleConfirmGenerate = useCallback(async () => {
@@ -381,6 +383,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
         setServerStatus: setServerStatus,
         setLoadingDuration: setLoadingDuration,
         setLoadingTimer: (timer) => (loadingTimer.current = timer),
+        setGeneratedDescription: setLocalGeneratedDescription,
         refetchWorkouts: refetchWorkouts,
         abortControllerRef,
       });
@@ -874,6 +877,8 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
           difficulty: formData?.difficulty,
           equipment: selectedEquipment,
           useImperial: true,
+          numberOfWeeks: parseInt(formData?.numberOfWeeks, 10) || 1,
+          trainingMethodology: formData?.trainingMethodology,
         },
         weekSpecificInput: weekInput || weekInputs[weekNumber] || '',
         updateWorkoutStatus: (workoutId, updates) => {
@@ -941,6 +946,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
         setServerStatus: setServerStatus,
         setLoadingDuration: setLoadingDuration,
         setLoadingTimer: (timer) => (loadingTimer.current = timer),
+        setGeneratedDescription: setLocalGeneratedDescription,
         refetchWorkouts: refetchWorkouts,
         abortControllerRef,
       });
@@ -1396,7 +1402,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
               formatDate={formatDate}
               gymId={currentGym?.id || program?.gym_id}
               generatedDescription={
-                program?.program_overview?.generated_description
+                localGeneratedDescription || program?.program_overview?.generated_description
               }
             />
           </div>
