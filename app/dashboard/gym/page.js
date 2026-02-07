@@ -1,31 +1,31 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
 import {
-  createGymAction,
-  updateGymAction,
-  regenerateInviteCodeAction,
-  getGymMembersAction,
-  getPendingMembersAction,
-  approveMembershipAction,
-  rejectMembershipAction,
-} from '@/actions/gymActions';
-import {
-  Settings,
-  Link2,
-  Users,
-  Copy,
-  Check,
-  RefreshCw,
   Building2,
-  QrCode,
-  UserCheck,
-  UserX,
+  Check,
   Clock,
+  Copy,
+  Link2,
+  QrCode,
+  RefreshCw,
+  Settings,
   Shield,
   Sparkles,
+  UserCheck,
+  Users,
+  UserX,
 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import {
+  approveMembershipAction,
+  createGymAction,
+  getGymMembersAction,
+  getPendingMembersAction,
+  regenerateInviteCodeAction,
+  rejectMembershipAction,
+  updateGymAction,
+} from '@/actions/gymActions';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function GymManagementPage() {
   const { currentGym, refetchGymMemberships, user } = useAuth();
@@ -146,9 +146,7 @@ export default function GymManagementPage() {
                   <Building2 className="w-7 h-7 text-white" />
                 </div>
                 <div>
-                  <h1 className="text-2xl sm:text-3xl font-bold text-white">
-                    Create Your Gym
-                  </h1>
+                  <h1 className="text-2xl sm:text-3xl font-bold text-white">Create Your Gym</h1>
                   <p className="text-blue-100 mt-1">
                     Set up your space and start inviting athletes
                   </p>
@@ -176,7 +174,10 @@ export default function GymManagementPage() {
           </div>
 
           {/* Creation Form */}
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 sm:p-8 animate-fadeIn" style={{ animationDelay: '0.1s' }}>
+          <div
+            className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 sm:p-8 animate-fadeIn"
+            style={{ animationDelay: '0.1s' }}
+          >
             <form onSubmit={handleCreateGym} className="space-y-6">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">
@@ -193,9 +194,7 @@ export default function GymManagementPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Description
-                </label>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Description</label>
                 <textarea
                   className="w-full px-4 py-3 border border-slate-300 rounded-lg text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors resize-none"
                   value={formData.description}
@@ -206,9 +205,7 @@ export default function GymManagementPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Timezone
-                </label>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Timezone</label>
                 <select
                   className="w-full px-4 py-3 border border-slate-300 rounded-lg text-slate-900 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                   value={formData.timezone}
@@ -258,9 +255,7 @@ export default function GymManagementPage() {
                 <Building2 className="w-6 h-6 text-blue-600" />
               </div>
               <div>
-                <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">
-                  {currentGym.name}
-                </h1>
+                <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">{currentGym.name}</h1>
                 <p className="text-slate-500 text-sm">Gym Management</p>
               </div>
             </div>
@@ -319,14 +314,14 @@ export default function GymManagementPage() {
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 max-w-2xl animate-fadeIn">
             <div className="px-6 py-4 border-b border-slate-200">
               <h2 className="text-lg font-semibold text-slate-900">Gym Settings</h2>
-              <p className="text-sm text-slate-500 mt-1">Update your gym information and preferences</p>
+              <p className="text-sm text-slate-500 mt-1">
+                Update your gym information and preferences
+              </p>
             </div>
 
             <form onSubmit={handleUpdateGym} className="p-6 space-y-6">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Gym Name
-                </label>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Gym Name</label>
                 <input
                   type="text"
                   className="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-slate-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
@@ -337,9 +332,7 @@ export default function GymManagementPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Description
-                </label>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Description</label>
                 <textarea
                   className="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-slate-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors resize-none"
                   value={formData.description}
@@ -349,9 +342,7 @@ export default function GymManagementPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Timezone
-                </label>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Timezone</label>
                 <select
                   className="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-slate-900 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                   value={formData.timezone}
@@ -397,7 +388,9 @@ export default function GymManagementPage() {
                   </div>
                   <div>
                     <h2 className="text-lg font-semibold text-slate-900">Invite Link</h2>
-                    <p className="text-sm text-slate-500">Share this link with athletes to invite them</p>
+                    <p className="text-sm text-slate-500">
+                      Share this link with athletes to invite them
+                    </p>
                   </div>
                 </div>
               </div>
@@ -438,7 +431,9 @@ export default function GymManagementPage() {
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
               <div className="px-6 py-4 border-b border-slate-200">
                 <h2 className="text-lg font-semibold text-slate-900">Invite Code</h2>
-                <p className="text-sm text-slate-500">Athletes can enter this code manually to join</p>
+                <p className="text-sm text-slate-500">
+                  Athletes can enter this code manually to join
+                </p>
               </div>
 
               <div className="p-6">
@@ -508,7 +503,9 @@ export default function GymManagementPage() {
                     >
                       <div className="flex items-center gap-3">
                         <div className="w-11 h-11 bg-slate-100 rounded-full flex items-center justify-center text-slate-600 font-semibold">
-                          {(member.user?.display_name || member.user?.full_name || 'U').charAt(0).toUpperCase()}
+                          {(member.user?.display_name || member.user?.full_name || 'U')
+                            .charAt(0)
+                            .toUpperCase()}
                         </div>
                         <div>
                           <p className="font-medium text-slate-900">
@@ -598,7 +595,9 @@ export default function GymManagementPage() {
                                   />
                                 ) : (
                                   <span className="text-slate-600 font-semibold">
-                                    {(member.user?.display_name || member.user?.full_name || 'U').charAt(0).toUpperCase()}
+                                    {(member.user?.display_name || member.user?.full_name || 'U')
+                                      .charAt(0)
+                                      .toUpperCase()}
                                   </span>
                                 )}
                               </div>

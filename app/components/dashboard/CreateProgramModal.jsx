@@ -1,7 +1,7 @@
 'use client';
 
+import { ChevronDown, PenSquare, Sparkles } from 'lucide-react';
 import { useState } from 'react';
-import { Sparkles, PenSquare, ChevronDown } from 'lucide-react';
 
 export default function CreateProgramModal({
   isOpen,
@@ -77,11 +77,7 @@ export default function CreateProgramModal({
                         'Selected client/class'}
                     </strong>
                   </span>
-                  <button
-                    type="button"
-                    className="btn btn-xs btn-ghost"
-                    onClick={onChangeEntity}
-                  >
+                  <button type="button" className="btn btn-xs btn-ghost" onClick={onChangeEntity}>
                     Change
                   </button>
                 </div>
@@ -121,9 +117,7 @@ export default function CreateProgramModal({
                   <select
                     className="select select-bordered w-full"
                     value={programDuration}
-                    onChange={(e) =>
-                      onProgramDurationChange(parseInt(e.target.value))
-                    }
+                    onChange={(e) => onProgramDurationChange(parseInt(e.target.value))}
                     required
                   >
                     {weekOptions.map((num) => (
@@ -134,7 +128,11 @@ export default function CreateProgramModal({
                   </select>
                   {!isPremium && (
                     <div className="text-xs text-gray-500 mt-1">
-                      Free trial limited to 2 weeks. <a href="/pricing" className="text-primary hover:underline">Upgrade</a> for longer programs.
+                      Free trial limited to 2 weeks.{' '}
+                      <a href="/pricing" className="text-primary hover:underline">
+                        Upgrade
+                      </a>{' '}
+                      for longer programs.
                     </div>
                   )}
                 </div>
@@ -156,36 +154,26 @@ export default function CreateProgramModal({
                     <span className="text-sm">Workout Days</span>
                   </label>
                   <div className="flex flex-wrap gap-2">
-                    {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(
-                      (day, index) => (
-                        <button
-                          key={day}
-                          type="button"
-                          className={`btn btn-sm ${
-                            daysOfWeek.includes(index)
-                              ? 'btn-primary'
-                              : 'btn-outline'
-                          }`}
-                          onClick={() => onToggleDay(index)}
-                        >
-                          {day}
-                        </button>
-                      )
-                    )}
+                    {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, index) => (
+                      <button
+                        key={day}
+                        type="button"
+                        className={`btn btn-sm ${
+                          daysOfWeek.includes(index) ? 'btn-primary' : 'btn-outline'
+                        }`}
+                        onClick={() => onToggleDay(index)}
+                      >
+                        {day}
+                      </button>
+                    ))}
                   </div>
                   {daysOfWeek.length === 0 && (
-                    <p className="text-red-500 text-sm mt-2">
-                      Please select at least one day
-                    </p>
+                    <p className="text-red-500 text-sm mt-2">Please select at least one day</p>
                   )}
                 </div>
 
                 <div className="modal-action">
-                  <button
-                    type="button"
-                    onClick={handleCancel}
-                    className="btn btn-outline"
-                  >
+                  <button type="button" onClick={handleCancel} className="btn btn-outline">
                     Cancel
                   </button>
                   <button

@@ -1,8 +1,8 @@
 'use client';
-import { use, useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import ClientMetricsTab from '@/components/ClientMetricsTab';
+import { use, useEffect, useState } from 'react';
 import ClassMetricsTab from '@/components/ClassMetricsTab';
+import ClientMetricsTab from '@/components/ClientMetricsTab';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function ProgramMetricsPage(props) {
   const params = use(props.params);

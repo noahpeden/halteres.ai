@@ -1,25 +1,25 @@
 'use client';
-import { useState, useEffect, useTransition, useMemo } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
 import {
-  Users,
-  Search,
-  Filter,
-  UserMinus,
-  GraduationCap,
-  Award,
   Activity,
-  ChevronDown,
   ArrowLeft,
+  Award,
+  ChevronDown,
+  Filter,
+  GraduationCap,
+  Search,
+  UserMinus,
+  Users,
 } from 'lucide-react';
 import Link from 'next/link';
-import ConfirmationModal from '@/components/ConfirmationModal.jsx';
+import { useEffect, useMemo, useState, useTransition } from 'react';
 import {
-  getGymMembersAction,
   getClassEntitiesAction,
-  updateMemberClassAction,
+  getGymMembersAction,
   removeMemberAction,
+  updateMemberClassAction,
 } from '@/actions/gymActions';
+import ConfirmationModal from '@/components/ConfirmationModal.jsx';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function ManageAthletesPage() {
   const { currentGym } = useAuth();
@@ -37,8 +37,8 @@ export default function ManageAthletesPage() {
 
   // Calculate stats
   const stats = useMemo(() => {
-    const total = athletes.filter(a => a.role === 'athlete').length;
-    const assigned = athletes.filter(a => a.role === 'athlete' && a.class_id).length;
+    const total = athletes.filter((a) => a.role === 'athlete').length;
+    const assigned = athletes.filter((a) => a.role === 'athlete' && a.class_id).length;
     const unassigned = total - assigned;
     return { total, assigned, unassigned };
   }, [athletes]);
@@ -46,11 +46,12 @@ export default function ManageAthletesPage() {
   // Filter athletes (only show athletes, not coaches/owners)
   const filteredAthletes = useMemo(() => {
     return athletes
-      .filter(member => member.role === 'athlete' && member.status === 'active')
-      .filter(athlete => {
+      .filter((member) => member.role === 'athlete' && member.status === 'active')
+      .filter((athlete) => {
         const name = athlete.user?.display_name || athlete.user?.full_name || '';
         const matchesSearch = name.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesClass = filterClass === 'ALL' ||
+        const matchesClass =
+          filterClass === 'ALL' ||
           (filterClass === 'UNASSIGNED' ? !athlete.class_id : athlete.class_id === filterClass);
         return matchesSearch && matchesClass;
       });
@@ -93,11 +94,17 @@ export default function ManageAthletesPage() {
     startTransitionClassUpdate(async () => {
       const result = await updateMemberClassAction(membershipId, classId || null);
       if (result.success) {
-        setAthletes(athletes.map(athlete =>
-          athlete.id === membershipId
-            ? { ...athlete, class_id: classId || null, class: classes.find(c => c.id === classId) || null }
-            : athlete
-        ));
+        setAthletes(
+          athletes.map((athlete) =>
+            athlete.id === membershipId
+              ? {
+                  ...athlete,
+                  class_id: classId || null,
+                  class: classes.find((c) => c.id === classId) || null,
+                }
+              : athlete
+          )
+        );
       } else {
         setError(result.error);
       }
@@ -110,7 +117,7 @@ export default function ManageAthletesPage() {
     startTransitionRemove(async () => {
       const result = await removeMemberAction(selectedAthlete.id);
       if (result.success) {
-        setAthletes(athletes.filter(athlete => athlete.id !== selectedAthlete.id));
+        setAthletes(athletes.filter((athlete) => athlete.id !== selectedAthlete.id));
         setShowRemoveModal(false);
         setSelectedAthlete(null);
       } else {
@@ -239,8 +246,10 @@ export default function ManageAthletesPage() {
               >
                 <option value="ALL">All Athletes</option>
                 <option value="UNASSIGNED">Unassigned</option>
-                {classes.map(cls => (
-                  <option key={cls.id} value={cls.id}>{cls.name}</option>
+                {classes.map((cls) => (
+                  <option key={cls.id} value={cls.id}>
+                    {cls.name}
+                  </option>
                 ))}
               </select>
             </div>
@@ -261,9 +270,7 @@ export default function ManageAthletesPage() {
           <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
             <Users className="w-8 h-8 text-slate-400" />
           </div>
-          <h3 className="text-lg font-semibold text-slate-800 mb-2">
-            No Athletes Yet
-          </h3>
+          <h3 className="text-lg font-semibold text-slate-800 mb-2">No Athletes Yet</h3>
           <p className="text-slate-500 mb-6 max-w-sm mx-auto">
             Share your gym's invite code with athletes to get them started.
           </p>
@@ -279,14 +286,13 @@ export default function ManageAthletesPage() {
           <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
             <Search className="w-8 h-8 text-slate-400" />
           </div>
-          <h3 className="text-lg font-semibold text-slate-800 mb-2">
-            No Results Found
-          </h3>
-          <p className="text-slate-500 mb-4">
-            Try adjusting your search or filter criteria.
-          </p>
+          <h3 className="text-lg font-semibold text-slate-800 mb-2">No Results Found</h3>
+          <p className="text-slate-500 mb-4">Try adjusting your search or filter criteria.</p>
           <button
-            onClick={() => { setSearchQuery(''); setFilterClass('ALL'); }}
+            onClick={() => {
+              setSearchQuery('');
+              setFilterClass('ALL');
+            }}
             className="text-blue-600 hover:text-blue-700 font-medium text-sm"
           >
             Clear Filters
@@ -327,7 +333,9 @@ export default function ManageAthletesPage() {
                             />
                           ) : (
                             <span className="text-emerald-600 font-semibold">
-                              {(athlete.user?.display_name || athlete.user?.full_name || 'A').charAt(0).toUpperCase()}
+                              {(athlete.user?.display_name || athlete.user?.full_name || 'A')
+                                .charAt(0)
+                                .toUpperCase()}
                             </span>
                           )}
                         </div>
@@ -354,8 +362,10 @@ export default function ManageAthletesPage() {
                           }`}
                         >
                           <option value="">No class assigned</option>
-                          {classes.map(cls => (
-                            <option key={cls.id} value={cls.id}>{cls.name}</option>
+                          {classes.map((cls) => (
+                            <option key={cls.id} value={cls.id}>
+                              {cls.name}
+                            </option>
                           ))}
                         </select>
                         <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
@@ -426,7 +436,9 @@ export default function ManageAthletesPage() {
         content={{
           title: 'Remove Athlete?',
           message: `Are you sure you want to remove ${
-            selectedAthlete?.user?.display_name || selectedAthlete?.user?.full_name || 'this athlete'
+            selectedAthlete?.user?.display_name ||
+            selectedAthlete?.user?.full_name ||
+            'this athlete'
           } from your gym? They will need to rejoin using the invite code.`,
           confirmText: 'Remove',
         }}

@@ -1,8 +1,8 @@
-import { metadata } from '../metadata';
 import Image from 'next/image';
 import Link from 'next/link';
-import peaceCorpsImage from '@/assets/peace-corps.jpg';
 import mexicoCityImage from '@/assets/mexico-city.jpg';
+import peaceCorpsImage from '@/assets/peace-corps.jpg';
+import { metadata } from '../metadata';
 
 export const generateMetadata = () => {
   return {
@@ -21,12 +21,10 @@ export default function CompanyPage() {
         <div className="hero min-h-[30vh] bg-primary text-primary-content">
           <div className="hero-content text-center">
             <div className="max-w-md">
-              <h1 className="text-5xl font-bold text-white">
-                About HalteresAI
-              </h1>
+              <h1 className="text-5xl font-bold text-white">About HalteresAI</h1>
               <p className="py-6 text-white">
-                We're on a mission to give gym owners their programming back—
-                custom, equipment-specific, and 100% theirs.
+                We're on a mission to give gym owners their programming back— custom,
+                equipment-specific, and 100% theirs.
               </p>
             </div>
           </div>
@@ -37,13 +35,11 @@ export default function CompanyPage() {
           <div className="container mx-auto px-4">
             <div className="text-center mb-12">
               <div className="badge badge-primary mb-2">Our Mission</div>
-              <h2 className="text-4xl font-bold">
-                Giving gym owners their programming back
-              </h2>
+              <h2 className="text-4xl font-bold">Giving gym owners their programming back</h2>
               <p className="mt-4 text-lg max-w-2xl mx-auto">
-                At HalteresAI, we believe your members come to YOUR gym for YOUR
-                coaching and YOUR community. They deserve YOUR programming too—not
-                generic workouts that don't fit your equipment or goals.
+                At HalteresAI, we believe your members come to YOUR gym for YOUR coaching and YOUR
+                community. They deserve YOUR programming too—not generic workouts that don't fit
+                your equipment or goals.
               </p>
             </div>
 
@@ -69,8 +65,8 @@ export default function CompanyPage() {
                     <h3 className="card-title">8 Weeks in 10 Minutes</h3>
                   </div>
                   <p>
-                    Transform programming time from hours to minutes. Stop
-                    spending Sunday nights writing next week's workouts.
+                    Transform programming time from hours to minutes. Stop spending Sunday nights
+                    writing next week's workouts.
                   </p>
                 </div>
               </div>
@@ -96,8 +92,8 @@ export default function CompanyPage() {
                     <h3 className="card-title">Your Equipment, Your Way</h3>
                   </div>
                   <p>
-                    Programming that actually fits YOUR gym. No more workouts
-                    that assume sleds, ropes, or machines you don't have.
+                    Programming that actually fits YOUR gym. No more workouts that assume sleds,
+                    ropes, or machines you don't have.
                   </p>
                 </div>
               </div>
@@ -123,8 +119,8 @@ export default function CompanyPage() {
                     <h3 className="card-title">Your Brand, Not Theirs</h3>
                   </div>
                   <p>
-                    Deliver programming that's uniquely yours. Your members came
-                    for YOUR gym—give them programming to match.
+                    Deliver programming that's uniquely yours. Your members came for YOUR gym—give
+                    them programming to match.
                   </p>
                 </div>
               </div>
@@ -140,26 +136,23 @@ export default function CompanyPage() {
                 <h2 className="text-4xl font-bold mb-6">Our Story</h2>
                 <div className="space-y-4">
                   <p className="text-lg">
-                    HalteresAI was founded by Noah Peden (CEO/CTO) and Ben
-                    Feimer (CRO), who met in the Peace Corps Mongolia where they
-                    both served from 2014 to 2016. During their service, with
-                    limited entertainment options, they turned to fitness as a
-                    way to stay active and connected.
+                    HalteresAI was founded by Noah Peden (CEO/CTO) and Ben Feimer (CRO), who met in
+                    the Peace Corps Mongolia where they both served from 2014 to 2016. During their
+                    service, with limited entertainment options, they turned to fitness as a way to
+                    stay active and connected.
                   </p>
                   <p className="text-lg">
-                    After the Peace Corps, Noah became a software engineer and
-                    discovered CrossFit, where he noticed a common problem: coaches
-                    either spent countless hours on programming OR paid for generic
-                    programming that didn't fit their equipment. Meanwhile, Ben
-                    entered the non-profit advising world while developing a passion
+                    After the Peace Corps, Noah became a software engineer and discovered CrossFit,
+                    where he noticed a common problem: coaches either spent countless hours on
+                    programming OR paid for generic programming that didn't fit their equipment.
+                    Meanwhile, Ben entered the non-profit advising world while developing a passion
                     for powerlifting and experiencing various training methodologies.
                   </p>
                   <p className="text-lg">
-                    When Noah saw gym owners struggling with this choice—time or
-                    authenticity—he approached Ben with the idea for HalteresAI.
-                    Combining Noah's technical expertise with Ben's business acumen
-                    and shared passion for fitness, they built a platform designed
-                    to give gym owners the best of both worlds: fast programming
+                    When Noah saw gym owners struggling with this choice—time or authenticity—he
+                    approached Ben with the idea for HalteresAI. Combining Noah's technical
+                    expertise with Ben's business acumen and shared passion for fitness, they built
+                    a platform designed to give gym owners the best of both worlds: fast programming
                     that's 100% customized to their gym.
                   </p>
                 </div>
@@ -178,8 +171,7 @@ export default function CompanyPage() {
                   </figure>
                   <div className="card-body pt-2">
                     <p className="text-sm opacity-70">
-                      Noah and Ben in Mongolia during their Peace Corps service
-                      (2014-2016)
+                      Noah and Ben in Mongolia during their Peace Corps service (2014-2016)
                     </p>
                   </div>
                 </div>
@@ -196,8 +188,8 @@ export default function CompanyPage() {
                   </figure>
                   <div className="card-body pt-2">
                     <p className="text-sm opacity-70">
-                      The founders in Mexico City, where they decided to partner
-                      and create HalteresAI
+                      The founders in Mexico City, where they decided to partner and create
+                      HalteresAI
                     </p>
                   </div>
                 </div>
@@ -211,9 +203,7 @@ export default function CompanyPage() {
           <div className="container mx-auto px-4">
             <div className="mb-12">
               <h2 className="text-4xl font-bold mb-4">Our Values</h2>
-              <p className="text-lg">
-                These core principles guide everything we do at HalteresAI.
-              </p>
+              <p className="text-lg">These core principles guide everything we do at HalteresAI.</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -221,8 +211,8 @@ export default function CompanyPage() {
                 <div className="card-body">
                   <h3 className="card-title">Coach-Centered Innovation</h3>
                   <p>
-                    We develop our technology by deeply understanding the real
-                    challenges fitness professionals face every day.
+                    We develop our technology by deeply understanding the real challenges fitness
+                    professionals face every day.
                   </p>
                 </div>
               </div>
@@ -231,8 +221,8 @@ export default function CompanyPage() {
                 <div className="card-body">
                   <h3 className="card-title">Scientific Integrity</h3>
                   <p>
-                    Our programming is based on exercise science and proven
-                    methodologies, not fads or trends.
+                    Our programming is based on exercise science and proven methodologies, not fads
+                    or trends.
                   </p>
                 </div>
               </div>
@@ -241,8 +231,8 @@ export default function CompanyPage() {
                 <div className="card-body">
                   <h3 className="card-title">Continuous Improvement</h3>
                   <p>
-                    We're committed to constantly refining our platform based on
-                    user feedback and emerging research.
+                    We're committed to constantly refining our platform based on user feedback and
+                    emerging research.
                   </p>
                 </div>
               </div>
@@ -251,8 +241,8 @@ export default function CompanyPage() {
                 <div className="card-body">
                   <h3 className="card-title">Community Impact</h3>
                   <p>
-                    We believe fitness changes lives, and we're passionate about
-                    helping fitness professionals build stronger communities.
+                    We believe fitness changes lives, and we're passionate about helping fitness
+                    professionals build stronger communities.
                   </p>
                 </div>
               </div>
@@ -267,14 +257,11 @@ export default function CompanyPage() {
               Ready to take back your programming?
             </h2>
             <p className="max-w-xl mx-auto mb-8 text-lg opacity-80 text-white">
-              Join gym owners who've stopped paying for generic programming
-              and started delivering their own.
+              Join gym owners who've stopped paying for generic programming and started delivering
+              their own.
             </p>
             <div className="flex flex-wrap justify-center gap-4">
-              <Link
-                href="/login"
-                className="btn btn-lg btn-secondary text-white"
-              >
+              <Link href="/login" className="btn btn-lg btn-secondary text-white">
                 Try Free for 14 Days
               </Link>
               <Link

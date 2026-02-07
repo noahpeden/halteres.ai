@@ -3,10 +3,7 @@
  * @param {Object} context - The full context for prompt generation
  * @returns {string} The assembled prompt string
  */
-import {
-  formatEquipmentRestrictions,
-  formatSchedulingRequirements,
-} from '../promptBuilder.js';
+import { formatEquipmentRestrictions, formatSchedulingRequirements } from '../promptBuilder.js';
 
 export function bodybuildingPrompt(context) {
   // Extract all relevant parameters with fallbacks
@@ -34,8 +31,7 @@ export function bodybuildingPrompt(context) {
   // Get more specific parameters
   const numberOfWeeks = parseInt(duration_weeks || context.numberOfWeeks || 8);
   const daysPerWeek = parseInt(days_per_week || context.daysPerWeek || 5);
-  const programType =
-    periodization?.program_type || context.programType || 'linear';
+  const programType = periodization?.program_type || context.programType || 'linear';
   const equipment = gym_details?.equipment || context.equipment || [];
   const startDate = calendar_data?.start_date || context.startDate || '';
   const totalWorkouts = numberOfWeeks * daysPerWeek;
@@ -49,18 +45,8 @@ export function bodybuildingPrompt(context) {
       : 'Body Part Split'; // Default bodybuilding split
 
   // Get day names for better readability
-  const dayNames = [
-    'Sunday',
-    'Monday',
-    'Tuesday',
-    'Wednesday',
-    'Thursday',
-    'Friday',
-    'Saturday',
-  ];
-  const selectedDayNames = selectedDaysOfWeek
-    .map((dayNum) => dayNames[dayNum])
-    .join(', ');
+  const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const selectedDayNames = selectedDaysOfWeek.map((dayNum) => dayNames[dayNum]).join(', ');
 
   // Determine if scaling options should be included
   const includeScaling = ['Beginner', 'Intermediate'].includes(difficulty);
@@ -68,9 +54,9 @@ export function bodybuildingPrompt(context) {
 
   // Build the Bodybuilding prompt
   const isGeneratingSpecificWeek = context.isWeekSpecific;
-  const weekSpecificInfo = isGeneratingSpecificWeek ?
-    `Week ${context.weekNumber} of ${context.totalWeeks}` :
-    `${numberOfWeeks}-week`;
+  const weekSpecificInfo = isGeneratingSpecificWeek
+    ? `Week ${context.weekNumber} of ${context.totalWeeks}`
+    : `${numberOfWeeks}-week`;
 
   return `Generate a ${isGeneratingSpecificWeek ? 'single week' : numberOfWeeks + '-week'} bodybuilding training program.
 
@@ -85,11 +71,15 @@ ${focus_area ? `Focus Area: ${focus_area}` : ''}
 Periodization: ${programType}
 </program_parameters>
 
-${description ? `<client_requirements priority="high">
+${
+  description
+    ? `<client_requirements priority="high">
 ${description}
 These requirements take precedence over general guidelines below.
 </client_requirements>
-` : ''}
+`
+    : ''
+}
 ${formatEquipmentRestrictions(equipment)}
 
 <workout_formats required="${formattedWorkoutFormats}">
@@ -99,9 +89,11 @@ Use bodybuilding techniques like drop sets, supersets, tempo control where appro
 </workout_formats>
 
 <output_quantity>
-${isGeneratingSpecificWeek
-  ? `Generate exactly ${context.workoutsThisWeek || daysPerWeek} workouts for Week ${context.weekNumber} only.`
-  : `Generate exactly ${totalWorkouts} workouts total (${numberOfWeeks} weeks × ${daysPerWeek} days).`}
+${
+  isGeneratingSpecificWeek
+    ? `Generate exactly ${context.workoutsThisWeek || daysPerWeek} workouts for Week ${context.weekNumber} only.`
+    : `Generate exactly ${totalWorkouts} workouts total (${numberOfWeeks} weeks × ${daysPerWeek} days).`
+}
 </output_quantity>
 
 ${personalization ? `<personalization>${personalization}</personalization>` : ''}
@@ -111,14 +103,18 @@ ${clientMetrics ? `\n${clientMetrics}` : ''}
 ${referenceWorkouts ? `\n${referenceWorkouts}` : ''}
 ${additionalNotes ? `\n<additional_notes>${additionalNotes}</additional_notes>` : ''}
 ${formattedPeriodizationGuidelines}
-${context.formattedDates ? `
+${
+  context.formattedDates
+    ? `
 <scheduling>
 Training Days: ${selectedDayNames || 'All available days'}
 Assign workouts to these exact dates:
 ${context.formattedDates}
 Each workout's "date" field must match one of these dates exactly.
 </scheduling>
-` : formatSchedulingRequirements(suggestedDates, daysPerWeek, selectedDayNames)}
+`
+    : formatSchedulingRequirements(suggestedDates, daysPerWeek, selectedDayNames)
+}
 
 <description_requirements>
 Include in the program description:
@@ -166,14 +162,18 @@ Purpose of this session in the bodybuilding program
 - Intended stimulus: volume, intensity, pump
 - Mind-muscle connection and form focus guidance
 
-${includeScaling ? `## Scaling Options
+${
+  includeScaling
+    ? `## Scaling Options
 ### Intermediate Option
 Adjustments for intermediate lifters: volume or intensity technique additions
 
 ### Beginner Option
 Simplified exercise choices or reduced volume for beginners
 ${hasInjuryHistory ? `\n### Injury Considerations\nAlternative exercises or modifications for common limitations` : ''}
-` : ''}
+`
+    : ''
+}
 ## Warm-up
 Warm-up specific to target muscle group(s)
 - Light cardio, dynamic stretching, activation exercises
@@ -198,8 +198,10 @@ Brief cool-down protocol
 - Tips for executing intensity techniques effectively
 </workout_body_structure>
 
-${isGeneratingSpecificWeek
-  ? `Generate exactly ${context.workoutsThisWeek || daysPerWeek} workouts for Week ${context.weekNumber}.`
-  : `Generate exactly ${totalWorkouts} workouts covering ${numberOfWeeks} week(s).`}
+${
+  isGeneratingSpecificWeek
+    ? `Generate exactly ${context.workoutsThisWeek || daysPerWeek} workouts for Week ${context.weekNumber}.`
+    : `Generate exactly ${totalWorkouts} workouts covering ${numberOfWeeks} week(s).`
+}
 `;
 }

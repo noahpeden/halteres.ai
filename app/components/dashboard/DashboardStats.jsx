@@ -28,9 +28,7 @@ export default function DashboardStats({ stats }) {
       <div className="stat bg-white shadow rounded-lg">
         <div className="stat-title">Today's Workouts</div>
         <div className="flex items-center justify-between">
-          <div className="stat-value text-secondary">
-            {stats.activeWorkouts}
-          </div>
+          <div className="stat-value text-secondary">{stats.activeWorkouts}</div>
           <div className="stat-figure text-secondary">
             <Calendar className="h-8 w-8" />
           </div>

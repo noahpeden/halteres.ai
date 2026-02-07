@@ -1,7 +1,17 @@
 'use client';
 
+import {
+  Check,
+  CheckCircle,
+  ChevronDown,
+  ChevronUp,
+  Loader2,
+  MoreVertical,
+  Pencil,
+  Sparkles,
+  Trash2,
+} from 'lucide-react';
 import { useState } from 'react';
-import { Sparkles, Check, Loader2, ChevronDown, ChevronUp, Pencil, Trash2, CheckCircle, MoreVertical } from 'lucide-react';
 import TemplateFeedbackButton from '@/components/feedback/TemplateFeedbackButton';
 
 // Simple markdown parser for workout content (same as WorkoutList)
@@ -11,7 +21,10 @@ const parseMarkdownToHTML = (markdown) => {
   let html = markdown
     // Headers (## Header -> <h3>, ### Header -> <h4>)
     .replace(/^### (.*$)/gim, '<h4 class="text-base font-semibold mt-4 mb-2 text-gray-800">$1</h4>')
-    .replace(/^## (.*$)/gim, '<h3 class="text-lg font-semibold mt-5 mb-3 text-gray-900 border-b border-gray-200 pb-1">$1</h3>')
+    .replace(
+      /^## (.*$)/gim,
+      '<h3 class="text-lg font-semibold mt-5 mb-3 text-gray-900 border-b border-gray-200 pb-1">$1</h3>'
+    )
     // Bold text (**text** or __text__)
     .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-gray-900">$1</strong>')
     .replace(/__(.*?)__/g, '<strong class="font-semibold text-gray-900">$1</strong>')
@@ -19,12 +32,18 @@ const parseMarkdownToHTML = (markdown) => {
     .replace(/\*(.*?)\*/g, '<em class="italic">$1</em>')
     .replace(/_(.*?)_/g, '<em class="italic">$1</em>')
     // Bullet points (- item or * item)
-    .replace(/^[\s]*[-\*\+]\s+(.*$)/gim, '<li class="ml-4 mb-1">$1</li>')
+    .replace(/^[\s]*[-*+]\s+(.*$)/gim, '<li class="ml-4 mb-1">$1</li>')
     // Numbered lists (1. item, 2. item, etc.)
     .replace(/^[\s]*\d+\.\s+(.*$)/gim, '<li class="ml-4 mb-1 list-decimal">$1</li>')
     // Gender symbols with better styling
-    .replace(/♀/g, '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-pink-100 text-pink-800">♀</span>')
-    .replace(/♂/g, '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">♂</span>')
+    .replace(
+      /♀/g,
+      '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-pink-100 text-pink-800">♀</span>'
+    )
+    .replace(
+      /♂/g,
+      '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">♂</span>'
+    )
     // Convert line breaks to <br> but preserve structure
     .replace(/\n/g, '<br>');
 
@@ -78,13 +97,13 @@ export default function SkeletonPreview({
 
   // Calculate stats
   const totalWeeks = groupedWeeks.length;
-  const detailedWeeks = groupedWeeks.filter(w => w.status === 'detailed').length;
-  const skeletonWeeks = groupedWeeks.filter(w => w.status === 'skeleton').length;
+  const detailedWeeks = groupedWeeks.filter((w) => w.status === 'detailed').length;
+  const skeletonWeeks = groupedWeeks.filter((w) => w.status === 'skeleton').length;
 
   const toggleWeekExpanded = (weekNumber) => {
-    setExpandedWeeks(prev => ({
+    setExpandedWeeks((prev) => ({
       ...prev,
-      [weekNumber]: !prev[weekNumber]
+      [weekNumber]: !prev[weekNumber],
     }));
   };
 
@@ -95,9 +114,9 @@ export default function SkeletonPreview({
   };
 
   const setWeekNote = (weekNumber, note) => {
-    setWeekNotes(prev => ({
+    setWeekNotes((prev) => ({
       ...prev,
-      [weekNumber]: note
+      [weekNumber]: note,
     }));
   };
 
@@ -142,9 +161,7 @@ export default function SkeletonPreview({
           <span className="text-sm text-base-content/60">
             {detailedWeeks} of {totalWeeks} weeks detailed
             {enhancingWeeks.size > 0 && (
-              <span className="ml-2 text-primary">
-                ({enhancingWeeks.size} in progress)
-              </span>
+              <span className="ml-2 text-primary">({enhancingWeeks.size} in progress)</span>
             )}
           </span>
         </div>
@@ -169,14 +186,12 @@ export default function SkeletonPreview({
         <div className="mb-4">
           <div className="collapse collapse-arrow bg-base-200">
             <input type="checkbox" defaultChecked={true} />
-            <div className="collapse-title font-medium">
-              Program Description
-            </div>
+            <div className="collapse-title font-medium">Program Description</div>
             <div className="collapse-content">
               <div
                 className="p-2 bg-white rounded-md text-sm"
                 dangerouslySetInnerHTML={{
-                  __html: parseMarkdownToHTML(generatedDescription)
+                  __html: parseMarkdownToHTML(generatedDescription),
                 }}
               />
             </div>
@@ -186,7 +201,7 @@ export default function SkeletonPreview({
 
       {/* Week Cards */}
       <div className="grid gap-4">
-        {groupedWeeks.map(week => (
+        {groupedWeeks.map((week) => (
           <WeekCard
             key={week.weekNumber}
             week={week}
@@ -216,9 +231,14 @@ export default function SkeletonPreview({
               <div className="font-semibold">Enhance All Remaining Weeks</div>
               <div className="text-sm text-base-content/60">
                 {isEnhancing ? (
-                  <>Enhancing {enhancingWeeks.size} week{enhancingWeeks.size !== 1 ? 's' : ''}...</>
+                  <>
+                    Enhancing {enhancingWeeks.size} week{enhancingWeeks.size !== 1 ? 's' : ''}...
+                  </>
                 ) : (
-                  <>{skeletonWeeks} weeks x ~2.5 min = ~{Math.round(skeletonWeeks * 2.5)} minutes total</>
+                  <>
+                    {skeletonWeeks} weeks x ~2.5 min = ~{Math.round(skeletonWeeks * 2.5)} minutes
+                    total
+                  </>
                 )}
               </div>
             </div>
@@ -249,8 +269,9 @@ export default function SkeletonPreview({
           <div className="bg-base-100 rounded-xl p-6 max-w-md m-4 shadow-2xl">
             <h3 className="font-bold text-lg mb-2">Enhance Remaining Weeks?</h3>
             <p className="text-base-content/70 mb-4">
-              {detailedWeeks} week{detailedWeeks > 1 ? 's have' : ' has'} already been enhanced and will be preserved.
-              {' '}{skeletonWeeks} week{skeletonWeeks > 1 ? 's' : ''} will be enhanced.
+              {detailedWeeks} week{detailedWeeks > 1 ? 's have' : ' has'} already been enhanced and
+              will be preserved. {skeletonWeeks} week{skeletonWeeks > 1 ? 's' : ''} will be
+              enhanced.
             </p>
             <div className="flex flex-col gap-2">
               <button
@@ -332,12 +353,14 @@ function WeekCard({
       {/* Week Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
-          <span className={`
+          <span
+            className={`
             w-8 h-8 rounded-full flex items-center justify-center font-bold
-            ${week.status === 'detailed'
-              ? 'bg-primary text-white'
-              : 'bg-base-200 text-base-content'}
-          `}>
+            ${
+              week.status === 'detailed' ? 'bg-primary text-white' : 'bg-base-200 text-base-content'
+            }
+          `}
+          >
             {week.status === 'detailed' ? <Check className="w-4 h-4" /> : week.weekNumber}
           </span>
           <span className="font-semibold text-lg">Week {week.weekNumber}</span>
@@ -345,10 +368,12 @@ function WeekCard({
 
         {/* Status Badge */}
         <div className="flex items-center gap-2">
-          <span className={`
+          <span
+            className={`
             px-3 py-1 rounded-full text-sm font-medium
             ${statusBadgeColors[week.status]}
-          `}>
+          `}
+          >
             {week.status === 'enhancing' && (
               <Loader2 className="w-3 h-3 mr-1 inline animate-spin" />
             )}
@@ -356,15 +381,8 @@ function WeekCard({
           </span>
 
           {/* Expand/Collapse Button */}
-          <button
-            onClick={onToggleExpand}
-            className="btn btn-ghost btn-sm btn-circle"
-          >
-            {isExpanded ? (
-              <ChevronUp className="w-4 h-4" />
-            ) : (
-              <ChevronDown className="w-4 h-4" />
-            )}
+          <button onClick={onToggleExpand} className="btn btn-ghost btn-sm btn-circle">
+            {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
           </button>
         </div>
       </div>
@@ -372,14 +390,9 @@ function WeekCard({
       {/* Workout Previews */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 mb-4">
         {week.workouts.map((workout, i) => (
-          <div
-            key={workout.id || i}
-            className="p-3 bg-base-200/50 rounded-lg text-center"
-          >
+          <div key={workout.id || i} className="p-3 bg-base-200/50 rounded-lg text-center">
             <div className="text-xs text-base-content/60">Day {i + 1}</div>
-            <div className="font-medium text-sm truncate">
-              {extractFocus(workout.title)}
-            </div>
+            <div className="font-medium text-sm truncate">{extractFocus(workout.title)}</div>
           </div>
         ))}
       </div>
@@ -417,11 +430,7 @@ function WeekCard({
             className="textarea textarea-bordered w-full text-sm"
             rows={2}
           />
-          <button
-            onClick={onEnhance}
-            disabled={isEnhancing}
-            className="btn btn-primary w-full"
-          >
+          <button onClick={onEnhance} disabled={isEnhancing} className="btn btn-primary w-full">
             {isEnhancing ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -459,7 +468,11 @@ function DetailedWorkoutCard({
   const displayBody = workout.body || workout.body_skeleton;
 
   const getDisplayDate = () => {
-    const date = workout.scheduled_date || workout.suggestedDate || workout.date || workout.tags?.suggestedDate;
+    const date =
+      workout.scheduled_date ||
+      workout.suggestedDate ||
+      workout.date ||
+      workout.tags?.suggestedDate;
     if (!date) return null;
     return formatDate ? formatDate(date) : date;
   };
@@ -473,7 +486,8 @@ function DetailedWorkoutCard({
           {workout.body_skeleton || workout.body}
         </div>
         <div className="mt-2 p-2 bg-warning/10 rounded text-xs text-warning-content">
-          Skeleton version - Click "Add Full Details" to add strategy, coaching cues, warm-up, cool-down, and scaling options.
+          Skeleton version - Click "Add Full Details" to add strategy, coaching cues, warm-up,
+          cool-down, and scaling options.
         </div>
       </div>
     );
@@ -513,9 +527,7 @@ function DetailedWorkoutCard({
               </span>
             )}
           </div>
-          <h4 className="font-semibold break-words">
-            {workout.title || `Day ${dayIndex + 1}`}
-          </h4>
+          <h4 className="font-semibold break-words">{workout.title || `Day ${dayIndex + 1}`}</h4>
         </div>
         {workout.id && (
           <details className="dropdown dropdown-end flex-shrink-0">
@@ -578,18 +590,13 @@ function DetailedWorkoutCard({
       <div
         className="overflow-auto max-h-60 sm:max-h-80 text-sm mb-3 flex-grow"
         dangerouslySetInnerHTML={{
-          __html: parseMarkdownToHTML(displayBody || 'No description available')
+          __html: parseMarkdownToHTML(displayBody || 'No description available'),
         }}
       />
       <div className="flex justify-between items-center mt-auto gap-2">
         {/* Feedback Button */}
         {workout.id && gymId && (
-          <TemplateFeedbackButton
-            workoutId={workout.id}
-            gymId={gymId}
-            showStats={true}
-            size="sm"
-          />
+          <TemplateFeedbackButton workoutId={workout.id} gymId={gymId} showStats={true} size="sm" />
         )}
         {(!workout.id || !gymId) && <div />}
         <button
@@ -619,7 +626,7 @@ function groupWorkoutsByWeek(workouts) {
 
   const grouped = {};
 
-  workouts.forEach(workout => {
+  workouts.forEach((workout) => {
     // Try to get week number from workout data or parse from title
     let weekNumber = workout.week_number;
 
@@ -639,13 +646,13 @@ function groupWorkoutsByWeek(workouts) {
   });
 
   // Determine week status based on workout statuses
-  Object.values(grouped).forEach(week => {
-    const statuses = week.workouts.map(w => w.generation_status || 'detailed');
-    if (statuses.every(s => s === 'detailed')) {
+  Object.values(grouped).forEach((week) => {
+    const statuses = week.workouts.map((w) => w.generation_status || 'detailed');
+    if (statuses.every((s) => s === 'detailed')) {
       week.status = 'detailed';
-    } else if (statuses.some(s => s === 'enhancing')) {
+    } else if (statuses.some((s) => s === 'enhancing')) {
       week.status = 'enhancing';
-    } else if (statuses.some(s => s === 'skeleton')) {
+    } else if (statuses.some((s) => s === 'skeleton')) {
       week.status = 'skeleton';
     } else {
       week.status = 'detailed'; // Default for legacy workouts

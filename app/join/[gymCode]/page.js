@@ -1,15 +1,15 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import { useAuth } from '@/contexts/AuthContext';
-import { joinGymAction } from '@/actions/gymActions';
 import Link from 'next/link';
+import { useParams, useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { joinGymAction } from '@/actions/gymActions';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function JoinGymPage() {
   const { gymCode } = useParams();
   const router = useRouter();
-  const { user, isCoach, refetchGymMemberships } = useAuth();
+  const { user, isCoach, refetchGymMemberships, gymMemberships, loadingGym } = useAuth();
 
   const [gym, setGym] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -41,6 +41,19 @@ export default function JoinGymPage() {
     fetchGym();
   }, [gymCode]);
 
+  // Check if user is already a member of this gym and redirect
+  useEffect(() => {
+    if (user && gym && !loadingGym && gymMemberships.length > 0) {
+      const isMember = gymMemberships.some(
+        (membership) => membership.gym?.id === gym.id
+      );
+      if (isMember) {
+        // Already a member - redirect to athlete dashboard
+        router.push('/athlete');
+      }
+    }
+  }, [user, gym, gymMemberships, loadingGym, router]);
+
   const handleJoin = async () => {
     if (!user) {
       // Redirect to login with return URL
@@ -62,6 +75,11 @@ export default function JoinGymPage() {
         router.push(isCoach ? '/dashboard' : '/athlete');
       }, 2000);
     } else {
+      // If already a member, redirect to athlete dashboard instead of showing error
+      if (result.error?.toLowerCase().includes('already a member')) {
+        router.push('/athlete');
+        return;
+      }
       setError(result.error);
     }
 
@@ -121,9 +139,7 @@ export default function JoinGymPage() {
 
           <h2 className="card-title justify-center text-2xl">{gym?.name}</h2>
 
-          {gym?.description && (
-            <p className="text-base-content/70 mt-2">{gym.description}</p>
-          )}
+          {gym?.description && <p className="text-base-content/70 mt-2">{gym.description}</p>}
 
           <div className="divider"></div>
 
@@ -191,10 +207,7 @@ export default function JoinGymPage() {
                       You need an account to join this gym.
                     </p>
                     <div className="flex gap-2 justify-center">
-                      <Link
-                        href={`/login?redirect=/join/${gymCode}`}
-                        className="btn btn-primary"
-                      >
+                      <Link href={`/login?redirect=/join/${gymCode}`} className="btn btn-primary">
                         Sign In
                       </Link>
                       <Link

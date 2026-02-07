@@ -1,5 +1,5 @@
-import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
 
 async function getSupabaseClient() {
   const cookieStore = await cookies();
@@ -82,11 +82,12 @@ export async function GET(request) {
 
 function formatPRValue(pr) {
   switch (pr.result_type) {
-    case 'time':
+    case 'time': {
       if (!pr.time_seconds) return '-';
       const mins = Math.floor(pr.time_seconds / 60);
       const secs = pr.time_seconds % 60;
       return `${mins}:${secs.toString().padStart(2, '0')}`;
+    }
     case 'weight':
       return `${pr.weight_kg || 0} kg`;
     case 'reps':

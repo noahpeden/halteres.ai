@@ -1,5 +1,5 @@
-import { createClient } from '@/utils/supabase/server';
 import { NextResponse } from 'next/server';
+import { createClient } from '@/utils/supabase/server';
 
 export async function POST(req) {
   try {
@@ -10,10 +10,7 @@ export async function POST(req) {
     } = await supabase.auth.getSession();
 
     if (!session) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
     const userId = session.user.id;
@@ -26,10 +23,7 @@ export async function POST(req) {
 
     if (updateError) {
       console.error('Error deactivating account:', updateError);
-      return NextResponse.json(
-        { error: 'Failed to deactivate account' },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: 'Failed to deactivate account' }, { status: 500 });
     }
 
     // Return success response

@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
+import { useState } from 'react';
 
 // Define default options outside the component
 const defaultTypeOptions = [
@@ -59,9 +59,7 @@ export default function ProgramTypeSelector({
               <span>{selectedOption.name}</span>
             </>
           ) : (
-            <span className="text-base-content/70">
-              Select training methodology
-            </span>
+            <span className="text-base-content/70">Select training methodology</span>
           )}
         </span>
         <ChevronDown className="h-4 w-4" />

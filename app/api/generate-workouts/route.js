@@ -1,18 +1,11 @@
-import { createClient } from '@/utils/supabase/server';
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
+import { createClient } from '@/utils/supabase/server';
 
 export async function POST(req) {
   try {
     const body = await req.json();
-    const {
-      programId,
-      programDetails,
-      clientMetrics,
-      preferences,
-      office,
-      whiteboard,
-    } = body;
+    const { programId, programDetails, clientMetrics, preferences, office, whiteboard } = body;
     const supabase = await createClient();
 
     // Fetch program details if not provided
@@ -48,12 +41,8 @@ export async function POST(req) {
 
     // Create the user prompt
     const userPrompt = `
-    Create a detailed workout program for a ${
-      preferences.personalization || 'general athlete'
-    } 
-    for the next ${
-      preferences.duration || '7'
-    } days. The user has the following details:
+    Create a detailed workout program for a ${preferences.personalization || 'general athlete'} 
+    for the next ${preferences.duration || '7'} days. The user has the following details:
     - Equipment: ${office?.equipmentList || 'Standard gym equipment'}
     - Coaching staff experience: ${
       office?.coachList?.length
@@ -69,11 +58,7 @@ export async function POST(req) {
     - Difficulty level: ${preferences.difficulty || 'Intermediate'}
     - Quirks: ${preferences.quirks || 'None'}
     - Gym name: ${office?.gymName || 'Your Gym'}
-    ${
-      preferences.trainingMethodology
-        ? `- Methodology: ${preferences.trainingMethodology}`
-        : ''
-    }
+    ${preferences.trainingMethodology ? `- Methodology: ${preferences.trainingMethodology}` : ''}
 
     Please use the following as primary references for workout structure and style:
     1. Example workout: ${preferences.exampleWorkout || 'Not provided'}
@@ -178,10 +163,7 @@ export async function POST(req) {
       });
     }
 
-    return NextResponse.json(
-      { workouts, rawContent: generatedContent },
-      { status: 200 }
-    );
+    return NextResponse.json({ workouts, rawContent: generatedContent }, { status: 200 });
   } catch (error) {
     console.error('Error generating workouts:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -216,9 +198,7 @@ async function matchWorkouts(supabase, embedding) {
 // Helper function to parse the generated content into workout objects
 function parseWorkoutsFromContent(content, preferences) {
   // Split content by days or sections
-  const sections = content
-    .split(/Day \d+:|Workout \d+:|Session \d+:/g)
-    .filter(Boolean);
+  const sections = content.split(/Day \d+:|Workout \d+:|Session \d+:/g).filter(Boolean);
 
   return sections.map((section, index) => {
     // Extract title if available
@@ -244,8 +224,7 @@ function determineWorkoutType(content) {
   if (lowerContent.includes('amrap')) return 'AMRAP';
   if (lowerContent.includes('emom')) return 'EMOM';
   if (lowerContent.includes('for time')) return 'For Time';
-  if (lowerContent.includes('strength') && !lowerContent.includes('metcon'))
-    return 'Strength';
+  if (lowerContent.includes('strength') && !lowerContent.includes('metcon')) return 'Strength';
   if (lowerContent.includes('hypertrophy')) return 'Hypertrophy';
   if (lowerContent.includes('endurance')) return 'Endurance';
   if (lowerContent.includes('tabata')) return 'Tabata';

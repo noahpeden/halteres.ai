@@ -22,33 +22,33 @@ export const feetInchesToCm = (feet, inches) => {
 // Format height for display
 export const formatHeight = (cm, useImperial = true) => {
   if (!cm) return 'Not set';
-  
+
   if (useImperial) {
     const { feet, inches } = cmToFeet(cm);
     return `${feet}'${inches}"`;
   }
-  
+
   return `${cm} cm`;
 };
 
 // Format weight for display
 export const formatWeight = (kg, useImperial = true) => {
   if (!kg) return 'Not set';
-  
+
   if (useImperial) {
     return `${kgToLbs(kg).toFixed(1)} lbs`;
   }
-  
+
   return `${kg} kg`;
 };
 
 // Format 1RM for display
 export const format1RM = (kg, useImperial = true) => {
   if (!kg) return 'Not set';
-  
+
   if (useImperial) {
     return `${kgToLbs(kg).toFixed(1)} lbs`;
   }
-  
+
   return `${kg} kg`;
 };

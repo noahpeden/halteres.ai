@@ -70,11 +70,7 @@ export default function CreateEntityModal({
             </div>
 
             <div className="modal-action">
-              <button
-                type="button"
-                onClick={onCancel}
-                className="btn btn-outline"
-              >
+              <button type="button" onClick={onCancel} className="btn btn-outline">
                 Cancel
               </button>
               <button type="submit" className="btn btn-primary">

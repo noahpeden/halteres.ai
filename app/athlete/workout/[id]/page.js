@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { useAuth } from '@/contexts/AuthContext';
-import ResultEntryForm from '@/components/athlete/ResultEntryForm';
+import { useEffect, useState } from 'react';
+import AIFeedbackCard from '@/components/athlete/AIFeedbackCard';
 import LeaderboardView from '@/components/athlete/LeaderboardView';
 import PRCelebration from '@/components/athlete/PRCelebration';
-import AIFeedbackCard from '@/components/athlete/AIFeedbackCard';
+import ResultEntryForm from '@/components/athlete/ResultEntryForm';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function WorkoutDetailPage() {
   const { id } = useParams();
@@ -75,7 +75,9 @@ export default function WorkoutDetailPage() {
     return (
       <div className="p-6 text-center">
         <h2 className="text-xl font-bold mb-2">Workout Not Found</h2>
-        <p className="text-base-content/60 mb-4">This workout doesn't exist or you don't have access.</p>
+        <p className="text-base-content/60 mb-4">
+          This workout doesn't exist or you don't have access.
+        </p>
         <button className="btn btn-primary" onClick={() => router.back()}>
           Go Back
         </button>
@@ -87,10 +89,7 @@ export default function WorkoutDetailPage() {
     <div className="min-h-screen bg-base-200">
       {/* PR Celebration Modal */}
       {showPRCelebration && (
-        <PRCelebration
-          prData={prData}
-          onClose={() => setShowPRCelebration(false)}
-        />
+        <PRCelebration prData={prData} onClose={() => setShowPRCelebration(false)} />
       )}
 
       {/* Header */}
@@ -135,7 +134,9 @@ export default function WorkoutDetailPage() {
             <div className="card bg-base-100 shadow">
               <div className="card-body">
                 <h2 className="card-title">Description</h2>
-                <p className="whitespace-pre-wrap">{workout.description || 'No description provided.'}</p>
+                <p className="whitespace-pre-wrap">
+                  {workout.description || 'No description provided.'}
+                </p>
               </div>
             </div>
 
@@ -148,9 +149,15 @@ export default function WorkoutDetailPage() {
                     {workout.exercises.map((exercise, idx) => (
                       <div key={idx} className="border-l-4 border-primary pl-3 py-1">
                         <p className="font-medium">{exercise.name}</p>
-                        {exercise.reps && <p className="text-sm text-base-content/60">{exercise.reps} reps</p>}
-                        {exercise.weight && <p className="text-sm text-base-content/60">@ {exercise.weight}</p>}
-                        {exercise.notes && <p className="text-sm text-base-content/60">{exercise.notes}</p>}
+                        {exercise.reps && (
+                          <p className="text-sm text-base-content/60">{exercise.reps} reps</p>
+                        )}
+                        {exercise.weight && (
+                          <p className="text-sm text-base-content/60">@ {exercise.weight}</p>
+                        )}
+                        {exercise.notes && (
+                          <p className="text-sm text-base-content/60">{exercise.notes}</p>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -171,10 +178,7 @@ export default function WorkoutDetailPage() {
                         {userResult.is_pr && ' • 🏆 PR!'}
                       </p>
                     </div>
-                    <button
-                      className="btn btn-outline btn-sm"
-                      onClick={() => setActiveTab('log')}
-                    >
+                    <button className="btn btn-outline btn-sm" onClick={() => setActiveTab('log')}>
                       Edit
                     </button>
                   </div>
@@ -183,19 +187,11 @@ export default function WorkoutDetailPage() {
             )}
 
             {/* AI Feedback (if result exists) */}
-            {userResult && (
-              <AIFeedbackCard
-                workoutResultId={userResult.id}
-                userId={user?.id}
-              />
-            )}
+            {userResult && <AIFeedbackCard workoutResultId={userResult.id} userId={user?.id} />}
 
             {/* Log Result CTA */}
             {!userResult && (
-              <button
-                className="btn btn-primary btn-lg w-full"
-                onClick={() => setActiveTab('log')}
-              >
+              <button className="btn btn-primary btn-lg w-full" onClick={() => setActiveTab('log')}>
                 Log Your Result
               </button>
             )}
@@ -216,11 +212,7 @@ export default function WorkoutDetailPage() {
 
         {/* Leaderboard Tab */}
         {activeTab === 'leaderboard' && (
-          <LeaderboardView
-            workoutId={id}
-            gymId={currentGym?.id}
-            workoutTitle={workout.name}
-          />
+          <LeaderboardView workoutId={id} gymId={currentGym?.id} workoutTitle={workout.name} />
         )}
       </div>
     </div>

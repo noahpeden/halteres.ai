@@ -1,43 +1,38 @@
 'use client';
-import { useEffect, useRef, useCallback, memo, useState, useMemo } from 'react';
+
+import { ChevronDown, ChevronUp, Sparkles } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProgram } from '@/contexts/ProgramContext';
-import { useRouter } from 'next/navigation';
 import Toast from '../Toast';
-import { formatDate } from './utils';
-import {
-  generateProgram,
-  saveProgram,
-  handleAutoAssignDates,
-  handleDatePickerSave as datePickerSaveAction,
-} from './programActions';
-
-import { calculateEndDate } from './dateHandlers';
-import { handleDayOfWeekChangeUtil } from './formHandlers';
-
-import ProgramFormComponent from './ProgramForm';
-import EquipmentSelectorComponent from './EquipmentSelector';
-import ReferenceWorkoutsComponent from './ReferenceWorkouts';
-import WorkoutList from './WorkoutList';
-import WorkoutModalComponent from './WorkoutModal';
+import { difficulties, focusAreas, gymTypes, programTypes } from '../utils';
 import DatePickerModalComponent from './DatePickerModal';
-import RescheduleModalComponent from './RescheduleModal';
+import { calculateEndDate } from './dateHandlers';
 import EditWorkoutModalComponent from './EditWorkoutModal';
-import ProgramGenerationModalComponent from './ProgramGenerationModal';
-import ReferenceWorkoutSearchModal from './ReferenceWorkoutSearchModal';
 import EnhancedReferenceWorkoutSearchModal from './EnhancedReferenceWorkoutSearchModal';
-
-import { Sparkles, ChevronDown, ChevronUp } from 'lucide-react';
-import { gymTypes, focusAreas, difficulties, programTypes } from '../utils';
-
+import EquipmentSelectorComponent from './EquipmentSelector';
+import { handleDayOfWeekChangeUtil } from './formHandlers';
+import GenerationProgress from './GenerationProgress';
+import ProgramFormComponent from './ProgramForm';
+import ProgramGenerationModalComponent from './ProgramGenerationModal';
+import {
+  approveAndEnhanceWeek,
+  handleDatePickerSave as datePickerSaveAction,
+  generateProgram,
+  generateSkeletonProgram,
+  groupWorkoutsByWeek,
+  handleAutoAssignDates,
+  saveProgram,
+} from './programActions';
+import ReferenceWorkoutSearchModal from './ReferenceWorkoutSearchModal';
+import ReferenceWorkoutsComponent from './ReferenceWorkouts';
+import RescheduleModalComponent from './RescheduleModal';
 // Two-phase generation components
 import SkeletonPreview from './SkeletonPreview';
-import GenerationProgress from './GenerationProgress';
-import {
-  generateSkeletonProgram,
-  approveAndEnhanceWeek,
-  groupWorkoutsByWeek,
-} from './programActions';
+import { formatDate } from './utils';
+import WorkoutList from './WorkoutList';
+import WorkoutModalComponent from './WorkoutModal';
 
 const ProgramForm = memo(ProgramFormComponent);
 const EquipmentSelector = memo(EquipmentSelectorComponent);
@@ -94,10 +89,8 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
   // Local state for UI-specific features
   const [loadingDuration, setLoadingDuration] = useState(0);
   const [serverStatus, setServerStatus] = useState(null);
-  const [isReferenceWorkoutModalOpen, setReferenceWorkoutModalOpen] =
-    useState(false);
-  const [isEnhancedReferenceModalOpen, setIsEnhancedReferenceModalOpen] =
-    useState(false);
+  const [isReferenceWorkoutModalOpen, setReferenceWorkoutModalOpen] = useState(false);
+  const [isEnhancedReferenceModalOpen, setIsEnhancedReferenceModalOpen] = useState(false);
   const [hasCustomWorkoutFormat, setHasCustomWorkoutFormat] = useState(false);
   const [customSectionName, setCustomSectionName] = useState('');
   const [customSectionDuration, setCustomSectionDuration] = useState('');
@@ -105,7 +98,9 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
 
   // Local state for textarea inputs to prevent character deletion during typing
   const [localDescription, setLocalDescription] = useState(formData?.description || '');
-  const [localReferenceInput, setLocalReferenceInput] = useState(formData?.referenceInput || formData?.personalization || '');
+  const [localReferenceInput, setLocalReferenceInput] = useState(
+    formData?.referenceInput || formData?.personalization || ''
+  );
 
   // Refs to track active editing state (prevents real-time sync overwrites)
   const isEditingDescriptionRef = useRef(false);
@@ -114,7 +109,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
   // Refs for debounce timeouts
   const descriptionTimeoutRef = useRef(null);
   const referenceTimeoutRef = useRef(null);
-  
+
   // Local state for streaming workouts (UI-only, not saved to DB yet)
   const [streamingWorkouts, setStreamingWorkouts] = useState([]);
 
@@ -126,7 +121,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
   const [enhancingWeeks, setEnhancingWeeks] = useState(new Set());
   const [showGenerationProgress, setShowGenerationProgress] = useState(false);
   const [skeletonProgress, setSkeletonProgress] = useState(null);
-  
+
   // Combined workouts for display (database workouts + streaming workouts)
   const displayWorkouts = useMemo(() => {
     // During generation, show streaming workouts; after completion, show database workouts
@@ -134,7 +129,11 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
       return streamingWorkouts;
     }
     // Also check generation stage for more precise control
-    if (generationStage && ['generating', 'streaming', 'processing'].includes(generationStage) && streamingWorkouts.length > 0) {
+    if (
+      generationStage &&
+      ['generating', 'streaming', 'processing'].includes(generationStage) &&
+      streamingWorkouts.length > 0
+    ) {
       return streamingWorkouts;
     }
     return workouts;
@@ -180,10 +179,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
   useEffect(() => {
     if (!wizardComplete || !programId) return;
 
-    showToast(
-      'Program setup complete! You can now generate workouts.',
-      'success'
-    );
+    showToast('Program setup complete! You can now generate workouts.', 'success');
   }, [wizardComplete, programId, showToast]);
 
   // Sync local state with formData when it changes externally (not while editing)
@@ -234,10 +230,8 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
     }
 
     // Optional fields - check both referenceInput and personalization for previous workouts
-    const hasReferenceInput =
-      formData?.referenceInput && formData.referenceInput.trim() !== '';
-    const hasPersonalization =
-      formData?.personalization && formData.personalization.trim() !== '';
+    const hasReferenceInput = formData?.referenceInput && formData.referenceInput.trim() !== '';
+    const hasPersonalization = formData?.personalization && formData.personalization.trim() !== '';
     if (!hasReferenceInput && !hasPersonalization) {
       missingOptionalFields.push('previousWorkouts');
     }
@@ -264,18 +258,10 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
 
   // Calculate end date for display
   const calculatedEndDate = useMemo(() => {
-    if (
-      formData?.startDate &&
-      formData?.numberOfWeeks &&
-      formData?.daysOfWeek?.length > 0
-    ) {
+    if (formData?.startDate && formData?.numberOfWeeks && formData?.daysOfWeek?.length > 0) {
       const testDate = new Date(formData.startDate);
       if (!isNaN(testDate.getTime()) && parseInt(formData.numberOfWeeks) > 0) {
-        return calculateEndDate(
-          formData.startDate,
-          formData.numberOfWeeks,
-          formData.daysOfWeek
-        );
+        return calculateEndDate(formData.startDate, formData.numberOfWeeks, formData.daysOfWeek);
       }
     }
     return null;
@@ -288,18 +274,12 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
       const trialEndDateObj = trialEndDate ? new Date(trialEndDate) : null;
       const now = new Date();
       if (trialEndDateObj && trialEndDateObj < now) {
-        showToast(
-          'Your free trial has expired. Please upgrade to continue.',
-          'error'
-        );
+        showToast('Your free trial has expired. Please upgrade to continue.', 'error');
         return;
       }
 
       if (generationsRemaining <= 0) {
-        showToast(
-          'You have used all your free generations. Please upgrade to continue.',
-          'error'
-        );
+        showToast('You have used all your free generations. Please upgrade to continue.', 'error');
         return;
       }
     } else if (subscriptionStatus !== 'active') {
@@ -315,15 +295,11 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
 
     openModal('confirmationModal', {
       content: {
-        title: isReGenerating
-          ? 'Re-generate Program Workouts?'
-          : 'Generate Program Workouts?',
+        title: isReGenerating ? 'Re-generate Program Workouts?' : 'Generate Program Workouts?',
         message: isReGenerating
           ? 'This will replace all currently generated workouts for this program with new ones based on the current settings. The old workouts will be permanently deleted. Are you sure?'
           : 'Ready to generate the initial set of workouts for this program based on your settings?',
-        confirmText: isReGenerating
-          ? 'Re-generate Workouts'
-          : 'Generate Workouts',
+        confirmText: isReGenerating ? 'Re-generate Workouts' : 'Generate Workouts',
         validation: validation,
       },
     });
@@ -339,7 +315,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
 
   // Functions to manage streaming workouts
   const addStreamingWorkout = useCallback((workout) => {
-    setStreamingWorkouts(prev => [...prev, workout]);
+    setStreamingWorkouts((prev) => [...prev, workout]);
   }, []);
 
   const clearStreamingWorkouts = useCallback(() => {
@@ -376,7 +352,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
         formData: { ...formData, equipment: selectedEquipment },
         setIsLoading: () => {},
         setSuggestions: saveGeneratedWorkouts,
-        addStreamingWorkout: (workout) => setStreamingWorkouts(prev => [...prev, workout]),
+        addStreamingWorkout: (workout) => setStreamingWorkouts((prev) => [...prev, workout]),
         clearStreamingWorkouts: () => setStreamingWorkouts([]),
         showToastMessage: showToast,
         setGenerationStage: updateGenerationStage,
@@ -511,18 +487,10 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
     } else {
       showToast('Failed to reschedule program', 'error');
     }
-  }, [
-    modals.rescheduleModal,
-    formData,
-    updateFormFields,
-    closeModal,
-    showToast,
-  ]);
+  }, [modals.rescheduleModal, formData, updateFormFields, closeModal, showToast]);
 
   const handleBackToWizard = useCallback(() => {
-    window.location.href = `/program-wizard/step-1${
-      programId ? `?programId=${programId}` : ''
-    }`;
+    window.location.href = `/program-wizard/step-1${programId ? `?programId=${programId}` : ''}`;
   }, [programId]);
 
   const handleStopGeneration = useCallback(() => {
@@ -660,16 +628,19 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
   );
 
   // Debounced handler for description textarea
-  const handleDescriptionChange = useCallback((e) => {
-    const newValue = e.target.value;
-    isEditingDescriptionRef.current = true;
-    setLocalDescription(newValue);
+  const handleDescriptionChange = useCallback(
+    (e) => {
+      const newValue = e.target.value;
+      isEditingDescriptionRef.current = true;
+      setLocalDescription(newValue);
 
-    if (descriptionTimeoutRef.current) clearTimeout(descriptionTimeoutRef.current);
-    descriptionTimeoutRef.current = setTimeout(() => {
-      handleFieldChange('description', newValue);
-    }, 500);
-  }, [handleFieldChange]);
+      if (descriptionTimeoutRef.current) clearTimeout(descriptionTimeoutRef.current);
+      descriptionTimeoutRef.current = setTimeout(() => {
+        handleFieldChange('description', newValue);
+      }, 500);
+    },
+    [handleFieldChange]
+  );
 
   const handleDescriptionBlur = useCallback(() => {
     if (descriptionTimeoutRef.current) {
@@ -677,20 +648,25 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
       descriptionTimeoutRef.current = null;
     }
     handleFieldChange('description', localDescription);
-    setTimeout(() => { isEditingDescriptionRef.current = false; }, 100);
+    setTimeout(() => {
+      isEditingDescriptionRef.current = false;
+    }, 100);
   }, [handleFieldChange, localDescription]);
 
   // Debounced handler for reference input textarea
-  const handleReferenceInputChange = useCallback((e) => {
-    const newValue = e.target.value;
-    isEditingReferenceRef.current = true;
-    setLocalReferenceInput(newValue);
+  const handleReferenceInputChange = useCallback(
+    (e) => {
+      const newValue = e.target.value;
+      isEditingReferenceRef.current = true;
+      setLocalReferenceInput(newValue);
 
-    if (referenceTimeoutRef.current) clearTimeout(referenceTimeoutRef.current);
-    referenceTimeoutRef.current = setTimeout(() => {
-      handleFieldChange('referenceInput', newValue);
-    }, 500);
-  }, [handleFieldChange]);
+      if (referenceTimeoutRef.current) clearTimeout(referenceTimeoutRef.current);
+      referenceTimeoutRef.current = setTimeout(() => {
+        handleFieldChange('referenceInput', newValue);
+      }, 500);
+    },
+    [handleFieldChange]
+  );
 
   const handleReferenceInputBlur = useCallback(() => {
     if (referenceTimeoutRef.current) {
@@ -698,7 +674,9 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
       referenceTimeoutRef.current = null;
     }
     handleFieldChange('referenceInput', localReferenceInput);
-    setTimeout(() => { isEditingReferenceRef.current = false; }, 100);
+    setTimeout(() => {
+      isEditingReferenceRef.current = false;
+    }, 100);
   }, [handleFieldChange, localReferenceInput]);
 
   const handleProgramTypeChange = useCallback(
@@ -732,10 +710,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
 
   const handleDayOfWeekChange = useCallback(
     (day) => {
-      const newDaysOfWeek = handleDayOfWeekChangeUtil(
-        day,
-        formData?.daysOfWeek || []
-      );
+      const newDaysOfWeek = handleDayOfWeekChangeUtil(day, formData?.daysOfWeek || []);
       updateFormFields({
         calendar_data: {
           start_date: formData?.startDate || '',
@@ -764,10 +739,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
     updateFormFields({
       session_details: {
         ...formData.session_details,
-        custom_sections: [
-          ...(formData.customWorkoutSections || []),
-          newSection,
-        ],
+        custom_sections: [...(formData.customWorkoutSections || []), newSection],
       },
     });
 
@@ -846,82 +818,98 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
 
   // Week input handler for two-phase enhancement
   const setWeekInput = useCallback((weekNumber, input) => {
-    setWeekInputs(prev => ({
+    setWeekInputs((prev) => ({
       ...prev,
-      [weekNumber]: input
+      [weekNumber]: input,
     }));
   }, []);
 
   // Handle week enhancement (Phase 2) - supports concurrent enhancement of multiple weeks
-  const handleEnhanceWeek = useCallback(async (weekNumber, weekInput) => {
-    if (!programId) return;
+  const handleEnhanceWeek = useCallback(
+    async (weekNumber, weekInput) => {
+      if (!programId) return;
 
-    // Check if this week is already being enhanced
-    if (enhancingWeeks.has(weekNumber)) {
-      showToast(`Week ${weekNumber} is already being enhanced`, 'info');
-      return;
-    }
+      // Check if this week is already being enhanced
+      if (enhancingWeeks.has(weekNumber)) {
+        showToast(`Week ${weekNumber} is already being enhanced`, 'info');
+        return;
+      }
 
-    // Add this week to the enhancing set
-    setEnhancingWeeks(prev => new Set([...prev, weekNumber]));
+      // Add this week to the enhancing set
+      setEnhancingWeeks((prev) => new Set([...prev, weekNumber]));
 
-    try {
-      const weekWorkouts = workouts.filter(w => w.week_number === weekNumber);
+      try {
+        const weekWorkouts = workouts.filter((w) => w.week_number === weekNumber);
 
-      await approveAndEnhanceWeek({
-        programId,
-        weekNumber,
-        workouts: weekWorkouts,
-        context: {
-          goal: formData?.goal,
-          difficulty: formData?.difficulty,
-          equipment: selectedEquipment,
-          useImperial: true,
-          numberOfWeeks: parseInt(formData?.numberOfWeeks, 10) || 1,
-          trainingMethodology: formData?.trainingMethodology,
-        },
-        weekSpecificInput: weekInput || weekInputs[weekNumber] || '',
-        updateWorkoutStatus: (workoutId, updates) => {
-          updateWorkout(workoutId, updates);
-        },
-        showToast,
-        supabase,
-      });
+        await approveAndEnhanceWeek({
+          programId,
+          weekNumber,
+          workouts: weekWorkouts,
+          context: {
+            goal: formData?.goal,
+            difficulty: formData?.difficulty,
+            equipment: selectedEquipment,
+            useImperial: true,
+            numberOfWeeks: parseInt(formData?.numberOfWeeks, 10) || 1,
+            trainingMethodology: formData?.trainingMethodology,
+          },
+          weekSpecificInput: weekInput || weekInputs[weekNumber] || '',
+          updateWorkoutStatus: (workoutId, updates) => {
+            updateWorkout(workoutId, updates);
+          },
+          showToast,
+          supabase,
+        });
 
-      // Clear the input after successful enhancement
-      setWeekInput(weekNumber, '');
-
-    } catch (error) {
-      showToast(`Failed to enhance Week ${weekNumber}: ${error.message}`, 'error');
-    } finally {
-      // Remove this week from the enhancing set
-      setEnhancingWeeks(prev => {
-        const next = new Set(prev);
-        next.delete(weekNumber);
-        return next;
-      });
-    }
-  }, [programId, workouts, formData, selectedEquipment, weekInputs, updateWorkout, showToast, supabase, setWeekInput, enhancingWeeks]);
+        // Clear the input after successful enhancement
+        setWeekInput(weekNumber, '');
+      } catch (error) {
+        showToast(`Failed to enhance Week ${weekNumber}: ${error.message}`, 'error');
+      } finally {
+        // Remove this week from the enhancing set
+        setEnhancingWeeks((prev) => {
+          const next = new Set(prev);
+          next.delete(weekNumber);
+          return next;
+        });
+      }
+    },
+    [
+      programId,
+      workouts,
+      formData,
+      selectedEquipment,
+      weekInputs,
+      updateWorkout,
+      showToast,
+      supabase,
+      setWeekInput,
+      enhancingWeeks,
+    ]
+  );
 
   // Handle enhance all weeks - launches all enhancements concurrently
   // Options: { includeEnhanced: boolean } - if true, re-enhances already-enhanced weeks
-  const handleEnhanceAllWeeks = useCallback(async (options = {}) => {
-    const { includeEnhanced = false } = options;
-    const groupedWeeks = groupWorkoutsByWeek(workouts);
+  const handleEnhanceAllWeeks = useCallback(
+    async (options = {}) => {
+      const { includeEnhanced = false } = options;
+      const groupedWeeks = groupWorkoutsByWeek(workouts);
 
-    // Filter based on options - either all weeks or just skeleton weeks
-    const weeksToEnhance = includeEnhanced
-      ? groupedWeeks
-      : groupedWeeks.filter(w => w.status === 'skeleton');
+      // Filter based on options - either all weeks or just skeleton weeks
+      const weeksToEnhance = includeEnhanced
+        ? groupedWeeks
+        : groupedWeeks.filter((w) => w.status === 'skeleton');
 
-    // Launch all week enhancements concurrently
-    const enhancePromises = weeksToEnhance.map(week =>
-      handleEnhanceWeek(week.weekNumber, weekInputs[week.weekNumber] || '')
-    );
+      // Launch all week enhancements concurrently
+      const enhancePromises = weeksToEnhance.map((week) =>
+        handleEnhanceWeek(week.weekNumber, weekInputs[week.weekNumber] || '')
+      );
 
-    // Wait for all to complete (each handles its own errors)
-    await Promise.allSettled(enhancePromises);
-  }, [workouts, weekInputs, handleEnhanceWeek]);
+      // Wait for all to complete (each handles its own errors)
+      await Promise.allSettled(enhancePromises);
+    },
+    [workouts, weekInputs, handleEnhanceWeek]
+  );
 
   // Two-phase skeleton generation
   const handleGenerateSkeleton = useCallback(async () => {
@@ -939,7 +927,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
         formData: { ...formData, equipment: selectedEquipment },
         setIsLoading: () => {},
         setSuggestions: saveGeneratedWorkouts,
-        addStreamingWorkout: (workout) => setStreamingWorkouts(prev => [...prev, workout]),
+        addStreamingWorkout: (workout) => setStreamingWorkouts((prev) => [...prev, workout]),
         clearStreamingWorkouts: () => setStreamingWorkouts([]),
         showToastMessage: showToast,
         setGenerationStage: updateGenerationStage,
@@ -952,21 +940,29 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
       });
 
       setShowGenerationProgress(false);
-
     } catch (error) {
       showToast(`Generation failed: ${error.message}`, 'error');
       setShowGenerationProgress(false);
       updateGenerationStage('error');
     }
-  }, [programId, formData, selectedEquipment, saveGeneratedWorkouts, showToast, startGeneration, updateGenerationStage, refetchWorkouts]);
+  }, [
+    programId,
+    formData,
+    selectedEquipment,
+    saveGeneratedWorkouts,
+    showToast,
+    startGeneration,
+    updateGenerationStage,
+    refetchWorkouts,
+  ]);
 
   // Check for skeletons to show SkeletonPreview
   const hasSkeletonWorkouts = useMemo(() => {
-    return workouts.some(w => w.generation_status === 'skeleton');
+    return workouts.some((w) => w.generation_status === 'skeleton');
   }, [workouts]);
 
   const hasDetailedWorkouts = useMemo(() => {
-    return workouts.some(w => w.generation_status === 'detailed' || !w.generation_status);
+    return workouts.some((w) => w.generation_status === 'detailed' || !w.generation_status);
   }, [workouts]);
 
   // Mobile config panel visibility state
@@ -992,7 +988,9 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
         currentWeek={skeletonProgress?.currentWeek || serverStatus?.week || 0}
         totalWeeks={parseInt(formData?.numberOfWeeks) || 0}
         workoutsGenerated={streamingWorkouts.length}
-        totalWorkouts={(parseInt(formData?.numberOfWeeks) || 4) * (formData?.daysOfWeek?.length || 3)}
+        totalWorkouts={
+          (parseInt(formData?.numberOfWeeks) || 4) * (formData?.daysOfWeek?.length || 3)
+        }
         elapsedTime={loadingDuration}
         currentMessage={serverStatus?.message || 'Generating...'}
         onCancel={() => {
@@ -1006,9 +1004,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
         error={generationStage === 'error' ? 'Generation failed' : null}
       />
 
-      {toast.show && (
-        <Toast message={toast.message} type={toast.type} onClose={() => {}} />
-      )}
+      {toast.show && <Toast message={toast.message} type={toast.type} onClose={() => {}} />}
 
       {/* Mobile Config Toggle Button */}
       <div className="lg:hidden sticky top-0 z-20 bg-white border-b border-slate-200 p-3">
@@ -1022,16 +1018,20 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
             </div>
             <span className="text-sm font-semibold text-slate-700">Program Config</span>
           </div>
-          <ChevronDown className={`w-5 h-5 text-slate-400 transition-transform ${showMobileConfig ? 'rotate-180' : ''}`} />
+          <ChevronDown
+            className={`w-5 h-5 text-slate-400 transition-transform ${showMobileConfig ? 'rotate-180' : ''}`}
+          />
         </button>
       </div>
 
       {/* LEFT: Compact Config Panel */}
-      <div className={`
+      <div
+        className={`
         w-full lg:w-72 xl:w-80 flex-shrink-0 border-b lg:border-b-0 lg:border-r border-slate-200 bg-slate-50/50
         flex flex-col
         ${showMobileConfig ? 'flex' : 'hidden lg:flex'}
-      `}>
+      `}
+      >
         {/* Config Header - Hidden on mobile since we have the toggle */}
         <div className="hidden lg:flex items-center justify-between p-4 border-b border-slate-200 sticky top-0 bg-slate-50/95 backdrop-blur-sm z-10">
           <div className="flex items-center gap-2">
@@ -1080,8 +1080,10 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
                 value={formData?.programType || 'linear'}
                 onChange={(e) => handleFieldChange('programType', e.target.value)}
               >
-                {programTypes.map(type => (
-                  <option key={type.value} value={type.value}>{type.label}</option>
+                {programTypes.map((type) => (
+                  <option key={type.value} value={type.value}>
+                    {type.label}
+                  </option>
                 ))}
               </select>
             </div>
@@ -1095,12 +1097,22 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
             </summary>
             <div className="px-3 pb-3 pt-1 space-y-3">
               <div>
-                <label className="text-xs font-medium text-slate-500 mb-1.5 block">Days of Week</label>
+                <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                  Days of Week
+                </label>
                 <div className="flex flex-wrap gap-1.5">
                   {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, i) => {
-                    const fullDay = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][i];
-                    const isSelected = formData?.daysOfWeek?.some(d =>
-                      typeof d === 'string' && d.toLowerCase() === fullDay.toLowerCase()
+                    const fullDay = [
+                      'Sunday',
+                      'Monday',
+                      'Tuesday',
+                      'Wednesday',
+                      'Thursday',
+                      'Friday',
+                      'Saturday',
+                    ][i];
+                    const isSelected = formData?.daysOfWeek?.some(
+                      (d) => typeof d === 'string' && d.toLowerCase() === fullDay.toLowerCase()
                     );
                     return (
                       <button
@@ -1126,27 +1138,35 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
                     value={formData?.numberOfWeeks || '4'}
                     onChange={(e) => handleFieldChange('numberOfWeeks', e.target.value)}
                   >
-                    {[1, 2, 3, 4, 5, 6, 7, 8, 10, 12].map(w => (
-                      <option key={w} value={w}>{w} week{w > 1 ? 's' : ''}</option>
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 10, 12].map((w) => (
+                      <option key={w} value={w}>
+                        {w} week{w > 1 ? 's' : ''}
+                      </option>
                     ))}
                   </select>
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-slate-500 mb-1.5 block">Duration (min)</label>
+                  <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                    Duration (min)
+                  </label>
                   <input
                     type="number"
                     className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                     placeholder="60"
                     value={formData?.sessionDetails?.duration_minutes || ''}
-                    onChange={(e) => handleFieldChange('sessionDetails', {
-                      ...formData?.sessionDetails,
-                      duration_minutes: e.target.value ? parseInt(e.target.value) : null
-                    })}
+                    onChange={(e) =>
+                      handleFieldChange('sessionDetails', {
+                        ...formData?.sessionDetails,
+                        duration_minutes: e.target.value ? parseInt(e.target.value) : null,
+                      })
+                    }
                   />
                 </div>
               </div>
               <div>
-                <label className="text-xs font-medium text-slate-500 mb-1.5 block">Start Date</label>
+                <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                  Start Date
+                </label>
                 <input
                   type="date"
                   className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
@@ -1156,7 +1176,10 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
               </div>
               {calculatedEndDate && (
                 <div className="text-xs text-slate-500 bg-slate-100 px-3 py-2 rounded-lg">
-                  End Date: <span className="font-medium text-slate-700">{new Date(calculatedEndDate).toLocaleDateString()}</span>
+                  End Date:{' '}
+                  <span className="font-medium text-slate-700">
+                    {new Date(calculatedEndDate).toLocaleDateString()}
+                  </span>
                 </div>
               )}
             </div>
@@ -1177,20 +1200,26 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
                   onChange={(e) => handleFieldChange('gymType', e.target.value)}
                 >
                   <option value="">Select gym type</option>
-                  {gymTypes.map(type => (
-                    <option key={type.value} value={type.value}>{type.label}</option>
+                  {gymTypes.map((type) => (
+                    <option key={type.value} value={type.value}>
+                      {type.label}
+                    </option>
                   ))}
                 </select>
               </div>
               <div>
-                <label className="text-xs font-medium text-slate-500 mb-1.5 block">Difficulty</label>
+                <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                  Difficulty
+                </label>
                 <select
                   className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                   value={formData?.difficulty || 'intermediate'}
                   onChange={(e) => handleFieldChange('difficulty', e.target.value)}
                 >
-                  {difficulties.map(diff => (
-                    <option key={diff.value} value={diff.value}>{diff.label}</option>
+                  {difficulties.map((diff) => (
+                    <option key={diff.value} value={diff.value}>
+                      {diff.label}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -1209,20 +1238,26 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
             </summary>
             <div className="px-3 pb-3 pt-1 space-y-3">
               <div>
-                <label className="text-xs font-medium text-slate-500 mb-1.5 block">Focus Area</label>
+                <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                  Focus Area
+                </label>
                 <select
                   className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                   value={formData?.focusArea || ''}
                   onChange={(e) => handleFieldChange('focusArea', e.target.value)}
                 >
                   <option value="">Select focus area</option>
-                  {focusAreas.map(area => (
-                    <option key={area.value} value={area.value}>{area.label}</option>
+                  {focusAreas.map((area) => (
+                    <option key={area.value} value={area.value}>
+                      {area.label}
+                    </option>
                   ))}
                 </select>
               </div>
               <div>
-                <label className="text-xs font-medium text-slate-500 mb-1.5 block">Workout Types</label>
+                <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                  Workout Types
+                </label>
                 <div className="flex flex-wrap gap-1.5">
                   {[
                     { id: 'strength', label: 'Strength' },
@@ -1238,7 +1273,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
                     { id: 'complex', label: 'Complex' },
                     { id: 'hiit', label: 'HIIT' },
                     { id: 'metcon', label: 'MetCon' },
-                  ].map(type => (
+                  ].map((type) => (
                     <button
                       key={type.id}
                       className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
@@ -1337,7 +1372,9 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
         {/* Workouts Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 lg:mb-6 pb-4 border-b border-slate-200 gap-3">
           <div>
-            <h2 className="text-base lg:text-lg font-semibold text-slate-800">Generated Workouts</h2>
+            <h2 className="text-base lg:text-lg font-semibold text-slate-800">
+              Generated Workouts
+            </h2>
             <div className="flex flex-wrap items-center gap-2 mt-1">
               <span className="inline-flex items-center px-2 py-0.5 lg:px-2.5 lg:py-1 bg-blue-50 text-blue-700 rounded-lg text-xs font-medium">
                 {displayWorkouts.length} workouts
@@ -1393,10 +1430,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
               onMarkComplete={handleMarkComplete}
               onDatePick={(workout) => {
                 const initialDate =
-                  workout.suggestedDate ||
-                  workout.scheduled_date ||
-                  formData?.startDate ||
-                  null;
+                  workout.suggestedDate || workout.scheduled_date || formData?.startDate || null;
                 openModal('datePickerModal', { workout, date: initialDate });
               }}
               formatDate={formatDate}
@@ -1414,11 +1448,10 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
             <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mb-4">
               <Sparkles className="w-8 h-8 text-slate-400" />
             </div>
-            <h3 className="text-lg font-semibold text-slate-700 mb-2">
-              No workouts yet
-            </h3>
+            <h3 className="text-lg font-semibold text-slate-700 mb-2">No workouts yet</h3>
             <p className="text-sm text-slate-500 max-w-sm px-4">
-              Configure your program settings in the left panel, then click "Generate Program" to create your personalized workout plan.
+              Configure your program settings in the left panel, then click "Generate Program" to
+              create your personalized workout plan.
             </p>
           </div>
         )}
@@ -1459,9 +1492,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
           currentEndDate={formData?.endDate}
           onClose={() => closeModal('rescheduleModal')}
           onSave={handleRescheduleProgram}
-          setNewStartDate={(date) =>
-            openModal('rescheduleModal', { newStartDate: date })
-          }
+          setNewStartDate={(date) => openModal('rescheduleModal', { newStartDate: date })}
           newStartDate={modals.rescheduleModal.newStartDate}
         />
       )}

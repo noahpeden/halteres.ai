@@ -1,13 +1,13 @@
-import { NextResponse } from 'next/server';
-import { createMobileCompatibleClient, corsHeaders } from '@/utils/supabase/mobile';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
+import { NextResponse } from 'next/server';
 import { stripe } from '@/utils/stripe';
+import { corsHeaders, createMobileCompatibleClient } from '@/utils/supabase/mobile';
 
 export async function OPTIONS(request) {
   return new Response(null, {
     status: 200,
-    headers: corsHeaders()
+    headers: corsHeaders(),
   });
 }
 
@@ -19,23 +19,17 @@ export async function POST(req) {
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
 
     if (!priceId) {
-      return new NextResponse(
-        JSON.stringify({ error: 'Price ID is required' }),
-        {
-          status: 400,
-          headers: { 'Content-Type': 'application/json', ...corsHeaders() },
-        }
-      );
+      return new NextResponse(JSON.stringify({ error: 'Price ID is required' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders() },
+      });
     }
     if (!siteUrl) {
       console.error('Missing NEXT_PUBLIC_SITE_URL environment variable');
-      return new NextResponse(
-        JSON.stringify({ error: 'Internal server configuration error' }),
-        {
-          status: 500,
-          headers: { 'Content-Type': 'application/json', ...corsHeaders() },
-        }
-      );
+      return new NextResponse(JSON.stringify({ error: 'Internal server configuration error' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders() },
+      });
     }
 
     // 1. Get authenticated user
@@ -64,7 +58,8 @@ export async function POST(req) {
       if (existingProfile.subscription_status === 'active') {
         return new NextResponse(
           JSON.stringify({
-            error: 'You already have an active subscription. Please manage your subscription from your profile page.'
+            error:
+              'You already have an active subscription. Please manage your subscription from your profile page.',
           }),
           {
             status: 400,
@@ -109,13 +104,10 @@ export async function POST(req) {
     if (profileError && profileError.code !== 'PGRST116') {
       // PGRST116: row not found
       console.error('Profile fetch error:', profileError);
-      return new NextResponse(
-        JSON.stringify({ error: 'Failed to retrieve user profile' }),
-        {
-          status: 500,
-          headers: { 'Content-Type': 'application/json', ...corsHeaders() },
-        }
-      );
+      return new NextResponse(JSON.stringify({ error: 'Failed to retrieve user profile' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders() },
+      });
     }
 
     let stripeCustomerId = profile?.stripe_customer_id;
@@ -134,9 +126,7 @@ export async function POST(req) {
         );
       }
       try {
-        console.log(
-          `Creating Stripe customer for user ${user.id} with email ${user.email}`
-        );
+        console.log(`Creating Stripe customer for user ${user.id} with email ${user.email}`);
         const customer = await stripe.customers.create({
           email: user.email,
           metadata: {
@@ -144,9 +134,7 @@ export async function POST(req) {
           },
         });
         stripeCustomerId = customer.id;
-        console.log(
-          `Created Stripe customer ${stripeCustomerId} for user ${user.id}`
-        );
+        console.log(`Created Stripe customer ${stripeCustomerId} for user ${user.id}`);
 
         // Update profile with new Stripe customer ID
         const { error: updateError } = await supabaseAdmin
@@ -165,13 +153,10 @@ export async function POST(req) {
         console.error('Stripe customer creation error:', stripeError);
         // Use status code from stripeError if available, otherwise 500
         const statusCode = stripeError.statusCode || 500;
-        return new NextResponse(
-          JSON.stringify({ error: `Stripe error: ${stripeError.message}` }),
-          {
-            status: statusCode,
-            headers: { 'Content-Type': 'application/json', ...corsHeaders() },
-          }
-        );
+        return new NextResponse(JSON.stringify({ error: `Stripe error: ${stripeError.message}` }), {
+          status: statusCode,
+          headers: { 'Content-Type': 'application/json', ...corsHeaders() },
+        });
       }
     }
 
@@ -210,10 +195,7 @@ export async function POST(req) {
 
       return NextResponse.json({ sessionId: session.id }, { headers: corsHeaders() });
     } catch (stripeSessionError) {
-      console.error(
-        'Stripe checkout session creation error:',
-        stripeSessionError
-      );
+      console.error('Stripe checkout session creation error:', stripeSessionError);
       const statusCode = stripeSessionError.statusCode || 500;
       return new NextResponse(
         JSON.stringify({
@@ -227,12 +209,9 @@ export async function POST(req) {
     }
   } catch (error) {
     console.error('Checkout Session General Error:', error);
-    return new NextResponse(
-      JSON.stringify({ error: 'Internal Server Error' }),
-      {
-        status: 500,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders() },
-      }
-    );
+    return new NextResponse(JSON.stringify({ error: 'Internal Server Error' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders() },
+    });
   }
 }

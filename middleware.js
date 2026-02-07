@@ -59,19 +59,14 @@ export async function middleware(req) {
 
   // Check if this is a public sharing route
   // Pattern: /program/{programId}/workout/{workoutId} or /program/{programId}/share
-  const isPublicWorkoutRoute = /^\/program\/[^\/]+\/workout\/[^\/]+$/.test(
-    pathname
-  );
-  const isPublicProgramRoute = /^\/program\/[^\/]+\/share$/.test(pathname);
+  const isPublicWorkoutRoute = /^\/program\/[^/]+\/workout\/[^/]+$/.test(pathname);
+  const isPublicProgramRoute = /^\/program\/[^/]+\/share$/.test(pathname);
   const isPublicRoute = isPublicWorkoutRoute || isPublicProgramRoute;
 
   const isProtectedRoute =
-    protectedRoutes.some((route) => pathname.startsWith(route)) &&
-    !isPublicRoute; // Exclude public routes from protection
+    protectedRoutes.some((route) => pathname.startsWith(route)) && !isPublicRoute; // Exclude public routes from protection
 
-  const isGenerationRoute = generationActionRoutes.some((route) =>
-    pathname.startsWith(route)
-  );
+  const isGenerationRoute = generationActionRoutes.some((route) => pathname.startsWith(route));
 
   // Allow access to public routes
   if (
@@ -98,7 +93,8 @@ export async function middleware(req) {
 
   // Define coach-only routes (athletes should not access these)
   const coachOnlyRoutes = ['/dashboard', '/program', '/write-program'];
-  const isCoachOnlyRoute = coachOnlyRoutes.some((route) => pathname.startsWith(route)) && !isPublicRoute;
+  const isCoachOnlyRoute =
+    coachOnlyRoutes.some((route) => pathname.startsWith(route)) && !isPublicRoute;
 
   // Define athlete routes that require setup to be complete
   const athleteRoutes = ['/athlete'];
@@ -168,9 +164,7 @@ export async function middleware(req) {
 
       const isActive = subscription_status === 'active';
       const isTrialing = subscription_status === 'trialing';
-      const trialExpired = trial_end_date
-        ? new Date(trial_end_date) < new Date()
-        : true;
+      const trialExpired = trial_end_date ? new Date(trial_end_date) < new Date() : true;
 
       // --- Generation Route Specific Checks ---
       if (isGenerationRoute) {

@@ -1,23 +1,19 @@
 'use client';
-import { useState, useEffect } from 'react';
-import {
-  Trash2,
-  Pencil,
-  MoreVertical,
-  CheckCircle,
-  ChevronLeft,
-  ChevronRight,
-} from 'lucide-react';
+import { CheckCircle, ChevronLeft, ChevronRight, MoreVertical, Pencil, Trash2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import TemplateFeedbackButton from '@/components/feedback/TemplateFeedbackButton';
 
 // Simple markdown parser for workout content
 const parseMarkdownToHTML = (markdown) => {
   if (!markdown) return '';
-  
+
   let html = markdown
     // Headers (## Header -> <h3>, ### Header -> <h4>)
     .replace(/^### (.*$)/gim, '<h4 class="text-base font-semibold mt-4 mb-2 text-gray-800">$1</h4>')
-    .replace(/^## (.*$)/gim, '<h3 class="text-lg font-semibold mt-5 mb-3 text-gray-900 border-b border-gray-200 pb-1">$1</h3>')
+    .replace(
+      /^## (.*$)/gim,
+      '<h3 class="text-lg font-semibold mt-5 mb-3 text-gray-900 border-b border-gray-200 pb-1">$1</h3>'
+    )
     // Bold text (**text** or __text__)
     .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-gray-900">$1</strong>')
     .replace(/__(.*?)__/g, '<strong class="font-semibold text-gray-900">$1</strong>')
@@ -25,12 +21,18 @@ const parseMarkdownToHTML = (markdown) => {
     .replace(/\*(.*?)\*/g, '<em class="italic">$1</em>')
     .replace(/_(.*?)_/g, '<em class="italic">$1</em>')
     // Bullet points (- item or * item)
-    .replace(/^[\s]*[-\*\+]\s+(.*$)/gim, '<li class="ml-4 mb-1">$1</li>')
+    .replace(/^[\s]*[-*+]\s+(.*$)/gim, '<li class="ml-4 mb-1">$1</li>')
     // Numbered lists (1. item, 2. item, etc.)
     .replace(/^[\s]*\d+\.\s+(.*$)/gim, '<li class="ml-4 mb-1 list-decimal">$1</li>')
     // Gender symbols with better styling
-    .replace(/♀/g, '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-pink-100 text-pink-800">♀</span>')
-    .replace(/♂/g, '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">♂</span>')
+    .replace(
+      /♀/g,
+      '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-pink-100 text-pink-800">♀</span>'
+    )
+    .replace(
+      /♂/g,
+      '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">♂</span>'
+    )
     // Convert line breaks to <br> but preserve structure
     .replace(/\n/g, '<br>');
 
@@ -116,33 +118,33 @@ export default function WorkoutList({
 
   const weekGroups = groupWorkoutsByWeek();
   const totalWeeks = weekGroups.length;
-  const currentWeekData = weekGroups.find(
-    (group) => group.week === currentWeek
-  );
+  const currentWeekData = weekGroups.find((group) => group.week === currentWeek);
 
   // Determine generation progress for visual feedback
   const getWeekGenerationStatus = (weekNumber) => {
     // If we have workouts for this week, it's complete
-    if (weekGroups.find(w => w.week === weekNumber)?.workouts?.length > 0) {
+    if (weekGroups.find((w) => w.week === weekNumber)?.workouts?.length > 0) {
       return 'complete';
     }
-    
+
     // If generation failed and we don't have workouts for this week
     if (generationStage === 'error') {
       return 'failed';
     }
-    
+
     // If we're not generating, treat as complete (static state)
     if (!generationStage) {
       return 'complete';
     }
-    
+
     // If we're currently generating this week
-    if (serverStatus?.currentWeek === weekNumber || 
-        (generationStage === 'generating' && weekNumber === totalWeeks + 1)) {
+    if (
+      serverStatus?.currentWeek === weekNumber ||
+      (generationStage === 'generating' && weekNumber === totalWeeks + 1)
+    ) {
       return 'generating';
     }
-    
+
     // If we haven't reached this week yet
     return 'pending';
   };
@@ -194,16 +196,23 @@ export default function WorkoutList({
         <div>
           <h3 className="text-lg font-semibold">Generated Program</h3>
           <p className="text-sm text-gray-600">
-            {workouts.length} workout{workouts.length !== 1 ? 's' : ''}{' '}
-            generated ({totalWeeks} week{totalWeeks !== 1 ? 's' : ''})
+            {workouts.length} workout{workouts.length !== 1 ? 's' : ''} generated ({totalWeeks} week
+            {totalWeeks !== 1 ? 's' : ''})
             {generationStage && (
               <span className="ml-2 text-primary font-medium">
-                {generationStage === 'generating' ? '• Generating...' : 
-                 generationStage === 'preparing' ? '• Preparing...' : 
-                 generationStage === 'retrying' ? '• Retrying...' : 
-                 generationStage === 'streaming' ? '• Streaming content...' :
-                 generationStage?.startsWith('streaming_week_') ? `• Streaming ${generationStage.replace('streaming_week_', 'week ')} content...` :
-                 generationStage === 'error' ? '• Generation failed - partial program saved' : ''}
+                {generationStage === 'generating'
+                  ? '• Generating...'
+                  : generationStage === 'preparing'
+                    ? '• Preparing...'
+                    : generationStage === 'retrying'
+                      ? '• Retrying...'
+                      : generationStage === 'streaming'
+                        ? '• Streaming content...'
+                        : generationStage?.startsWith('streaming_week_')
+                          ? `• Streaming ${generationStage.replace('streaming_week_', 'week ')} content...`
+                          : generationStage === 'error'
+                            ? '• Generation failed - partial program saved'
+                            : ''}
               </span>
             )}
           </p>
@@ -213,14 +222,12 @@ export default function WorkoutList({
         <div className="mb-4">
           <div className="collapse collapse-arrow bg-base-200">
             <input type="checkbox" defaultChecked={true} />
-            <div className="collapse-title font-medium">
-              Program Description
-            </div>
+            <div className="collapse-title font-medium">Program Description</div>
             <div className="collapse-content">
-              <div 
+              <div
                 className="p-2 bg-white rounded-md text-sm"
                 dangerouslySetInnerHTML={{
-                  __html: parseMarkdownToHTML(generatedDescription)
+                  __html: parseMarkdownToHTML(generatedDescription),
                 }}
               />
             </div>
@@ -242,9 +249,7 @@ export default function WorkoutList({
 
             <div className="text-center">
               <span className="text-lg font-semibold">Week {currentWeek}</span>
-              <span className="text-sm text-gray-600 block">
-                of {totalWeeks}
-              </span>
+              <span className="text-sm text-gray-600 block">of {totalWeeks}</span>
             </div>
 
             <button
@@ -280,12 +285,12 @@ export default function WorkoutList({
                         currentWeek === weekGroup.week
                           ? 'btn-primary'
                           : status === 'complete'
-                          ? 'btn-outline'
-                          : status === 'generating'
-                          ? 'btn-outline btn-warning'
-                          : status === 'failed'
-                          ? 'btn-outline btn-error'
-                          : 'btn-outline btn-disabled'
+                            ? 'btn-outline'
+                            : status === 'generating'
+                              ? 'btn-outline btn-warning'
+                              : status === 'failed'
+                                ? 'btn-outline btn-error'
+                                : 'btn-outline btn-disabled'
                       }`}
                       onClick={() => setCurrentWeek(weekGroup.week)}
                       disabled={status === 'pending'}
@@ -302,15 +307,10 @@ export default function WorkoutList({
                 <>
                   {currentWeek > 3 && (
                     <>
-                      <button
-                        className="btn btn-sm btn-outline"
-                        onClick={() => setCurrentWeek(1)}
-                      >
+                      <button className="btn btn-sm btn-outline" onClick={() => setCurrentWeek(1)}>
                         1
                       </button>
-                      {currentWeek > 4 && (
-                        <span className="px-2 text-gray-500">...</span>
-                      )}
+                      {currentWeek > 4 && <span className="px-2 text-gray-500">...</span>}
                     </>
                   )}
 
@@ -322,9 +322,7 @@ export default function WorkoutList({
                       } else if (currentWeek >= totalWeeks - 2) {
                         return week >= totalWeeks - 4;
                       } else {
-                        return (
-                          week >= currentWeek - 2 && week <= currentWeek + 2
-                        );
+                        return week >= currentWeek - 2 && week <= currentWeek + 2;
                       }
                     })
                     .map((weekGroup) => {
@@ -336,12 +334,12 @@ export default function WorkoutList({
                             currentWeek === weekGroup.week
                               ? 'btn-primary'
                               : status === 'complete'
-                              ? 'btn-outline'
-                              : status === 'generating'
-                              ? 'btn-outline btn-warning'
-                              : status === 'failed'
-                              ? 'btn-outline btn-error'
-                              : 'btn-outline btn-disabled'
+                                ? 'btn-outline'
+                                : status === 'generating'
+                                  ? 'btn-outline btn-warning'
+                                  : status === 'failed'
+                                    ? 'btn-outline btn-error'
+                                    : 'btn-outline btn-disabled'
                           }`}
                           onClick={() => setCurrentWeek(weekGroup.week)}
                           disabled={status === 'pending'}
@@ -419,10 +417,7 @@ export default function WorkoutList({
           <div className="grid grid-cols-1 gap-4">
             {currentWeekData.workouts.map((workout, index) => (
               <div
-                key={
-                  workout.streamingId ||
-                  `${currentWeekData.week}-${index}-${workout.title}`
-                }
+                key={workout.streamingId || `${currentWeekData.week}-${index}-${workout.title}`}
                 className={`border rounded-md p-3 sm:p-4 flex flex-col w-full ${
                   workout.completed ? 'bg-green-50 border-green-200' : ''
                 }`}
@@ -465,8 +460,7 @@ export default function WorkoutList({
                       )}
                     </div>
                     <h4 className="font-semibold break-words">
-                      {workout.title ||
-                        `Week ${currentWeekData.week}, Day ${index + 1}`}
+                      {workout.title || `Week ${currentWeekData.week}, Day ${index + 1}`}
                     </h4>
                   </div>
                   {workout.id && (
@@ -494,11 +488,7 @@ export default function WorkoutList({
                               e.stopPropagation();
                               onMarkComplete(workout);
                             }}
-                            title={
-                              workout.completed
-                                ? 'Mark as incomplete'
-                                : 'Mark as complete'
-                            }
+                            title={workout.completed ? 'Mark as incomplete' : 'Mark as complete'}
                           >
                             <CheckCircle className="h-4 w-4" />
                             {workout.completed ? 'Incomplete' : 'Complete'}
@@ -529,22 +519,20 @@ export default function WorkoutList({
                     {workout.scheduled_date
                       ? formatDate(workout.scheduled_date)
                       : workout.suggestedDate
-                      ? formatDate(workout.suggestedDate)
-                      : workout.date
-                      ? formatDate(workout.date)
-                      : workout.tags?.suggestedDate
-                      ? formatDate(workout.tags.suggestedDate)
-                      : 'Not scheduled'}
+                        ? formatDate(workout.suggestedDate)
+                        : workout.date
+                          ? formatDate(workout.date)
+                          : workout.tags?.suggestedDate
+                            ? formatDate(workout.tags.suggestedDate)
+                            : 'Not scheduled'}
                   </button>
                 </div>
-                <div 
+                <div
                   className="overflow-auto max-h-60 sm:max-h-80 text-sm mb-3 flex-grow"
                   dangerouslySetInnerHTML={{
                     __html: parseMarkdownToHTML(
-                      workout.body ||
-                      workout.description ||
-                      'No description available'
-                    )
+                      workout.body || workout.description || 'No description available'
+                    ),
                   }}
                 />
                 <div className="flex justify-between items-center mt-auto gap-2">
@@ -581,12 +569,17 @@ export default function WorkoutList({
             {generationStage && (
               <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-md">
                 <p className="text-blue-700 text-sm">
-                  {generationStage === 'generating' ? '• Generating...' : 
-                   generationStage === 'preparing' ? '• Preparing...' : 
-                   generationStage === 'retrying' ? '• Retrying...' : 
-                   generationStage === 'streaming' ? '• Streaming content...' :
-                   generationStage?.startsWith('streaming_week_') ? `• Streaming ${generationStage.replace('streaming_week_', 'week ')} content...` :
-                   '• Processing...'}
+                  {generationStage === 'generating'
+                    ? '• Generating...'
+                    : generationStage === 'preparing'
+                      ? '• Preparing...'
+                      : generationStage === 'retrying'
+                        ? '• Retrying...'
+                        : generationStage === 'streaming'
+                          ? '• Streaming content...'
+                          : generationStage?.startsWith('streaming_week_')
+                            ? `• Streaming ${generationStage.replace('streaming_week_', 'week ')} content...`
+                            : '• Processing...'}
                 </p>
               </div>
             )}
@@ -601,8 +594,8 @@ export default function WorkoutList({
             {generationStage === 'error' && (
               <div className="mt-4 p-4 bg-orange-50 border border-orange-200 rounded-md">
                 <p className="text-orange-700 text-sm">
-                  ⚠️ Generation was interrupted. You can regenerate the program to complete missing weeks, 
-                  or manually add workouts for Week {currentWeek}.
+                  ⚠️ Generation was interrupted. You can regenerate the program to complete missing
+                  weeks, or manually add workouts for Week {currentWeek}.
                 </p>
               </div>
             )}

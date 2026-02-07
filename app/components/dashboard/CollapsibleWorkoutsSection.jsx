@@ -1,17 +1,17 @@
 'use client';
-import { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
 import {
+  Calendar,
+  CheckCircle2,
   ChevronDown,
   ChevronRight,
-  Calendar,
+  Circle,
   Clock,
+  Eye,
   User,
   Users,
-  CheckCircle2,
-  Circle,
-  Eye,
 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function CollapsibleWorkoutsSection() {
   const [isExpanded, setIsExpanded] = useState(true);
@@ -25,9 +25,7 @@ export default function CollapsibleWorkoutsSection() {
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center">
-            <h2 className="text-xl font-semibold text-slate-900">
-              This Week's Workouts
-            </h2>
+            <h2 className="text-xl font-semibold text-slate-900">This Week's Workouts</h2>
             <div className="ml-3 p-1 rounded-lg bg-blue-100">
               <Calendar className="w-4 h-4 text-blue-600" />
             </div>
@@ -43,9 +41,7 @@ export default function CollapsibleWorkoutsSection() {
             )}
           </div> */}
         </div>
-        <p className="text-sm text-slate-600 mt-1">
-          Upcoming scheduled sessions
-        </p>
+        <p className="text-sm text-slate-600 mt-1">Upcoming scheduled sessions</p>
       </div>
 
       {/* Collapsible Content */}
@@ -194,10 +190,11 @@ function EnhancedUpcomingWorkouts() {
             const scheduledDate = workout.scheduled_date;
             const suggestedDate = workout.suggestedDate;
             const workoutDate = workout.date;
-            const tagDate = workout.tags?.suggestedDate || workout.tags?.scheduled_date || workout.tags?.date;
+            const tagDate =
+              workout.tags?.suggestedDate || workout.tags?.scheduled_date || workout.tags?.date;
 
             let finalDate = null;
-            
+
             // Try scheduled_date first (primary field in database)
             if (scheduledDate) {
               try {
@@ -251,10 +248,11 @@ function EnhancedUpcomingWorkouts() {
               const scheduledDate = workout.scheduled_date;
               const suggestedDate = workout.suggestedDate;
               const workoutDate = workout.date;
-              const tagDate = workout.tags?.suggestedDate || workout.tags?.scheduled_date || workout.tags?.date;
+              const tagDate =
+                workout.tags?.suggestedDate || workout.tags?.scheduled_date || workout.tags?.date;
 
               let finalDate = null;
-              
+
               // Try scheduled_date first
               if (scheduledDate) {
                 try {
@@ -310,9 +308,7 @@ function EnhancedUpcomingWorkouts() {
               };
             })
             .filter((workout) => workout.scheduled_date)
-            .sort(
-              (a, b) => new Date(a.scheduled_date) - new Date(b.scheduled_date)
-            );
+            .sort((a, b) => new Date(a.scheduled_date) - new Date(b.scheduled_date));
 
           setWorkouts(formattedWorkouts);
 
@@ -358,9 +354,7 @@ function EnhancedUpcomingWorkouts() {
 
       setWorkouts(
         workouts.map((workout) =>
-          workout.id === workoutId
-            ? { ...workout, completed: newState }
-            : workout
+          workout.id === workoutId ? { ...workout, completed: newState } : workout
         )
       );
     } catch (error) {
@@ -402,9 +396,7 @@ function EnhancedUpcomingWorkouts() {
         <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-3">
           <Calendar className="w-6 h-6 text-slate-400" />
         </div>
-        <p className="text-slate-600 text-sm">
-          No workouts scheduled for this week.
-        </p>
+        <p className="text-slate-600 text-sm">No workouts scheduled for this week.</p>
       </div>
     );
   }
@@ -434,11 +426,7 @@ function EnhancedUpcomingWorkouts() {
           <div className="text-center py-6">
             <p className="text-slate-500 text-sm">
               No workouts for{' '}
-              {
-                dateOptions.find(
-                  (opt) => (opt.dateKey || opt.key) === selectedDateFilter
-                )?.display
-              }
+              {dateOptions.find((opt) => (opt.dateKey || opt.key) === selectedDateFilter)?.display}
             </p>
           </div>
         ) : (
@@ -500,9 +488,7 @@ function WorkoutCard({ workout, isCompleted, onToggleCompletion, formatDate }) {
             </div>
           </div>
 
-          <p className="text-xs text-slate-500 truncate">
-            Program: {workout.programName}
-          </p>
+          <p className="text-xs text-slate-500 truncate">Program: {workout.programName}</p>
         </div>
 
         <div className="flex items-center space-x-1 ml-2">

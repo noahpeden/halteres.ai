@@ -1,10 +1,10 @@
-import { createMobileCompatibleClient, corsHeaders } from '@/utils/supabase/mobile';
 import { NextResponse } from 'next/server';
+import { corsHeaders, createMobileCompatibleClient } from '@/utils/supabase/mobile';
 
 export async function OPTIONS(req) {
   return new NextResponse(null, {
     status: 200,
-    headers: corsHeaders()
+    headers: corsHeaders(),
   });
 }
 
@@ -12,9 +12,14 @@ export async function GET(request) {
   const supabase = await createMobileCompatibleClient(request);
 
   // Check authentication
-  const { data: { session } } = await supabase.auth.getSession();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
   if (!session) {
-    return NextResponse.json({ error: 'Not authenticated' }, { status: 401, headers: corsHeaders() });
+    return NextResponse.json(
+      { error: 'Not authenticated' },
+      { status: 401, headers: corsHeaders() }
+    );
   }
   const { searchParams } = new URL(request.url);
   const query = searchParams.get('query') || '';
@@ -45,24 +50,25 @@ export async function POST(request) {
   const supabase = await createMobileCompatibleClient(request);
 
   // Check authentication
-  const { data: { session } } = await supabase.auth.getSession();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
   if (!session) {
-    return NextResponse.json({ error: 'Not authenticated' }, { status: 401, headers: corsHeaders() });
+    return NextResponse.json(
+      { error: 'Not authenticated' },
+      { status: 401, headers: corsHeaders() }
+    );
   }
 
   try {
     const body = await request.json();
     const { query, limit = 10, filters = {} } = body;
 
-    let queryBuilder = supabase
-      .from('external_workouts_new')
-      .select('id, title, body, tags');
+    let queryBuilder = supabase.from('external_workouts_new').select('id, title, body, tags');
 
     // Apply search query if provided
     if (query && query.trim() !== '') {
-      queryBuilder = queryBuilder.or(
-        `title.ilike.%${query}%,body.ilike.%${query}%`
-      );
+      queryBuilder = queryBuilder.or(`title.ilike.%${query}%,body.ilike.%${query}%`);
     }
 
     // Apply any filters
@@ -77,9 +83,7 @@ export async function POST(request) {
     }
 
     // Apply ordering and limits
-    queryBuilder = queryBuilder
-      .order('created_at', { ascending: false })
-      .limit(limit);
+    queryBuilder = queryBuilder.order('created_at', { ascending: false }).limit(limit);
 
     const { data, error } = await queryBuilder;
 

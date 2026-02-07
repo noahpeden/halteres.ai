@@ -1,6 +1,6 @@
-import { createClient } from '@/utils/supabase/server';
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
+import { createClient } from '@/utils/supabase/server';
 
 export async function POST(request) {
   const openAiClient = new OpenAI({
@@ -25,10 +25,7 @@ export async function POST(request) {
 
   const { data: sessionData } = await supabaseClient.auth.getSession();
   if (!sessionData.session) {
-    return NextResponse.json(
-      { error: 'Authentication required' },
-      { status: 401 }
-    );
+    return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
   }
 
   // Format date for the workout
@@ -43,11 +40,7 @@ Goal: ${goal}
 Duration: ${duration} minutes
 Difficulty: ${difficulty}
 ${focusArea ? `Focus Area: ${focusArea}` : ''}
-${
-  equipment && equipment.length > 0
-    ? `Available Equipment: ${equipment.join(', ')}`
-    : ''
-}
+${equipment && equipment.length > 0 ? `Available Equipment: ${equipment.join(', ')}` : ''}
 ${
   workoutFormats && workoutFormats.length > 0
     ? `Workout Formats to Include: ${workoutFormats.join(', ')}`
@@ -104,10 +97,7 @@ Return only one workout structured with these sections. Format your response as 
         generatedWorkout.suggestedDate = formattedChosenDate;
       }
     } catch (error) {
-      return NextResponse.json(
-        { error: 'Failed to generate a valid workout' },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: 'Failed to generate a valid workout' }, { status: 500 });
     }
 
     return NextResponse.json({
@@ -115,9 +105,6 @@ Return only one workout structured with these sections. Format your response as 
     });
   } catch (error) {
     console.error('Error generating workout:', error);
-    return NextResponse.json(
-      { error: 'Failed to generate workout' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to generate workout' }, { status: 500 });
   }
 }

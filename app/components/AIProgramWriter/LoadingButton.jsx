@@ -1,13 +1,8 @@
 'use client';
-import { useState, useEffect } from 'react';
-import { X, StopCircle } from 'lucide-react';
+import { StopCircle, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
-export default function LoadingButton({
-  generationStage,
-  loadingDuration,
-  serverStatus,
-  onStop,
-}) {
+export default function LoadingButton({ generationStage, loadingDuration, serverStatus, onStop }) {
   const [showCompletion, setShowCompletion] = useState(false);
   const [persistentWorkoutCount, setPersistentWorkoutCount] = useState({
     generated: 0,
@@ -95,15 +90,13 @@ export default function LoadingButton({
   };
 
   // Check if we're streaming workouts
-  const isStreamingWorkouts =
-    serverStatus && serverStatus.type === 'workout_generated';
+  const isStreamingWorkouts = serverStatus && serverStatus.type === 'workout_generated';
   const workoutProgress = isStreamingWorkouts
     ? `${serverStatus.index + 1}/${serverStatus.total}`
     : null;
 
   // Check for chunked week progress
-  const isStreamingChunks =
-    serverStatus && serverStatus.type === 'workout_chunk';
+  const isStreamingChunks = serverStatus && serverStatus.type === 'workout_chunk';
   const chunkProgress = isStreamingChunks ? `Week ${serverStatus.week}` : null;
 
   // Check for week progress
@@ -137,14 +130,8 @@ export default function LoadingButton({
     }
 
     // Check for chunked week progress (most accurate for chunked generation)
-    if (
-      isStreamingChunks &&
-      serverStatus.totalGenerated &&
-      serverStatus.totalExpected
-    ) {
-      const progress = Math.round(
-        (serverStatus.totalGenerated / serverStatus.totalExpected) * 100
-      );
+    if (isStreamingChunks && serverStatus.totalGenerated && serverStatus.totalExpected) {
+      const progress = Math.round((serverStatus.totalGenerated / serverStatus.totalExpected) * 100);
       return Math.min(progress, 95); // Cap at 95% until complete
     }
 
@@ -270,87 +257,70 @@ export default function LoadingButton({
             }`}
             style={{ width: `${progressPercentage}%` }}
           >
-            {!isComplete && (
-              <div className="h-full bg-white/30 animate-pulse rounded-full"></div>
-            )}
+            {!isComplete && <div className="h-full bg-white/30 animate-pulse rounded-full"></div>}
           </div>
         </div>
       </div>
 
       {/* Progress indicators */}
-      {(isStreaming || workoutProgress || weekProgress || chunkProgress) &&
-        !isComplete && (
-          <div className="flex flex-col items-center gap-2">
-            {chunkProgress && (
-              <div className="flex items-center gap-2 px-3 py-1 bg-white/60 rounded-full border border-green-200">
-                <span className="text-sm font-medium text-green-700">
-                  Generated:
+      {(isStreaming || workoutProgress || weekProgress || chunkProgress) && !isComplete && (
+        <div className="flex flex-col items-center gap-2">
+          {chunkProgress && (
+            <div className="flex items-center gap-2 px-3 py-1 bg-white/60 rounded-full border border-green-200">
+              <span className="text-sm font-medium text-green-700">Generated:</span>
+              <span className="text-sm font-bold text-green-800">{chunkProgress}</span>
+              {persistentWorkoutCount.total > 0 && (
+                <span className="text-xs text-green-600">
+                  ({persistentWorkoutCount.generated}/{persistentWorkoutCount.total} workouts)
                 </span>
-                <span className="text-sm font-bold text-green-800">
-                  {chunkProgress}
-                </span>
-                {persistentWorkoutCount.total > 0 && (
-                  <span className="text-xs text-green-600">
-                    ({persistentWorkoutCount.generated}/{persistentWorkoutCount.total} workouts)
-                  </span>
-                )}
-              </div>
-            )}
+              )}
+            </div>
+          )}
 
-            {!chunkProgress && persistentWorkoutCount.total > 0 && (
-              <div className="flex items-center gap-2 px-3 py-1 bg-white/60 rounded-full border border-blue-200">
-                <span className="text-sm font-medium text-blue-700">
-                  Progress:
-                </span>
-                <span className="text-sm font-bold text-blue-800">
-                  {persistentWorkoutCount.generated}/{persistentWorkoutCount.total} workouts
-                </span>
-              </div>
-            )}
+          {!chunkProgress && persistentWorkoutCount.total > 0 && (
+            <div className="flex items-center gap-2 px-3 py-1 bg-white/60 rounded-full border border-blue-200">
+              <span className="text-sm font-medium text-blue-700">Progress:</span>
+              <span className="text-sm font-bold text-blue-800">
+                {persistentWorkoutCount.generated}/{persistentWorkoutCount.total} workouts
+              </span>
+            </div>
+          )}
 
-            {workoutProgress && !chunkProgress && (
-              <div className="flex items-center gap-2 px-3 py-1 bg-white/60 rounded-full border border-blue-200">
-                <span className="text-sm font-medium text-blue-700">
-                  Workout Progress:
-                </span>
-                <span className="text-sm font-bold text-blue-800">
-                  {workoutProgress}
-                </span>
-              </div>
-            )}
+          {workoutProgress && !chunkProgress && (
+            <div className="flex items-center gap-2 px-3 py-1 bg-white/60 rounded-full border border-blue-200">
+              <span className="text-sm font-medium text-blue-700">Workout Progress:</span>
+              <span className="text-sm font-bold text-blue-800">{workoutProgress}</span>
+            </div>
+          )}
 
-            {weekProgress && !workoutProgress && !chunkProgress && (
-              <div className="flex items-center gap-2 px-3 py-1 bg-white/60 rounded-full border border-purple-200">
-                <span className="text-sm font-medium text-purple-700">
-                  Week Progress:
-                </span>
-                <span className="text-sm font-bold text-purple-800">
-                  {weekProgress}
-                </span>
-              </div>
-            )}
+          {weekProgress && !workoutProgress && !chunkProgress && (
+            <div className="flex items-center gap-2 px-3 py-1 bg-white/60 rounded-full border border-purple-200">
+              <span className="text-sm font-medium text-purple-700">Week Progress:</span>
+              <span className="text-sm font-bold text-purple-800">{weekProgress}</span>
+            </div>
+          )}
 
-            {showStreamingIndicator && (
-              <div className="flex items-center gap-2 text-xs text-gray-600">
-                <div className="flex gap-1">
-                  <div
-                    className="w-1 h-1 bg-green-500 rounded-full animate-bounce"
-                    style={{ animationDelay: '0ms' }}
-                  ></div>
-                  <div
-                    className="w-1 h-1 bg-green-500 rounded-full animate-bounce"
-                    style={{ animationDelay: '150ms' }}
-                  ></div>
-                  <div
-                    className="w-1 h-1 bg-green-500 rounded-full animate-bounce"
-                    style={{ animationDelay: '300ms' }}
-                  ></div>
-                </div>
-                <span>Live AI generation</span>
+          {showStreamingIndicator && (
+            <div className="flex items-center gap-2 text-xs text-gray-600">
+              <div className="flex gap-1">
+                <div
+                  className="w-1 h-1 bg-green-500 rounded-full animate-bounce"
+                  style={{ animationDelay: '0ms' }}
+                ></div>
+                <div
+                  className="w-1 h-1 bg-green-500 rounded-full animate-bounce"
+                  style={{ animationDelay: '150ms' }}
+                ></div>
+                <div
+                  className="w-1 h-1 bg-green-500 rounded-full animate-bounce"
+                  style={{ animationDelay: '300ms' }}
+                ></div>
               </div>
-            )}
-          </div>
-        )}
+              <span>Live AI generation</span>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Retry warning */}
       {isRetrying && (
@@ -375,12 +345,8 @@ export default function LoadingButton({
       {/* Completion message */}
       {isComplete && (
         <div className="text-center">
-          <p className="text-sm text-green-700 font-medium">
-            Your program is ready!
-          </p>
-          <p className="text-xs text-gray-600 mt-1">
-            Scroll down to view your workouts
-          </p>
+          <p className="text-sm text-green-700 font-medium">Your program is ready!</p>
+          <p className="text-xs text-gray-600 mt-1">Scroll down to view your workouts</p>
         </div>
       )}
 

@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
-import { useAuth } from '@/contexts/AuthContext';
 import { X } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 import WizardProgress from '../../components/ProgramWizard/WizardProgress';
 
 export default function Step2Page() {
@@ -138,9 +138,7 @@ export default function Step2Page() {
       {/* Exit button when there's a programId */}
       {programId && (
         <button
-          onClick={() =>
-            (window.location.href = `/program/${programId}/writer`)
-          }
+          onClick={() => (window.location.href = `/program/${programId}/writer`)}
           className="absolute top-4 right-4 btn btn-ghost btn-circle z-10"
           title="Exit wizard and go to program writer"
         >
@@ -158,9 +156,7 @@ export default function Step2Page() {
 
       <div className="bg-base-200 rounded-lg p-6">
         <div className="text-center mb-6">
-          <h2 className="text-2xl font-bold text-primary mb-2">
-            Program Description
-          </h2>
+          <h2 className="text-2xl font-bold text-primary mb-2">Program Description</h2>
           <p className="text-base-content/70">
             Describe your client's goals, needs, and training preferences
           </p>
@@ -169,36 +165,26 @@ export default function Step2Page() {
         <div className="space-y-6">
           <div>
             <label className="label">
-              <span className="label-text text-lg font-medium">
-                Program Name
-              </span>
-              <span className="label-text-alt">
-                From dashboard - you can edit if needed
-              </span>
+              <span className="label-text text-lg font-medium">Program Name</span>
+              <span className="label-text-alt">From dashboard - you can edit if needed</span>
             </label>
             <input
               type="text"
               value={programName}
               onChange={(e) => setProgramName(e.target.value)}
               placeholder="e.g., John's Basketball Prep, Sarah's Marathon Training, Mike's Strength Builder"
-              className={`input input-bordered w-full ${
-                errors.programName ? 'input-error' : ''
-              }`}
+              className={`input input-bordered w-full ${errors.programName ? 'input-error' : ''}`}
             />
             {errors.programName && (
               <label className="label">
-                <span className="label-text-alt text-error">
-                  {errors.programName}
-                </span>
+                <span className="label-text-alt text-error">{errors.programName}</span>
               </label>
             )}
           </div>
 
           <div>
             <label className="label">
-              <span className="label-text text-lg font-medium">
-                Client Program Description
-              </span>
+              <span className="label-text text-lg font-medium">Client Program Description</span>
               <span className="label-text-alt">
                 Be specific about their goals, needs, and current status
               </span>
@@ -213,9 +199,7 @@ export default function Step2Page() {
             />
             {errors.programDescription && (
               <label className="label">
-                <span className="label-text-alt text-error">
-                  {errors.programDescription}
-                </span>
+                <span className="label-text-alt text-error">{errors.programDescription}</span>
               </label>
             )}
 
@@ -250,22 +234,13 @@ export default function Step2Page() {
               ></path>
             </svg>
             <div>
-              <div className="font-semibold">
-                Tips for effective client descriptions:
-              </div>
+              <div className="font-semibold">Tips for effective client descriptions:</div>
               <ul className="text-sm mt-1 list-disc list-inside">
-                <li>
-                  Include client's current fitness level and training experience
-                </li>
-                <li>
-                  Mention specific goals (strength, muscle, endurance, weight
-                  loss)
-                </li>
+                <li>Include client's current fitness level and training experience</li>
+                <li>Mention specific goals (strength, muscle, endurance, weight loss)</li>
                 <li>Note any injuries, limitations, or movements to avoid</li>
                 <li>Specify their time constraints and training preferences</li>
-                <li>
-                  Include their motivation and what success looks like to them
-                </li>
+                <li>Include their motivation and what success looks like to them</li>
               </ul>
             </div>
           </div>
@@ -273,12 +248,7 @@ export default function Step2Page() {
 
         <div className="flex justify-between items-center mt-8 pt-6 border-t border-base-300">
           <button onClick={handlePrevious} className="btn btn-outline">
-            <svg
-              className="w-4 h-4 mr-2"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
+            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -289,15 +259,9 @@ export default function Step2Page() {
             Back to Step 1
           </button>
 
-          <div className="text-sm text-base-content/60">
-            Step 2 of 5 • Client Description
-          </div>
+          <div className="text-sm text-base-content/60">Step 2 of 5 • Client Description</div>
 
-          <button 
-            onClick={handleNext} 
-            className="btn btn-primary px-6"
-            disabled={isSaving}
-          >
+          <button onClick={handleNext} className="btn btn-primary px-6" disabled={isSaving}>
             {isSaving ? (
               <>
                 <span className="loading loading-spinner loading-sm mr-2"></span>
@@ -306,12 +270,7 @@ export default function Step2Page() {
             ) : (
               <>
                 Continue to Step 3
-                <svg
-                  className="w-4 h-4 ml-2"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
+                <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"

@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
-import { createMobileCompatibleClient, corsHeaders } from '@/utils/supabase/mobile';
+import { corsHeaders, createMobileCompatibleClient } from '@/utils/supabase/mobile';
 
 // Handle OPTIONS for CORS preflight
 export async function OPTIONS(request) {
   return new Response(null, {
     status: 200,
-    headers: corsHeaders()
+    headers: corsHeaders(),
   });
 }
 
@@ -16,7 +16,10 @@ export async function POST(req) {
     // NOTE: getSession() doesn't work with bearer tokens from mobile apps
     // Always use getUser() when authenticating requests that may come from mobile
     const supabase = await createMobileCompatibleClient(req);
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
 
     if (authError || !user) {
       console.error('Auth error:', authError);
@@ -24,7 +27,7 @@ export async function POST(req) {
         { error: 'Not authenticated' },
         {
           status: 401,
-          headers: corsHeaders()
+          headers: corsHeaders(),
         }
       );
     }
@@ -40,12 +43,11 @@ export async function POST(req) {
     if (!workout || !instructions || !methodology || !gymEquipment) {
       return NextResponse.json(
         {
-          error:
-            'Missing required fields: workout, instructions, methodology, gymEquipment',
+          error: 'Missing required fields: workout, instructions, methodology, gymEquipment',
         },
         {
           status: 400,
-          headers: corsHeaders()
+          headers: corsHeaders(),
         }
       );
     }
@@ -61,9 +63,7 @@ Enhance the following workout according to these user instructions: "${instructi
 
 Context:
 - Training methodology: ${methodology}
-- Equipment available: ${
-      Array.isArray(gymEquipment) ? gymEquipment.join(', ') : gymEquipment
-    }
+- Equipment available: ${Array.isArray(gymEquipment) ? gymEquipment.join(', ') : gymEquipment}
 - Client injuries or limitations: ${
       injuries && injuries.length
         ? Array.isArray(injuries)
@@ -117,7 +117,7 @@ Requirements:
         { error: `Failed to parse enhanced workout from AI response: ${err.message}` },
         {
           status: 500,
-          headers: corsHeaders()
+          headers: corsHeaders(),
         }
       );
     }
@@ -126,7 +126,7 @@ Requirements:
       { enhancedWorkout },
       {
         status: 200,
-        headers: corsHeaders()
+        headers: corsHeaders(),
       }
     );
   } catch (error) {
@@ -135,7 +135,7 @@ Requirements:
       { error: error.message },
       {
         status: 500,
-        headers: corsHeaders()
+        headers: corsHeaders(),
       }
     );
   }

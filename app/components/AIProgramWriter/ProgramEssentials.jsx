@@ -1,13 +1,10 @@
 'use client';
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { ChevronDown, InfoIcon } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import ProgramTypeSelector from '@/components/selectors/ProgramTypeSelector';
 import { programTypes } from '@/components/utils';
-import { InfoIcon, ChevronDown } from 'lucide-react';
 
-export default function ProgramEssentials({
-  formData,
-  handleChange,
-}) {
+export default function ProgramEssentials({ formData, handleChange }) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [localDescription, setLocalDescription] = useState(formData.description || '');
   const [localReferenceInput, setLocalReferenceInput] = useState(getReferenceInputValue());
@@ -17,9 +14,7 @@ export default function ProgramEssentials({
   const isEditingDescriptionRef = useRef(false);
   const isEditingReferenceRef = useRef(false);
 
-  const selectedProgramType = programTypes.find(
-    (type) => type.value === formData.programType
-  );
+  const selectedProgramType = programTypes.find((type) => type.value === formData.programType);
 
   // Pre-populate reference input with form data
   function getReferenceInputValue() {
@@ -47,21 +42,24 @@ export default function ProgramEssentials({
   };
 
   // Debounced handler for description
-  const handleDescriptionChange = useCallback((e) => {
-    const newValue = e.target.value;
-    isEditingDescriptionRef.current = true; // Mark as actively editing
-    setLocalDescription(newValue);
+  const handleDescriptionChange = useCallback(
+    (e) => {
+      const newValue = e.target.value;
+      isEditingDescriptionRef.current = true; // Mark as actively editing
+      setLocalDescription(newValue);
 
-    // Clear existing timeout
-    if (descriptionTimeoutRef.current) {
-      clearTimeout(descriptionTimeoutRef.current);
-    }
+      // Clear existing timeout
+      if (descriptionTimeoutRef.current) {
+        clearTimeout(descriptionTimeoutRef.current);
+      }
 
-    // Set new timeout for debounced update
-    descriptionTimeoutRef.current = setTimeout(() => {
-      handleChange({ target: { name: 'description', value: newValue } });
-    }, 500); // 500ms debounce delay
-  }, [handleChange]);
+      // Set new timeout for debounced update
+      descriptionTimeoutRef.current = setTimeout(() => {
+        handleChange({ target: { name: 'description', value: newValue } });
+      }, 500); // 500ms debounce delay
+    },
+    [handleChange]
+  );
 
   // Handle blur for immediate save
   const handleDescriptionBlur = useCallback(() => {
@@ -80,21 +78,24 @@ export default function ProgramEssentials({
   }, [handleChange, localDescription]);
 
   // Debounced handler for reference input
-  const handleReferenceInputChange = useCallback((e) => {
-    const newValue = e.target.value;
-    isEditingReferenceRef.current = true; // Mark as actively editing
-    setLocalReferenceInput(newValue);
+  const handleReferenceInputChange = useCallback(
+    (e) => {
+      const newValue = e.target.value;
+      isEditingReferenceRef.current = true; // Mark as actively editing
+      setLocalReferenceInput(newValue);
 
-    // Clear existing timeout
-    if (referenceTimeoutRef.current) {
-      clearTimeout(referenceTimeoutRef.current);
-    }
+      // Clear existing timeout
+      if (referenceTimeoutRef.current) {
+        clearTimeout(referenceTimeoutRef.current);
+      }
 
-    // Set new timeout for debounced update
-    referenceTimeoutRef.current = setTimeout(() => {
-      handleChange({ target: { name: 'referenceInput', value: newValue } });
-    }, 500); // 500ms debounce delay
-  }, [handleChange]);
+      // Set new timeout for debounced update
+      referenceTimeoutRef.current = setTimeout(() => {
+        handleChange({ target: { name: 'referenceInput', value: newValue } });
+      }, 500); // 500ms debounce delay
+    },
+    [handleChange]
+  );
 
   // Handle blur for immediate save
   const handleReferenceInputBlur = useCallback(() => {
@@ -128,8 +129,8 @@ export default function ProgramEssentials({
     <section className="bg-base-100 p-5 rounded-lg border border-base-300 shadow-sm h-full flex flex-col">
       <h2 className="text-xl font-semibold  text-primary">Essentials</h2>
       <span className="text-sm text-gray-500 mb-4">
-        Our platform and AI take the data from this section as the highest
-        priority when designing your program.
+        Our platform and AI take the data from this section as the highest priority when designing
+        your program.
       </span>
 
       {/* Training Methodology */}
@@ -154,8 +155,7 @@ export default function ProgramEssentials({
             }}
           />
           <span className="text-xs text-gray-500 mb-2">
-            Select the overall approach that will guide your program's structure
-            and progression.
+            Select the overall approach that will guide your program's structure and progression.
           </span>
         </label>
       </div>
@@ -176,9 +176,7 @@ export default function ProgramEssentials({
               }}
             >
               <span>
-                {selectedProgramType
-                  ? selectedProgramType.label
-                  : 'Select Periodization Type'}
+                {selectedProgramType ? selectedProgramType.label : 'Select Periodization Type'}
               </span>
               <ChevronDown className="h-4 w-4" />
             </summary>
@@ -186,9 +184,7 @@ export default function ProgramEssentials({
               {programTypes.map((type) => (
                 <li key={type.value}>
                   <button
-                    className={`w-full ${
-                      formData.programType === type.value ? 'active' : ''
-                    }`}
+                    className={`w-full ${formData.programType === type.value ? 'active' : ''}`}
                     onClick={() => {
                       handleProgramTypeSelect(type.value);
                       // Auto-save will be triggered by handleChange
@@ -231,9 +227,7 @@ export default function ProgramEssentials({
       <div className="mt-4">
         <label className="w-full">
           <div className="flex items-center">
-            <span className="text-sm font-medium">
-              Previous Workout/Program (Optional)
-            </span>
+            <span className="text-sm font-medium">Previous Workout/Program (Optional)</span>
             <div
               className="tooltip tooltip-top tooltip-info ml-2"
               data-tip="Paste your own workout or program text here. We will use this for Retrieval Augmented Generation (RAG) which matches to the most relevant workouts in our library, and then use those in addition to your pasted text to generate your program."

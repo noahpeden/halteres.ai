@@ -1,9 +1,9 @@
 'use client';
-import { flushSync } from 'react-dom';
 import { startTransition } from 'react';
+import { flushSync } from 'react-dom';
 import equipmentList from '@/utils/equipmentList';
-import { dayNameToNumber } from './utils';
 import { calculateEndDate } from './dateHandlers';
+import { dayNameToNumber } from './utils';
 
 // Maximum number of retries for network requests
 const MAX_RETRIES = 2;
@@ -48,14 +48,9 @@ export async function generateProgram({
     // Track the current retry attempt and workout indices
     const currentRetryAttempt = { count: 0 };
     // Calculate expected total using the same logic as the API
-    const calculatedWeeks = parseInt(
-      formData.numberOfWeeks || formData.duration_weeks || 4
-    );
+    const calculatedWeeks = parseInt(formData.numberOfWeeks || formData.duration_weeks || 4);
     const calculatedDaysPerWeek = parseInt(
-      formData.daysPerWeek ||
-        formData.days_per_week ||
-        formData.daysOfWeek?.length ||
-        3
+      formData.daysPerWeek || formData.days_per_week || formData.daysOfWeek?.length || 3
     );
     const expectedTotal = calculatedWeeks * calculatedDaysPerWeek;
 
@@ -93,10 +88,7 @@ export async function generateProgram({
 
         // If this is a retry, show message to user and clear previous partial results
         if (retryCount > 0) {
-          showToastMessage(
-            `Retry attempt ${retryCount} of ${MAX_RETRIES}...`,
-            'warning'
-          );
+          showToastMessage(`Retry attempt ${retryCount} of ${MAX_RETRIES}...`, 'warning');
           setGenerationStage('retrying');
           // Clear any partial workouts from previous attempt
           setSuggestions([]);
@@ -129,8 +121,7 @@ export async function generateProgram({
             }
 
             // Try capitalized version
-            const capitalizedDay =
-              day.charAt(0).toUpperCase() + day.slice(1).toLowerCase();
+            const capitalizedDay = day.charAt(0).toUpperCase() + day.slice(1).toLowerCase();
             if (dayNameToNumber[capitalizedDay] !== undefined) {
               return dayNameToNumber[capitalizedDay];
             }
@@ -263,14 +254,9 @@ export async function generateProgram({
           clearTimeout(timeoutId);
 
           // If we get a 504 Gateway Timeout or 503 Service Unavailable, retry
-          if (
-            (statusCode === 504 || statusCode === 503) &&
-            retryCount < MAX_RETRIES
-          ) {
+          if ((statusCode === 504 || statusCode === 503) && retryCount < MAX_RETRIES) {
             retryCount++;
-            lastError = new Error(
-              `Server returned ${statusCode} error. Retrying...`
-            );
+            lastError = new Error(`Server returned ${statusCode} error. Retrying...`);
             continue; // Skip to next retry iteration
           }
 
@@ -297,7 +283,7 @@ export async function generateProgram({
             buffer += decoder.decode(value, { stream: true });
 
             // Process complete messages from buffer
-            let messages = buffer.split('\n\n');
+            const messages = buffer.split('\n\n');
             buffer = messages.pop() || ''; // Keep the last incomplete message in buffer
 
             for (const message of messages) {
@@ -317,16 +303,10 @@ export async function generateProgram({
                     // Handle start of streaming
                     if (data.week) {
                       setGenerationStage(`streaming_week_${data.week}`);
-                      showToastMessage(
-                        `Streaming week ${data.week} content...`,
-                        'info'
-                      );
+                      showToastMessage(`Streaming week ${data.week} content...`, 'info');
                     } else {
                       setGenerationStage('streaming');
-                      showToastMessage(
-                        data.message || 'Streaming content...',
-                        'info'
-                      );
+                      showToastMessage(data.message || 'Streaming content...', 'info');
                     }
                   } else if (data.type === 'stream_chunk') {
                     // Handle streaming chunks - could be used to show live progress
@@ -341,10 +321,7 @@ export async function generateProgram({
                   } else if (data.type === 'error') {
                     // Handle chunked generation errors
                     console.error('[Streaming] Error:', data.error);
-                    showToastMessage(
-                      `Generation error: ${data.error}`,
-                      'error'
-                    );
+                    showToastMessage(`Generation error: ${data.error}`, 'error');
                     setGenerationStage('error');
                     setIsLoading(false);
                     break; // Exit the streaming loop on error
@@ -373,21 +350,13 @@ export async function generateProgram({
                     // Reset workout tracker for new generation
                     workoutTracker.currentIndex = 0;
                     workoutTracker.processedWorkouts.clear();
-                    console.log(
-                      '[Streaming] Reset workout tracker for new generation'
-                    );
+                    console.log('[Streaming] Reset workout tracker for new generation');
 
                     // Clear any existing streaming workouts
-                    if (
-                      clearStreamingWorkouts &&
-                      typeof clearStreamingWorkouts === 'function'
-                    ) {
+                    if (clearStreamingWorkouts && typeof clearStreamingWorkouts === 'function') {
                       clearStreamingWorkouts();
                     }
-                    showToastMessage(
-                      `Program created: ${data.title}`,
-                      'success'
-                    );
+                    showToastMessage(`Program created: ${data.title}`, 'success');
 
                     if (!programId && data.title) {
                       setFormData((prev) => ({
@@ -434,10 +403,7 @@ export async function generateProgram({
                       }
 
                       // Validate against expected total
-                      if (
-                        workoutTracker.currentIndex >=
-                        workoutTracker.expectedTotal
-                      ) {
+                      if (workoutTracker.currentIndex >= workoutTracker.expectedTotal) {
                         console.warn(
                           '[Streaming] Exceeded expected workout count in chunk, skipping:',
                           workout.title
@@ -469,10 +435,7 @@ export async function generateProgram({
                       workoutTracker.currentIndex++;
 
                       // Add to UI state immediately using streaming function
-                      if (
-                        addStreamingWorkout &&
-                        typeof addStreamingWorkout === 'function'
-                      ) {
+                      if (addStreamingWorkout && typeof addStreamingWorkout === 'function') {
                         addStreamingWorkout(newWorkout);
                       }
                     });
@@ -516,10 +479,7 @@ export async function generateProgram({
                     }
 
                     // Validate against expected total to prevent overflow
-                    if (
-                      workoutTracker.currentIndex >=
-                      workoutTracker.expectedTotal
-                    ) {
+                    if (workoutTracker.currentIndex >= workoutTracker.expectedTotal) {
                       console.warn(
                         '[Streaming] WARNING: Exceeded expected workout count',
                         'Current index:',
@@ -554,10 +514,7 @@ export async function generateProgram({
                     workoutTracker.currentIndex++;
 
                     // Add to streaming state
-                    if (
-                      addStreamingWorkout &&
-                      typeof addStreamingWorkout === 'function'
-                    ) {
+                    if (addStreamingWorkout && typeof addStreamingWorkout === 'function') {
                       addStreamingWorkout(newWorkout);
                     }
 
@@ -566,10 +523,7 @@ export async function generateProgram({
                       `Workout ${workoutTracker.currentIndex}/${workoutTracker.expectedTotal}: ${workout.title}`,
                       'success'
                     );
-                  } else if (
-                    data.type === 'saving' ||
-                    data.type === 'finalizing'
-                  ) {
+                  } else if (data.type === 'saving' || data.type === 'finalizing') {
                     setGenerationStage('finalizing');
                   } else if (data.type === 'complete') {
                     console.log(
@@ -593,9 +547,7 @@ export async function generateProgram({
                     }
 
                     if (data.description) {
-                      console.log(
-                        '[Streaming] Setting program description from complete event'
-                      );
+                      console.log('[Streaming] Setting program description from complete event');
                       setGeneratedDescription(data.description);
                     }
 
@@ -615,20 +567,12 @@ export async function generateProgram({
                     }
 
                     // Clear streaming workouts and trigger refetch to load from database
-                    if (
-                      clearStreamingWorkouts &&
-                      typeof clearStreamingWorkouts === 'function'
-                    ) {
-                      console.log(
-                        '[Streaming] Clearing streaming workouts after completion'
-                      );
+                    if (clearStreamingWorkouts && typeof clearStreamingWorkouts === 'function') {
+                      console.log('[Streaming] Clearing streaming workouts after completion');
                       clearStreamingWorkouts();
                     }
 
-                    if (
-                      refetchWorkouts &&
-                      typeof refetchWorkouts === 'function'
-                    ) {
+                    if (refetchWorkouts && typeof refetchWorkouts === 'function') {
                       console.log('[Streaming] Final refetch after completion');
                       setTimeout(() => {
                         refetchWorkouts();
@@ -637,9 +581,7 @@ export async function generateProgram({
 
                     // Show success message
                     const workoutCount =
-                      data.totalWorkouts ||
-                      data.suggestions?.length ||
-                      'multiple';
+                      data.totalWorkouts || data.suggestions?.length || 'multiple';
                     showToastMessage(
                       `Program complete! Generated ${workoutCount} workouts.`,
                       'success'
@@ -694,15 +636,12 @@ export async function generateProgram({
                         equipment: formData.equipment || [],
                         difficulty: formData.difficulty || 'intermediate',
                         focusArea: formData.focusArea || 'full_body',
-                        workoutDuration:
-                          formData.sessionDetails?.duration_minutes || 60,
+                        workoutDuration: formData.sessionDetails?.duration_minutes || 60,
                         workoutFormats: formData.workoutFormats || [],
                         entityId: formData.entityId,
                         startDate: formData.startDate,
                         numberOfWeeks: parseInt(formData.numberOfWeeks) || 4,
-                        daysOfWeek: (formData.daysOfWeek || []).map((day) =>
-                          day.toLowerCase()
-                        ),
+                        daysOfWeek: (formData.daysOfWeek || []).map((day) => day.toLowerCase()),
                         // Mark as having a generated program
                         hasGeneratedProgram: true,
                         programId: programId,
@@ -726,10 +665,7 @@ export async function generateProgram({
                     console.error('[Streaming] Error event:', data);
                     setIsLoading(false);
                     setGenerationStage('error');
-                    showToastMessage(
-                      data.error || 'Failed to generate program',
-                      'error'
-                    );
+                    showToastMessage(data.error || 'Failed to generate program', 'error');
 
                     // Clear the timer
                     if (timer) {
@@ -737,9 +673,7 @@ export async function generateProgram({
                       setLoadingTimer(null);
                     }
 
-                    reject(
-                      new Error(data.error || 'Failed to generate program')
-                    );
+                    reject(new Error(data.error || 'Failed to generate program'));
                   }
                 } catch (e) {
                   console.error('Error parsing SSE message:', e, message);
@@ -822,15 +756,12 @@ export async function generateProgram({
                 equipment: formData.equipment || [],
                 difficulty: formData.difficulty || 'intermediate',
                 focusArea: formData.focusArea || 'full_body',
-                workoutDuration:
-                  formData.sessionDetails?.duration_minutes || 60,
+                workoutDuration: formData.sessionDetails?.duration_minutes || 60,
                 workoutFormats: formData.workoutFormats || [],
                 entityId: formData.entityId,
                 startDate: formData.startDate,
                 numberOfWeeks: parseInt(formData.numberOfWeeks) || 4,
-                daysOfWeek: (formData.daysOfWeek || []).map((day) =>
-                  day.toLowerCase()
-                ),
+                daysOfWeek: (formData.daysOfWeek || []).map((day) => day.toLowerCase()),
                 // Mark as having a generated program
                 hasGeneratedProgram: true,
                 programId: programId,
@@ -847,9 +778,7 @@ export async function generateProgram({
               }, 5000); // 2 second delay
             }
           } else {
-            showToastMessage(
-              'No program workouts were generated. Please try again.'
-            );
+            showToastMessage('No program workouts were generated. Please try again.');
           }
 
           // If we get here, the request was successful
@@ -864,8 +793,7 @@ export async function generateProgram({
         lastError = error;
 
         // Check if this is a user-initiated abort
-        const isUserAbort =
-          error.name === 'AbortError' && controller.signal.aborted;
+        const isUserAbort = error.name === 'AbortError' && controller.signal.aborted;
         if (isUserAbort) {
           // Don't retry user-initiated aborts
           console.log('Generation aborted by user');
@@ -884,23 +812,16 @@ export async function generateProgram({
 
         // Determine if this is a retryable error
         const isNetworkError =
-          error.name === 'TypeError' &&
-          error.message &&
-          error.message.includes('network');
+          error.name === 'TypeError' && error.message && error.message.includes('network');
         const isTimeoutError = error.name === 'AbortError' && !isUserAbort;
         const isGatewayError =
-          error.message &&
-          (error.message.includes('504') || error.message.includes('Gateway'));
+          error.message && (error.message.includes('504') || error.message.includes('Gateway'));
         const isServiceUnavailable =
           error.message &&
-          (error.message.includes('503') ||
-            error.message.includes('Service Unavailable'));
+          (error.message.includes('503') || error.message.includes('Service Unavailable'));
 
         const isRetryableError =
-          isNetworkError ||
-          isTimeoutError ||
-          isGatewayError ||
-          isServiceUnavailable;
+          isNetworkError || isTimeoutError || isGatewayError || isServiceUnavailable;
 
         // If error is retryable and we have retries left
         if (isRetryableError && retryCount < MAX_RETRIES) {
@@ -941,35 +862,23 @@ export async function generateProgram({
       clearInterval(timer);
 
       // Show appropriate error message based on error type
-      if (
-        lastError.name === 'AbortError' ||
-        lastError.message.includes('timed out')
-      ) {
+      if (lastError.name === 'AbortError' || lastError.message.includes('timed out')) {
         showToastMessage(
           `Program generation timed out after ${MAX_RETRIES} attempts. Please try again later with a smaller program or fewer requirements.`,
           'error'
         );
-      } else if (
-        lastError.message.includes('504') ||
-        lastError.message.includes('Gateway')
-      ) {
+      } else if (lastError.message.includes('504') || lastError.message.includes('Gateway')) {
         showToastMessage(
           `Gateway timeout after ${MAX_RETRIES} retry attempts. The server is taking too long to respond. Please try again later or generate a simpler program.`,
           'error'
         );
-      } else if (
-        lastError.message.includes('network') ||
-        lastError.message.includes('fetch')
-      ) {
+      } else if (lastError.message.includes('network') || lastError.message.includes('fetch')) {
         showToastMessage(
           `Network error during program generation. Please check your connection and try again.`,
           'error'
         );
       } else {
-        showToastMessage(
-          `Program generation failed: ${lastError.message}`,
-          'error'
-        );
+        showToastMessage(`Program generation failed: ${lastError.message}`, 'error');
       }
 
       setIsLoading(false);
@@ -1016,9 +925,7 @@ export async function saveProgram({
 
   try {
     // Convert day names to day numbers for API consistency
-    const daysOfWeekNumbers = programData.daysOfWeek.map(
-      (day) => dayNameToNumber[day]
-    );
+    const daysOfWeekNumbers = programData.daysOfWeek.map((day) => dayNameToNumber[day]);
 
     // Prepare gym_details with equipment and gym type
     const gymDetails = {
@@ -1047,10 +954,7 @@ export async function saveProgram({
 
     if (deleteWorkoutsError) {
       console.error('Error deleting existing workouts:', deleteWorkoutsError);
-      showToastMessage(
-        `Failed to clean up old workouts: ${deleteWorkoutsError.message}`,
-        'error'
-      );
+      showToastMessage(`Failed to clean up old workouts: ${deleteWorkoutsError.message}`, 'error');
       setIsLoading(false);
       return;
     }
@@ -1158,9 +1062,7 @@ export async function saveProgram({
         entityId: programData.entityId,
         startDate: programData.startDate,
         numberOfWeeks: parseInt(programData.numberOfWeeks) || 4,
-        daysOfWeek: (programData.daysOfWeek || []).map((day) =>
-          day.toLowerCase()
-        ),
+        daysOfWeek: (programData.daysOfWeek || []).map((day) => day.toLowerCase()),
         programId: programId,
         // Mark as saved
         hasGeneratedProgram: suggestions && suggestions.length > 0,
@@ -1170,10 +1072,7 @@ export async function saveProgram({
     }
   } catch (error) {
     console.error('Error saving program:', error);
-    showToastMessage(
-      `Failed to save program: ${error.message || 'Unknown error'}`,
-      'error'
-    );
+    showToastMessage(`Failed to save program: ${error.message || 'Unknown error'}`, 'error');
   } finally {
     setIsLoading(false);
   }
@@ -1194,9 +1093,7 @@ export async function autoSaveProgramDetails({
 
   try {
     // Convert day names to day numbers for API consistency
-    const daysOfWeekNumbers = formData.daysOfWeek.map(
-      (day) => dayNameToNumber[day]
-    );
+    const daysOfWeekNumbers = formData.daysOfWeek.map((day) => dayNameToNumber[day]);
 
     // Get equipment names
     const selectedEquipmentNames = formData.equipment
@@ -1254,21 +1151,14 @@ export async function autoSaveProgramDetails({
     return true; // Indicate success
   } catch (error) {
     console.error('Error auto-saving program details:', error);
-    showToastMessage(
-      `Auto-save failed: ${error.message || 'Unknown error'}`,
-      'error'
-    );
+    showToastMessage(`Auto-save failed: ${error.message || 'Unknown error'}`, 'error');
     return false; // Indicate failure
   }
   // No setIsLoading changes here, as this runs in the background
 }
 
 // Create initial program record
-export async function createProgramRecord({
-  formData,
-  supabase,
-  showToastMessage,
-}) {
+export async function createProgramRecord({ formData, supabase, showToastMessage }) {
   try {
     // Prepare minimal data for the initial insert
     // We will update this with more details later after generation/saving
@@ -1410,11 +1300,7 @@ export async function handleAutoAssignDates({
     if (deleteWorkoutsError) throw deleteWorkoutsError;
 
     // Calculate the new end date based on the new start date
-    const newEndDate = calculateEndDate(
-      startDate,
-      formData.numberOfWeeks,
-      formData.daysOfWeek
-    );
+    const newEndDate = calculateEndDate(startDate, formData.numberOfWeeks, formData.daysOfWeek);
 
     if (!newEndDate) {
       throw new Error('Failed to calculate new end date');
@@ -1431,7 +1317,7 @@ export async function handleAutoAssignDates({
 
     // Calculate all dates that should have workouts
     const endDate = new Date(newEndDate);
-    let currentDate = new Date(startDate);
+    const currentDate = new Date(startDate);
 
     // Pre-calculate all dates
     const workoutDates = [];
@@ -1439,10 +1325,7 @@ export async function handleAutoAssignDates({
     let daysThisWeek = 0;
     const daysPerWeek = parseInt(formData.daysPerWeek);
 
-    while (
-      currentDate <= endDate &&
-      weekCounter < parseInt(formData.numberOfWeeks)
-    ) {
+    while (currentDate <= endDate && weekCounter < parseInt(formData.numberOfWeeks)) {
       const dayOfWeek = currentDate.getDay();
 
       if (selectedDayNumbers.includes(dayOfWeek)) {
@@ -1514,9 +1397,7 @@ export async function handleAutoAssignDates({
             // Remove scheduled_date from here
           },
           // Add scheduled_date at the top level
-          scheduled_date: scheduledDate
-            ? new Date(scheduledDate).toISOString()
-            : null,
+          scheduled_date: scheduledDate ? new Date(scheduledDate).toISOString() : null,
           is_reference: false,
         });
       }
@@ -1551,8 +1432,7 @@ export async function handleAutoAssignDates({
       setSuggestions((prev) =>
         prev.map((w, idx) => {
           // Find the corresponding new workout data based on the original suggestion order
-          const matchingNewWorkout =
-            idx < newWorkouts.length ? newWorkouts[idx] : null;
+          const matchingNewWorkout = idx < newWorkouts.length ? newWorkouts[idx] : null;
           if (matchingNewWorkout) {
             // Clean potential date fields from existing tags
             const tagsWithoutDate = { ...(w.tags || {}) };
@@ -1565,9 +1445,7 @@ export async function handleAutoAssignDates({
               savedWorkoutId: matchingNewWorkout.id,
               // Use the top-level scheduled_date from the DB result
               suggestedDate: matchingNewWorkout.scheduled_date
-                ? new Date(matchingNewWorkout.scheduled_date)
-                    .toISOString()
-                    .split('T')[0]
+                ? new Date(matchingNewWorkout.scheduled_date).toISOString().split('T')[0]
                 : null,
               tags: tagsWithoutDate, // Use cleaned tags
             };
@@ -1578,16 +1456,11 @@ export async function handleAutoAssignDates({
     }
 
     showToastMessage(
-      `Successfully rescheduled program to start on ${
-        startDate.toISOString().split('T')[0]
-      }!`
+      `Successfully rescheduled program to start on ${startDate.toISOString().split('T')[0]}!`
     );
   } catch (error) {
     console.error('Error rescheduling program:', error);
-    showToastMessage(
-      'Failed to reschedule program. Please try again.',
-      'error'
-    );
+    showToastMessage('Failed to reschedule program. Please try again.', 'error');
   } finally {
     setIsLoading(false);
   }
@@ -1607,8 +1480,7 @@ export async function handleDatePickerSave({
 
   try {
     // First, check if the workout already exists in the database
-    const workoutId =
-      selectedWorkoutForDate.id || selectedWorkoutForDate.savedWorkoutId;
+    const workoutId = selectedWorkoutForDate.id || selectedWorkoutForDate.savedWorkoutId;
     let newWorkoutId;
 
     if (workoutId) {
@@ -1660,8 +1532,7 @@ export async function handleDatePickerSave({
         .insert({
           program_id: programId,
           title: selectedWorkoutForDate.title,
-          body:
-            selectedWorkoutForDate.body || selectedWorkoutForDate.description,
+          body: selectedWorkoutForDate.body || selectedWorkoutForDate.description,
           tags: tagsWithoutDate,
           scheduled_date: selectedDate || null,
           is_reference: false,
@@ -1719,13 +1590,11 @@ export async function handleDatePickerSave({
       if (updateScheduleError) throw updateScheduleError;
     } else {
       // Create a new schedule entry
-      const { error: scheduleError } = await supabase
-        .from('workout_schedule')
-        .insert({
-          program_id: programId,
-          workout_id: newWorkoutId,
-          scheduled_date: selectedDate,
-        });
+      const { error: scheduleError } = await supabase.from('workout_schedule').insert({
+        program_id: programId,
+        workout_id: newWorkoutId,
+        scheduled_date: selectedDate,
+      });
 
       if (scheduleError) throw scheduleError;
     }
@@ -1739,35 +1608,20 @@ export async function handleDatePickerSave({
 }
 
 // Delete workout
-export async function deleteWorkout({
-  workoutId,
-  supabase,
-  setSuggestions,
-  showToastMessage,
-  e,
-}) {
+export async function deleteWorkout({ workoutId, supabase, setSuggestions, showToastMessage, e }) {
   if (e) e.stopPropagation(); // Prevent triggering the workout details modal
 
-  if (
-    !confirm(
-      'Are you sure you want to delete this workout? This action cannot be undone.'
-    )
-  ) {
+  if (!confirm('Are you sure you want to delete this workout? This action cannot be undone.')) {
     return;
   }
 
   try {
-    const { error } = await supabase
-      .from('program_workouts')
-      .delete()
-      .eq('id', workoutId);
+    const { error } = await supabase.from('program_workouts').delete().eq('id', workoutId);
 
     if (error) throw error;
 
     // Update local state
-    setSuggestions((prev) =>
-      prev.filter((workout) => workout.id !== workoutId)
-    );
+    setSuggestions((prev) => prev.filter((workout) => workout.id !== workoutId));
     showToastMessage('Workout deleted successfully');
   } catch (error) {
     console.error('Error deleting workout:', error);
@@ -1937,7 +1791,7 @@ export async function generateSkeletonProgram({
         if (done) break;
 
         buffer += decoder.decode(value, { stream: true });
-        let messages = buffer.split('\n\n');
+        const messages = buffer.split('\n\n');
         buffer = messages.pop() || '';
 
         for (const message of messages) {
@@ -1990,7 +1844,11 @@ export async function generateSkeletonProgram({
                 }
 
                 clearInterval(timer);
-                resolve({ success: true, totalWorkouts: data.totalWorkouts, description: data.description });
+                resolve({
+                  success: true,
+                  totalWorkouts: data.totalWorkouts,
+                  description: data.description,
+                });
               } else if (data.type === 'error') {
                 throw new Error(data.error);
               }
@@ -2053,7 +1911,10 @@ export async function pollUntilComplete(programId, supabase, callbacks) {
         callbacks.updateWorkouts(workouts);
       }
 
-      if (status.generation_status === 'completed' || status.generation_status === 'skeleton_complete') {
+      if (
+        status.generation_status === 'completed' ||
+        status.generation_status === 'skeleton_complete'
+      ) {
         callbacks.showToast('Generation complete!', 'success');
         if (callbacks.onComplete) callbacks.onComplete();
         return;
@@ -2096,7 +1957,7 @@ export async function approveAndEnhanceWeek({
       body: JSON.stringify({
         programId,
         weekNumber,
-        workoutIds: workouts.map(w => w.id),
+        workoutIds: workouts.map((w) => w.id),
         context,
         weekSpecificInput: weekSpecificInput || '',
       }),
@@ -2115,7 +1976,7 @@ export async function approveAndEnhanceWeek({
       if (done) break;
 
       buffer += decoder.decode(value, { stream: true });
-      let messages = buffer.split('\n\n');
+      const messages = buffer.split('\n\n');
       buffer = messages.pop() || '';
 
       for (const message of messages) {
@@ -2157,7 +2018,7 @@ export async function approveAndEnhanceWeek({
 export function groupWorkoutsByWeek(workouts) {
   const grouped = {};
 
-  workouts.forEach(workout => {
+  workouts.forEach((workout) => {
     const weekNumber = workout.week_number || 1;
     if (!grouped[weekNumber]) {
       grouped[weekNumber] = {
@@ -2170,11 +2031,11 @@ export function groupWorkoutsByWeek(workouts) {
   });
 
   // Determine week status based on workout statuses
-  Object.values(grouped).forEach(week => {
-    const statuses = week.workouts.map(w => w.generation_status);
-    if (statuses.every(s => s === 'detailed')) {
+  Object.values(grouped).forEach((week) => {
+    const statuses = week.workouts.map((w) => w.generation_status);
+    if (statuses.every((s) => s === 'detailed')) {
       week.status = 'detailed';
-    } else if (statuses.some(s => s === 'enhancing')) {
+    } else if (statuses.some((s) => s === 'enhancing')) {
       week.status = 'enhancing';
     } else {
       week.status = 'skeleton';

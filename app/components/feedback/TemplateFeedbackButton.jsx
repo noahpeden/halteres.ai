@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 /**
  * Simple thumbs up/down feedback button for workout templates
@@ -26,9 +26,7 @@ export default function TemplateFeedbackButton({
 
   const fetchFeedback = async () => {
     try {
-      const response = await fetch(
-        `/api/workout-feedback/template?workoutId=${workoutId}`
-      );
+      const response = await fetch(`/api/workout-feedback/template?workoutId=${workoutId}`);
       const data = await response.json();
 
       if (data.userFeedback) {
@@ -123,23 +121,17 @@ export default function TemplateFeedbackButton({
           disabled={loading}
           title="Rate positively (right-click to add notes)"
         >
-          {loading ? (
-            <span className="loading loading-spinner loading-xs"></span>
-          ) : (
-            <span>👍</span>
-          )}
+          {loading ? <span className="loading loading-spinner loading-xs"></span> : <span>👍</span>}
         </button>
 
         {/* Stats */}
         {showStats && stats.total > 0 && (
-          <span className={`${statsSizeClasses[size]} text-base-content/60 min-w-[3rem] text-center`}>
-            {stats.thumbs_up > 0 && (
-              <span className="text-success">{stats.thumbs_up}</span>
-            )}
+          <span
+            className={`${statsSizeClasses[size]} text-base-content/60 min-w-[3rem] text-center`}
+          >
+            {stats.thumbs_up > 0 && <span className="text-success">{stats.thumbs_up}</span>}
             {stats.thumbs_up > 0 && stats.thumbs_down > 0 && ' / '}
-            {stats.thumbs_down > 0 && (
-              <span className="text-error">{stats.thumbs_down}</span>
-            )}
+            {stats.thumbs_down > 0 && <span className="text-error">{stats.thumbs_down}</span>}
           </span>
         )}
 
@@ -158,11 +150,7 @@ export default function TemplateFeedbackButton({
           disabled={loading}
           title="Rate negatively (right-click to add notes)"
         >
-          {loading ? (
-            <span className="loading loading-spinner loading-xs"></span>
-          ) : (
-            <span>👎</span>
-          )}
+          {loading ? <span className="loading loading-spinner loading-xs"></span> : <span>👎</span>}
         </button>
       </div>
 
@@ -192,24 +180,15 @@ export default function TemplateFeedbackButton({
             onChange={(e) => setNotes(e.target.value)}
           />
           <div className="modal-action">
-            <button
-              className="btn btn-ghost"
-              onClick={() => setShowNotesModal(false)}
-            >
+            <button className="btn btn-ghost" onClick={() => setShowNotesModal(false)}>
               Cancel
             </button>
             <button
-              className={`btn ${
-                pendingRating === 'thumbs_up' ? 'btn-success' : 'btn-error'
-              }`}
+              className={`btn ${pendingRating === 'thumbs_up' ? 'btn-success' : 'btn-error'}`}
               onClick={handleNotesSubmit}
               disabled={loading}
             >
-              {loading ? (
-                <span className="loading loading-spinner loading-sm"></span>
-              ) : (
-                'Submit'
-              )}
+              {loading ? <span className="loading loading-spinner loading-sm"></span> : 'Submit'}
             </button>
           </div>
         </div>

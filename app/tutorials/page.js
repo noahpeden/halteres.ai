@@ -1,27 +1,27 @@
 'use client';
 
-import { useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
 import {
   BookOpen,
-  Wand2,
+  Calendar,
+  ChevronDown,
+  ChevronRight,
+  Dumbbell,
+  ExternalLink,
+  MessageSquare,
+  Play,
+  RefreshCw,
   Search,
   Share2,
   Sparkles,
-  ChevronDown,
-  ChevronRight,
-  ExternalLink,
   Target,
-  Calendar,
-  RefreshCw,
-  Play,
-  Video,
-  Trophy,
-  Dumbbell,
-  Users,
-  MessageSquare,
   TrendingUp,
+  Trophy,
+  Users,
+  Video,
+  Wand2,
 } from 'lucide-react';
+import { useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 
 const tutorials = [
   {
@@ -30,60 +30,66 @@ const tutorials = [
     icon: Wand2,
     description: 'Learn how to create comprehensive training programs using our guided wizard.',
     content: {
-      overview: 'The Program Wizard is a 5-step guided process that helps you create personalized training programs.',
+      overview:
+        'The Program Wizard is a 5-step guided process that helps you create personalized training programs.',
       steps: [
         {
           step: 1,
           title: 'Training Methodology',
-          description: 'Choose your training methodology (CrossFit, Bodybuilding, Powerlifting, etc.) and periodization model (Linear Progression, Undulating, Block, etc.)',
+          description:
+            'Choose your training methodology (CrossFit, Bodybuilding, Powerlifting, etc.) and periodization model (Linear Progression, Undulating, Block, etc.)',
           location: '/program-wizard/step-1',
           features: [
             '12 different training methodologies available',
             '5 periodization models to choose from',
-            'Each option includes detailed descriptions'
-          ]
+            'Each option includes detailed descriptions',
+          ],
         },
         {
           step: 2,
           title: 'Program Description',
-          description: 'Set your program name and write a detailed description of your gym\'s goals, member needs, and training focus',
+          description:
+            "Set your program name and write a detailed description of your gym's goals, member needs, and training focus",
           location: '/program-wizard/step-2',
           features: [
             'Custom program naming (pre-filled from dashboard)',
             'Detailed description requirements (min 50 characters)',
             'Example prompts for different program types',
-            'Tips for effective program descriptions'
-          ]
+            'Tips for effective program descriptions',
+          ],
         },
         {
           step: 3,
           title: 'Previous Workouts',
-          description: 'Share your gym\'s recent programming or search for reference workouts to inspire your new cycle',
+          description:
+            "Share your gym's recent programming or search for reference workouts to inspire your new cycle",
           location: '/program-wizard/step-3',
           features: [
             'Upload previous workout logs and programming history',
             'AI-powered web search for reference workouts',
             'Select multiple reference workouts as inspiration',
-            'Skip option for fresh programming cycles'
-          ]
+            'Skip option for fresh programming cycles',
+          ],
         },
         {
           step: 4,
           title: 'Gym Setup',
-          description: 'Configure gym type, equipment, difficulty level, focus areas, and workout preferences',
+          description:
+            'Configure gym type, equipment, difficulty level, focus areas, and workout preferences',
           location: '/program-wizard/step-4',
           features: [
             '15 different gym types (CrossFit Box, Commercial Gym, Home Gym, etc.)',
             'Equipment presets based on gym type with custom adjustments',
             'Difficulty levels (Beginner, Intermediate, Advanced, Elite)',
             'Focus areas (Upper/Lower Body, Full Body, Core, etc.)',
-            'Workout duration and format preferences'
-          ]
+            'Workout duration and format preferences',
+          ],
         },
         {
           step: 5,
           title: 'Member/Class Metrics',
-          description: 'Review and update metrics for your target members including performance benchmarks and considerations',
+          description:
+            'Review and update metrics for your target members including performance benchmarks and considerations',
           location: '/program-wizard/step-5',
           features: [
             'Typical member stats (fitness levels, experience)',
@@ -91,37 +97,40 @@ const tutorials = [
             'Class size and scaling considerations',
             'Injury history and common limitations',
             'Imperial/Metric unit conversion',
-            'Optional - can be updated after program creation'
-          ]
-        }
+            'Optional - can be updated after program creation',
+          ],
+        },
       ],
       tips: [
         'Take your time in Step 1 - the training methodology and periodization model significantly impact your program',
         'In Step 2, be detailed in your program description - this helps create better-targeted workouts',
         'Step 3 is optional but powerful - reference workouts help the AI understand your training style',
         'In Step 4, equipment selection is auto-populated based on gym type but can be fully customized to YOUR equipment',
-        'Step 5 metrics are optional but help personalize the program intensity and progressions for your members'
-      ]
-    }
+        'Step 5 metrics are optional but help personalize the program intensity and progressions for your members',
+      ],
+    },
   },
   {
     id: 'program-editor',
     title: 'Editing and Regenerating Programs',
     icon: RefreshCw,
-    description: 'Master the AI Program Writer for editing, regenerating, and customizing your training programs.',
+    description:
+      'Master the AI Program Writer for editing, regenerating, and customizing your training programs.',
     content: {
-      overview: 'The AI Program Writer allows you to edit program details and regenerate workouts with full customization.',
+      overview:
+        'The AI Program Writer allows you to edit program details and regenerate workouts with full customization.',
       sections: [
         {
           title: 'Program Form Editing',
-          description: 'Modify any aspect of your program including methodology, equipment, schedule, and personalization',
+          description:
+            'Modify any aspect of your program including methodology, equipment, schedule, and personalization',
           features: [
             'Real-time auto-save of all changes',
             'Equipment selection with gym type presets',
             'Custom workout format creation',
-            'Scheduling and date management'
+            'Scheduling and date management',
           ],
-          location: 'Left panel of the Program Writer'
+          location: 'Left panel of the Program Writer',
         },
         {
           title: 'Workout Generation',
@@ -130,14 +139,14 @@ const tutorials = [
             'Initial generation creates workouts from scratch',
             'Regeneration replaces existing workouts with new ones',
             'Confirmation dialogs prevent accidental overwrites',
-            'Real-time generation progress tracking'
+            'Real-time generation progress tracking',
           ],
           process: [
             'Click "Generate Workouts" button',
             'Confirm generation in the modal dialog',
             'Watch progress through multiple stages',
-            'Review generated workouts in the workout list'
-          ]
+            'Review generated workouts in the workout list',
+          ],
         },
         {
           title: 'Workout Management',
@@ -147,16 +156,16 @@ const tutorials = [
             'Edit workout titles and content',
             'Schedule workouts to specific dates',
             'Mark workouts as complete',
-            'Delete unwanted workouts'
-          ]
-        }
+            'Delete unwanted workouts',
+          ],
+        },
       ],
       tips: [
         'Changes are auto-saved, but use the Save button for manual saves',
         'Regenerating will replace ALL current workouts - use with caution',
-        'You can edit individual workouts without affecting the rest'
-      ]
-    }
+        'You can edit individual workouts without affecting the rest',
+      ],
+    },
   },
   {
     id: 'reference-workouts',
@@ -164,16 +173,18 @@ const tutorials = [
     icon: Search,
     description: 'Learn how to find and use reference workouts to improve your program generation.',
     content: {
-      overview: 'Reference workouts help the AI understand your preferences and generate better, more targeted programs.',
+      overview:
+        'Reference workouts help the AI understand your preferences and generate better, more targeted programs.',
       features: [
         {
           title: 'Search Functionality',
-          description: 'Search through thousands of workouts using keywords, movements, or workout names',
+          description:
+            'Search through thousands of workouts using keywords, movements, or workout names',
           examples: [
             'Search "Fran" to find the famous CrossFit benchmark',
             'Search "EMOM" to find Every Minute on the Minute workouts',
-            'Search "strength" to find strength-focused sessions'
-          ]
+            'Search "strength" to find strength-focused sessions',
+          ],
         },
         {
           title: 'Workout Selection',
@@ -182,8 +193,8 @@ const tutorials = [
             'Enter search terms in the search bar',
             'Review workout details and tags',
             'Check the checkbox to select workouts',
-            'Click "Add Selected" to add them to your program'
-          ]
+            'Click "Add Selected" to add them to your program',
+          ],
         },
         {
           title: 'Impact on Generation',
@@ -192,18 +203,18 @@ const tutorials = [
             'More accurate workout styles',
             'Better movement selection',
             'Improved workout structure',
-            'Consistent training methodology'
-          ]
-        }
+            'Consistent training methodology',
+          ],
+        },
       ],
       bestPractices: [
         'Select 3-5 reference workouts that represent your ideal training style',
         'Choose workouts from your preferred methodology (CrossFit, bodybuilding, etc.)',
         'Include variety - mix different workout types and intensities',
-        'Review workout descriptions to ensure they match your goals'
+        'Review workout descriptions to ensure they match your goals',
       ],
-      location: 'Access via "Search Reference Workouts" button in the Program Writer'
-    }
+      location: 'Access via "Search Reference Workouts" button in the Program Writer',
+    },
   },
   {
     id: 'sharing',
@@ -211,7 +222,8 @@ const tutorials = [
     icon: Share2,
     description: 'Learn how to share your programs and workouts publicly with others.',
     content: {
-      overview: 'Share your training programs and individual workouts with the community through public links.',
+      overview:
+        'Share your training programs and individual workouts with the community through public links.',
       sharing: [
         {
           title: 'Program Sharing',
@@ -220,15 +232,15 @@ const tutorials = [
             'Navigate to your program',
             'Go to the "Share" section',
             'Toggle "Make this program public"',
-            'Copy the public link to share with others'
+            'Copy the public link to share with others',
           ],
           location: '/program/[programId]/share',
           features: [
             'Public link generation',
             'Privacy controls',
             'View-only access for public users',
-            'Full program details visible'
-          ]
+            'Full program details visible',
+          ],
         },
         {
           title: 'Workout Sharing',
@@ -236,22 +248,22 @@ const tutorials = [
           features: [
             'Generate public links for specific workouts',
             'Share workout details without full program access',
-            'Perfect for sharing daily workouts'
-          ]
-        }
+            'Perfect for sharing daily workouts',
+          ],
+        },
       ],
       benefits: [
         'Help others with similar training goals',
         'Build your reputation in the fitness community',
         'Get feedback on your programming',
-        'Contribute to the workout database'
+        'Contribute to the workout database',
       ],
       privacy: [
         'Only shared items are public - other programs remain private',
         'You can revoke public access at any time',
-        'Public viewers cannot edit your content'
-      ]
-    }
+        'Public viewers cannot edit your content',
+      ],
+    },
   },
   {
     id: 'enhancement',
@@ -259,7 +271,8 @@ const tutorials = [
     icon: Sparkles,
     description: 'Use AI to enhance and improve your existing programs and workouts.',
     content: {
-      overview: 'Enhancement features use AI to improve your existing content based on specific instructions.',
+      overview:
+        'Enhancement features use AI to improve your existing content based on specific instructions.',
       features: [
         {
           title: 'Program Enhancement',
@@ -269,14 +282,14 @@ const tutorials = [
             'Click "Enhance Program" button',
             'Describe your desired improvements',
             'AI analyzes and enhances all workouts',
-            'Review changes before saving'
+            'Review changes before saving',
           ],
           examples: [
             '"Add more CrossFit metcons"',
             '"Include more mobility work"',
             '"Make it more strength-focused"',
-            '"Replace cardio with HIIT sessions"'
-          ]
+            '"Replace cardio with HIIT sessions"',
+          ],
         },
         {
           title: 'Individual Workout Enhancement',
@@ -286,17 +299,17 @@ const tutorials = [
             'Adjust workout intensity',
             'Modify movement selection',
             'Change workout structure',
-            'Add specific elements'
-          ]
-        }
+            'Add specific elements',
+          ],
+        },
       ],
       bestPractices: [
         'Be specific in your enhancement requests',
         'Review enhanced content before saving',
         'Use enhancement iteratively for best results',
-        'Consider your equipment and skill level in requests'
-      ]
-    }
+        'Consider your equipment and skill level in requests',
+      ],
+    },
   },
   {
     id: 'athlete-management',
@@ -304,7 +317,8 @@ const tutorials = [
     icon: Users,
     description: 'Learn how to invite athletes to your gym and manage their access.',
     content: {
-      overview: 'HalteresAI connects coaches and athletes. Athletes join your gym with an invite code and get access to workouts, leaderboards, and AI feedback.',
+      overview:
+        'HalteresAI connects coaches and athletes. Athletes join your gym with an invite code and get access to workouts, leaderboards, and AI feedback.',
       sections: [
         {
           title: 'Creating Invite Codes',
@@ -313,9 +327,9 @@ const tutorials = [
             'Access invite codes from your gym settings',
             'Share codes via text, email, or post in your gym',
             'Codes link athletes to your gym automatically',
-            'Athletes see only your gym\'s programming'
+            "Athletes see only your gym's programming",
           ],
-          location: 'Dashboard > Gym Settings'
+          location: 'Dashboard > Gym Settings',
         },
         {
           title: 'Athlete Onboarding',
@@ -323,9 +337,9 @@ const tutorials = [
           features: [
             'Athletes set their display name',
             'Optional: Enter baseline metrics (1RMs, mile time)',
-            'Immediately get access to today\'s workout',
-            'Can update metrics anytime from their profile'
-          ]
+            "Immediately get access to today's workout",
+            'Can update metrics anytime from their profile',
+          ],
         },
         {
           title: 'Viewing Athlete Activity',
@@ -334,16 +348,16 @@ const tutorials = [
             'View logged workout results',
             'See leaderboard standings',
             'Track athlete engagement over time',
-            'Identify athletes who may need attention'
-          ]
-        }
+            'Identify athletes who may need attention',
+          ],
+        },
       ],
       tips: [
         'Share your invite code during class announcements',
-        'Post the code on your gym\'s whiteboard or member portal',
-        'Encourage athletes to complete their profile for personalized feedback'
-      ]
-    }
+        "Post the code on your gym's whiteboard or member portal",
+        'Encourage athletes to complete their profile for personalized feedback',
+      ],
+    },
   },
   {
     id: 'leaderboards',
@@ -351,7 +365,8 @@ const tutorials = [
     icon: Trophy,
     description: 'Learn how the points system and leaderboards work to motivate athletes.',
     content: {
-      overview: 'Leaderboards gamify your gym experience. Athletes earn points for participating, and rankings update in real-time across weekly and monthly periods.',
+      overview:
+        'Leaderboards gamify your gym experience. Athletes earn points for participating, and rankings update in real-time across weekly and monthly periods.',
       sections: [
         {
           title: 'How Points Work',
@@ -362,8 +377,8 @@ const tutorials = [
             '3rd Place: +5 points',
             'Logged Workout: +3 points',
             'Personal Record: +2 points',
-            'RX Completion: +1 point'
-          ]
+            'RX Completion: +1 point',
+          ],
         },
         {
           title: 'Leaderboard Types',
@@ -372,8 +387,8 @@ const tutorials = [
             'By Workout: Rankings for each specific workout',
             'This Week: Aggregate points for the current week',
             'This Month: Aggregate points for the current month',
-            'Points reset at the start of each period'
-          ]
+            'Points reset at the start of each period',
+          ],
         },
         {
           title: 'Athlete Recognition',
@@ -382,16 +397,16 @@ const tutorials = [
             'Medal badges for top 3 finishers',
             'PR badges when hitting personal records',
             'RX badges for completing workouts as prescribed',
-            'Current user highlighting on the leaderboard'
-          ]
-        }
+            'Current user highlighting on the leaderboard',
+          ],
+        },
       ],
       tips: [
         'Announce weekly winners during class',
         'Encourage athletes to log all their workouts',
-        'Use leaderboards to identify your most engaged athletes'
-      ]
-    }
+        'Use leaderboards to identify your most engaged athletes',
+      ],
+    },
   },
   {
     id: 'ai-feedback',
@@ -399,18 +414,19 @@ const tutorials = [
     icon: MessageSquare,
     description: 'Learn how the AI feedback loop improves programming and athlete insights.',
     content: {
-      overview: 'HalteresAI learns from everyone. Coach feedback improves program generation. Athlete feedback improves personalized insights. The more you use it, the smarter it gets.',
+      overview:
+        'HalteresAI learns from everyone. Coach feedback improves program generation. Athlete feedback improves personalized insights. The more you use it, the smarter it gets.',
       sections: [
         {
           title: 'Coach Feedback',
           description: 'Rate and comment on generated workouts to train the AI',
           features: [
             'Rate workouts after reviewing them',
-            'Provide specific feedback on what you liked or didn\'t',
+            "Provide specific feedback on what you liked or didn't",
             'AI uses this to improve future generations',
-            'Your preferences shape your gym\'s programming style'
+            "Your preferences shape your gym's programming style",
           ],
-          location: 'Program Writer > Generated Workouts'
+          location: 'Program Writer > Generated Workouts',
         },
         {
           title: 'Athlete Feedback',
@@ -419,8 +435,8 @@ const tutorials = [
             'Available after logging workout results',
             'AI analyzes performance relative to history',
             'Provides personalized tips and observations',
-            'Considers athlete\'s metrics and goals'
-          ]
+            "Considers athlete's metrics and goals",
+          ],
         },
         {
           title: 'Weekly Trends',
@@ -429,16 +445,16 @@ const tutorials = [
             'Analyzes workout patterns over time',
             'Identifies improvement areas',
             'Highlights achievements and PRs',
-            'Updates weekly based on logged data'
-          ]
-        }
+            'Updates weekly based on logged data',
+          ],
+        },
       ],
       tips: [
         'Encourage athletes to log detailed notes with their results',
-        'Rate generated workouts even if they\'re good—positive feedback matters',
-        'The AI gets smarter with consistent use over time'
-      ]
-    }
+        "Rate generated workouts even if they're good—positive feedback matters",
+        'The AI gets smarter with consistent use over time',
+      ],
+    },
   },
   {
     id: 'athlete-app',
@@ -446,17 +462,18 @@ const tutorials = [
     icon: Dumbbell,
     description: 'Help your athletes get the most out of the mobile app.',
     content: {
-      overview: 'Athletes use the mobile app to access workouts, log results, check leaderboards, and track their progress. Share this guide with your members.',
+      overview:
+        'Athletes use the mobile app to access workouts, log results, check leaderboards, and track their progress. Share this guide with your members.',
       sections: [
         {
           title: 'Daily Workout View',
-          description: 'Athletes see today\'s workout on their home screen',
+          description: "Athletes see today's workout on their home screen",
           features: [
-            'Today\'s workout displayed prominently',
+            "Today's workout displayed prominently",
             'Tap to view full workout details',
             'Log results directly from the workout view',
-            'Access upcoming workouts in the calendar'
-          ]
+            'Access upcoming workouts in the calendar',
+          ],
         },
         {
           title: 'Logging Results',
@@ -465,8 +482,8 @@ const tutorials = [
             'Enter time, reps, or weight as appropriate',
             'Mark as RX or scaled',
             'Add notes about the workout',
-            'Request AI feedback after logging'
-          ]
+            'Request AI feedback after logging',
+          ],
         },
         {
           title: 'Profile & Metrics',
@@ -475,8 +492,8 @@ const tutorials = [
             'Update display name',
             'Enter and update 1RM lifts',
             'Track body metrics (weight, height)',
-            'View personal workout history'
-          ]
+            'View personal workout history',
+          ],
         },
         {
           title: 'Leaderboard Access',
@@ -485,17 +502,17 @@ const tutorials = [
             'View workout-specific rankings',
             'Check weekly and monthly standings',
             'See points breakdown',
-            'Celebrate top performers'
-          ]
-        }
+            'Celebrate top performers',
+          ],
+        },
       ],
       tips: [
         'Athletes should download the app from the App Store or Google Play',
-        'Have athletes join using your gym\'s invite code',
-        'Encourage profile completion for the best experience'
-      ]
-    }
-  }
+        "Have athletes join using your gym's invite code",
+        'Encourage profile completion for the best experience',
+      ],
+    },
+  },
 ];
 
 export default function TutorialsPage() {
@@ -511,12 +528,10 @@ export default function TutorialsPage() {
       <div className="max-w-4xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12">
           <BookOpen className="w-16 h-16 text-primary mx-auto mb-4" />
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            Platform Tutorials
-          </h1>
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">Platform Tutorials</h1>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Master the complete HalteresAI platform. Learn how to generate programming,
-            manage athletes, use leaderboards, and leverage AI feedback to improve your gym.
+            Master the complete HalteresAI platform. Learn how to generate programming, manage
+            athletes, use leaderboards, and leverage AI feedback to improve your gym.
           </p>
         </div>
 
@@ -524,7 +539,7 @@ export default function TutorialsPage() {
           {tutorials.map((tutorial) => {
             const IconComponent = tutorial.icon;
             const isExpanded = expandedTutorial === tutorial.id;
-            
+
             return (
               <div key={tutorial.id} className="bg-white rounded-lg shadow-md overflow-hidden">
                 <button
@@ -539,12 +554,8 @@ export default function TutorialsPage() {
                         </div>
                       </div>
                       <div>
-                        <h3 className="text-lg font-semibold text-gray-900">
-                          {tutorial.title}
-                        </h3>
-                        <p className="text-gray-600 text-sm">
-                          {tutorial.description}
-                        </p>
+                        <h3 className="text-lg font-semibold text-gray-900">{tutorial.title}</h3>
+                        <p className="text-gray-600 text-sm">{tutorial.description}</p>
                       </div>
                     </div>
                     <div className="flex-shrink-0">
@@ -560,9 +571,7 @@ export default function TutorialsPage() {
                 {isExpanded && (
                   <div className="px-6 pb-6 border-t border-gray-100">
                     <div className="pt-4">
-                      <p className="text-gray-700 mb-6">
-                        {tutorial.content.overview}
-                      </p>
+                      <p className="text-gray-700 mb-6">{tutorial.content.overview}</p>
 
                       {/* Program Wizard specific content */}
                       {tutorial.id === 'program-wizard' && (
@@ -603,9 +612,7 @@ export default function TutorialsPage() {
                           </div>
 
                           <div>
-                            <h4 className="text-lg font-semibold text-gray-900 mb-3">
-                              Pro Tips
-                            </h4>
+                            <h4 className="text-lg font-semibold text-gray-900 mb-3">Pro Tips</h4>
                             <div className="bg-blue-50 rounded-lg p-4">
                               <ul className="space-y-2">
                                 {tutorial.content.tips.map((tip, index) => (
@@ -628,9 +635,7 @@ export default function TutorialsPage() {
                               <h4 className="text-lg font-semibold text-gray-900 mb-2">
                                 {section.title}
                               </h4>
-                              <p className="text-gray-600 text-sm mb-3">
-                                {section.description}
-                              </p>
+                              <p className="text-gray-600 text-sm mb-3">{section.description}</p>
                               {section.location && (
                                 <p className="text-xs text-primary mb-3 font-medium">
                                   📍 {section.location}
@@ -665,9 +670,7 @@ export default function TutorialsPage() {
                           ))}
 
                           <div>
-                            <h4 className="text-lg font-semibold text-gray-900 mb-3">
-                              Pro Tips
-                            </h4>
+                            <h4 className="text-lg font-semibold text-gray-900 mb-3">Pro Tips</h4>
                             <div className="bg-green-50 rounded-lg p-4">
                               <ul className="space-y-2">
                                 {tutorial.content.tips.map((tip, index) => (
@@ -690,9 +693,7 @@ export default function TutorialsPage() {
                               <h4 className="text-lg font-semibold text-gray-900 mb-2">
                                 {feature.title}
                               </h4>
-                              <p className="text-gray-600 text-sm mb-3">
-                                {feature.description}
-                              </p>
+                              <p className="text-gray-600 text-sm mb-3">{feature.description}</p>
                               {feature.examples && (
                                 <div className="mb-3">
                                   <h5 className="font-medium text-gray-900 mb-2">Examples:</h5>
@@ -769,9 +770,7 @@ export default function TutorialsPage() {
                               <h4 className="text-lg font-semibold text-gray-900 mb-2">
                                 {shareType.title}
                               </h4>
-                              <p className="text-gray-600 text-sm mb-3">
-                                {shareType.description}
-                              </p>
+                              <p className="text-gray-600 text-sm mb-3">{shareType.description}</p>
                               {shareType.location && (
                                 <p className="text-xs text-primary mb-3 font-medium">
                                   📍 {shareType.location}
@@ -807,9 +806,7 @@ export default function TutorialsPage() {
 
                           <div className="grid md:grid-cols-2 gap-4">
                             <div>
-                              <h4 className="text-lg font-semibold text-gray-900 mb-3">
-                                Benefits
-                              </h4>
+                              <h4 className="text-lg font-semibold text-gray-900 mb-3">Benefits</h4>
                               <div className="bg-green-50 rounded-lg p-4">
                                 <ul className="space-y-2">
                                   {tutorial.content.benefits.map((benefit, index) => (
@@ -849,9 +846,7 @@ export default function TutorialsPage() {
                               <h4 className="text-lg font-semibold text-gray-900 mb-2">
                                 {feature.title}
                               </h4>
-                              <p className="text-gray-600 text-sm mb-3">
-                                {feature.description}
-                              </p>
+                              <p className="text-gray-600 text-sm mb-3">{feature.description}</p>
                               {feature.location && (
                                 <p className="text-xs text-primary mb-3 font-medium">
                                   📍 {feature.location}
@@ -879,7 +874,9 @@ export default function TutorialsPage() {
                               )}
                               {feature.examples && (
                                 <div className="mb-3">
-                                  <h5 className="font-medium text-gray-900 mb-2">Example requests:</h5>
+                                  <h5 className="font-medium text-gray-900 mb-2">
+                                    Example requests:
+                                  </h5>
                                   <div className="space-y-2">
                                     {feature.examples.map((example, eIndex) => (
                                       <div key={eIndex} className="bg-gray-100 rounded px-3 py-2">
@@ -917,21 +914,23 @@ export default function TutorialsPage() {
                               </ul>
                             </div>
                           </div>
-
                         </div>
                       )}
 
                       {/* Athlete & Gym Management tutorials - uses sections format */}
-                      {['athlete-management', 'leaderboards', 'ai-feedback', 'athlete-app'].includes(tutorial.id) && (
+                      {[
+                        'athlete-management',
+                        'leaderboards',
+                        'ai-feedback',
+                        'athlete-app',
+                      ].includes(tutorial.id) && (
                         <div className="space-y-6">
                           {tutorial.content.sections.map((section, index) => (
                             <div key={index} className="border rounded-lg p-4">
                               <h4 className="text-lg font-semibold text-gray-900 mb-2">
                                 {section.title}
                               </h4>
-                              <p className="text-gray-600 text-sm mb-3">
-                                {section.description}
-                              </p>
+                              <p className="text-gray-600 text-sm mb-3">{section.description}</p>
                               {section.location && (
                                 <p className="text-xs text-primary mb-3 font-medium">
                                   📍 {section.location}
@@ -952,9 +951,7 @@ export default function TutorialsPage() {
 
                           {tutorial.content.tips && (
                             <div>
-                              <h4 className="text-lg font-semibold text-gray-900 mb-3">
-                                Pro Tips
-                              </h4>
+                              <h4 className="text-lg font-semibold text-gray-900 mb-3">Pro Tips</h4>
                               <div className="bg-blue-50 rounded-lg p-4">
                                 <ul className="space-y-2">
                                   {tutorial.content.tips.map((tip, index) => (
@@ -1021,8 +1018,9 @@ export default function TutorialsPage() {
                 Watch: Complete Halteres Overview
               </h2>
               <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-                Get a comprehensive walkthrough of all Halteres features in this detailed video tutorial. 
-                Perfect for new users and those wanting to maximize their use of the platform.
+                Get a comprehensive walkthrough of all Halteres features in this detailed video
+                tutorial. Perfect for new users and those wanting to maximize their use of the
+                platform.
               </p>
             </div>
 
@@ -1050,9 +1048,7 @@ export default function TutorialsPage() {
 
               {/* Video Description */}
               <div className="mt-6 bg-white rounded-lg p-6 shadow-sm">
-                <h3 className="text-xl font-semibold text-gray-900 mb-4">
-                  What You'll Learn
-                </h3>
+                <h3 className="text-xl font-semibold text-gray-900 mb-4">What You'll Learn</h3>
                 <div className="grid md:grid-cols-2 gap-6">
                   <div>
                     <h4 className="font-medium text-gray-900 mb-3">Core Features</h4>
@@ -1103,13 +1099,11 @@ export default function TutorialsPage() {
                   <div className="flex items-start space-x-3">
                     <Video className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
                     <div>
-                      <h4 className="font-medium text-blue-900 mb-1">
-                        Video Tutorial Coming Soon
-                      </h4>
+                      <h4 className="font-medium text-blue-900 mb-1">Video Tutorial Coming Soon</h4>
                       <p className="text-sm text-blue-700">
-                        We're currently producing a comprehensive video guide that will walk you through 
-                        all of Halteres' features. In the meantime, explore the detailed tutorials above 
-                        for step-by-step written instructions.
+                        We're currently producing a comprehensive video guide that will walk you
+                        through all of Halteres' features. In the meantime, explore the detailed
+                        tutorials above for step-by-step written instructions.
                       </p>
                     </div>
                   </div>
@@ -1121,16 +1115,13 @@ export default function TutorialsPage() {
 
         {/* Additional Resources */}
         <div className="mt-12 bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">
-            Need More Help?
-          </h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">Need More Help?</h2>
           <div className="grid md:grid-cols-2 gap-6">
             <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                Getting Started
-              </h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Getting Started</h3>
               <p className="text-gray-600 text-sm mb-3">
-                New to the platform? Start with the Program Wizard tutorial and work your way through the basics.
+                New to the platform? Start with the Program Wizard tutorial and work your way
+                through the basics.
               </p>
               <a
                 href="/program-wizard"
@@ -1140,16 +1131,11 @@ export default function TutorialsPage() {
               </a>
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                Contact Support
-              </h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Contact Support</h3>
               <p className="text-gray-600 text-sm mb-3">
                 Have questions not covered in these tutorials? We're here to help.
               </p>
-              <a
-                href="/contact"
-                className="text-primary hover:text-primary/80 text-sm font-medium"
-              >
+              <a href="/contact" className="text-primary hover:text-primary/80 text-sm font-medium">
                 Get in Touch →
               </a>
             </div>

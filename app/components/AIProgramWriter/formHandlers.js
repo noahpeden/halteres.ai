@@ -1,8 +1,7 @@
 'use client';
 import equipmentList from '@/utils/equipmentList';
-import { dayNameToNumber, dayNumberToName } from './utils';
 import { gymEquipmentPresets } from '../utils';
-import { processWorkoutDescription } from './utils';
+import { dayNameToNumber, dayNumberToName, processWorkoutDescription } from './utils';
 
 // Process workout for display
 export const processWorkoutForDisplay = (workout) => {
@@ -12,9 +11,7 @@ export const processWorkoutForDisplay = (workout) => {
     : undefined;
 
   const suggestedDate =
-    scheduledDate ||
-    workout.tags?.scheduled_date ||
-    workout.tags?.suggestedDate;
+    scheduledDate || workout.tags?.scheduled_date || workout.tags?.suggestedDate;
 
   return {
     ...workout,
@@ -160,16 +157,12 @@ export function updateFormDataFromProgram(program, formData) {
     // Also update gymType if available in gym_details
     if (program.gym_details.gym_type) {
       const mappedGymType =
-        gymTypeMapping[program.gym_details.gym_type] ||
-        program.gym_details.gym_type;
+        gymTypeMapping[program.gym_details.gym_type] || program.gym_details.gym_type;
       updatedData.gymType = mappedGymType;
     }
 
     // Also update equipment if available in gym_details
-    if (
-      program.gym_details.equipment &&
-      Array.isArray(program.gym_details.equipment)
-    ) {
+    if (program.gym_details.equipment && Array.isArray(program.gym_details.equipment)) {
       // Convert equipment names to IDs
       const equipmentIds = program.gym_details.equipment
         .map((name) => {
@@ -229,11 +222,7 @@ export const handleFormChange = (e, setFormData) => {
 export const handleNumberInputChange = (e, setFormData, min, max) => {
   const { name, value } = e.target;
   const parsedValue = parseInt(value, 10);
-  if (
-    !isNaN(parsedValue) &&
-    parsedValue >= min &&
-    (max === undefined || parsedValue <= max)
-  ) {
+  if (!isNaN(parsedValue) && parsedValue >= min && (max === undefined || parsedValue <= max)) {
     setFormData((prev) => ({ ...prev, [name]: parsedValue.toString() })); // Store as string if form expects strings
   } else if (value === '') {
     // Allow clearing the input
@@ -281,9 +270,7 @@ export const handleEquipmentChange = (e, currentFormData) => {
       newEquipmentNames = [...newEquipmentNames, equipmentItem.label];
     } else {
       newEquipment = newEquipment.filter((item) => item !== value);
-      newEquipmentNames = newEquipmentNames.filter(
-        (name) => name !== equipmentItem.label
-      );
+      newEquipmentNames = newEquipmentNames.filter((name) => name !== equipmentItem.label);
     }
     // Check if all are selected after individual change
     allSelected = newEquipment.length === allEquipmentIds.length;
@@ -353,33 +340,18 @@ export const handleDayOfWeekChangeUtil = (day, currentDaysOfWeek) => {
 };
 
 // Update days of week based on days per week changes
-export const updateDaysOfWeekFromDaysPerWeek = (
-  daysPerWeek,
-  daysOfWeek,
-  setFormData
-) => {
+export const updateDaysOfWeekFromDaysPerWeek = (daysPerWeek, daysOfWeek, setFormData) => {
   const daysPerWeekNum = parseInt(daysPerWeek);
   const daysOfWeekLength = daysOfWeek.length;
 
   if (daysPerWeekNum !== daysOfWeekLength) {
     // Default days of week options
-    const allDays = [
-      'Monday',
-      'Tuesday',
-      'Wednesday',
-      'Thursday',
-      'Friday',
-      'Saturday',
-      'Sunday',
-    ];
+    const allDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
     if (daysPerWeekNum > daysOfWeekLength) {
       // Add days
       const daysToAdd = allDays.filter((day) => !daysOfWeek.includes(day));
-      const newDays = [
-        ...daysOfWeek,
-        ...daysToAdd.slice(0, daysPerWeekNum - daysOfWeekLength),
-      ];
+      const newDays = [...daysOfWeek, ...daysToAdd.slice(0, daysPerWeekNum - daysOfWeekLength)];
 
       setFormData((prev) => ({ ...prev, daysOfWeek: newDays }));
     } else if (daysPerWeekNum < daysOfWeekLength && daysPerWeekNum > 0) {

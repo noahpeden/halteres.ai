@@ -1,9 +1,11 @@
 'use client';
-import { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { ArrowLeft, Building, CheckCircle, Dumbbell, Eye, EyeOff } from 'lucide-react';
+import Image from 'next/image';
 import Link from 'next/link';
-import { Dumbbell, Users, Building } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import logo from '@/assets/logo.png';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function LoginPage() {
   const { session, supabase, loadingProfile, isAthlete } = useAuth();
@@ -21,10 +23,13 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [passwordConfirm, setPasswordConfirm] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showPasswordConfirm, setShowPasswordConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [showResetForm, setShowResetForm] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   // New state for role selection and gym code
   const [signupStep, setSignupStep] = useState(1); // 1 = credentials, 2 = role selection, 3 = gym code (athletes)
@@ -35,6 +40,10 @@ export default function LoginPage() {
 
   // Check if coming from a join link (has gym code pre-filled)
   const comingFromJoinLink = roleParam === 'athlete' && gymCodeFromRedirect;
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Check for error parameters in the URL
   useEffect(() => {
@@ -176,9 +185,10 @@ export default function LoginPage() {
 
     try {
       // Determine redirect URL based on role
-      const redirectUrl = role === 'athlete'
-        ? `${window.location.origin}/auth/callback?role=athlete${gymInviteCode ? `&gymCode=${gymInviteCode}` : ''}`
-        : `${window.location.origin}/auth/callback?role=coach`;
+      const redirectUrl =
+        role === 'athlete'
+          ? `${window.location.origin}/auth/callback?role=athlete${gymInviteCode ? `&gymCode=${gymInviteCode}` : ''}`
+          : `${window.location.origin}/auth/callback?role=coach`;
 
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -273,405 +283,510 @@ export default function LoginPage() {
 
   if (session) {
     return (
-      <div className="flex justify-center items-center min-h-screen bg-base-200">
-        <div className="text-center">
-          <div className="loading loading-spinner loading-lg mb-4"></div>
-          <p className="text-base-content">Logging you in...</p>
+      <div className="flex justify-center items-center min-h-screen bg-base-100 relative overflow-hidden">
+        {/* Background decorations */}
+        <div className="absolute inset-0">
+          <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-bl from-primary/5 via-transparent to-transparent" />
+          <div className="absolute bottom-0 left-0 w-96 h-96 bg-accent/10 rounded-full blur-3xl -translate-x-1/2 translate-y-1/2" />
+        </div>
+        <div className="text-center relative z-10">
+          <span className="loading loading-spinner loading-lg text-primary mb-4"></span>
+          <p className="text-base-content font-medium">Logging you in...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex justify-center items-center min-h-screen bg-base-200">
-      <div className="w-full max-w-md p-8 space-y-6 bg-base-100 rounded-xl shadow-lg">
-        {/* Success message */}
-        {successMessage && (
-          <div className="alert alert-success">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="stroke-current shrink-0 h-6 w-6"
-              fill="none"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            <span>{successMessage}</span>
-          </div>
-        )}
+    <div className="min-h-screen bg-base-100 flex items-center justify-center relative overflow-hidden">
+      {/* Background Elements */}
+      <div className="absolute inset-0">
+        <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-bl from-primary/5 via-transparent to-transparent" />
+        <div className="absolute bottom-0 left-0 w-96 h-96 bg-accent/10 rounded-full blur-3xl -translate-x-1/2 translate-y-1/2" />
+        <div className="absolute top-20 right-20 w-72 h-72 bg-secondary/10 rounded-full blur-3xl" />
+        {/* Decorative grid */}
+        <div
+          className="absolute inset-0 opacity-[0.02]"
+          style={{
+            backgroundImage: `linear-gradient(#1771dc 1px, transparent 1px), linear-gradient(90deg, #1771dc 1px, transparent 1px)`,
+            backgroundSize: '60px 60px',
+          }}
+        />
+      </div>
 
-        {/* Error message */}
-        {errorMessage && (
-          <div className="alert alert-error">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="stroke-current shrink-0 h-6 w-6"
-              fill="none"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            <span>{errorMessage}</span>
-          </div>
-        )}
+      {/* Main Content */}
+      <div className={`relative z-10 w-full max-w-md px-4 py-8 ${mounted ? 'animate-fadeIn' : 'opacity-0'}`}>
+        {/* Back to home link with logo */}
+        <Link
+          href="/"
+          className="inline-flex items-center gap-3 px-4 py-2 bg-base-200 rounded-full border border-base-300 mb-8 hover:bg-base-300 transition-colors"
+        >
+          <Image
+            src={logo}
+            alt="Halteres.ai Logo"
+            width={28}
+            height={28}
+            className="rounded-lg"
+            priority
+          />
+          <span className="text-sm font-semibold text-base-content">HalteresAI</span>
+          <ArrowLeft className="w-4 h-4 text-neutral" />
+        </Link>
 
-        {showResetForm ? (
-          <div className="space-y-4">
-            <h2 className="text-2xl font-bold text-center">Reset Password</h2>
-            <form onSubmit={handlePasswordReset} className="space-y-4">
-              <div className="w-full">
-                <label className="label">
-                  <span className="text-sm">Email</span>
-                </label>
-                <input
-                  type="email"
-                  placeholder="Your email"
-                  className="input input-bordered w-full"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
+        {/* Main Card */}
+        <div className="card bg-base-100 shadow-2xl border border-base-200">
+          <div className="card-body p-8 space-y-6">
+            {/* Success message */}
+            {successMessage && (
+              <div className="alert alert-success shadow-lg">
+                <CheckCircle className="w-5 h-5" />
+                <span>{successMessage}</span>
               </div>
+            )}
 
-              <div className="w-full mt-4">
-                <button
-                  type="submit"
-                  className={`btn btn-primary w-full ${
-                    loading ? 'loading' : ''
-                  }`}
-                  disabled={loading}
+            {/* Error message */}
+            {errorMessage && (
+              <div className="alert alert-error shadow-lg">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="stroke-current shrink-0 h-5 w-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
                 >
-                  Send Reset Link
-                </button>
-              </div>
-
-              <div className="text-center mt-4">
-                <button
-                  type="button"
-                  className="link link-hover text-sm"
-                  onClick={() => setShowResetForm(false)}
-                >
-                  Back to login
-                </button>
-              </div>
-            </form>
-          </div>
-        ) : (
-          <>
-            <div className="tabs tabs-boxed justify-center">
-              <button
-                className={`tab ${activeTab === 'login' ? 'tab-active' : ''}`}
-                onClick={() => setActiveTab('login')}
-              >
-                Login
-              </button>
-              <button
-                className={`tab ${activeTab === 'signup' ? 'tab-active' : ''}`}
-                onClick={() => setActiveTab('signup')}
-              >
-                Sign Up
-              </button>
-            </div>
-
-            {activeTab === 'login' ? (
-              <form onSubmit={handleLogin} className="space-y-4">
-                <div className="w-full">
-                  <label className="label">
-                    <span className="text-sm">Email</span>
-                  </label>
-                  <input
-                    type="email"
-                    placeholder="Your email"
-                    className="input input-bordered w-full"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
                   />
-                </div>
+                </svg>
+                <span>{errorMessage}</span>
+              </div>
+            )}
 
-                <div className="w-full">
-                  <label className="label">
-                    <span className="text-sm">Password</span>
-                  </label>
-                  <input
-                    type="password"
-                    placeholder="Your password"
-                    className="input input-bordered w-full"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                  />
-                  <label className="label">
-                    <button
-                      type="button"
-                      className="text-xs link link-hover"
-                      onClick={() => setShowResetForm(true)}
-                    >
-                      Forgot password?
-                    </button>
-                  </label>
+            {showResetForm ? (
+              <div className="space-y-6">
+                <div className="text-center">
+                  <h2 className="text-2xl font-bold text-base-content">Reset Password</h2>
+                  <p className="text-sm text-neutral mt-2">We'll send you a link to reset your password</p>
                 </div>
+                <form onSubmit={handlePasswordReset} className="space-y-4">
+                  <div className="form-control w-full">
+                    <label className="label">
+                      <span className="label-text font-medium">Email</span>
+                    </label>
+                    <input
+                      type="email"
+                      placeholder="you@example.com"
+                      className="input input-bordered w-full focus:input-primary"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                    />
+                  </div>
 
-                <div className="w-full mt-4">
                   <button
                     type="submit"
-                    className={`btn btn-primary w-full ${
-                      loading ? 'loading' : ''
-                    }`}
+                    className="btn btn-primary w-full"
                     disabled={loading}
+                  >
+                    {loading && <span className="loading loading-spinner loading-sm"></span>}
+                    Send Reset Link
+                  </button>
+
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm w-full"
+                    onClick={() => setShowResetForm(false)}
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                    Back to login
+                  </button>
+                </form>
+              </div>
+            ) : (
+              <>
+                {/* Tabs */}
+                <div className="flex bg-base-200 rounded-xl p-1">
+                  <button
+                    className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-semibold transition-all ${
+                      activeTab === 'login'
+                        ? 'bg-base-100 text-base-content shadow-sm'
+                        : 'text-neutral hover:text-base-content'
+                    }`}
+                    onClick={() => {
+                      setActiveTab('login');
+                      setSignupStep(1);
+                      setErrorMessage('');
+                    }}
                   >
                     Login
                   </button>
+                  <button
+                    className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-semibold transition-all ${
+                      activeTab === 'signup'
+                        ? 'bg-base-100 text-base-content shadow-sm'
+                        : 'text-neutral hover:text-base-content'
+                    }`}
+                    onClick={() => {
+                      setActiveTab('signup');
+                      setErrorMessage('');
+                    }}
+                  >
+                    Sign Up
+                  </button>
                 </div>
-              </form>
-            ) : (
-              <>
-                {/* Step 1: Email and Password */}
-                {signupStep === 1 && (
-                  <form onSubmit={handleCredentialsSubmit} className="space-y-4">
-                    <div className="w-full">
+
+                {activeTab === 'login' ? (
+                  <form onSubmit={handleLogin} className="space-y-4">
+                    <div className="form-control w-full">
                       <label className="label">
-                        <span className="text-sm">Email</span>
+                        <span className="label-text font-medium">Email</span>
                       </label>
                       <input
                         type="email"
-                        placeholder="Your email"
-                        className="input input-bordered w-full"
+                        placeholder="you@example.com"
+                        className="input input-bordered w-full focus:input-primary"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         required
                       />
                     </div>
 
-                    <div className="w-full">
+                    <div className="form-control w-full">
                       <label className="label">
-                        <span className="text-sm">Password</span>
+                        <span className="label-text font-medium">Password</span>
                       </label>
-                      <input
-                        type="password"
-                        placeholder="Create a password"
-                        className="input input-bordered w-full"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        required
-                      />
-                    </div>
-
-                    <div className="w-full">
-                      <label className="label">
-                        <span className="text-sm">Confirm Password</span>
-                      </label>
-                      <input
-                        type="password"
-                        placeholder="Confirm your password"
-                        className="input input-bordered w-full"
-                        value={passwordConfirm}
-                        onChange={(e) => setPasswordConfirm(e.target.value)}
-                        required
-                      />
-                    </div>
-
-                    <div className="w-full mt-4">
-                      <button
-                        type="submit"
-                        className="btn btn-primary w-full"
-                      >
-                        Continue
-                      </button>
-                    </div>
-                  </form>
-                )}
-
-                {/* Step 2: Role Selection */}
-                {signupStep === 2 && (
-                  <div className="space-y-4">
-                    <div className="text-center mb-4">
-                      <h3 className="text-lg font-semibold">I am a...</h3>
-                      <p className="text-sm text-gray-500">Select your role to continue</p>
-                    </div>
-
-                    <div className="grid grid-cols-1 gap-4">
-                      <button
-                        type="button"
-                        onClick={() => handleRoleSelect('coach')}
-                        className="card bg-base-200 hover:bg-primary hover:text-white transition-all cursor-pointer p-6 text-left group"
-                        disabled={loading}
-                      >
-                        <div className="flex items-center gap-4">
-                          <div className="p-3 bg-primary/10 rounded-xl group-hover:bg-white/20">
-                            <Building className="w-8 h-8 text-primary group-hover:text-white" />
-                          </div>
-                          <div>
-                            <h4 className="font-bold text-lg">Coach / Gym Owner</h4>
-                            <p className="text-sm opacity-70">Generate AI programming, track athletes, and grow your gym</p>
-                          </div>
-                        </div>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => handleRoleSelect('athlete')}
-                        className="card bg-base-200 hover:bg-secondary hover:text-white transition-all cursor-pointer p-6 text-left group"
-                        disabled={loading}
-                      >
-                        <div className="flex items-center gap-4">
-                          <div className="p-3 bg-secondary/10 rounded-xl group-hover:bg-white/20">
-                            <Dumbbell className="w-8 h-8 text-secondary group-hover:text-white" />
-                          </div>
-                          <div>
-                            <h4 className="font-bold text-lg">Athlete</h4>
-                            <p className="text-sm opacity-70">Access workouts, compete on leaderboards, and get AI feedback</p>
-                          </div>
-                        </div>
-                      </button>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => setSignupStep(1)}
-                      className="btn btn-ghost btn-sm w-full mt-2"
-                    >
-                      Back
-                    </button>
-                  </div>
-                )}
-
-                {/* Step 3: Gym Code (Athletes only) */}
-                {signupStep === 3 && (
-                  <form onSubmit={handleGymCodeSubmit} className="space-y-4">
-                    <div className="text-center mb-4">
-                      {comingFromJoinLink && gymInfo ? (
-                        <>
-                          <h3 className="text-lg font-semibold">Join {gymInfo.name}</h3>
-                          <p className="text-sm text-gray-500">Complete your account to join this gym</p>
-                        </>
-                      ) : (
-                        <>
-                          <h3 className="text-lg font-semibold">Enter Your Gym Code</h3>
-                          <p className="text-sm text-gray-500">Get this code from your coach or gym</p>
-                        </>
-                      )}
-                    </div>
-
-                    {/* Show gym info if valid */}
-                    {gymInfo && (
-                      <div className="alert alert-success">
-                        <div>
-                          <p className="font-semibold">{gymInfo.name}</p>
-                          {gymInfo.description && (
-                            <p className="text-sm opacity-80">{gymInfo.description}</p>
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Only show gym code input if not pre-filled or if user wants to change it */}
-                    {!comingFromJoinLink && (
-                      <div className="w-full">
-                        <label className="label">
-                          <span className="text-sm">Gym Invite Code</span>
-                        </label>
+                      <div className="relative">
                         <input
-                          type="text"
-                          placeholder="e.g. ABC123"
-                          className="input input-bordered w-full text-center text-2xl tracking-widest uppercase"
-                          value={gymCode}
-                          onChange={(e) => {
-                            setGymCode(e.target.value.toUpperCase());
-                            setGymInfo(null);
-                            setErrorMessage('');
-                          }}
-                          maxLength={10}
+                          type={showPassword ? 'text' : 'password'}
+                          placeholder="Enter your password"
+                          className="input input-bordered w-full pr-12 focus:input-primary"
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
                           required
                         />
+                        <button
+                          type="button"
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral hover:text-base-content"
+                          onClick={() => setShowPassword(!showPassword)}
+                        >
+                          {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                        </button>
                       </div>
-                    )}
-
-                    <div className="w-full mt-4">
-                      <button
-                        type="submit"
-                        className={`btn btn-primary w-full ${
-                          loading || validatingGymCode ? 'loading' : ''
-                        }`}
-                        disabled={loading || validatingGymCode || !gymCode}
-                      >
-                        {validatingGymCode ? 'Validating...' : comingFromJoinLink ? 'Create Account & Join' : 'Complete Sign Up'}
-                      </button>
+                      <label className="label">
+                        <button
+                          type="button"
+                          className="label-text-alt link link-primary"
+                          onClick={() => setShowResetForm(true)}
+                        >
+                          Forgot password?
+                        </button>
+                      </label>
                     </div>
 
                     <button
-                      type="button"
-                      onClick={() => {
-                        if (comingFromJoinLink) {
-                          // Go back to step 1 but keep gym code
-                          setSignupStep(1);
-                          setErrorMessage('');
-                        } else {
-                          setSignupStep(2);
-                          setGymCode('');
-                          setGymInfo(null);
-                          setErrorMessage('');
-                        }
-                      }}
-                      className="btn btn-ghost btn-sm w-full"
+                      type="submit"
+                      className="btn btn-primary w-full shadow-lg shadow-primary/25"
+                      disabled={loading}
                     >
-                      Back
+                      {loading && <span className="loading loading-spinner loading-sm"></span>}
+                      Login
                     </button>
                   </form>
+                ) : (
+                  <>
+                    {/* Step 1: Email and Password */}
+                    {signupStep === 1 && (
+                      <form onSubmit={handleCredentialsSubmit} className="space-y-4">
+                        <div className="form-control w-full">
+                          <label className="label">
+                            <span className="label-text font-medium">Email</span>
+                          </label>
+                          <input
+                            type="email"
+                            placeholder="you@example.com"
+                            className="input input-bordered w-full focus:input-primary"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            required
+                          />
+                        </div>
+
+                        <div className="form-control w-full">
+                          <label className="label">
+                            <span className="label-text font-medium">Password</span>
+                          </label>
+                          <div className="relative">
+                            <input
+                              type={showPassword ? 'text' : 'password'}
+                              placeholder="Create a password"
+                              className="input input-bordered w-full pr-12 focus:input-primary"
+                              value={password}
+                              onChange={(e) => setPassword(e.target.value)}
+                              required
+                            />
+                            <button
+                              type="button"
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral hover:text-base-content"
+                              onClick={() => setShowPassword(!showPassword)}
+                            >
+                              {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="form-control w-full">
+                          <label className="label">
+                            <span className="label-text font-medium">Confirm Password</span>
+                          </label>
+                          <div className="relative">
+                            <input
+                              type={showPasswordConfirm ? 'text' : 'password'}
+                              placeholder="Confirm your password"
+                              className="input input-bordered w-full pr-12 focus:input-primary"
+                              value={passwordConfirm}
+                              onChange={(e) => setPasswordConfirm(e.target.value)}
+                              required
+                            />
+                            <button
+                              type="button"
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral hover:text-base-content"
+                              onClick={() => setShowPasswordConfirm(!showPasswordConfirm)}
+                            >
+                              {showPasswordConfirm ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                            </button>
+                          </div>
+                        </div>
+
+                        <button type="submit" className="btn btn-primary w-full shadow-lg shadow-primary/25">
+                          Continue
+                        </button>
+                      </form>
+                    )}
+
+                    {/* Step 2: Role Selection */}
+                    {signupStep === 2 && (
+                      <div className="space-y-4">
+                        <div className="text-center">
+                          <h3 className="text-xl font-bold text-base-content">I am a...</h3>
+                          <p className="text-sm text-neutral mt-1">Select your role to continue</p>
+                        </div>
+
+                        <div className="space-y-3">
+                          <button
+                            type="button"
+                            onClick={() => handleRoleSelect('coach')}
+                            className="w-full card bg-gradient-to-br from-primary/5 to-primary/10 border-2 border-primary/20 hover:border-primary hover:shadow-lg hover:shadow-primary/20 transition-all cursor-pointer p-5 text-left group"
+                            disabled={loading}
+                          >
+                            <div className="flex items-center gap-4">
+                              <div className="p-3 bg-primary/10 rounded-xl group-hover:bg-primary/20 transition-colors">
+                                <Building className="w-7 h-7 text-primary" />
+                              </div>
+                              <div>
+                                <h4 className="font-bold text-lg text-base-content">Coach / Gym Owner</h4>
+                                <p className="text-sm text-neutral">
+                                  Generate AI programming, track athletes, and grow your gym
+                                </p>
+                              </div>
+                            </div>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleRoleSelect('athlete')}
+                            className="w-full card bg-gradient-to-br from-accent/5 to-accent/10 border-2 border-accent/20 hover:border-accent hover:shadow-lg hover:shadow-accent/20 transition-all cursor-pointer p-5 text-left group"
+                            disabled={loading}
+                          >
+                            <div className="flex items-center gap-4">
+                              <div className="p-3 bg-accent/10 rounded-xl group-hover:bg-accent/20 transition-colors">
+                                <Dumbbell className="w-7 h-7 text-accent" />
+                              </div>
+                              <div>
+                                <h4 className="font-bold text-lg text-base-content">Athlete</h4>
+                                <p className="text-sm text-neutral">
+                                  Access workouts, compete on leaderboards, and get AI feedback
+                                </p>
+                              </div>
+                            </div>
+                          </button>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => setSignupStep(1)}
+                          className="btn btn-ghost btn-sm w-full"
+                        >
+                          <ArrowLeft className="w-4 h-4" />
+                          Back
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Step 3: Gym Code (Athletes only) */}
+                    {signupStep === 3 && (
+                      <form onSubmit={handleGymCodeSubmit} className="space-y-4">
+                        <div className="text-center">
+                          {comingFromJoinLink && gymInfo ? (
+                            <>
+                              <h3 className="text-xl font-bold text-base-content">Join {gymInfo.name}</h3>
+                              <p className="text-sm text-neutral mt-1">
+                                Complete your account to join this gym
+                              </p>
+                            </>
+                          ) : (
+                            <>
+                              <h3 className="text-xl font-bold text-base-content">Enter Your Gym Code</h3>
+                              <p className="text-sm text-neutral mt-1">
+                                Get this code from your coach or gym
+                              </p>
+                            </>
+                          )}
+                        </div>
+
+                        {/* Show gym info if valid */}
+                        {gymInfo && (
+                          <div className="alert alert-success shadow-md">
+                            <CheckCircle className="w-5 h-5" />
+                            <div>
+                              <p className="font-semibold">{gymInfo.name}</p>
+                              {gymInfo.description && (
+                                <p className="text-sm opacity-80">{gymInfo.description}</p>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Only show gym code input if not pre-filled or if user wants to change it */}
+                        {!comingFromJoinLink && (
+                          <div className="form-control w-full">
+                            <label className="label">
+                              <span className="label-text font-medium">Gym Invite Code</span>
+                            </label>
+                            <input
+                              type="text"
+                              placeholder="e.g. ABC123"
+                              className="input input-bordered w-full text-center text-2xl tracking-widest uppercase font-mono focus:input-primary"
+                              value={gymCode}
+                              onChange={(e) => {
+                                setGymCode(e.target.value.toUpperCase());
+                                setGymInfo(null);
+                                setErrorMessage('');
+                              }}
+                              maxLength={10}
+                              required
+                            />
+                          </div>
+                        )}
+
+                        <button
+                          type="submit"
+                          className="btn btn-primary w-full shadow-lg shadow-primary/25"
+                          disabled={loading || validatingGymCode || !gymCode}
+                        >
+                          {(loading || validatingGymCode) && <span className="loading loading-spinner loading-sm"></span>}
+                          {validatingGymCode
+                            ? 'Validating...'
+                            : comingFromJoinLink
+                              ? 'Create Account & Join'
+                              : 'Complete Sign Up'}
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (comingFromJoinLink) {
+                              // Go back to step 1 but keep gym code
+                              setSignupStep(1);
+                              setErrorMessage('');
+                            } else {
+                              setSignupStep(2);
+                              setGymCode('');
+                              setGymInfo(null);
+                              setErrorMessage('');
+                            }
+                          }}
+                          className="btn btn-ghost btn-sm w-full"
+                        >
+                          <ArrowLeft className="w-4 h-4" />
+                          Back
+                        </button>
+                      </form>
+                    )}
+                  </>
                 )}
+
+                <div className="divider text-xs text-neutral">OR</div>
+
+                <button
+                  type="button"
+                  onClick={handleGoogleLogin}
+                  className="btn btn-outline w-full gap-2"
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <span className="loading loading-spinner loading-sm"></span>
+                  ) : (
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="18"
+                      height="18"
+                      preserveAspectRatio="xMidYMid"
+                      viewBox="0 0 256 262"
+                    >
+                      <path
+                        fill="#4285F4"
+                        d="M255.878 133.451c0-10.734-.871-18.567-2.756-26.69H130.55v48.448h71.947c-1.45 12.04-9.283 30.172-26.69 42.356l-.244 1.622 38.755 30.023 2.685.268c24.659-22.774 38.875-56.282 38.875-96.027"
+                      ></path>
+                      <path
+                        fill="#34A853"
+                        d="M130.55 261.1c35.248 0 64.839-11.605 86.453-31.622l-41.196-31.913c-11.024 7.688-25.82 13.055-45.257 13.055-34.523 0-63.824-22.773-74.269-54.25l-1.531.13-40.298 31.187-.527 1.465C35.393 231.798 79.49 261.1 130.55 261.1"
+                      ></path>
+                      <path
+                        fill="#FBBC05"
+                        d="M56.281 156.37c-2.756-8.123-4.351-16.827-4.351-25.82 0-8.994 1.595-17.697 4.206-25.82l-.073-1.73L15.26 71.312l-1.335.635C5.077 89.644 0 109.517 0 130.55s5.077 40.905 13.925 58.602l42.356-32.782"
+                      ></path>
+                      <path
+                        fill="#EB4335"
+                        d="M130.55 50.479c24.514 0 41.05 10.589 50.479 19.438l36.844-35.974C195.245 12.91 165.798 0 130.55 0 79.49 0 35.393 29.301 13.925 71.947l42.211 32.783c10.59-31.477 39.891-54.251 74.414-54.251"
+                      ></path>
+                    </svg>
+                  )}
+                  Continue with Google
+                </button>
+
+                {/* Trust Signals */}
+                <div className="flex flex-wrap justify-center gap-4 pt-2 text-xs text-neutral">
+                  <div className="flex items-center gap-1.5">
+                    <CheckCircle className="w-3.5 h-3.5 text-accent" />
+                    <span>14-day free trial</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <CheckCircle className="w-3.5 h-3.5 text-accent" />
+                    <span>No credit card</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <CheckCircle className="w-3.5 h-3.5 text-accent" />
+                    <span>Athletes free</span>
+                  </div>
+                </div>
               </>
             )}
-
-            <div className="divider">OR</div>
-
-            <div className="w-full">
-              <button
-                type="button"
-                onClick={handleGoogleLogin}
-                className={`btn btn-outline w-full ${loading ? 'loading' : ''}`}
-                disabled={loading}
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="20"
-                  height="20"
-                  preserveAspectRatio="xMidYMid"
-                  viewBox="0 0 256 262"
-                  className="mr-2"
-                >
-                  <path
-                    fill="#4285F4"
-                    d="M255.878 133.451c0-10.734-.871-18.567-2.756-26.69H130.55v48.448h71.947c-1.45 12.04-9.283 30.172-26.69 42.356l-.244 1.622 38.755 30.023 2.685.268c24.659-22.774 38.875-56.282 38.875-96.027"
-                  ></path>
-                  <path
-                    fill="#34A853"
-                    d="M130.55 261.1c35.248 0 64.839-11.605 86.453-31.622l-41.196-31.913c-11.024 7.688-25.82 13.055-45.257 13.055-34.523 0-63.824-22.773-74.269-54.25l-1.531.13-40.298 31.187-.527 1.465C35.393 231.798 79.49 261.1 130.55 261.1"
-                  ></path>
-                  <path
-                    fill="#FBBC05"
-                    d="M56.281 156.37c-2.756-8.123-4.351-16.827-4.351-25.82 0-8.994 1.595-17.697 4.206-25.82l-.073-1.73L15.26 71.312l-1.335.635C5.077 89.644 0 109.517 0 130.55s5.077 40.905 13.925 58.602l42.356-32.782"
-                  ></path>
-                  <path
-                    fill="#EB4335"
-                    d="M130.55 50.479c24.514 0 41.05 10.589 50.479 19.438l36.844-35.974C195.245 12.91 165.798 0 130.55 0 79.49 0 35.393 29.301 13.925 71.947l42.211 32.783c10.59-31.477 39.891-54.251 74.414-54.251"
-                  ></path>
-                </svg>
-                Continue with Google
-              </button>
-            </div>
-          </>
-        )}
+          </div>
+        </div>
       </div>
+
+      {/* Animations */}
+      <style jsx global>{`
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fadeIn {
+          animation: fadeIn 0.6s ease-out forwards;
+        }
+      `}</style>
     </div>
   );
 }

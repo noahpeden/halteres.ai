@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import AthleteOnboardingModal from '@/components/athlete/AthleteOnboardingModal';
 import WeeklyTrendsCard from '@/components/athlete/WeeklyTrendsCard';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function AthleteDashboard() {
   const { user, profile, currentGym, isAthlete, gymMemberships, refetchProfile } = useAuth();
@@ -217,30 +217,28 @@ export default function AthleteDashboard() {
             <div className="flex justify-between items-center">
               <h2 className="card-title">Today's Workouts</h2>
               {activeProgram && (
-                <span className="text-sm text-base-content/60">
-                  from {activeProgram.name}
-                </span>
+                <span className="text-sm text-base-content/60">from {activeProgram.name}</span>
               )}
             </div>
             {todaysWorkouts.length === 0 ? (
               <div className="text-center py-8">
                 <div className="text-4xl mb-2">📅</div>
                 <p className="text-base-content/60">No workouts scheduled for today</p>
-                <p className="text-sm text-base-content/40">Check back tomorrow or view past workouts</p>
+                <p className="text-sm text-base-content/40">
+                  Check back tomorrow or view past workouts
+                </p>
               </div>
             ) : (
               <div className="space-y-3">
                 {todaysWorkouts.map((workout) => (
-                  <Link
-                    key={workout.id}
-                    href={`/athlete/workout/${workout.id}`}
-                    className="block"
-                  >
+                  <Link key={workout.id} href={`/athlete/workout/${workout.id}`} className="block">
                     <div className="border rounded-lg p-4 hover:bg-base-200 transition-colors">
                       <div className="flex justify-between items-start">
                         <div>
                           <h3 className="font-bold">{workout.title}</h3>
-                          <p className="text-sm text-base-content/60">{workout.workout_type || workout.program?.name}</p>
+                          <p className="text-sm text-base-content/60">
+                            {workout.workout_type || workout.program?.name}
+                          </p>
                         </div>
                         {workout.hasLogged ? (
                           <span className="badge badge-success">Completed</span>
@@ -249,7 +247,9 @@ export default function AthleteDashboard() {
                         )}
                       </div>
                       {workout.body && (
-                        <p className="text-sm mt-2 line-clamp-2 text-base-content/70">{workout.body.substring(0, 150)}...</p>
+                        <p className="text-sm mt-2 line-clamp-2 text-base-content/70">
+                          {workout.body.substring(0, 150)}...
+                        </p>
                       )}
                     </div>
                   </Link>
@@ -275,7 +275,10 @@ export default function AthleteDashboard() {
             ) : (
               <div className="space-y-2">
                 {recentResults.slice(0, 5).map((result) => (
-                  <div key={result.id} className="flex justify-between items-center py-2 border-b last:border-0">
+                  <div
+                    key={result.id}
+                    className="flex justify-between items-center py-2 border-b last:border-0"
+                  >
                     <div>
                       <p className="font-medium">{result.workout?.name || 'Workout'}</p>
                       <p className="text-sm text-base-content/60">
@@ -298,7 +301,10 @@ export default function AthleteDashboard() {
 
         {/* Quick Links */}
         <div className="grid grid-cols-2 gap-4">
-          <Link href="/athlete/programs" className="card bg-base-100 shadow hover:shadow-lg transition-shadow">
+          <Link
+            href="/athlete/programs"
+            className="card bg-base-100 shadow hover:shadow-lg transition-shadow"
+          >
             <div className="card-body items-center text-center p-4">
               <span className="text-3xl">📋</span>
               <p className="font-medium">Programs</p>
@@ -307,19 +313,28 @@ export default function AthleteDashboard() {
               )}
             </div>
           </Link>
-          <Link href="/athlete/leaderboard" className="card bg-base-100 shadow hover:shadow-lg transition-shadow">
+          <Link
+            href="/athlete/leaderboard"
+            className="card bg-base-100 shadow hover:shadow-lg transition-shadow"
+          >
             <div className="card-body items-center text-center p-4">
               <span className="text-3xl">🏆</span>
               <p className="font-medium">Leaderboards</p>
             </div>
           </Link>
-          <Link href="/athlete/profile" className="card bg-base-100 shadow hover:shadow-lg transition-shadow">
+          <Link
+            href="/athlete/profile"
+            className="card bg-base-100 shadow hover:shadow-lg transition-shadow"
+          >
             <div className="card-body items-center text-center p-4">
               <span className="text-3xl">📊</span>
               <p className="font-medium">My PRs</p>
             </div>
           </Link>
-          <Link href="/athlete/history" className="card bg-base-100 shadow hover:shadow-lg transition-shadow">
+          <Link
+            href="/athlete/history"
+            className="card bg-base-100 shadow hover:shadow-lg transition-shadow"
+          >
             <div className="card-body items-center text-center p-4">
               <span className="text-3xl">📅</span>
               <p className="font-medium">History</p>

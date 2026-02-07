@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Sparkles, X, CheckCircle2, AlertCircle } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Sparkles, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 /**
  * GenerationProgress - Full-screen generation experience with progress visualization
@@ -22,11 +22,12 @@ export default function GenerationProgress({
   const [animatedProgress, setAnimatedProgress] = useState(0);
 
   // Calculate progress percentage
-  const progress = totalWorkouts > 0
-    ? Math.round((workoutsGenerated / totalWorkouts) * 100)
-    : totalWeeks > 0
-      ? Math.round((currentWeek / totalWeeks) * 100)
-      : 0;
+  const progress =
+    totalWorkouts > 0
+      ? Math.round((workoutsGenerated / totalWorkouts) * 100)
+      : totalWeeks > 0
+        ? Math.round((currentWeek / totalWeeks) * 100)
+        : 0;
 
   // Animate progress bar
   useEffect(() => {
@@ -94,21 +95,19 @@ export default function GenerationProgress({
               <div className="absolute inset-2 rounded-full bg-primary/30 animate-pulse" />
             </>
           )}
-          <div className={`
+          <div
+            className={`
             absolute inset-4 rounded-full flex items-center justify-center
             ${isError ? 'bg-error' : isComplete ? 'bg-success' : 'bg-primary'}
-          `}>
+          `}
+          >
             {icon}
           </div>
         </div>
 
         {/* Status text */}
-        <h2 className="text-2xl font-bold text-base-content mb-2">
-          {title}
-        </h2>
-        <p className="text-base-content/60 mb-8 min-h-[24px]">
-          {subtitle}
-        </p>
+        <h2 className="text-2xl font-bold text-base-content mb-2">{title}</h2>
+        <p className="text-base-content/60 mb-8 min-h-[24px]">{subtitle}</p>
 
         {/* Progress bar */}
         {!isComplete && !isError && (
@@ -130,15 +129,11 @@ export default function GenerationProgress({
               <div className="text-base-content/60">Weeks</div>
             </div>
             <div className="text-center">
-              <div className="font-bold text-2xl text-secondary">
-                {workoutsGenerated}
-              </div>
+              <div className="font-bold text-2xl text-secondary">{workoutsGenerated}</div>
               <div className="text-base-content/60">Workouts</div>
             </div>
             <div className="text-center">
-              <div className="font-bold text-2xl text-accent">
-                {formatTime(elapsedTime)}
-              </div>
+              <div className="font-bold text-2xl text-accent">{formatTime(elapsedTime)}</div>
               <div className="text-base-content/60">Elapsed</div>
             </div>
           </div>
@@ -147,7 +142,8 @@ export default function GenerationProgress({
         {/* Estimated time remaining */}
         {!isComplete && !isError && workoutsGenerated > 0 && (
           <p className="text-sm text-base-content/50 mb-4">
-            Estimated time remaining: ~{estimateTimeRemaining(workoutsGenerated, totalWorkouts, elapsedTime)}
+            Estimated time remaining: ~
+            {estimateTimeRemaining(workoutsGenerated, totalWorkouts, elapsedTime)}
           </p>
         )}
 
@@ -164,10 +160,7 @@ export default function GenerationProgress({
 
         {/* Complete button */}
         {isComplete && (
-          <button
-            onClick={onCancel}
-            className="btn btn-success"
-          >
+          <button onClick={onCancel} className="btn btn-success">
             <CheckCircle2 className="w-4 h-4 mr-2" />
             View Program
           </button>
@@ -175,10 +168,7 @@ export default function GenerationProgress({
 
         {/* Error retry button */}
         {isError && (
-          <button
-            onClick={onCancel}
-            className="btn btn-error"
-          >
+          <button onClick={onCancel} className="btn btn-error">
             Close
           </button>
         )}

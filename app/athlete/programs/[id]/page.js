@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
+import { useParams, useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function ProgramDetailPage() {
   const { id } = useParams();
@@ -143,7 +143,8 @@ export default function ProgramDetailPage() {
             <div className="flex justify-between text-xs text-base-content/50 mt-1">
               <span>{stats.completionRate}% complete</span>
               <span>
-                {program.startDate && `${formatDate(program.startDate)} - ${formatDate(program.endDate)}`}
+                {program.startDate &&
+                  `${formatDate(program.startDate)} - ${formatDate(program.endDate)}`}
               </span>
             </div>
           </div>

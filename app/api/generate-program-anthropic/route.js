@@ -1,9 +1,9 @@
-import { createClient } from '@/utils/supabase/server';
-import { createMobileCompatibleClient, corsHeaders } from '@/utils/supabase/mobile';
-import { NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
-import { formatClientMetrics } from '@/utils/prompt-builder/promptBuilder.js';
+import { NextResponse } from 'next/server';
 import { getFeedbackContextForGeneration } from '@/utils/feedback/feedbackUtils.js';
+import { formatClientMetrics } from '@/utils/prompt-builder/promptBuilder.js';
+import { corsHeaders, createMobileCompatibleClient } from '@/utils/supabase/mobile';
+import { createClient } from '@/utils/supabase/server';
 
 export const maxDuration = 800; // Maximum for Vercel Pro plan (800 seconds)
 export const dynamic = 'force-dynamic';
@@ -12,7 +12,7 @@ export const dynamic = 'force-dynamic';
 export async function OPTIONS(request) {
   return new Response(null, {
     status: 200,
-    headers: corsHeaders()
+    headers: corsHeaders(),
   });
 }
 
@@ -78,9 +78,7 @@ export async function POST(request) {
     logWithTimestamp('Request data received', requestData);
 
     // Use chunked generation for all programs (simplified approach)
-    const numberOfWeeks = parseInt(
-      requestData.duration_weeks || requestData.numberOfWeeks || 4
-    );
+    const numberOfWeeks = parseInt(requestData.duration_weeks || requestData.numberOfWeeks || 4);
 
     logWithTimestamp('Using unified chunked generation', { numberOfWeeks });
 
@@ -95,7 +93,7 @@ export async function POST(request) {
       { error: 'Failed to generate program: ' + error.message },
       {
         status: 500,
-        headers: corsHeaders()
+        headers: corsHeaders(),
       }
     );
   }
@@ -124,9 +122,7 @@ async function saveWorkoutsBatch(programId, workouts, weekNumber, sharedData, su
       },
     }));
 
-    const { error } = await supabase
-      .from('program_workouts')
-      .insert(workoutsToInsert);
+    const { error } = await supabase.from('program_workouts').insert(workoutsToInsert);
 
     if (error) {
       logWithTimestamp('Error saving workout batch', { error: error.message });
@@ -146,28 +142,21 @@ async function handleChunkedGeneration(requestData, anthropic, supabase) {
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     start(controller) {
-      generateProgramChunked(
-        requestData,
-        anthropic,
-        supabase,
-        controller,
-        encoder
-      ).catch((error) => {
-        logWithTimestamp('Chunked generation error', { error: error.message });
-        try {
-          sendEvent(controller, encoder, 'error', { error: error.message });
-          if (controller && controller.desiredSize !== null) {
-            controller.close();
-          }
-        } catch (closeError) {
-          logWithTimestamp(
-            'Controller already closed during stream error handling',
-            {
-              error: closeError.message,
+      generateProgramChunked(requestData, anthropic, supabase, controller, encoder).catch(
+        (error) => {
+          logWithTimestamp('Chunked generation error', { error: error.message });
+          try {
+            sendEvent(controller, encoder, 'error', { error: error.message });
+            if (controller && controller.desiredSize !== null) {
+              controller.close();
             }
-          );
+          } catch (closeError) {
+            logWithTimestamp('Controller already closed during stream error handling', {
+              error: closeError.message,
+            });
+          }
         }
-      });
+      );
     },
   });
 
@@ -182,13 +171,7 @@ async function handleChunkedGeneration(requestData, anthropic, supabase) {
 }
 
 // Main chunked generation logic
-async function generateProgramChunked(
-  requestData,
-  anthropic,
-  supabase,
-  controller,
-  encoder
-) {
+async function generateProgramChunked(requestData, anthropic, supabase, controller, encoder) {
   try {
     // Extract shared data
     const sharedData = await extractSharedData(requestData, supabase);
@@ -246,8 +229,16 @@ async function generateProgramChunked(
         // INCREMENTAL SAVE: Save this week's workouts immediately for resilience
         // This ensures workouts aren't lost if the connection drops
         if (sharedData.programId && weekWorkouts.length > 0) {
-          await saveWorkoutsBatch(sharedData.programId, weekWorkouts, currentWeek, sharedData, supabase);
-          logWithTimestamp(`Saved ${weekWorkouts.length} workouts for week ${currentWeek} to database`);
+          await saveWorkoutsBatch(
+            sharedData.programId,
+            weekWorkouts,
+            currentWeek,
+            sharedData,
+            supabase
+          );
+          logWithTimestamp(
+            `Saved ${weekWorkouts.length} workouts for week ${currentWeek} to database`
+          );
         }
 
         // Stream the generated workouts for this week to UI
@@ -274,13 +265,12 @@ async function generateProgramChunked(
 
         // Note: Workouts are saved incrementally, so previous weeks are already in database
         // Just log the error - no need to save again
-        logWithTimestamp(`Week ${currentWeek} generation failed, but previous ${allWorkouts.length} workouts are already saved to database`);
+        logWithTimestamp(
+          `Week ${currentWeek} generation failed, but previous ${allWorkouts.length} workouts are already saved to database`
+        );
 
         // Generate placeholder workouts for failed week
-        const placeholderWorkouts = generatePlaceholderWeek(
-          currentWeek,
-          sharedData
-        );
+        const placeholderWorkouts = generatePlaceholderWeek(currentWeek, sharedData);
         allWorkouts.push(...placeholderWorkouts);
 
         sendEvent(controller, encoder, 'warning', {
@@ -309,7 +299,7 @@ async function generateProgramChunked(
             total_weeks: numberOfWeeks,
             workouts_saved: allWorkouts.length,
             completed_at: new Date().toISOString(),
-          }
+          },
         };
 
         // Save the AI-generated program description to the database
@@ -326,12 +316,11 @@ async function generateProgramChunked(
           });
         }
 
-        await supabase
-          .from('programs')
-          .update(updateData)
-          .eq('id', sharedData.programId);
+        await supabase.from('programs').update(updateData).eq('id', sharedData.programId);
 
-        logWithTimestamp(`Program generation completed, ${allWorkouts.length} workouts saved incrementally`);
+        logWithTimestamp(
+          `Program generation completed, ${allWorkouts.length} workouts saved incrementally`
+        );
 
         sendEvent(controller, encoder, 'status', {
           message: 'All workouts saved successfully!',
@@ -346,15 +335,12 @@ async function generateProgramChunked(
       message: 'Program generated successfully with Anthropic (chunked)',
       title: `Training Program for ${sharedData.goal}`,
       description:
-        programDescription ||
-        `${numberOfWeeks}-week program, ${daysPerWeek} days per week`,
+        programDescription || `${numberOfWeeks}-week program, ${daysPerWeek} days per week`,
       overview:
         programOverview ||
         `A comprehensive ${numberOfWeeks}-week ${
           sharedData.difficulty
-        } training program focused on ${
-          sharedData.focusArea || sharedData.goal
-        }`,
+        } training program focused on ${sharedData.focusArea || sharedData.goal}`,
       suggestions: allWorkouts,
       model: 'anthropic-chunked',
       totalWorkouts: allWorkouts.length,
@@ -424,10 +410,7 @@ async function generateWeekWorkouts(
 
   // Calculate dates for this week
   const weekStartIndex = (weekNumber - 1) * daysPerWeek;
-  const weekDates = suggestedDates.slice(
-    weekStartIndex,
-    weekStartIndex + daysPerWeek
-  );
+  const weekDates = suggestedDates.slice(weekStartIndex, weekStartIndex + daysPerWeek);
 
   // Get context from previous weeks for progression
   const previousWeeksContext =
@@ -479,25 +462,12 @@ Periodization Type: ${programType || 'Linear'}
 Days Per Week: ${daysPerWeek} days
 Selected Training Days: ${selectedDaysOfWeek
     .map(
-      (day) =>
-        [
-          'Sunday',
-          'Monday',
-          'Tuesday',
-          'Wednesday',
-          'Thursday',
-          'Friday',
-          'Saturday',
-        ][day]
+      (day) => ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][day]
     )
     .join(', ')}
 Week: ${weekNumber} of ${numberOfWeeks}
 ${focusArea ? `Focus Area: ${focusArea}` : ''}
-${
-  equipment && equipment.length > 0
-    ? `Available Equipment: ${equipment.join(', ')}`
-    : ''
-}
+${equipment && equipment.length > 0 ? `Available Equipment: ${equipment.join(', ')}` : ''}
 ${
   workoutFormats && workoutFormats.length > 0
     ? `Workout Formats to Include: ${workoutFormats.join(', ')}`
@@ -507,13 +477,9 @@ ${gymType ? `Gym Type: ${gymType}` : ''}
 ${additionalNotes ? `Additional Notes: ${additionalNotes}` : ''}
 ${personalization ? `Personalization: ${personalization}` : ''}
 ${clientMetricsContent ? `${clientMetricsContent}` : ''}
-${
-  referenceWorkoutsContent ? `${referenceWorkoutsContent}` : ''
-}${
+${referenceWorkoutsContent ? `${referenceWorkoutsContent}` : ''}${
   feedbackPatternsContent ? `${feedbackPatternsContent}` : ''
-}${
-  ragFeedbackWorkoutsContent ? `${ragFeedbackWorkoutsContent}` : ''
-}${previousWeeksContext}
+}${ragFeedbackWorkoutsContent ? `${ragFeedbackWorkoutsContent}` : ''}${previousWeeksContext}
 
 <periodization_principles type="${programType}">
 Apply ${programType} periodization principles for week ${weekNumber}:
@@ -541,11 +507,7 @@ Your response MUST be in this exact JSON format:
       "body": "Detailed workout description including all required sections",
       "date": "${weekDates[0] || new Date().toISOString().split('T')[0]}"
     }
-    ${
-      daysPerWeek > 1
-        ? '... more workouts for remaining days of week ' + weekNumber
-        : ''
-    }
+    ${daysPerWeek > 1 ? '... more workouts for remaining days of week ' + weekNumber : ''}
   ]
 }
 
@@ -625,26 +587,26 @@ Users have specific equipment access and unit preferences. Including exercises r
     // Build system messages with prompt caching for client metrics
     const systemMessages = [
       {
-        type: "text",
+        type: 'text',
         text: systemPrompt,
-      }
+      },
     ];
 
     // Add client metrics with caching if available (reduces latency 30-50%)
     if (clientMetricsContent) {
       systemMessages.push({
-        type: "text",
+        type: 'text',
         text: clientMetricsContent,
-        cache_control: { type: "ephemeral" }
+        cache_control: { type: 'ephemeral' },
       });
     }
 
     // Add reference workouts with caching if available
     if (referenceWorkoutsContent) {
       systemMessages.push({
-        type: "text",
+        type: 'text',
         text: referenceWorkoutsContent,
-        cache_control: { type: "ephemeral" }
+        cache_control: { type: 'ephemeral' },
       });
     }
 
@@ -718,23 +680,14 @@ Users have specific equipment access and unit preferences. Including exercises r
       let jsonContent = responseContent;
 
       // More robust markdown stripping with multiple strategies
-      if (
-        responseContent.includes('```json') ||
-        responseContent.includes('```')
-      ) {
-        logWithTimestamp(
-          `Week ${weekNumber} contains markdown markers, attempting to extract`
-        );
+      if (responseContent.includes('```json') || responseContent.includes('```')) {
+        logWithTimestamp(`Week ${weekNumber} contains markdown markers, attempting to extract`);
 
         // Strategy 1: Extract content between ```json and ``` markers
-        const jsonBlockMatch = responseContent.match(
-          /```(?:json)?\s*\n?([\s\S]*?)(?:\n```|$)/
-        );
+        const jsonBlockMatch = responseContent.match(/```(?:json)?\s*\n?([\s\S]*?)(?:\n```|$)/);
         if (jsonBlockMatch && jsonBlockMatch[1]) {
           jsonContent = jsonBlockMatch[1].trim();
-          logWithTimestamp(
-            `Week ${weekNumber} extracted JSON from markdown block`
-          );
+          logWithTimestamp(`Week ${weekNumber} extracted JSON from markdown block`);
         } else {
           // Strategy 2: More aggressive stripping with multiple patterns
           jsonContent = responseContent
@@ -743,9 +696,7 @@ Users have specific equipment access and unit preferences. Including exercises r
             .replace(/^```[a-z]*\s*\n?/, '') // Remove any remaining opening ```
             .replace(/\n?```\s*$/, '') // Remove any remaining closing ```
             .trim();
-          logWithTimestamp(
-            `Week ${weekNumber} stripped markdown markers with aggressive fallback`
-          );
+          logWithTimestamp(`Week ${weekNumber} stripped markdown markers with aggressive fallback`);
         }
 
         // Strategy 3: Additional cleanup for any remaining markdown artifacts
@@ -762,9 +713,7 @@ Users have specific equipment access and unit preferences. Including exercises r
           jsonContent = jsonStartMatch[1];
         }
 
-        logWithTimestamp(
-          `Week ${weekNumber} final cleaned content length: ${jsonContent.length}`
-        );
+        logWithTimestamp(`Week ${weekNumber} final cleaned content length: ${jsonContent.length}`);
       } else {
         logWithTimestamp(`Week ${weekNumber} no markdown markers detected`);
       }
@@ -788,9 +737,7 @@ Users have specific equipment access and unit preferences. Including exercises r
 
         // Remove any remaining markdown if it still exists
         if (fixedContent.includes('```')) {
-          const jsonBlockMatch = fixedContent.match(
-            /```(?:json)?\s*\n?([\s\S]*?)(?:\n```|$)/
-          );
+          const jsonBlockMatch = fixedContent.match(/```(?:json)?\s*\n?([\s\S]*?)(?:\n```|$)/);
           if (jsonBlockMatch && jsonBlockMatch[1]) {
             fixedContent = jsonBlockMatch[1].trim();
           } else {
@@ -802,12 +749,10 @@ Users have specific equipment access and unit preferences. Including exercises r
         }
 
         // Advanced JSON repair strategy
-        logWithTimestamp(
-          `Attempting to fix malformed JSON for week ${weekNumber}`
-        );
+        logWithTimestamp(`Attempting to fix malformed JSON for week ${weekNumber}`);
 
         // Strategy 1: Fix unterminated strings and objects
-        let repairAttempts = [];
+        const repairAttempts = [];
 
         // Attempt 1: Basic string and object closure
         let attempt1 = fixedContent;
@@ -840,18 +785,13 @@ Users have specific equipment access and unit preferences. Including exercises r
         let attempt2 = fixedContent;
 
         // Find the last complete workout object
-        const workoutMatches = [
-          ...attempt2.matchAll(/\{\s*"title"[^}]*?"body"[^}]*?\}/g),
-        ];
+        const workoutMatches = [...attempt2.matchAll(/\{\s*"title"[^}]*?"body"[^}]*?\}/g)];
         if (workoutMatches.length > 0) {
           const lastCompleteWorkout = workoutMatches[workoutMatches.length - 1];
-          const cutoffPosition =
-            lastCompleteWorkout.index + lastCompleteWorkout[0].length;
+          const cutoffPosition = lastCompleteWorkout.index + lastCompleteWorkout[0].length;
 
           // Reconstruct JSON with complete workouts only
-          const completeWorkouts = workoutMatches
-            .map((match) => match[0])
-            .join(',\n    ');
+          const completeWorkouts = workoutMatches.map((match) => match[0]).join(',\n    ');
           attempt2 = `{\n  "workouts": [\n    ${completeWorkouts}\n  ]\n}`;
           repairAttempts.push({
             name: 'complete_workouts_only',
@@ -864,9 +804,7 @@ Users have specific equipment access and unit preferences. Including exercises r
         const bodyPattern = /"body"\s*:\s*"((?:[^"\\]|\\.)*)"(?=\s*[,}])/g;
         const datePattern = /"date"\s*:\s*"([^"]*)"/g;
 
-        const titles = [...fixedContent.matchAll(titlePattern)].map(
-          (m) => m[1]
-        );
+        const titles = [...fixedContent.matchAll(titlePattern)].map((m) => m[1]);
         const bodies = [...fixedContent.matchAll(bodyPattern)].map((m) => m[1]);
         const dates = [...fixedContent.matchAll(datePattern)].map((m) => m[1]);
 
@@ -874,17 +812,12 @@ Users have specific equipment access and unit preferences. Including exercises r
           const reconstructedWorkouts = titles.map((title, i) => {
             return {
               title: title,
-              body:
-                bodies[i] || 'Workout details incomplete due to parsing error',
+              body: bodies[i] || 'Workout details incomplete due to parsing error',
               date: dates[i] || new Date().toISOString().split('T')[0],
             };
           });
 
-          const attempt3 = JSON.stringify(
-            { workouts: reconstructedWorkouts },
-            null,
-            2
-          );
+          const attempt3 = JSON.stringify({ workouts: reconstructedWorkouts }, null, 2);
           repairAttempts.push({
             name: 'regex_reconstruction',
             content: attempt3,
@@ -895,11 +828,7 @@ Users have specific equipment access and unit preferences. Including exercises r
         for (const attempt of repairAttempts) {
           try {
             const parsed = JSON.parse(attempt.content);
-            if (
-              parsed.workouts &&
-              Array.isArray(parsed.workouts) &&
-              parsed.workouts.length > 0
-            ) {
+            if (parsed.workouts && Array.isArray(parsed.workouts) && parsed.workouts.length > 0) {
               partialWorkouts = parsed.workouts;
               logWithTimestamp(
                 `Successfully repaired JSON using ${attempt.name} for week ${weekNumber}`,
@@ -929,12 +858,9 @@ Users have specific equipment access and unit preferences. Including exercises r
                 try {
                   return JSON.parse(match);
                 } catch (parseErr) {
-                  logWithTimestamp(
-                    `Failed to parse individual workout: ${parseErr.message}`,
-                    {
-                      workout: match.substring(0, 100) + '...',
-                    }
-                  );
+                  logWithTimestamp(`Failed to parse individual workout: ${parseErr.message}`, {
+                    workout: match.substring(0, 100) + '...',
+                  });
                   return null;
                 }
               })
@@ -942,12 +868,9 @@ Users have specific equipment access and unit preferences. Including exercises r
           }
         }
       } catch (extractError) {
-        logWithTimestamp(
-          `Failed to extract partial workouts for week ${weekNumber}`,
-          {
-            error: extractError.message,
-          }
-        );
+        logWithTimestamp(`Failed to extract partial workouts for week ${weekNumber}`, {
+          error: extractError.message,
+        });
       }
 
       if (partialWorkouts.length > 0) {
@@ -957,9 +880,7 @@ Users have specific equipment access and unit preferences. Including exercises r
         return { workouts: partialWorkouts };
       }
 
-      throw new Error(
-        `Failed to parse AI response for week ${weekNumber}: ${parseError.message}`
-      );
+      throw new Error(`Failed to parse AI response for week ${weekNumber}: ${parseError.message}`);
     }
 
     // Extract workouts
@@ -981,27 +902,17 @@ Users have specific equipment access and unit preferences. Including exercises r
         workouts.push({
           title: `Week ${weekNumber}, Day ${dayNumber}: Rest or Recovery`,
           body: 'Rest day or light recovery work as needed.',
-          date:
-            weekDates[workouts.length] ||
-            new Date().toISOString().split('T')[0],
+          date: weekDates[workouts.length] || new Date().toISOString().split('T')[0],
         });
       }
     }
 
     // Ensure each workout has the correct fields
-    const formattedWorkouts = workouts
-      .slice(0, daysPerWeek)
-      .map((workout, index) => ({
-        title: workout.title || `Week ${weekNumber}, Day ${index + 1}`,
-        body:
-          workout.body ||
-          workout.description ||
-          'Workout details not available',
-        date:
-          workout.date ||
-          weekDates[index] ||
-          new Date().toISOString().split('T')[0],
-      }));
+    const formattedWorkouts = workouts.slice(0, daysPerWeek).map((workout, index) => ({
+      title: workout.title || `Week ${weekNumber}, Day ${index + 1}`,
+      body: workout.body || workout.description || 'Workout details not available',
+      date: workout.date || weekDates[index] || new Date().toISOString().split('T')[0],
+    }));
 
     logWithTimestamp(`Week ${weekNumber} formatted successfully`, {
       workouts: formattedWorkouts.length,
@@ -1014,8 +925,7 @@ Users have specific equipment access and unit preferences. Including exercises r
 
     if (includeDescription && parsedContent.programDescription) {
       result.programDescription = parsedContent.programDescription;
-      result.programOverview =
-        parsedContent.programOverview || parsedContent.programDescription;
+      result.programOverview = parsedContent.programOverview || parsedContent.programDescription;
       logWithTimestamp(`Week ${weekNumber} program description included`, {
         descriptionLength: parsedContent.programDescription.length,
       });
@@ -1052,9 +962,7 @@ function generatePlaceholderWeek(weekNumber, sharedData) {
 ## Cool-down
 - 5-10 minutes stretching
 - Recovery breathing`,
-      date:
-        suggestedDates[weekStartIndex + day - 1] ||
-        new Date().toISOString().split('T')[0],
+      date: suggestedDates[weekStartIndex + day - 1] || new Date().toISOString().split('T')[0],
     });
   }
 
@@ -1075,9 +983,7 @@ async function saveWorkoutsToDatabase(programId, workouts, supabase, gymId = nul
       title: workout.title || 'Untitled Workout',
       body: workout.body || workout.description || 'No description available',
       scheduled_date:
-        workout.date ||
-        workout.suggestedDate ||
-        new Date().toISOString().split('T')[0],
+        workout.date || workout.suggestedDate || new Date().toISOString().split('T')[0],
       is_reference: false,
       tags: {
         suggestedDate: workout.date || workout.suggestedDate,
@@ -1086,17 +992,13 @@ async function saveWorkoutsToDatabase(programId, workouts, supabase, gymId = nul
       },
     }));
 
-    const { error } = await supabase
-      .from('program_workouts')
-      .insert(workoutsToInsert);
+    const { error } = await supabase.from('program_workouts').insert(workoutsToInsert);
 
     if (error) {
       throw error;
     }
 
-    logWithTimestamp(
-      `Successfully saved ${workouts.length} workouts to database`
-    );
+    logWithTimestamp(`Successfully saved ${workouts.length} workouts to database`);
   } catch (error) {
     logWithTimestamp('Database save error', { error: error.message });
     throw error;
@@ -1119,24 +1021,15 @@ async function extractSharedData(requestData, supabase) {
   const trainingMethodology = requestData.trainingMethodology || '';
 
   // Critical parameters - ensure they have fallback values
-  const numberOfWeeks = parseInt(
-    requestData.duration_weeks || requestData.numberOfWeeks || 4
-  );
-  const daysPerWeek = parseInt(
-    requestData.days_per_week || requestData.daysPerWeek || 3
-  );
+  const numberOfWeeks = parseInt(requestData.duration_weeks || requestData.numberOfWeeks || 4);
+  const daysPerWeek = parseInt(requestData.days_per_week || requestData.daysPerWeek || 3);
   const programType =
-    requestData.periodization?.program_type ||
-    requestData.programType ||
-    'linear';
+    requestData.periodization?.program_type || requestData.programType || 'linear';
 
   // Optional parameters
-  const equipment =
-    requestData.gym_details?.equipment || requestData.equipment || [];
-  const gymType =
-    requestData.gym_details?.gym_type || requestData.gymType || '';
-  const startDate =
-    requestData.calendar_data?.start_date || requestData.startDate || '';
+  const equipment = requestData.gym_details?.equipment || requestData.equipment || [];
+  const gymType = requestData.gym_details?.gym_type || requestData.gymType || '';
+  const startDate = requestData.calendar_data?.start_date || requestData.startDate || '';
 
   logWithTimestamp('Parsed parameters', {
     numberOfWeeks,
@@ -1158,20 +1051,13 @@ async function extractSharedData(requestData, supabase) {
 
   // Filter out null values and ensure we have valid day numbers
   let validDaysOfWeek = selectedDaysOfWeek.filter(
-    (day) =>
-      day !== null &&
-      day !== undefined &&
-      typeof day === 'number' &&
-      day >= 0 &&
-      day <= 6
+    (day) => day !== null && day !== undefined && typeof day === 'number' && day >= 0 && day <= 6
   );
   logWithTimestamp('Valid days of week after filtering', { validDaysOfWeek });
 
   // Fallback if no valid days are found - use Monday, Wednesday, Friday as default
   if (validDaysOfWeek.length === 0) {
-    logWithTimestamp(
-      'No valid days found, using default schedule (Mon, Wed, Fri)'
-    );
+    logWithTimestamp('No valid days found, using default schedule (Mon, Wed, Fri)');
     validDaysOfWeek = [1, 3, 5]; // Monday, Wednesday, Friday
   }
 
@@ -1184,7 +1070,7 @@ async function extractSharedData(requestData, supabase) {
   // If we have valid selected days, use them to generate dates
   if (validDaysOfWeek.length > 0) {
     logWithTimestamp('Using valid days for date generation');
-    let currentDate = new Date(startingDate);
+    const currentDate = new Date(startingDate);
     let workoutsAdded = 0;
     let daysChecked = 0;
     const maxDaysToCheck = 365; // Prevent infinite loop
@@ -1197,10 +1083,9 @@ async function extractSharedData(requestData, supabase) {
         const dateString = currentDate.toISOString().split('T')[0];
         suggestedDates.push(dateString);
         workoutsAdded++;
-        logWithTimestamp(
-          `Added workout date ${workoutsAdded}/${totalWorkouts}`,
-          { date: dateString }
-        );
+        logWithTimestamp(`Added workout date ${workoutsAdded}/${totalWorkouts}`, {
+          date: dateString,
+        });
       }
 
       // Move to next day
@@ -1209,9 +1094,7 @@ async function extractSharedData(requestData, supabase) {
     }
 
     if (daysChecked >= maxDaysToCheck) {
-      logWithTimestamp(
-        'WARNING: Reached max days to check, using fallback dates'
-      );
+      logWithTimestamp('WARNING: Reached max days to check, using fallback dates');
     }
   } else {
     // Fallback: simple sequential dates if no days are selected
@@ -1279,8 +1162,7 @@ async function extractSharedData(requestData, supabase) {
   let clientGender = '';
   let gymId = null;
   // Determine unit preference - default to Imperial (true) if not specified in request
-  const useImperial =
-    requestData.useImperial !== undefined ? requestData.useImperial : true;
+  const useImperial = requestData.useImperial !== undefined ? requestData.useImperial : true;
   logWithTimestamp('Unit preference determined', { useImperial });
 
   if (programId) {
@@ -1337,16 +1219,8 @@ async function extractSharedData(requestData, supabase) {
 
   // Check if injury history exists and is meaningful
   let hasInjuryHistory = false;
-  if (
-    programId &&
-    typeof entityData !== 'undefined' &&
-    entityData &&
-    entityData.injury_history
-  ) {
-    if (
-      typeof entityData.injury_history === 'string' &&
-      entityData.injury_history.trim() !== ''
-    ) {
+  if (programId && typeof entityData !== 'undefined' && entityData && entityData.injury_history) {
+    if (typeof entityData.injury_history === 'string' && entityData.injury_history.trim() !== '') {
       hasInjuryHistory = true;
     } else if (
       typeof entityData.injury_history === 'object' &&

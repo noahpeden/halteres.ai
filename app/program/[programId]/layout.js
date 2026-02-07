@@ -1,16 +1,9 @@
 'use client';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { BarChart3, BookCopy, Bot, CalendarDays, LayoutDashboard, LogOut } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { use, useState, useEffect } from 'react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
-import {
-  LayoutDashboard,
-  CalendarDays,
-  BarChart3,
-  Bot,
-  BookCopy,
-  LogOut,
-} from 'lucide-react';
+import { use, useEffect, useState } from 'react';
 
 export default function ProgramLayout({ children, params }) {
   const { programId } = use(params);
@@ -52,15 +45,12 @@ export default function ProgramLayout({ children, params }) {
     fetchEntityType();
   }, [programId]);
 
-  const isPublicWorkoutPage =
-    pathname.includes('/workout/') && pathname.split('/').length === 5;
+  const isPublicWorkoutPage = pathname.includes('/workout/') && pathname.split('/').length === 5;
   const isPublicProgramPage = pathname.endsWith('/share');
   const isPublicPage = isPublicWorkoutPage || isPublicProgramPage;
 
   const handleLogout = async () => {
-    const { createClientComponentClient } = await import(
-      '@supabase/auth-helpers-nextjs'
-    );
+    const { createClientComponentClient } = await import('@supabase/auth-helpers-nextjs');
     const supabase = createClientComponentClient();
     await supabase.auth.signOut();
     window.location.href = '/';
@@ -102,7 +92,10 @@ export default function ProgramLayout({ children, params }) {
       href: `/program/${programId}/metrics`,
       label: entityType === 'CLASS' ? 'Class Metrics' : 'Client Metrics',
       icon: BarChart3,
-      description: entityType === 'CLASS' ? 'Track class progress and stats' : 'Track client progress and stats',
+      description:
+        entityType === 'CLASS'
+          ? 'Track class progress and stats'
+          : 'Track client progress and stats',
     },
     {
       href: '/dashboard',
@@ -167,9 +160,7 @@ export default function ProgramLayout({ children, params }) {
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col">
-        <main
-          className={`flex-1 ${isPublicPage ? '' : 'p-4 lg:p-6 pb-20 lg:pb-6'}`}
-        >
+        <main className={`flex-1 ${isPublicPage ? '' : 'p-4 lg:p-6 pb-20 lg:pb-6'}`}>
           {children}
         </main>
 
@@ -185,19 +176,11 @@ export default function ProgramLayout({ children, params }) {
                     href={link.href}
                     className={`
                       flex flex-col items-center justify-center p-2 rounded-lg transition-all duration-200
-                      ${
-                        isActive
-                          ? 'text-primary'
-                          : 'text-gray-500 hover:text-primary'
-                      }
+                      ${isActive ? 'text-primary' : 'text-gray-500 hover:text-primary'}
                     `}
                   >
-                    <link.icon
-                      className={`${isActive ? 'w-6 h-6' : 'w-5 h-5'}`}
-                    />
-                    <span className="text-xs mt-1 font-medium">
-                      {link.label}
-                    </span>
+                    <link.icon className={`${isActive ? 'w-6 h-6' : 'w-5 h-5'}`} />
+                    <span className="text-xs mt-1 font-medium">{link.label}</span>
                   </Link>
                 );
               })}

@@ -21,17 +21,12 @@ export default function WizardProgress({ currentStep }) {
                   step.number === currentStep
                     ? 'bg-primary text-white'
                     : step.number < currentStep
-                    ? 'bg-success text-white'
-                    : 'bg-base-300 text-base-content'
+                      ? 'bg-success text-white'
+                      : 'bg-base-300 text-base-content'
                 }`}
               >
                 {step.number < currentStep ? (
-                  <svg
-                    className="w-6 h-6"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
@@ -43,9 +38,7 @@ export default function WizardProgress({ currentStep }) {
                   step.number
                 )}
               </div>
-              <span className="text-sm mt-2 text-center max-w-[100px]">
-                {step.title}
-              </span>
+              <span className="text-sm mt-2 text-center max-w-[100px]">{step.title}</span>
             </div>
             {index < steps.length - 1 && (
               <div

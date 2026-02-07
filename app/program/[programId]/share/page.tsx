@@ -1,26 +1,21 @@
 'use client';
-import { use, useEffect, useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-
-import Link from 'next/link';
-import PublicWorkoutList from '@/components/AIProgramWriter/PublicWorkoutList';
 import {
   ArrowLeft,
-  Share2,
-  ExternalLink,
-  Lock,
-  User,
-  Dumbbell,
-  Target,
   BarChart,
   Calendar,
+  Dumbbell,
+  ExternalLink,
+  Lock,
+  Share2,
+  Target,
+  User,
 } from 'lucide-react';
+import Link from 'next/link';
+import { use, useEffect, useState } from 'react';
+import PublicWorkoutList from '@/components/AIProgramWriter/PublicWorkoutList';
+import { useAuth } from '@/contexts/AuthContext';
 
-export default function PublicProgramPage({
-  params,
-}: {
-  params: { programId: string };
-}) {
+export default function PublicProgramPage({ params }: { params: { programId: string } }) {
   const { programId } = params;
   const { user } = useAuth();
   const [program, setProgram] = useState(null);
@@ -31,9 +26,7 @@ export default function PublicProgramPage({
   useEffect(() => {
     async function fetchProgramData() {
       try {
-        const response = await fetch(
-          `/api/public-program?programId=${programId}`
-        );
+        const response = await fetch(`/api/public-program?programId=${programId}`);
         const data = await response.json();
 
         if (!response.ok) {
@@ -81,12 +74,9 @@ export default function PublicProgramPage({
       <div className="min-h-screen bg-base-200/30 flex items-center justify-center">
         <div className="text-center max-w-md mx-auto p-6">
           <div className="text-6xl mb-4">🚫</div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">
-            Program Not Found
-          </h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Program Not Found</h2>
           <p className="text-gray-600 mb-6">
-            {error ||
-              'The requested program could not be found or is not publicly accessible.'}
+            {error || 'The requested program could not be found or is not publicly accessible.'}
           </p>
           <div className="space-y-3">
             {!user && (
@@ -119,9 +109,7 @@ export default function PublicProgramPage({
                 <h1 className="text-2xl font-bold text-gray-900">
                   {program.name || 'Shared Program'}
                 </h1>
-                <p className="text-gray-600">
-                  Training Program • {program.duration_weeks} weeks
-                </p>
+                <p className="text-gray-600">Training Program • {program.duration_weeks} weeks</p>
               </div>
             </div>
 
@@ -181,14 +169,9 @@ export default function PublicProgramPage({
         </div>
 
         {/* Program Details */}
-        {(program.description ||
-          program.overview ||
-          program.difficulty ||
-          program.goal) && (
+        {(program.description || program.overview || program.difficulty || program.goal) && (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">
-              Program Overview
-            </h2>
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">Program Overview</h2>
 
             {/* Program Stats */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
@@ -197,9 +180,7 @@ export default function PublicProgramPage({
                   <BarChart className="w-5 h-5 text-primary" />
                   <div>
                     <p className="text-xs text-gray-600">Difficulty</p>
-                    <p className="font-medium capitalize">
-                      {program.difficulty}
-                    </p>
+                    <p className="font-medium capitalize">{program.difficulty}</p>
                   </div>
                 </div>
               )}
@@ -226,23 +207,17 @@ export default function PublicProgramPage({
             {/* Description */}
             {program.description && (
               <div className="prose prose-sm max-w-none">
-                <p className="text-gray-700 whitespace-pre-line">
-                  {program.description}
-                </p>
+                <p className="text-gray-700 whitespace-pre-line">{program.description}</p>
               </div>
             )}
 
             {/* Program Overview (if different from description) */}
             {program.overview && program.overview !== program.description && (
               <div className="mt-4 pt-4 border-t border-gray-200">
-                <h3 className="font-medium text-gray-900 mb-2">
-                  Additional Details
-                </h3>
+                <h3 className="font-medium text-gray-900 mb-2">Additional Details</h3>
                 <div className="prose prose-sm max-w-none">
                   {typeof program.overview === 'string' ? (
-                    <p className="text-gray-700 whitespace-pre-line">
-                      {program.overview}
-                    </p>
+                    <p className="text-gray-700 whitespace-pre-line">{program.overview}</p>
                   ) : typeof program.overview === 'object' ? (
                     <div className="space-y-3">
                       {Object.entries(program.overview).map(([key, value]) => (
@@ -251,9 +226,7 @@ export default function PublicProgramPage({
                             {key.replace(/_/g, ' ')}:
                           </h4>
                           <p className="text-gray-700 whitespace-pre-line pl-4">
-                            {typeof value === 'string'
-                              ? value
-                              : JSON.stringify(value, null, 2)}
+                            {typeof value === 'string' ? value : JSON.stringify(value, null, 2)}
                           </p>
                         </div>
                       ))}
@@ -283,19 +256,13 @@ export default function PublicProgramPage({
         {!user && (
           <div className="mt-8 bg-gradient-to-r from-primary to-secondary rounded-lg p-6 text-white">
             <div className="text-center">
-              <h3 className="text-xl font-bold mb-2">
-                Want to create programs like this?
-              </h3>
+              <h3 className="text-xl font-bold mb-2">Want to create programs like this?</h3>
               <p className="text-primary-content/90 mb-4">
-                Join HalteresAI and create personalized workout programs with AI
-                assistance. Perfect for personal trainers, coaches, and fitness
-                professionals.
+                Join HalteresAI and create personalized workout programs with AI assistance. Perfect
+                for personal trainers, coaches, and fitness professionals.
               </p>
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                <Link
-                  href="/auth/sign-up"
-                  className="btn btn-white text-primary font-semibold"
-                >
+                <Link href="/auth/sign-up" className="btn btn-white text-primary font-semibold">
                   Get Started Free
                 </Link>
                 <Link
@@ -317,9 +284,8 @@ export default function PublicProgramPage({
                 Want to create your own programs?
               </h3>
               <p className="text-blue-700 mb-4">
-                You're viewing a shared program. To create and manage your own
-                programs, access client metrics, and use our AI program writer,
-                visit your dashboard.
+                You're viewing a shared program. To create and manage your own programs, access
+                client metrics, and use our AI program writer, visit your dashboard.
               </p>
               <Link href="/dashboard" className="btn btn-primary">
                 Go to Dashboard

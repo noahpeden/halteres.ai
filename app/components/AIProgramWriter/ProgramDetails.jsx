@@ -1,15 +1,10 @@
 'use client';
-import { useState, useCallback } from 'react';
-import {
-  difficulties,
-  gymTypes,
-  focusAreas,
-  gymEquipmentPresets,
-} from '../utils';
+import { ChevronDown } from 'lucide-react';
+import { useCallback, useState } from 'react';
 import WorkoutFormatSelector from '@/components/selectors/WorkoutFormatSelector';
 import { useProgram } from '@/contexts/ProgramContext';
-import { ChevronDown } from 'lucide-react';
 import equipmentList from '@/utils/equipmentList';
+import { difficulties, focusAreas, gymEquipmentPresets, gymTypes } from '../utils';
 
 export default function ProgramDetails({
   formData,
@@ -24,15 +19,9 @@ export default function ProgramDetails({
     focusArea: false,
   });
 
-  const selectedGymType = gymTypes.find(
-    (type) => type.value === formData.gymType
-  );
-  const selectedDifficulty = difficulties.find(
-    (diff) => diff.value === formData.difficulty
-  );
-  const selectedFocusArea = focusAreas.find(
-    (area) => area.value === formData.focusArea
-  );
+  const selectedGymType = gymTypes.find((type) => type.value === formData.gymType);
+  const selectedDifficulty = difficulties.find((diff) => diff.value === formData.difficulty);
+  const selectedFocusArea = focusAreas.find((area) => area.value === formData.focusArea);
 
   const toggleDropdown = (dropdownName) => {
     setOpenDropdowns((prev) => ({
@@ -54,7 +43,7 @@ export default function ProgramDetails({
       closeDropdown('gymType');
 
       const newEquipment = gymEquipmentPresets[value] || [];
-      
+
       // Always update equipment when gym type is selected, regardless of if it changed
       // This fixes the CrossFit Box bug where equipment wasn't being set
       if (updateEquipment) {
@@ -142,9 +131,7 @@ export default function ProgramDetails({
 
   return (
     <section className="bg-base-100 p-3 sm:p-4 md:p-5 rounded-lg border border-base-300 shadow-sm w-full">
-      <h2 className="text-xl font-semibold mb-4 text-primary">
-        Program Details
-      </h2>
+      <h2 className="text-xl font-semibold mb-4 text-primary">Program Details</h2>
 
       {/* Equipment Selector - Full width */}
       <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 md:gap-6 mb-4 sm:mb-6">
@@ -160,18 +147,14 @@ export default function ProgramDetails({
                   toggleDropdown('gymType');
                 }}
               >
-                <span>
-                  {selectedGymType ? selectedGymType.label : 'Select gym type'}
-                </span>
+                <span>{selectedGymType ? selectedGymType.label : 'Select gym type'}</span>
                 <ChevronDown className="h-4 w-4" />
               </summary>
               <ul className="menu dropdown-content bg-base-100 rounded-box z-1 w-full p-2 shadow-sm">
                 {gymTypes.map((type) => (
                   <li key={type.value}>
                     <button
-                      className={`w-full ${
-                        formData.gymType === type.value ? 'active' : ''
-                      }`}
+                      className={`w-full ${formData.gymType === type.value ? 'active' : ''}`}
                       onClick={() => handleGymTypeSelect(type.value)}
                     >
                       {type.label}
@@ -182,8 +165,7 @@ export default function ProgramDetails({
             </details>
             <div className="label">
               <span className="text-xs text-accent">
-                Use the equipment selector below to further customize the gym
-                equipment available
+                Use the equipment selector below to further customize the gym equipment available
               </span>
             </div>
           </label>
@@ -193,10 +175,7 @@ export default function ProgramDetails({
         <div className="w-full sm:w-1/2">
           <label className="w-full">
             <span className="text-sm font-medium">Difficulty Level</span>
-            <details
-              className="dropdown w-full"
-              open={openDropdowns.difficulty}
-            >
+            <details className="dropdown w-full" open={openDropdowns.difficulty}>
               <summary
                 className="btn btn-outline w-full justify-between"
                 onClick={(e) => {
@@ -204,11 +183,7 @@ export default function ProgramDetails({
                   toggleDropdown('difficulty');
                 }}
               >
-                <span>
-                  {selectedDifficulty
-                    ? selectedDifficulty.label
-                    : 'Select difficulty'}
-                </span>
+                <span>{selectedDifficulty ? selectedDifficulty.label : 'Select difficulty'}</span>
                 <ChevronDown className="h-4 w-4" />
               </summary>
               <ul className="menu dropdown-content bg-base-100 rounded-box z-1 w-full p-2 shadow-sm">
@@ -249,19 +224,13 @@ export default function ProgramDetails({
                   toggleDropdown('focusArea');
                 }}
               >
-                <span>
-                  {selectedFocusArea
-                    ? selectedFocusArea.label
-                    : 'Select a focus area'}
-                </span>
+                <span>{selectedFocusArea ? selectedFocusArea.label : 'Select a focus area'}</span>
                 <ChevronDown className="h-4 w-4" />
               </summary>
               <ul className="menu dropdown-content bg-base-100 rounded-box z-1 w-full p-2 shadow-sm max-h-60 overflow-y-auto">
                 <li>
                   <button
-                    className={`w-full ${
-                      formData.focusArea === '' ? 'active' : ''
-                    }`}
+                    className={`w-full ${formData.focusArea === '' ? 'active' : ''}`}
                     onClick={() => handleFocusAreaSelect('')}
                   >
                     Select a focus area
@@ -270,9 +239,7 @@ export default function ProgramDetails({
                 {focusAreas.map((area) => (
                   <li key={area.value}>
                     <button
-                      className={`w-full ${
-                        formData.focusArea === area.value ? 'active' : ''
-                      }`}
+                      className={`w-full ${formData.focusArea === area.value ? 'active' : ''}`}
                       onClick={() => handleFocusAreaSelect(area.value)}
                     >
                       {area.label}
@@ -286,9 +253,7 @@ export default function ProgramDetails({
         {/* Workout Duration */}
         <div className="w-full sm:w-1/2">
           <label className="w-full">
-            <span className="text-sm font-medium">
-              Workout Duration (minutes)
-            </span>
+            <span className="text-sm font-medium">Workout Duration (minutes)</span>
             <input
               type="number"
               name="sessionDuration"
@@ -299,9 +264,7 @@ export default function ProgramDetails({
               onBlur={handleSessionDurationBlur}
             />
             <div className="label">
-              <span className="text-xs">
-                Approximate duration for each workout session.
-              </span>
+              <span className="text-xs">Approximate duration for each workout session.</span>
             </div>
           </label>
         </div>
@@ -336,8 +299,8 @@ export default function ProgramDetails({
             onChange={handleWorkoutFormatChangeWithDB}
           />
           <span className="text-xs text-gray-500 mt-1">
-            Choose the types of workouts you want to see in your program. These
-            are the building blocks of each session.
+            Choose the types of workouts you want to see in your program. These are the building
+            blocks of each session.
           </span>
         </label>
       </div>

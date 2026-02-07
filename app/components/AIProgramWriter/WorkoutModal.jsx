@@ -1,6 +1,6 @@
 'use client';
-import { useEffect, useState, useRef } from 'react';
-import { Trash2, Pencil, Sparkles } from 'lucide-react';
+import { Pencil, Sparkles, Trash2 } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import { useProgram } from '@/contexts/ProgramContext';
 
 export default function WorkoutModal({
@@ -52,12 +52,10 @@ export default function WorkoutModal({
       // Robust fallbacks for required fields
       const safeWorkout = {
         title: workout?.title || 'Untitled Workout',
-        description:
-          workout?.body || workout?.description || 'No description provided.',
+        description: workout?.body || workout?.description || 'No description provided.',
       };
       const safeInstructions = enhancement || 'No specific instructions.';
-      const safeMethodology =
-        formData?.trainingMethodology || 'General fitness';
+      const safeMethodology = formData?.trainingMethodology || 'General fitness';
       const safeGymEquipment = Array.isArray(formData?.equipment)
         ? formData.equipment.length > 0
           ? formData.equipment
@@ -314,8 +312,7 @@ export default function WorkoutModal({
           <div className="mb-4">
             <span className="badge badge-primary">
               {(() => {
-                const dateValue =
-                  displayWorkout.scheduled_date || displayWorkout.suggestedDate;
+                const dateValue = displayWorkout.scheduled_date || displayWorkout.suggestedDate;
                 if (dateValue) {
                   try {
                     const date = new Date(dateValue);
@@ -325,11 +322,7 @@ export default function WorkoutModal({
                       return formatDate(date);
                     }
                   } catch (e) {
-                    console.error(
-                      'Error parsing date in WorkoutModal:',
-                      dateValue,
-                      e
-                    );
+                    console.error('Error parsing date in WorkoutModal:', dateValue, e);
                   }
                 }
                 return 'Not scheduled';
@@ -337,12 +330,8 @@ export default function WorkoutModal({
             </span>
           </div>
 
-          {regenError && (
-            <div className="alert alert-error mb-4 text-sm">{regenError}</div>
-          )}
-          {saveError && (
-            <div className="alert alert-error mb-4 text-sm">{saveError}</div>
-          )}
+          {regenError && <div className="alert alert-error mb-4 text-sm">{regenError}</div>}
+          {saveError && <div className="alert alert-error mb-4 text-sm">{saveError}</div>}
           {isRegenerating && !pendingWorkout && (
             <div className="flex items-center gap-2 mb-4">
               <span className="loading loading-spinner loading-md"></span>
@@ -376,19 +365,13 @@ export default function WorkoutModal({
                   disabled={isSaving}
                   type="button"
                 >
-                  {isSaving ? (
-                    <span className="loading loading-spinner loading-xs"></span>
-                  ) : (
-                    'Save'
-                  )}
+                  {isSaving ? <span className="loading loading-spinner loading-xs"></span> : 'Save'}
                 </button>
               </div>
             </div>
           )}
           <div className="mt-4 prose max-w-none">
-            {renderWorkoutContent(
-              displayWorkout.body || displayWorkout.description
-            )}
+            {renderWorkoutContent(displayWorkout.body || displayWorkout.description)}
           </div>
         </div>
       </div>

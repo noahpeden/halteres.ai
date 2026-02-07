@@ -2,12 +2,12 @@
 'use server';
 
 import { createServerClient } from '@supabase/ssr';
+import mammoth from 'mammoth';
 import { cookies } from 'next/headers';
 import OpenAI from 'openai';
-import mammoth from 'mammoth';
 import pdf from 'pdf-parse/lib/pdf-parse';
-import * as XLSX from 'xlsx';
 import { createWorker } from 'tesseract.js';
+import * as XLSX from 'xlsx';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -60,15 +60,11 @@ const parseFile = async (file) => {
     //   return text;
     // }
   } else if (
-    file.type ===
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
   ) {
     const { value } = await mammoth.extractRawText({ buffer });
     return value;
-  } else if (
-    file.type ===
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-  ) {
+  } else if (file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') {
     const workbook = XLSX.read(buffer, { type: 'buffer' });
     const sheetName = workbook.SheetNames[0];
     const worksheet = workbook.Sheets[sheetName];

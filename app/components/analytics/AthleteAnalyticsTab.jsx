@@ -1,11 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { User, Trophy, Flame, Activity, FileText, TrendingUp } from 'lucide-react';
-import {
-  getAthleteListAction,
-  getAthleteAnalyticsAction,
-} from '@/actions/analyticsActions';
+import { Activity, FileText, Flame, TrendingUp, Trophy, User } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { getAthleteAnalyticsAction, getAthleteListAction } from '@/actions/analyticsActions';
 
 export default function AthleteAnalyticsTab({ gymId }) {
   const [athletes, setAthletes] = useState([]);
@@ -70,7 +67,7 @@ export default function AthleteAnalyticsTab({ gymId }) {
     );
   }
 
-  const selectedAthlete = athletes.find(a => a.userId === selectedAthleteId);
+  const selectedAthlete = athletes.find((a) => a.userId === selectedAthleteId);
 
   return (
     <div className="space-y-6">
@@ -143,7 +140,9 @@ export default function AthleteAnalyticsTab({ gymId }) {
             />
             <StatCard
               title="Avg Effort"
-              value={analytics.overallStats.avgEffort ? `${analytics.overallStats.avgEffort}/10` : '-'}
+              value={
+                analytics.overallStats.avgEffort ? `${analytics.overallStats.avgEffort}/10` : '-'
+              }
               icon={<TrendingUp className="w-6 h-6" />}
               color="bg-info/10"
               iconColor="text-info"
@@ -164,7 +163,8 @@ export default function AthleteAnalyticsTab({ gymId }) {
                 <h2 className="card-title text-lg">Weekly Activity (Last 8 Weeks)</h2>
                 <div className="flex items-end gap-2 h-32 mt-4">
                   {analytics.participationByWeek.map((week, i) => {
-                    const maxCount = Math.max(...analytics.participationByWeek.map(w => w.count)) || 1;
+                    const maxCount =
+                      Math.max(...analytics.participationByWeek.map((w) => w.count)) || 1;
                     return (
                       <div key={i} className="flex-1 flex flex-col items-center">
                         <div
@@ -290,9 +290,10 @@ export default function AthleteAnalyticsTab({ gymId }) {
                     </thead>
                     <tbody>
                       {analytics.programParticipation.map((program) => {
-                        const percentage = program.totalWorkouts > 0
-                          ? Math.round((program.completedWorkouts / program.totalWorkouts) * 100)
-                          : 0;
+                        const percentage =
+                          program.totalWorkouts > 0
+                            ? Math.round((program.completedWorkouts / program.totalWorkouts) * 100)
+                            : 0;
                         return (
                           <tr key={program.programId}>
                             <td className="font-medium">{program.programName}</td>

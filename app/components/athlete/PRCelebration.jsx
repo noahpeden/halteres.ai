@@ -45,9 +45,7 @@ export default function PRCelebration({ prData, onClose }) {
       <div className="relative bg-gradient-to-br from-yellow-400 via-orange-400 to-red-400 rounded-3xl p-1 animate-bounceIn">
         <div className="bg-base-100 rounded-3xl p-8 text-center max-w-sm">
           {/* Trophy Icon */}
-          <div className="text-7xl mb-4 animate-pulse">
-            🏆
-          </div>
+          <div className="text-7xl mb-4 animate-pulse">🏆</div>
 
           {/* PR Text */}
           <h2 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-500 to-orange-500 mb-2">
@@ -72,10 +70,7 @@ export default function PRCelebration({ prData, onClose }) {
           </p>
 
           {/* Close Button */}
-          <button
-            onClick={onClose}
-            className="btn btn-primary btn-lg"
-          >
+          <button onClick={onClose} className="btn btn-primary btn-lg">
             Celebrate! 🎉
           </button>
         </div>

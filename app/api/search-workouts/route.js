@@ -1,6 +1,6 @@
-import { createClient } from '@/utils/supabase/server';
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
+import { createClient } from '@/utils/supabase/server';
 
 async function generateSearchEmbedding(searchText) {
   try {
@@ -18,14 +18,10 @@ async function generateSearchEmbedding(searchText) {
 
     // Ensure the embedding is exactly 1536 dimensions
     if (embedding.length > 1536) {
-      console.log(
-        `Trimming embedding from ${embedding.length} to 1536 dimensions`
-      );
+      console.log(`Trimming embedding from ${embedding.length} to 1536 dimensions`);
       return embedding.slice(0, 1536); // Take only the first 1536 dimensions
     } else if (embedding.length < 1536) {
-      console.log(
-        `Padding embedding from ${embedding.length} to 1536 dimensions`
-      );
+      console.log(`Padding embedding from ${embedding.length} to 1536 dimensions`);
       return [...embedding, ...Array(1536 - embedding.length).fill(0)]; // Pad with zeros
     }
 
@@ -51,26 +47,19 @@ export async function POST(request) {
   try {
     // Generate embedding for the search query
     const queryTextForEmbeddings = searchQuery
-      ? `${searchQuery} ${goal || ''} ${difficulty || ''} ${
-          focusArea || ''
-        }`.trim()
+      ? `${searchQuery} ${goal || ''} ${difficulty || ''} ${focusArea || ''}`.trim()
       : `${goal || ''} ${difficulty || ''} ${focusArea || ''}`.trim();
     console.log('Query text for embeddings:', queryTextForEmbeddings);
 
-    const queryEmbedding = await generateSearchEmbedding(
-      queryTextForEmbeddings
-    );
+    const queryEmbedding = await generateSearchEmbedding(queryTextForEmbeddings);
     console.log(`Generated embedding with ${queryEmbedding.length} dimensions`);
 
     // Search for similar workouts using the new function
-    const searchResponse = await supabaseClient.rpc(
-      'match_workouts_embedding',
-      {
-        query_embedding: queryEmbedding,
-        match_threshold: 0.3,
-        match_count: 10,
-      }
-    );
+    const searchResponse = await supabaseClient.rpc('match_workouts_embedding', {
+      query_embedding: queryEmbedding,
+      match_threshold: 0.3,
+      match_count: 10,
+    });
 
     console.log('Search response:', {
       error: searchResponse.error,
@@ -93,9 +82,7 @@ export async function POST(request) {
         source: 'New Embedding Search',
       }));
 
-      console.log(
-        `Found ${workouts.length} workouts with new embedding search`
-      );
+      console.log(`Found ${workouts.length} workouts with new embedding search`);
     }
 
     return NextResponse.json({

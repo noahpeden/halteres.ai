@@ -1,20 +1,12 @@
 'use client';
 
-export default function ReferenceWorkouts({
-  workouts,
-  supabase,
-  onRemove,
-  showToastMessage,
-}) {
+export default function ReferenceWorkouts({ workouts, supabase, onRemove, showToastMessage }) {
   if (!workouts || workouts.length === 0) return null;
 
   const handleRemoveWorkout = async (workout) => {
     if (confirm('Remove this reference workout?')) {
       try {
-        const { error } = await supabase
-          .from('program_workouts')
-          .delete()
-          .eq('id', workout.id);
+        const { error } = await supabase.from('program_workouts').delete().eq('id', workout.id);
 
         if (error) throw error;
 
@@ -46,9 +38,7 @@ export default function ReferenceWorkouts({
             </svg>
           </div>
           <div>
-            <h3 className="text-xl font-semibold text-gray-800">
-              Reference Workouts
-            </h3>
+            <h3 className="text-xl font-semibold text-gray-800">Reference Workouts</h3>
             <p className="text-sm text-gray-600 mt-0.5">
               These workouts will be used as inspiration when generating your program.
             </p>
@@ -103,14 +93,17 @@ export default function ReferenceWorkouts({
                 Object.entries(workout.tags)
                   .filter(
                     ([key, value]) =>
-                      key !== 'workoutDetails' && 
-                      key !== 'source' && 
+                      key !== 'workoutDetails' &&
+                      key !== 'source' &&
                       key !== 'wizard_transferred' &&
                       typeof value !== 'object'
                   )
                   .slice(0, 3)
                   .map(([key, value]) => (
-                    <span key={key} className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-md">
+                    <span
+                      key={key}
+                      className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-md"
+                    >
                       {key}: {value.toString()}
                     </span>
                   ))}

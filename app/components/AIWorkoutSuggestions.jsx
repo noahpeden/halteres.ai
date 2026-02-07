@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import equipmentList from '@/utils/equipmentList';
 
@@ -57,12 +57,9 @@ export default function AIWorkoutSuggestions({ programId, onSelectWorkout }) {
   // Equipment presets based on gym type
   const gymEquipmentPresets = {
     'Crossfit Box': [
-      1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 14, 15, 16, 17, 18, 19, 20, 22, 23,
-      26, 46,
+      1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 14, 15, 16, 17, 18, 19, 20, 22, 23, 26, 46,
     ],
-    'Commercial Gym': [
-      1, 2, 3, 4, 5, 16, 24, 27, 39, 40, 41, 42, 44, 45, 46, 47,
-    ],
+    'Commercial Gym': [1, 2, 3, 4, 5, 16, 24, 27, 39, 40, 41, 42, 44, 45, 46, 47],
     'Home Gym': [4, 5, 6, 16, 24, 27],
     'Minimal Equipment': [4, 5, 6, 16, 27],
     'Outdoor Space': [6, 16, 18, 27],
@@ -89,10 +86,7 @@ export default function AIWorkoutSuggestions({ programId, onSelectWorkout }) {
 
   // Check if all equipment is selected when component mounts or equipment changes
   useEffect(() => {
-    if (
-      equipmentList.length > 0 &&
-      formData.equipment.length === equipmentList.length
-    ) {
+    if (equipmentList.length > 0 && formData.equipment.length === equipmentList.length) {
       setAllEquipmentSelected(true);
     } else {
       setAllEquipmentSelected(false);
@@ -219,9 +213,7 @@ export default function AIWorkoutSuggestions({ programId, onSelectWorkout }) {
       } else {
         return {
           ...prev,
-          workoutFormats: prev.workoutFormats.filter(
-            (format) => format !== value
-          ),
+          workoutFormats: prev.workoutFormats.filter((format) => format !== value),
         };
       }
     });
@@ -387,9 +379,7 @@ export default function AIWorkoutSuggestions({ programId, onSelectWorkout }) {
               ✕
             </button>
             <h3 className="font-medium">{selectedReference.title}</h3>
-            <p className="text-sm mt-1">
-              {selectedReference.body.substring(0, 200)}...
-            </p>
+            <p className="text-sm mt-1">{selectedReference.body.substring(0, 200)}...</p>
           </div>
         ) : (
           <div>
@@ -430,9 +420,7 @@ export default function AIWorkoutSuggestions({ programId, onSelectWorkout }) {
                           'Custom'}
                       </span>
                       {workout.tags?.focus && (
-                        <span className="badge badge-sm badge-outline">
-                          {workout.tags.focus}
-                        </span>
+                        <span className="badge badge-sm badge-outline">{workout.tags.focus}</span>
                       )}
                     </div>
                   </div>
@@ -565,18 +553,15 @@ export default function AIWorkoutSuggestions({ programId, onSelectWorkout }) {
           <label className="label">
             <span className="text-sm">Available Equipment</span>
           </label>
-          <button
-            className="btn btn-sm btn-ghost"
-            onClick={() => setShowEquipment(!showEquipment)}
-          >
+          <button className="btn btn-sm btn-ghost" onClick={() => setShowEquipment(!showEquipment)}>
             {showEquipment ? 'Hide' : 'Customize'}
           </button>
         </div>
 
         {!showEquipment ? (
           <div className="text-sm text-gray-600 p-2 border rounded-md">
-            Using equipment preset for {formData.gymType} (
-            {formData.equipment.length} items selected)
+            Using equipment preset for {formData.gymType} ({formData.equipment.length} items
+            selected)
           </div>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-60 overflow-y-auto p-2 border rounded-md">
@@ -649,11 +634,7 @@ export default function AIWorkoutSuggestions({ programId, onSelectWorkout }) {
         />
       </div>
 
-      <button
-        className="btn btn-primary w-full"
-        onClick={generateWorkouts}
-        disabled={isLoading}
-      >
+      <button className="btn btn-primary w-full" onClick={generateWorkouts} disabled={isLoading}>
         {isLoading ? (
           <>
             <span className="loading loading-spinner loading-sm"></span>
@@ -698,23 +679,13 @@ export default function AIWorkoutSuggestions({ programId, onSelectWorkout }) {
                   handleSelectWorkout(workout);
                 }}
               >
-                <h4 className="font-medium text-lg">
-                  {workout.title || `Workout ${index + 1}`}
-                </h4>
+                <h4 className="font-medium text-lg">{workout.title || `Workout ${index + 1}`}</h4>
                 <div className="flex gap-2 my-2">
-                  <span className="badge badge-primary">
-                    {workout.type || formData.goal}
-                  </span>
-                  <span className="badge badge-secondary">
-                    Day {workout.day || index + 1}
-                  </span>
-                  <span className="badge">
-                    {workout.difficulty || formData.difficulty}
-                  </span>
+                  <span className="badge badge-primary">{workout.type || formData.goal}</span>
+                  <span className="badge badge-secondary">Day {workout.day || index + 1}</span>
+                  <span className="badge">{workout.difficulty || formData.difficulty}</span>
                 </div>
-                <div className="mt-2 text-sm whitespace-pre-line">
-                  {workout.description}
-                </div>
+                <div className="mt-2 text-sm whitespace-pre-line">{workout.description}</div>
               </div>
             ))}
           </div>

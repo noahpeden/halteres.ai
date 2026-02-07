@@ -1,21 +1,21 @@
 'use client';
-import { use, useEffect, useState, useRef } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { useRouter } from 'next/navigation';
 import {
   ArrowLeft,
   Calendar,
   CheckCircle,
   Edit2,
-  Trash2,
-  Sparkles,
-  Save,
-  X,
-  Share2,
   MessageSquare,
+  Save,
+  Share2,
+  Sparkles,
   Target,
+  Trash2,
+  X,
 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { use, useEffect, useRef, useState } from 'react';
 import TemplateFeedbackButton from '@/components/feedback/TemplateFeedbackButton';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function WorkoutDetailsPage(props) {
   const params = use(props.params);
@@ -163,10 +163,8 @@ export default function WorkoutDetailsPage(props) {
         title: workout.title || 'Untitled Workout',
         description: workout.body || 'No description provided.',
       };
-      const safeInstructions =
-        enhanceText.trim() || 'No specific instructions.';
-      const safeMethodology =
-        formData.training_methodology || 'General fitness';
+      const safeInstructions = enhanceText.trim() || 'No specific instructions.';
+      const safeMethodology = formData.training_methodology || 'General fitness';
       const safeGymEquipment = Array.isArray(formData.gym_details?.equipment)
         ? formData.gym_details.equipment.length > 0
           ? formData.gym_details.equipment
@@ -250,14 +248,10 @@ export default function WorkoutDetailsPage(props) {
   };
 
   const handleDelete = async () => {
-    if (!workout || !confirm('Are you sure you want to delete this workout?'))
-      return;
+    if (!workout || !confirm('Are you sure you want to delete this workout?')) return;
 
     try {
-      const { error } = await supabase
-        .from('program_workouts')
-        .delete()
-        .eq('id', workout.id);
+      const { error } = await supabase.from('program_workouts').delete().eq('id', workout.id);
 
       if (error) throw error;
 
@@ -368,12 +362,8 @@ export default function WorkoutDetailsPage(props) {
   if (error || !workout) {
     return (
       <div className="text-center py-12">
-        <h2 className="text-xl font-semibold text-error mb-2">
-          Workout Not Found
-        </h2>
-        <p className="text-gray-600 mb-4">
-          {error || 'The requested workout could not be found.'}
-        </p>
+        <h2 className="text-xl font-semibold text-error mb-2">Workout Not Found</h2>
+        <p className="text-gray-600 mb-4">{error || 'The requested workout could not be found.'}</p>
         <button
           onClick={() => router.push(`/program/${programId}/writer`)}
           className="btn btn-primary"
@@ -407,9 +397,7 @@ export default function WorkoutDetailsPage(props) {
         <div className="mb-8">
           {isEditing ? (
             <div className="space-y-4">
-              <label className="block text-sm font-medium text-gray-700">
-                Workout Title
-              </label>
+              <label className="block text-sm font-medium text-gray-700">Workout Title</label>
               <input
                 type="text"
                 value={editedTitle}
@@ -423,9 +411,7 @@ export default function WorkoutDetailsPage(props) {
               <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6 mb-6">
                 <div className="flex-1">
                   <h1 className="text-4xl lg:text-5xl font-bold text-slate-800 leading-tight mb-4">
-                    {pendingEnhancement?.title ||
-                      workout.title ||
-                      'Workout Details'}
+                    {pendingEnhancement?.title || workout.title || 'Workout Details'}
                   </h1>
 
                   <div className="flex flex-wrap items-center gap-4">
@@ -492,9 +478,7 @@ export default function WorkoutDetailsPage(props) {
                           }`}
                         >
                           <CheckCircle className="w-4 h-4" />
-                          {workout.completed
-                            ? 'Mark Incomplete'
-                            : 'Mark Complete'}
+                          {workout.completed ? 'Mark Incomplete' : 'Mark Complete'}
                         </button>
 
                         <div className="relative">
@@ -517,8 +501,7 @@ export default function WorkoutDetailsPage(props) {
                                   Enhance Workout with AI
                                 </h3>
                                 <p className="text-sm text-gray-600 mb-3">
-                                  Describe how you'd like to improve this
-                                  workout
+                                  Describe how you'd like to improve this workout
                                 </p>
                               </div>
                               <input
@@ -629,12 +612,8 @@ export default function WorkoutDetailsPage(props) {
                   <div className="flex items-start gap-3">
                     <Sparkles className="w-5 h-5 mt-0.5 flex-shrink-0 text-purple-600" />
                     <div>
-                      <div className="font-semibold text-purple-900 mb-1">
-                        AI Enhancement Notes
-                      </div>
-                      <div className="text-purple-700">
-                        {pendingEnhancement.notes}
-                      </div>
+                      <div className="font-semibold text-purple-900 mb-1">AI Enhancement Notes</div>
+                      <div className="text-purple-700">{pendingEnhancement.notes}</div>
                     </div>
                   </div>
                 </div>
@@ -645,8 +624,7 @@ export default function WorkoutDetailsPage(props) {
                 <div className="mb-6 p-4 bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-xl">
                   <div className="flex items-center justify-between mb-4">
                     <div className="font-semibold text-purple-900">
-                      Enhanced workout is ready! Would you like to save these
-                      changes?
+                      Enhanced workout is ready! Would you like to save these changes?
                     </div>
                   </div>
                   <div className="flex gap-3">
@@ -734,19 +712,11 @@ export default function WorkoutDetailsPage(props) {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="flex items-center gap-2">
                 <span className="font-medium">Created:</span>
-                <span>
-                  {workout.created_at
-                    ? formatDate(workout.created_at)
-                    : 'Unknown'}
-                </span>
+                <span>{workout.created_at ? formatDate(workout.created_at) : 'Unknown'}</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="font-medium">Last Updated:</span>
-                <span>
-                  {workout.updated_at
-                    ? formatDate(workout.updated_at)
-                    : 'Unknown'}
-                </span>
+                <span>{workout.updated_at ? formatDate(workout.updated_at) : 'Unknown'}</span>
               </div>
             </div>
           </div>

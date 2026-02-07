@@ -19,9 +19,7 @@ export default function ProgramScheduling({
   // Use appropriate options based on subscription
   const weekOptions = isPremium ? premiumWeekOptions : freeWeekOptions;
 
-  const selectedWeeks = weekOptions.find(
-    (num) => num === parseInt(formData.numberOfWeeks)
-  );
+  const selectedWeeks = weekOptions.find((num) => num === parseInt(formData.numberOfWeeks));
 
   // Add state for dropdown open/close
   const [weeksDropdownOpen, setWeeksDropdownOpen] = useState(false);
@@ -36,13 +34,11 @@ export default function ProgramScheduling({
     <section className="bg-base-100 p-5 rounded-lg border border-base-300 shadow-sm h-full flex flex-col">
       <h2 className="text-xl font-semibold mb-4 text-primary">Scheduling</h2>
       <span className="text-sm text-gray-500 mb-4">
-        Choose the length of your program and the days of the week you'll have
-        sessions on. We use this to determine the number of workouts in the
-        program.
+        Choose the length of your program and the days of the week you'll have sessions on. We use
+        this to determine the number of workouts in the program.
         {!isPremium && (
           <span className="block mt-1 text-amber-600 font-medium">
-            Free users can create 1-2 week programs. Upgrade to Premium for
-            longer programs!
+            Free users can create 1-2 week programs. Upgrade to Premium for longer programs!
           </span>
         )}
       </span>
@@ -51,40 +47,35 @@ export default function ProgramScheduling({
       <div className="mb-4">
         <span className="text-sm font-medium">Days of Week</span>
         <div className="flex flex-wrap gap-x-4 gap-y-2 mt-2">
-          {[
-            'Sunday',
-            'Monday',
-            'Tuesday',
-            'Wednesday',
-            'Thursday',
-            'Friday',
-            'Saturday',
-          ].map((day) => {
-            // Ensure formData.daysOfWeek is an array and handle case-insensitive comparison
-            const daysArray = Array.isArray(formData.daysOfWeek) ? formData.daysOfWeek : [];
-            const isChecked = daysArray.some(d => 
-              typeof d === 'string' && d.toLowerCase() === day.toLowerCase()
-            );
-            
-            return (
-              <label key={day} className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  className="checkbox"
-                  checked={isChecked}
-                  onChange={() => {
-                    handleDayOfWeekChange(day);
-                    // Auto-save will be triggered by handleDayOfWeekChange
-                  }}
-                />
-                <span>{day}</span>
-              </label>
-            );
-          })}
+          {['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map(
+            (day) => {
+              // Ensure formData.daysOfWeek is an array and handle case-insensitive comparison
+              const daysArray = Array.isArray(formData.daysOfWeek) ? formData.daysOfWeek : [];
+              const isChecked = daysArray.some(
+                (d) => typeof d === 'string' && d.toLowerCase() === day.toLowerCase()
+              );
+
+              return (
+                <label key={day} className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    className="checkbox"
+                    checked={isChecked}
+                    onChange={() => {
+                      handleDayOfWeekChange(day);
+                      // Auto-save will be triggered by handleDayOfWeekChange
+                    }}
+                  />
+                  <span>{day}</span>
+                </label>
+              );
+            }
+          )}
         </div>
         <p className="text-xs text-gray-500 mt-1">
           {Array.isArray(formData.daysOfWeek) ? formData.daysOfWeek.length : 0} day
-          {(Array.isArray(formData.daysOfWeek) ? formData.daysOfWeek.length : 0) !== 1 ? 's' : ''} selected
+          {(Array.isArray(formData.daysOfWeek) ? formData.daysOfWeek.length : 0) !== 1 ? 's' : ''}{' '}
+          selected
         </p>
       </div>
 
@@ -115,9 +106,7 @@ export default function ProgramScheduling({
               {weekOptions.map((num) => (
                 <li key={num}>
                   <button
-                    className={`w-full ${
-                      parseInt(formData.numberOfWeeks) === num ? 'active' : ''
-                    }`}
+                    className={`w-full ${parseInt(formData.numberOfWeeks) === num ? 'active' : ''}`}
                     onClick={() => handleWeeksSelect(num)}
                   >
                     {num} {num === 1 ? 'week' : 'weeks'}

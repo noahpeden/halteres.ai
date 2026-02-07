@@ -1,5 +1,5 @@
-import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
 
 async function getSupabaseClient() {
   const cookieStore = await cookies();
@@ -81,12 +81,14 @@ export async function GET(request, { params }) {
     }
 
     // If userId provided, fetch user's results for these workouts
-    let userResults = {};
+    const userResults = {};
     if (userId && workouts?.length > 0) {
       const workoutIds = workouts.map((w) => w.id);
       const { data: results } = await supabase
         .from('workout_results')
-        .select('id, workout_id, result_type, time_seconds, rounds, reps, weight_kg, count, scale, is_pr, created_at')
+        .select(
+          'id, workout_id, result_type, time_seconds, rounds, reps, weight_kg, count, scale, is_pr, created_at'
+        )
         .eq('user_id', userId)
         .in('workout_id', workoutIds)
         .is('deleted_at', null);
@@ -94,7 +96,10 @@ export async function GET(request, { params }) {
       if (results) {
         // Group results by workout_id (use most recent)
         results.forEach((r) => {
-          if (!userResults[r.workout_id] || new Date(r.created_at) > new Date(userResults[r.workout_id].created_at)) {
+          if (
+            !userResults[r.workout_id] ||
+            new Date(r.created_at) > new Date(userResults[r.workout_id].created_at)
+          ) {
             userResults[r.workout_id] = r;
           }
         });
@@ -145,7 +150,8 @@ export async function GET(request, { params }) {
       stats: {
         total: totalWorkouts,
         completed: completedWorkouts,
-        completionRate: totalWorkouts > 0 ? Math.round((completedWorkouts / totalWorkouts) * 100) : 0,
+        completionRate:
+          totalWorkouts > 0 ? Math.round((completedWorkouts / totalWorkouts) * 100) : 0,
       },
       todaysWorkout,
     });
@@ -157,11 +163,12 @@ export async function GET(request, { params }) {
 
 function formatResult(result) {
   switch (result.result_type) {
-    case 'time':
+    case 'time': {
       if (!result.time_seconds) return '-';
       const mins = Math.floor(result.time_seconds / 60);
       const secs = result.time_seconds % 60;
       return `${mins}:${secs.toString().padStart(2, '0')}`;
+    }
     case 'rounds_reps':
       return `${result.rounds || 0} + ${result.reps || 0}`;
     case 'weight':

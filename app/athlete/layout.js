@@ -33,7 +33,9 @@ export default function AthleteLayout({ children }) {
                   key={item.href}
                   href={item.href}
                   className={`flex flex-col items-center py-2 px-4 rounded-lg transition-colors ${
-                    isActive ? 'text-primary bg-primary/10' : 'text-base-content/60 hover:text-primary'
+                    isActive
+                      ? 'text-primary bg-primary/10'
+                      : 'text-base-content/60 hover:text-primary'
                   }`}
                 >
                   <span className="text-xl">{item.icon}</span>

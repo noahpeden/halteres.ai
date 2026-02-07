@@ -1,26 +1,26 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
-import { useAuth } from '@/contexts/AuthContext';
 import { X } from 'lucide-react';
-import WizardProgress from '../../components/ProgramWizard/WizardProgress';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 import {
-  kgToLbs,
-  lbsToKg,
   cmToFeet,
   feetInchesToCm,
+  format1RM,
   formatHeight,
   formatWeight,
-  format1RM,
+  kgToLbs,
+  lbsToKg,
 } from '@/utils/unitConversions';
+import WizardProgress from '../../components/ProgramWizard/WizardProgress';
 
 export default function Step5Page() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const programId = searchParams.get('programId');
   const { supabase } = useAuth();
-  
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [entityData, setEntityData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -71,39 +71,43 @@ export default function Step5Page() {
               'friday',
               'saturday',
             ];
-            
+
             let daysOfWeekIndices = [];
             const programDaysOfWeek = program.calendar_data?.days_of_week || [];
             if (programDaysOfWeek && Array.isArray(programDaysOfWeek)) {
-              daysOfWeekIndices = programDaysOfWeek.map((day) => {
-                if (typeof day === 'string') {
-                  return dayNames.indexOf(day.toLowerCase());
-                }
-                return day;
-              }).filter((index) => index !== -1 && index >= 0 && index <= 6);
+              daysOfWeekIndices = programDaysOfWeek
+                .map((day) => {
+                  if (typeof day === 'string') {
+                    return dayNames.indexOf(day.toLowerCase());
+                  }
+                  return day;
+                })
+                .filter((index) => index !== -1 && index >= 0 && index <= 6);
             }
-            
+
             setSchedulingData({
               programName: program.name || '',
-              startDate: program.calendar_data?.start_date || (() => {
-                const tomorrow = new Date();
-                tomorrow.setDate(tomorrow.getDate() + 1);
-                return tomorrow.toISOString().split('T')[0];
-              })(),
+              startDate:
+                program.calendar_data?.start_date ||
+                (() => {
+                  const tomorrow = new Date();
+                  tomorrow.setDate(tomorrow.getDate() + 1);
+                  return tomorrow.toISOString().split('T')[0];
+                })(),
               numberOfWeeks: parseInt(program.duration_weeks) || 4,
               daysOfWeek: daysOfWeekIndices,
             });
-            
+
             if (program.entity_id) {
               setSelectedEntityId(program.entity_id);
-              
+
               // Fetch entity data for display
               const { data: entity, error: entityError } = await supabase
                 .from('entities')
                 .select('*')
                 .eq('id', program.entity_id)
                 .single();
-                
+
               if (!entityError && entity) {
                 setEntityData(entity);
                 setEntityName(entity.name);
@@ -118,10 +122,9 @@ export default function Step5Page() {
         }
       }
     }
-    
+
     loadProgram();
   }, [programId, supabase]);
-
 
   // Fetch all entities for selection
   useEffect(() => {
@@ -226,7 +229,7 @@ export default function Step5Page() {
     if (!programId) return;
 
     const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-    const daysOfWeekNames = schedulingData.daysOfWeek.map(index => dayNames[index]);
+    const daysOfWeekNames = schedulingData.daysOfWeek.map((index) => dayNames[index]);
     const endDate = calculateEndDate();
 
     const { error } = await supabase
@@ -251,7 +254,7 @@ export default function Step5Page() {
   const handleEntitySelect = async (entityId) => {
     setSelectedEntityId(entityId);
     setShowEntitySelection(false);
-    
+
     const selectedEntity = entities.find((e) => e.id === entityId);
     if (selectedEntity) {
       setEntityName(selectedEntity.name);
@@ -286,32 +289,26 @@ export default function Step5Page() {
 
   const handleSchedulingChange = async (field, value) => {
     setSchedulingData((prev) => ({ ...prev, [field]: value }));
-    
+
     // Update program in Supabase
     if (programId) {
       try {
         if (field === 'programName') {
-          await supabase
-            .from('programs')
-            .update({ name: value })
-            .eq('id', programId);
+          await supabase.from('programs').update({ name: value }).eq('id', programId);
         } else if (field === 'numberOfWeeks') {
-          await supabase
-            .from('programs')
-            .update({ duration_weeks: value })
-            .eq('id', programId);
+          await supabase.from('programs').update({ duration_weeks: value }).eq('id', programId);
         } else if (field === 'startDate') {
           const endDate = new Date(value);
           endDate.setDate(endDate.getDate() + schedulingData.numberOfWeeks * 7 - 1);
-          
+
           await supabase
             .from('programs')
-            .update({ 
+            .update({
               calendar_data: {
                 ...schedulingData,
                 start_date: value,
                 end_date: endDate.toISOString().split('T')[0],
-              }
+              },
             })
             .eq('id', programId);
         }
@@ -321,17 +318,8 @@ export default function Step5Page() {
     }
   };
 
-
   const handleToggleDay = async (dayIndex) => {
-    const dayNames = [
-      'sunday',
-      'monday',
-      'tuesday',
-      'wednesday',
-      'thursday',
-      'friday',
-      'saturday',
-    ];
+    const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 
     // For display purposes, keep track of day indices
     const newDaysOfWeekIndices = schedulingData.daysOfWeek.includes(dayIndex)
@@ -339,9 +327,7 @@ export default function Step5Page() {
       : [...schedulingData.daysOfWeek, dayIndex];
 
     // Convert indices to day names for database
-    const newDaysOfWeekNames = newDaysOfWeekIndices.map(
-      (index) => dayNames[index]
-    );
+    const newDaysOfWeekNames = newDaysOfWeekIndices.map((index) => dayNames[index]);
 
     setSchedulingData((prev) => ({
       ...prev,
@@ -352,15 +338,15 @@ export default function Step5Page() {
     if (programId) {
       try {
         const endDate = calculateEndDate();
-        
+
         await supabase
           .from('programs')
-          .update({ 
+          .update({
             calendar_data: {
               start_date: schedulingData.startDate,
               end_date: endDate,
               days_of_week: newDaysOfWeekNames,
-            }
+            },
           })
           .eq('id', programId);
       } catch (error) {
@@ -407,7 +393,7 @@ export default function Step5Page() {
     setIsSubmitting(true);
     try {
       const selectedEntity = entities.find((e) => e.id === selectedEntityId);
-      
+
       const dayNames = [
         'sunday',
         'monday',
@@ -417,10 +403,10 @@ export default function Step5Page() {
         'friday',
         'saturday',
       ];
-      
-      const finalDaysOfWeek = schedulingData.daysOfWeek.map(index => dayNames[index]);
+
+      const finalDaysOfWeek = schedulingData.daysOfWeek.map((index) => dayNames[index]);
       const endDate = calculateEndDate();
-      
+
       // Update program with final data
       const { error } = await supabase
         .from('programs')
@@ -453,19 +439,15 @@ export default function Step5Page() {
   // Get current entity data for display
   const currentEntity = entities.find((e) => e.id === selectedEntityId);
   const entityTypeText = currentEntity?.type === 'CLASS' ? 'class' : 'client';
-  const entityTypeTextCap =
-    currentEntity?.type === 'CLASS' ? 'Class' : 'Client';
-  const displayEntityName =
-    currentEntity?.name || entityName || 'Selected entity';
+  const entityTypeTextCap = currentEntity?.type === 'CLASS' ? 'Class' : 'Client';
+  const displayEntityName = currentEntity?.name || entityName || 'Selected entity';
 
   return (
     <div className="relative">
       {/* Exit button when there's a programId */}
       {programId && (
         <button
-          onClick={() =>
-            (window.location.href = `/program/${programId}/writer`)
-          }
+          onClick={() => (window.location.href = `/program/${programId}/writer`)}
           className="absolute top-4 right-4 btn btn-ghost btn-circle z-10"
           title="Exit wizard and go to program writer"
         >
@@ -477,9 +459,7 @@ export default function Step5Page() {
 
       <div className="bg-base-200 rounded-lg p-6">
         <div className="text-center mb-6">
-          <h2 className="text-2xl font-bold text-primary mb-2">
-            Program Setup - Final Step
-          </h2>
+          <h2 className="text-2xl font-bold text-primary mb-2">Program Setup - Final Step</h2>
           <p className="text-base-content/70">
             {selectedEntityId
               ? `Review and update ${displayEntityName}'s metrics before creating the program`
@@ -490,9 +470,7 @@ export default function Step5Page() {
         {/* Entity Selection Section */}
         {!selectedEntityId || showEntitySelection ? (
           <div className="bg-base-100 rounded-lg p-4 mb-6">
-            <h3 className="text-lg font-semibold mb-4">
-              Select Client or Class
-            </h3>
+            <h3 className="text-lg font-semibold mb-4">Select Client or Class</h3>
             {entities.length > 0 ? (
               <div className="w-full mb-4">
                 <label className="label">
@@ -533,13 +511,8 @@ export default function Step5Page() {
             )}
 
             <div className="flex justify-between items-center">
-              <span className="text-sm font-medium">
-                Or create a new client/class:
-              </span>
-              <button
-                onClick={handleCreateNewEntity}
-                className="btn btn-sm btn-outline"
-              >
+              <span className="text-sm font-medium">Or create a new client/class:</span>
+              <button onClick={handleCreateNewEntity} className="btn btn-sm btn-outline">
                 Create New
               </button>
             </div>
@@ -561,8 +534,7 @@ export default function Step5Page() {
               <div>
                 <h3 className="text-lg font-semibold">
                   Selected{' '}
-                  {entities.find((e) => e.id === selectedEntityId)?.type ===
-                  'CLASS'
+                  {entities.find((e) => e.id === selectedEntityId)?.type === 'CLASS'
                     ? 'Class'
                     : 'Client'}
                 </h3>
@@ -570,11 +542,7 @@ export default function Step5Page() {
                   {entities.find((e) => e.id === selectedEntityId)?.name}
                 </p>
               </div>
-              <button
-                type="button"
-                className="btn btn-sm btn-outline"
-                onClick={handleChangeEntity}
-              >
+              <button type="button" className="btn btn-sm btn-outline" onClick={handleChangeEntity}>
                 Change
               </button>
             </div>
@@ -596,9 +564,7 @@ export default function Step5Page() {
                 placeholder="Enter program name"
                 className="input input-bordered w-full"
                 value={schedulingData.programName}
-                onChange={(e) =>
-                  handleSchedulingChange('programName', e.target.value)
-                }
+                onChange={(e) => handleSchedulingChange('programName', e.target.value)}
                 required
               />
             </div>
@@ -612,9 +578,7 @@ export default function Step5Page() {
                 type="date"
                 className="input input-bordered w-full"
                 value={schedulingData.startDate}
-                onChange={(e) =>
-                  handleSchedulingChange('startDate', e.target.value)
-                }
+                onChange={(e) => handleSchedulingChange('startDate', e.target.value)}
                 required
               />
             </div>
@@ -622,19 +586,12 @@ export default function Step5Page() {
             {/* Program Duration */}
             <div>
               <label className="label">
-                <span className="text-sm font-medium">
-                  Program Duration (weeks)
-                </span>
+                <span className="text-sm font-medium">Program Duration (weeks)</span>
               </label>
               <select
                 className="select select-bordered w-full"
                 value={schedulingData.numberOfWeeks}
-                onChange={(e) =>
-                  handleSchedulingChange(
-                    'numberOfWeeks',
-                    parseInt(e.target.value)
-                  )
-                }
+                onChange={(e) => handleSchedulingChange('numberOfWeeks', parseInt(e.target.value))}
                 required
               >
                 {Array.from({ length: 8 }, (_, i) => i + 1).map((num) => (
@@ -648,9 +605,7 @@ export default function Step5Page() {
             {/* End Date (calculated) */}
             <div>
               <label className="label">
-                <span className="text-sm font-medium">
-                  End Date (calculated)
-                </span>
+                <span className="text-sm font-medium">End Date (calculated)</span>
               </label>
               <input
                 type="date"
@@ -666,27 +621,21 @@ export default function Step5Page() {
                 <span className="text-sm font-medium">Workout Days</span>
               </label>
               <div className="flex flex-wrap gap-2">
-                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(
-                  (day, index) => (
-                    <button
-                      key={day}
-                      type="button"
-                      className={`btn btn-sm ${
-                        schedulingData.daysOfWeek.includes(index)
-                          ? 'btn-primary'
-                          : 'btn-outline'
-                      }`}
-                      onClick={() => handleToggleDay(index)}
-                    >
-                      {day}
-                    </button>
-                  )
-                )}
+                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, index) => (
+                  <button
+                    key={day}
+                    type="button"
+                    className={`btn btn-sm ${
+                      schedulingData.daysOfWeek.includes(index) ? 'btn-primary' : 'btn-outline'
+                    }`}
+                    onClick={() => handleToggleDay(index)}
+                  >
+                    {day}
+                  </button>
+                ))}
               </div>
               {schedulingData.daysOfWeek.length === 0 && (
-                <p className="text-red-500 text-sm mt-2">
-                  Please select at least one day
-                </p>
+                <p className="text-red-500 text-sm mt-2">Please select at least one day</p>
               )}
             </div>
           </div>
@@ -700,16 +649,13 @@ export default function Step5Page() {
               {schedulingData.programName || 'Not set'}
             </div>
             <div>
-              <span className="font-medium">{entityTypeTextCap}:</span>{' '}
-              {entityName}
+              <span className="font-medium">{entityTypeTextCap}:</span> {entityName}
             </div>
             <div>
-              <span className="font-medium">Training Methodology:</span>{' '}
-              Not available
+              <span className="font-medium">Training Methodology:</span> Not available
             </div>
             <div>
-              <span className="font-medium">Duration:</span>{' '}
-              {schedulingData.numberOfWeeks} weeks
+              <span className="font-medium">Duration:</span> {schedulingData.numberOfWeeks} weeks
             </div>
             <div>
               <span className="font-medium">Start Date:</span>{' '}
@@ -720,8 +666,7 @@ export default function Step5Page() {
               {schedulingData.daysOfWeek?.length || 0} days/week
             </div>
             <div>
-              <span className="font-medium">Gym Type:</span>{' '}
-              Not available
+              <span className="font-medium">Gym Type:</span> Not available
             </div>
           </div>
         </div>
@@ -745,9 +690,7 @@ export default function Step5Page() {
                 ></path>
               </svg>
               <div>
-                <div className="font-semibold">
-                  About {entityTypeText} metrics
-                </div>
+                <div className="font-semibold">About {entityTypeText} metrics</div>
                 <div className="text-sm">
                   {entityType === 'CLASS'
                     ? 'Class metrics represent general information about the group. Individual variations may apply during training.'
@@ -759,30 +702,21 @@ export default function Step5Page() {
             <div className="mb-6">
               <div className="bg-base-100 rounded-lg p-6">
                 <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-xl font-semibold">
-                    {entityTypeTextCap} Metrics
-                  </h3>
+                  <h3 className="text-xl font-semibold">{entityTypeTextCap} Metrics</h3>
                   <div className="flex items-center gap-4">
                     {/* Unit Toggle */}
                     <label className="flex items-center gap-2 text-sm">
-                      <span className={!useImperial ? 'font-semibold' : ''}>
-                        Metric
-                      </span>
+                      <span className={!useImperial ? 'font-semibold' : ''}>Metric</span>
                       <input
                         type="checkbox"
                         className="toggle toggle-sm"
                         checked={useImperial}
                         onChange={(e) => setUseImperial(e.target.checked)}
                       />
-                      <span className={useImperial ? 'font-semibold' : ''}>
-                        Imperial
-                      </span>
+                      <span className={useImperial ? 'font-semibold' : ''}>Imperial</span>
                     </label>
                     {!isEditing && entityData && (
-                      <button
-                        onClick={handleEdit}
-                        className="btn btn-outline btn-sm"
-                      >
+                      <button onClick={handleEdit} className="btn btn-outline btn-sm">
                         Edit Metrics
                       </button>
                     )}
@@ -797,9 +731,7 @@ export default function Step5Page() {
                   <div className="space-y-4">
                     {/* Physical Stats */}
                     <div>
-                      <h4 className="font-medium mb-3 text-base-content/80">
-                        Physical Stats
-                      </h4>
+                      <h4 className="font-medium mb-3 text-base-content/80">Physical Stats</h4>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
                           <label className="label">
@@ -808,9 +740,7 @@ export default function Step5Page() {
                           {isEditing ? (
                             <select
                               value={editedData.gender || ''}
-                              onChange={(e) =>
-                                handleInputChange('gender', e.target.value)
-                              }
+                              onChange={(e) => handleInputChange('gender', e.target.value)}
                               className="select select-bordered w-full"
                             >
                               <option value="">Select gender</option>
@@ -836,19 +766,14 @@ export default function Step5Page() {
                                 <input
                                   type="number"
                                   value={
-                                    editedData.height_cm
-                                      ? cmToFeet(editedData.height_cm).feet
-                                      : ''
+                                    editedData.height_cm ? cmToFeet(editedData.height_cm).feet : ''
                                   }
                                   onChange={(e) => {
                                     const feet = e.target.value;
                                     const currentInches = editedData.height_cm
                                       ? cmToFeet(editedData.height_cm).inches
                                       : 0;
-                                    const cm = feetInchesToCm(
-                                      feet,
-                                      currentInches
-                                    );
+                                    const cm = feetInchesToCm(feet, currentInches);
                                     handleInputChange('height_cm', cm);
                                   }}
                                   className="input input-bordered w-16"
@@ -869,10 +794,7 @@ export default function Step5Page() {
                                       ? cmToFeet(editedData.height_cm).feet
                                       : 0;
                                     const inches = e.target.value;
-                                    const cm = feetInchesToCm(
-                                      currentFeet,
-                                      inches
-                                    );
+                                    const cm = feetInchesToCm(currentFeet, inches);
                                     handleInputChange('height_cm', cm);
                                   }}
                                   className="input input-bordered w-16"
@@ -886,9 +808,7 @@ export default function Step5Page() {
                               <input
                                 type="number"
                                 value={editedData.height_cm || ''}
-                                onChange={(e) =>
-                                  handleInputChange('height_cm', e.target.value)
-                                }
+                                onChange={(e) => handleInputChange('height_cm', e.target.value)}
                                 className="input input-bordered w-full"
                                 placeholder="Height in cm"
                               />
@@ -919,18 +839,13 @@ export default function Step5Page() {
                               onChange={(e) => {
                                 const value = e.target.value;
                                 if (useImperial) {
-                                  handleInputChange(
-                                    'weight_kg',
-                                    lbsToKg(value)
-                                  );
+                                  handleInputChange('weight_kg', lbsToKg(value));
                                 } else {
                                   handleInputChange('weight_kg', value);
                                 }
                               }}
                               className="input input-bordered w-full"
-                              placeholder={
-                                useImperial ? 'Weight in lbs' : 'Weight in kg'
-                              }
+                              placeholder={useImperial ? 'Weight in lbs' : 'Weight in kg'}
                             />
                           ) : (
                             <div className="input input-bordered w-full bg-base-200 flex items-center">
@@ -943,9 +858,7 @@ export default function Step5Page() {
 
                     {/* Performance Metrics */}
                     <div>
-                      <h4 className="font-medium mb-3 text-base-content/80">
-                        Performance Metrics
-                      </h4>
+                      <h4 className="font-medium mb-3 text-base-content/80">Performance Metrics</h4>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
                           <label className="label">
@@ -967,19 +880,14 @@ export default function Step5Page() {
                               onChange={(e) => {
                                 const value = e.target.value;
                                 if (useImperial) {
-                                  handleInputChange(
-                                    'bench_1rm',
-                                    lbsToKg(value)
-                                  );
+                                  handleInputChange('bench_1rm', lbsToKg(value));
                                 } else {
                                   handleInputChange('bench_1rm', value);
                                 }
                               }}
                               className="input input-bordered w-full"
                               placeholder={
-                                useImperial
-                                  ? 'Bench Press 1RM in lbs'
-                                  : 'Bench Press 1RM in kg'
+                                useImperial ? 'Bench Press 1RM in lbs' : 'Bench Press 1RM in kg'
                               }
                             />
                           ) : (
@@ -1008,20 +916,13 @@ export default function Step5Page() {
                               onChange={(e) => {
                                 const value = e.target.value;
                                 if (useImperial) {
-                                  handleInputChange(
-                                    'squat_1rm',
-                                    lbsToKg(value)
-                                  );
+                                  handleInputChange('squat_1rm', lbsToKg(value));
                                 } else {
                                   handleInputChange('squat_1rm', value);
                                 }
                               }}
                               className="input input-bordered w-full"
-                              placeholder={
-                                useImperial
-                                  ? 'Squat 1RM in lbs'
-                                  : 'Squat 1RM in kg'
-                              }
+                              placeholder={useImperial ? 'Squat 1RM in lbs' : 'Squat 1RM in kg'}
                             />
                           ) : (
                             <div className="input input-bordered w-full bg-base-200 flex items-center">
@@ -1042,28 +943,21 @@ export default function Step5Page() {
                               value={
                                 useImperial
                                   ? editedData.deadlift_1rm
-                                    ? kgToLbs(editedData.deadlift_1rm).toFixed(
-                                        1
-                                      )
+                                    ? kgToLbs(editedData.deadlift_1rm).toFixed(1)
                                     : ''
                                   : editedData.deadlift_1rm || ''
                               }
                               onChange={(e) => {
                                 const value = e.target.value;
                                 if (useImperial) {
-                                  handleInputChange(
-                                    'deadlift_1rm',
-                                    lbsToKg(value)
-                                  );
+                                  handleInputChange('deadlift_1rm', lbsToKg(value));
                                 } else {
                                   handleInputChange('deadlift_1rm', value);
                                 }
                               }}
                               className="input input-bordered w-full"
                               placeholder={
-                                useImperial
-                                  ? 'Deadlift 1RM in lbs'
-                                  : 'Deadlift 1RM in kg'
+                                useImperial ? 'Deadlift 1RM in lbs' : 'Deadlift 1RM in kg'
                               }
                             />
                           ) : (
@@ -1077,9 +971,7 @@ export default function Step5Page() {
 
                     {/* Cardio & Recovery Metrics */}
                     <div>
-                      <h4 className="font-medium mb-3 text-base-content/80">
-                        Cardio & Recovery
-                      </h4>
+                      <h4 className="font-medium mb-3 text-base-content/80">Cardio & Recovery</h4>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
                           <label className="label">
@@ -1089,9 +981,7 @@ export default function Step5Page() {
                             <input
                               type="text"
                               value={editedData.mile_time || ''}
-                              onChange={(e) =>
-                                handleInputChange('mile_time', e.target.value)
-                              }
+                              onChange={(e) => handleInputChange('mile_time', e.target.value)}
                               className="input input-bordered w-full"
                               placeholder="MM:SS (e.g., 07:30)"
                             />
@@ -1103,9 +993,7 @@ export default function Step5Page() {
                         </div>
                         <div>
                           <label className="label">
-                            <span className="label-text">
-                              Recovery Score (0-100)
-                            </span>
+                            <span className="label-text">Recovery Score (0-100)</span>
                           </label>
                           {isEditing ? (
                             <input
@@ -1113,12 +1001,7 @@ export default function Step5Page() {
                               min="0"
                               max="100"
                               value={editedData.recovery_score || ''}
-                              onChange={(e) =>
-                                handleInputChange(
-                                  'recovery_score',
-                                  e.target.value
-                                )
-                              }
+                              onChange={(e) => handleInputChange('recovery_score', e.target.value)}
                               className="input input-bordered w-full"
                               placeholder="0-100"
                             />
@@ -1136,19 +1019,13 @@ export default function Step5Page() {
                     {/* Injury History */}
                     <div>
                       <label className="label">
-                        <span className="label-text">
-                          Injury History / Limitations
-                        </span>
+                        <span className="label-text">Injury History / Limitations</span>
                       </label>
                       {isEditing ? (
                         <textarea
                           value={
                             typeof editedData.injury_history === 'object'
-                              ? JSON.stringify(
-                                  editedData.injury_history,
-                                  null,
-                                  2
-                                )
+                              ? JSON.stringify(editedData.injury_history, null, 2)
                               : editedData.injury_history || ''
                           }
                           onChange={(e) => {
@@ -1158,10 +1035,7 @@ export default function Step5Page() {
                               handleInputChange('injury_history', parsed);
                             } catch {
                               // If not valid JSON, store as string
-                              handleInputChange(
-                                'injury_history',
-                                e.target.value
-                              );
+                              handleInputChange('injury_history', e.target.value);
                             }
                           }}
                           className="textarea textarea-bordered w-full h-24"
@@ -1171,11 +1045,7 @@ export default function Step5Page() {
                         <div className="textarea textarea-bordered w-full bg-base-200 min-h-24 flex items-start">
                           {entityData?.injury_history
                             ? typeof entityData.injury_history === 'object'
-                              ? JSON.stringify(
-                                  entityData.injury_history,
-                                  null,
-                                  2
-                                )
+                              ? JSON.stringify(entityData.injury_history, null, 2)
                               : entityData.injury_history
                             : 'No injury history recorded'}
                         </div>
@@ -1185,16 +1055,10 @@ export default function Step5Page() {
                     {/* Edit buttons */}
                     {isEditing && (
                       <div className="flex gap-2 justify-end pt-4">
-                        <button
-                          onClick={handleCancel}
-                          className="btn btn-outline"
-                        >
+                        <button onClick={handleCancel} className="btn btn-outline">
                           Cancel
                         </button>
-                        <button
-                          onClick={handleSave}
-                          className="btn btn-primary"
-                        >
+                        <button onClick={handleSave} className="btn btn-primary">
                           Save Changes
                         </button>
                       </div>
@@ -1207,17 +1071,8 @@ export default function Step5Page() {
         )}
 
         <div className="flex justify-between items-center mt-8 pt-6 border-t border-base-300">
-          <button
-            onClick={handlePrevious}
-            className="btn btn-outline"
-            disabled={isSubmitting}
-          >
-            <svg
-              className="w-4 h-4 mr-2"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
+          <button onClick={handlePrevious} className="btn btn-outline" disabled={isSubmitting}>
+            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -1229,8 +1084,7 @@ export default function Step5Page() {
           </button>
 
           <div className="text-sm text-base-content/60">
-            Step 5 of 5 •{' '}
-            {selectedEntityId ? `${entityTypeTextCap} Metrics` : 'Setup'}
+            Step 5 of 5 • {selectedEntityId ? `${entityTypeTextCap} Metrics` : 'Setup'}
           </div>
 
           <button
@@ -1238,17 +1092,15 @@ export default function Step5Page() {
             className={`btn btn-primary px-6 ${isSubmitting ? 'loading' : ''}`}
             disabled={isSubmitting}
           >
-            {isSubmitting 
-              ? (programId ? 'Updating Program...' : 'Creating Program...') 
-              : (programId ? 'Update Program' : 'Create Program')
-            }
+            {isSubmitting
+              ? programId
+                ? 'Updating Program...'
+                : 'Creating Program...'
+              : programId
+                ? 'Update Program'
+                : 'Create Program'}
             {!isSubmitting && (
-              <svg
-                className="w-4 h-4 ml-2"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
+              <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"

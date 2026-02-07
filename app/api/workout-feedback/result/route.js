@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
-import { createMobileCompatibleClient, corsHeaders } from '@/utils/supabase/mobile';
 import OpenAI from 'openai';
+import { corsHeaders, createMobileCompatibleClient } from '@/utils/supabase/mobile';
 
 // Service role client for operations
 const supabaseAdmin = createClient(
@@ -94,10 +94,7 @@ export async function POST(request) {
     } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      return Response.json(
-        { error: 'Unauthorized' },
-        { status: 401, headers: corsHeaders() }
-      );
+      return Response.json({ error: 'Unauthorized' }, { status: 401, headers: corsHeaders() });
     }
 
     // Fetch workout result with related data
@@ -135,8 +132,7 @@ export async function POST(request) {
 
     // Determine feedback type
     const determinedFeedbackType =
-      feedbackType ||
-      (user.id === result.user_id ? 'self_assessment' : 'coach_to_athlete');
+      feedbackType || (user.id === result.user_id ? 'self_assessment' : 'coach_to_athlete');
 
     // If coach_to_athlete, verify user has coach relationship
     if (determinedFeedbackType === 'coach_to_athlete' && user.id === result.user_id) {
@@ -231,10 +227,7 @@ export async function GET(request) {
     } = await supabase.auth.getUser();
 
     if (!user) {
-      return Response.json(
-        { error: 'Unauthorized' },
-        { status: 401, headers: corsHeaders() }
-      );
+      return Response.json({ error: 'Unauthorized' }, { status: 401, headers: corsHeaders() });
     }
 
     // Get all feedback for this result (self-assessment and coach feedback)
@@ -261,12 +254,8 @@ export async function GET(request) {
     }
 
     // Separate self-assessment from coach feedback
-    const selfAssessment = allFeedback?.find(
-      (f) => f.feedback_type === 'self_assessment'
-    );
-    const coachFeedback = allFeedback?.filter(
-      (f) => f.feedback_type === 'coach_to_athlete'
-    );
+    const selfAssessment = allFeedback?.find((f) => f.feedback_type === 'self_assessment');
+    const coachFeedback = allFeedback?.filter((f) => f.feedback_type === 'coach_to_athlete');
     const userFeedback = allFeedback?.find((f) => f.from_user_id === user.id);
 
     return Response.json(
@@ -310,10 +299,7 @@ export async function DELETE(request) {
     } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      return Response.json(
-        { error: 'Unauthorized' },
-        { status: 401, headers: corsHeaders() }
-      );
+      return Response.json({ error: 'Unauthorized' }, { status: 401, headers: corsHeaders() });
     }
 
     // Delete user's feedback

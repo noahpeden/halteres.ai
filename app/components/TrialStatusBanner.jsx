@@ -1,7 +1,7 @@
 'use client';
-import { useAuth } from '@/contexts/AuthContext';
 import { Info, Zap } from 'lucide-react';
 import Link from 'next/link';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function TrialStatusBanner() {
   const {
@@ -13,30 +13,20 @@ export default function TrialStatusBanner() {
   } = useAuth();
 
   // Never show trial banner for athletes - they don't have subscriptions
-  if (
-    loadingProfile ||
-    isAthlete ||
-    !subscriptionStatus ||
-    subscriptionStatus !== 'trialing'
-  ) {
+  if (loadingProfile || isAthlete || !subscriptionStatus || subscriptionStatus !== 'trialing') {
     return null;
   }
 
   const trialEndDateObj = trialEnd ? new Date(trialEnd) : null;
   if (!trialEndDateObj || isNaN(trialEndDateObj.getTime())) {
-    console.warn(
-      'Invalid trial end date received in TrialStatusBanner:',
-      trialEnd
-    );
+    console.warn('Invalid trial end date received in TrialStatusBanner:', trialEnd);
     return null;
   }
 
   const now = new Date();
   const daysLeft = Math.max(
     0,
-    Math.ceil(
-      (trialEndDateObj.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
-    )
+    Math.ceil((trialEndDateObj.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
   );
 
   const remainingCount = generationsRemaining ?? 0;
@@ -45,8 +35,8 @@ export default function TrialStatusBanner() {
     <div className="mt-16 bg-gradient-to-r from-primary to-secondary text-white p-3 text-center text-sm shadow-md flex items-center justify-center space-x-2 w-full">
       <Info size={16} className="flex-shrink-0" />
       <span>
-        You have <strong>{daysLeft}</strong> day{daysLeft !== 1 ? 's' : ''} left
-        in your free trial with <strong>{remainingCount}</strong> generation
+        You have <strong>{daysLeft}</strong> day{daysLeft !== 1 ? 's' : ''} left in your free trial
+        with <strong>{remainingCount}</strong> generation
         {remainingCount !== 1 ? 's' : ''} remaining.
       </span>
       <Link

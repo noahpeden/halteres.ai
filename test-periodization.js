@@ -1,6 +1,7 @@
 // test-periodization.js
-import promptBuilder from './app/utils/prompt-builder/promptBuilder.js';
+
 import { formatPeriodizationGuidelines } from './app/utils/prompt-builder/periodizationUtils.js';
+import promptBuilder from './app/utils/prompt-builder/promptBuilder.js';
 
 // Test different periodization types
 const periodizationTypes = [
@@ -50,8 +51,6 @@ console.log('FULL PROMPT TEST WITH UNDULATING PERIODIZATION');
 console.log('==========================================');
 
 const undulatingPrompt = promptBuilder(undulatingContext, 'powerlifting');
-console.log(
-  undulatingPrompt.substring(0, 1000) + '...\n[truncated for brevity]'
-);
+console.log(undulatingPrompt.substring(0, 1000) + '...\n[truncated for brevity]');
 
 console.log('Test completed!');

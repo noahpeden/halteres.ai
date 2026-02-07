@@ -1,15 +1,13 @@
 'use client';
 
+import { useCallback } from 'react';
 import { useProgram } from '@/contexts/ProgramContext';
 import equipmentList from '@/utils/equipmentList';
-import { useCallback } from 'react';
 
 export default function EquipmentSelector({ isVisible, onToggleVisibility }) {
-  const { selectedEquipment, updateEquipment, updateFormFields, formData } =
-    useProgram();
+  const { selectedEquipment, updateEquipment, updateFormFields, formData } = useProgram();
 
-  const isAllEquipmentSelected =
-    selectedEquipment.length === equipmentList.length;
+  const isAllEquipmentSelected = selectedEquipment.length === equipmentList.length;
 
   const handleEquipmentToggle = useCallback(
     async (equipmentValue) => {
@@ -18,9 +16,7 @@ export default function EquipmentSelector({ isVisible, onToggleVisibility }) {
       let newEquipment;
       if (value === -1) {
         // Toggle all equipment
-        newEquipment = isAllEquipmentSelected
-          ? []
-          : equipmentList.map((item) => item.value);
+        newEquipment = isAllEquipmentSelected ? [] : equipmentList.map((item) => item.value);
       } else {
         const isSelected = selectedEquipment.includes(value);
         newEquipment = isSelected
@@ -48,13 +44,7 @@ export default function EquipmentSelector({ isVisible, onToggleVisibility }) {
         },
       });
     },
-    [
-      selectedEquipment,
-      isAllEquipmentSelected,
-      updateEquipment,
-      updateFormFields,
-      formData,
-    ]
+    [selectedEquipment, isAllEquipmentSelected, updateEquipment, updateFormFields, formData]
   );
 
   return (

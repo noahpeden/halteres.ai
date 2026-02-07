@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { FileText, Users, Trophy, TrendingUp } from 'lucide-react';
+import { FileText, TrendingUp, Trophy, Users } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import {
-  getProgramsForAnalyticsAction,
   getProgramAnalyticsAction,
+  getProgramsForAnalyticsAction,
 } from '@/actions/analyticsActions';
 
 export default function ProgramAnalyticsTab({ gymId }) {
@@ -62,9 +62,7 @@ export default function ProgramAnalyticsTab({ gymId }) {
         <div className="card-body text-center py-12">
           <FileText className="w-16 h-16 mx-auto text-base-content/30 mb-4" />
           <h3 className="text-xl font-semibold text-base-content/70">No Programs Yet</h3>
-          <p className="text-base-content/50">
-            Create a training program to see analytics here.
-          </p>
+          <p className="text-base-content/50">Create a training program to see analytics here.</p>
         </div>
       </div>
     );
@@ -138,7 +136,10 @@ export default function ProgramAnalyticsTab({ gymId }) {
                     const percentage = week.total > 0 ? (week.completed / week.total) * 100 : 0;
                     return (
                       <div key={i} className="flex-1 flex flex-col items-center">
-                        <div className="w-full bg-base-200 rounded-t relative" style={{ height: '120px' }}>
+                        <div
+                          className="w-full bg-base-200 rounded-t relative"
+                          style={{ height: '120px' }}
+                        >
                           <div
                             className="absolute bottom-0 w-full bg-primary rounded-t transition-all"
                             style={{ height: `${percentage}%` }}
@@ -204,7 +205,9 @@ export default function ProgramAnalyticsTab({ gymId }) {
                             </td>
                             <td>
                               {athlete.prCount > 0 ? (
-                                <span className="badge badge-warning badge-sm">{athlete.prCount}</span>
+                                <span className="badge badge-warning badge-sm">
+                                  {athlete.prCount}
+                                </span>
                               ) : (
                                 <span className="text-base-content/50">0</span>
                               )}

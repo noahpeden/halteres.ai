@@ -197,7 +197,10 @@ export async function GET(request) {
     });
   } catch (error) {
     console.error('Aggregate leaderboard error:', error);
-    return NextResponse.json({ success: false, error: 'Failed to load leaderboard' }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: 'Failed to load leaderboard' },
+      { status: 500 }
+    );
   }
 }
 

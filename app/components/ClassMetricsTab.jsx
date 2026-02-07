@@ -1,7 +1,7 @@
 'use client';
-import { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
 import { ChevronRight } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function ClassMetricsTab({
   programId,
@@ -60,7 +60,7 @@ export default function ClassMetricsTab({
         if (programError) throw programError;
 
         // Initialize with program data even if entity doesn't exist
-        let initialData = {
+        const initialData = {
           program: programData,
           metrics: {},
         };
@@ -147,13 +147,10 @@ export default function ClassMetricsTab({
         class_size: parseInt(editedData.metrics.class_size) || null,
         average_age: parseInt(editedData.metrics.average_age) || null,
         has_elite_athletes: editedData.metrics.has_elite_athletes || false,
-        average_experience_years:
-          parseFloat(editedData.metrics.average_experience_years) || null,
+        average_experience_years: parseFloat(editedData.metrics.average_experience_years) || null,
         skill_distribution: editedData.metrics.skill_distribution,
-        class_duration_minutes:
-          parseInt(editedData.metrics.class_duration_minutes) || 60,
-        warmup_duration_minutes:
-          parseInt(editedData.metrics.warmup_duration_minutes) || 15,
+        class_duration_minutes: parseInt(editedData.metrics.class_duration_minutes) || 60,
+        warmup_duration_minutes: parseInt(editedData.metrics.warmup_duration_minutes) || 15,
         type: 'CLASS',
       };
 
@@ -256,23 +253,18 @@ export default function ClassMetricsTab({
 
     // Distribute remaining proportionally between other two levels
     const currentOtherTotal =
-      currentDistribution[otherLevels[0]] +
-      currentDistribution[otherLevels[1]];
-    let newDistribution = { ...currentDistribution, [level]: numValue };
+      currentDistribution[otherLevels[0]] + currentDistribution[otherLevels[1]];
+    const newDistribution = { ...currentDistribution, [level]: numValue };
 
     if (currentOtherTotal > 0) {
-      const ratio0 =
-        currentDistribution[otherLevels[0]] / currentOtherTotal;
-      const ratio1 =
-        currentDistribution[otherLevels[1]] / currentOtherTotal;
+      const ratio0 = currentDistribution[otherLevels[0]] / currentOtherTotal;
+      const ratio1 = currentDistribution[otherLevels[1]] / currentOtherTotal;
       newDistribution[otherLevels[0]] = Math.round(remaining * ratio0);
       newDistribution[otherLevels[1]] = Math.round(remaining * ratio1);
 
       // Adjust for rounding errors
       const total =
-        newDistribution.beginner +
-        newDistribution.intermediate +
-        newDistribution.advanced;
+        newDistribution.beginner + newDistribution.intermediate + newDistribution.advanced;
       if (total !== 100) {
         newDistribution[otherLevels[1]] += 100 - total;
       }
@@ -297,9 +289,7 @@ export default function ClassMetricsTab({
 
   // Determine grid classes based on viewMode
   const gridClasses =
-    viewMode === 'fullPage'
-      ? 'grid grid-cols-1 md:grid-cols-2 gap-6'
-      : 'grid grid-cols-1 gap-6';
+    viewMode === 'fullPage' ? 'grid grid-cols-1 md:grid-cols-2 gap-6' : 'grid grid-cols-1 gap-6';
 
   return (
     <div
@@ -328,9 +318,7 @@ export default function ClassMetricsTab({
             aria-label="Collapse sidebar"
           >
             <ChevronRight
-              className={`h-5 w-5 transition-transform ${
-                !isCollapsed ? 'rotate-180' : ''
-              }`}
+              className={`h-5 w-5 transition-transform ${!isCollapsed ? 'rotate-180' : ''}`}
             />
           </button>
         )}
@@ -343,10 +331,7 @@ export default function ClassMetricsTab({
                   Save
                 </button>
                 {!isNewEntity && (
-                  <button
-                    onClick={handleCancel}
-                    className="btn btn-sm btn-outline"
-                  >
+                  <button onClick={handleCancel} className="btn btn-sm btn-outline">
                     Cancel
                   </button>
                 )}
@@ -361,11 +346,7 @@ export default function ClassMetricsTab({
       </div>
 
       {!(isCollapsed && viewMode === 'sidebar') && (
-        <div
-          className={`${
-            viewMode === 'sidebar' ? 'overflow-y-auto flex-grow min-h-0' : ''
-          }`}
-        >
+        <div className={`${viewMode === 'sidebar' ? 'overflow-y-auto flex-grow min-h-0' : ''}`}>
           {showEditByDefault ? (
             <div className="alert alert-info mb-4">
               <svg
@@ -381,9 +362,7 @@ export default function ClassMetricsTab({
                   d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                 ></path>
               </svg>
-              <span>
-                No class metrics found. Please add information below.
-              </span>
+              <span>No class metrics found. Please add information below.</span>
             </div>
           ) : null}
 
@@ -404,17 +383,13 @@ export default function ClassMetricsTab({
                     <textarea
                       className="textarea textarea-bordered w-full"
                       value={editedData.description || ''}
-                      onChange={(e) =>
-                        handleChange('description', e.target.value)
-                      }
+                      onChange={(e) => handleChange('description', e.target.value)}
                       placeholder="Program Description"
                     />
                   </div>
                 ) : (
                   <div>
-                    <p className="font-medium">
-                      {classData?.program?.name || 'Unnamed Program'}
-                    </p>
+                    <p className="font-medium">{classData?.program?.name || 'Unnamed Program'}</p>
                     <p className="text-gray-600">
                       {classData?.program?.description || 'No description'}
                     </p>
@@ -438,9 +413,7 @@ export default function ClassMetricsTab({
                       max="100"
                       className="input input-bordered w-full"
                       value={editedData.metrics.class_size || ''}
-                      onChange={(e) =>
-                        handleMetricsChange('class_size', e.target.value)
-                      }
+                      onChange={(e) => handleMetricsChange('class_size', e.target.value)}
                       placeholder="Number of athletes"
                     />
                   </div>
@@ -454,17 +427,13 @@ export default function ClassMetricsTab({
                       max="80"
                       className="input input-bordered w-full"
                       value={editedData.metrics.average_age || ''}
-                      onChange={(e) =>
-                        handleMetricsChange('average_age', e.target.value)
-                      }
+                      onChange={(e) => handleMetricsChange('average_age', e.target.value)}
                       placeholder="Average age of class"
                     />
                   </div>
                   <div className="w-full">
                     <label className="label">
-                      <span className="text-sm">
-                        Average Experience (years)
-                      </span>
+                      <span className="text-sm">Average Experience (years)</span>
                     </label>
                     <input
                       type="number"
@@ -474,10 +443,7 @@ export default function ClassMetricsTab({
                       className="input input-bordered w-full"
                       value={editedData.metrics.average_experience_years || ''}
                       onChange={(e) =>
-                        handleMetricsChange(
-                          'average_experience_years',
-                          e.target.value
-                        )
+                        handleMetricsChange('average_experience_years', e.target.value)
                       }
                       placeholder="Average years of training"
                     />
@@ -489,15 +455,10 @@ export default function ClassMetricsTab({
                         className="toggle toggle-primary"
                         checked={editedData.metrics.has_elite_athletes || false}
                         onChange={(e) =>
-                          handleMetricsChange(
-                            'has_elite_athletes',
-                            e.target.checked
-                          )
+                          handleMetricsChange('has_elite_athletes', e.target.checked)
                         }
                       />
-                      <span className="text-sm">
-                        Elite/Competitive Athletes Present
-                      </span>
+                      <span className="text-sm">Elite/Competitive Athletes Present</span>
                     </label>
                     <p className="text-xs text-gray-500 ml-1">
                       Enable to include RX+ scaling options
@@ -521,8 +482,7 @@ export default function ClassMetricsTab({
                   <div className="stat">
                     <div className="stat-title">Avg Experience</div>
                     <div className="stat-value text-lg">
-                      {classData?.metrics?.average_experience_years || 'N/A'}{' '}
-                      years
+                      {classData?.metrics?.average_experience_years || 'N/A'} years
                     </div>
                   </div>
                   <div className="stat">
@@ -555,12 +515,8 @@ export default function ClassMetricsTab({
                       min="0"
                       max="100"
                       className="range range-success range-sm"
-                      value={
-                        editedData.metrics.skill_distribution?.beginner || 0
-                      }
-                      onChange={(e) =>
-                        handleSkillDistributionChange('beginner', e.target.value)
-                      }
+                      value={editedData.metrics.skill_distribution?.beginner || 0}
+                      onChange={(e) => handleSkillDistributionChange('beginner', e.target.value)}
                     />
                   </div>
                   <div className="w-full">
@@ -574,14 +530,9 @@ export default function ClassMetricsTab({
                       min="0"
                       max="100"
                       className="range range-info range-sm"
-                      value={
-                        editedData.metrics.skill_distribution?.intermediate || 0
-                      }
+                      value={editedData.metrics.skill_distribution?.intermediate || 0}
                       onChange={(e) =>
-                        handleSkillDistributionChange(
-                          'intermediate',
-                          e.target.value
-                        )
+                        handleSkillDistributionChange('intermediate', e.target.value)
                       }
                     />
                   </div>
@@ -596,19 +547,14 @@ export default function ClassMetricsTab({
                       min="0"
                       max="100"
                       className="range range-secondary range-sm"
-                      value={
-                        editedData.metrics.skill_distribution?.advanced || 0
-                      }
-                      onChange={(e) =>
-                        handleSkillDistributionChange('advanced', e.target.value)
-                      }
+                      value={editedData.metrics.skill_distribution?.advanced || 0}
+                      onChange={(e) => handleSkillDistributionChange('advanced', e.target.value)}
                     />
                   </div>
                   <div className="text-xs text-gray-500 text-center">
                     Total:{' '}
                     {(editedData.metrics.skill_distribution?.beginner || 0) +
-                      (editedData.metrics.skill_distribution?.intermediate ||
-                        0) +
+                      (editedData.metrics.skill_distribution?.intermediate || 0) +
                       (editedData.metrics.skill_distribution?.advanced || 0)}
                     %
                   </div>
@@ -624,9 +570,7 @@ export default function ClassMetricsTab({
                   <div className="stat">
                     <div className="stat-title text-blue-600">Intermediate</div>
                     <div className="stat-value text-lg">
-                      {classData?.metrics?.skill_distribution?.intermediate ||
-                        0}
-                      %
+                      {classData?.metrics?.skill_distribution?.intermediate || 0}%
                     </div>
                   </div>
                   <div className="stat">
@@ -656,18 +600,13 @@ export default function ClassMetricsTab({
                       className="input input-bordered w-full"
                       value={editedData.metrics.class_duration_minutes || 60}
                       onChange={(e) =>
-                        handleMetricsChange(
-                          'class_duration_minutes',
-                          e.target.value
-                        )
+                        handleMetricsChange('class_duration_minutes', e.target.value)
                       }
                     />
                   </div>
                   <div className="w-full">
                     <label className="label">
-                      <span className="text-sm">
-                        Warmup/Skill Work (minutes)
-                      </span>
+                      <span className="text-sm">Warmup/Skill Work (minutes)</span>
                     </label>
                     <input
                       type="number"
@@ -677,10 +616,7 @@ export default function ClassMetricsTab({
                       className="input input-bordered w-full"
                       value={editedData.metrics.warmup_duration_minutes || 15}
                       onChange={(e) =>
-                        handleMetricsChange(
-                          'warmup_duration_minutes',
-                          e.target.value
-                        )
+                        handleMetricsChange('warmup_duration_minutes', e.target.value)
                       }
                     />
                   </div>

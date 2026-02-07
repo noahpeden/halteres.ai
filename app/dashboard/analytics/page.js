@@ -1,12 +1,12 @@
 'use client';
 
-import { useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { Building2, FileText, User, ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Building2, FileText, User } from 'lucide-react';
 import Link from 'next/link';
+import { useState } from 'react';
+import AthleteAnalyticsTab from '@/components/analytics/AthleteAnalyticsTab';
 import GymOverviewTab from '@/components/analytics/GymOverviewTab';
 import ProgramAnalyticsTab from '@/components/analytics/ProgramAnalyticsTab';
-import AthleteAnalyticsTab from '@/components/analytics/AthleteAnalyticsTab';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function AnalyticsPage() {
   const { currentGym } = useAuth();
@@ -29,10 +29,7 @@ export default function AnalyticsPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="py-6">
             <div className="flex items-center gap-4 mb-2">
-              <Link
-                href="/dashboard"
-                className="btn btn-ghost btn-sm btn-circle"
-              >
+              <Link href="/dashboard" className="btn btn-ghost btn-sm btn-circle">
                 <ArrowLeft className="w-5 h-5" />
               </Link>
               <div>

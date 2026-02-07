@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 export default function ReferenceWorkoutSearchModal({
   isOpen,
@@ -79,31 +79,18 @@ export default function ReferenceWorkoutSearchModal({
             onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
             autoFocus
           />
-          <button
-            className="btn btn-primary"
-            onClick={() => handleSearch()}
-            disabled={loading}
-          >
-            {loading ? (
-              <span className="loading loading-spinner loading-xs"></span>
-            ) : (
-              'Search'
-            )}
+          <button className="btn btn-primary" onClick={() => handleSearch()} disabled={loading}>
+            {loading ? <span className="loading loading-spinner loading-xs"></span> : 'Search'}
           </button>
         </div>
         {error && <div className="text-error mb-2">{error}</div>}
         <div className="max-h-80 overflow-y-auto">
           {results.length === 0 && !loading && (
-            <div className="text-sm text-gray-500">
-              No workouts found. Try a different search.
-            </div>
+            <div className="text-sm text-gray-500">No workouts found. Try a different search.</div>
           )}
           <ul className="space-y-2">
             {results.map((workout) => (
-              <li
-                key={workout.id}
-                className="border rounded-md p-3 flex items-start gap-3"
-              >
+              <li key={workout.id} className="border rounded-md p-3 flex items-start gap-3">
                 <input
                   type="checkbox"
                   className="checkbox mt-1"

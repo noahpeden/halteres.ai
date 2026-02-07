@@ -1,6 +1,6 @@
-import { metadata } from '../metadata';
 import Image from 'next/image';
 import Link from 'next/link';
+import { metadata } from '../metadata';
 
 export const generateMetadata = () => {
   return {
@@ -50,8 +50,8 @@ export default function TeamPage() {
                 Meet Our Team
               </h1>
               <p className="mt-6 text-lg leading-8 text-blue-100">
-                The passionate people behind HalteresAI, dedicated to
-                revolutionizing fitness programming.
+                The passionate people behind HalteresAI, dedicated to revolutionizing fitness
+                programming.
               </p>
             </div>
           </div>
@@ -65,9 +65,8 @@ export default function TeamPage() {
                 Our Leadership
               </h2>
               <p className="mt-6 text-lg leading-8 text-gray-600">
-                With backgrounds in fitness, technology, and business, our team
-                brings diverse expertise to creating the best AI-powered fitness
-                programming platform.
+                With backgrounds in fitness, technology, and business, our team brings diverse
+                expertise to creating the best AI-powered fitness programming platform.
               </p>
             </div>
             <ul
@@ -84,12 +83,8 @@ export default function TeamPage() {
                   <h3 className="mt-6 text-lg font-semibold leading-8 text-gray-900">
                     {person.name}
                   </h3>
-                  <p className="text-base leading-7 text-blue-600">
-                    {person.role}
-                  </p>
-                  <p className="mt-4 text-base leading-7 text-gray-600">
-                    {person.bio}
-                  </p>
+                  <p className="text-base leading-7 text-blue-600">{person.role}</p>
+                  <p className="mt-4 text-base leading-7 text-gray-600">{person.bio}</p>
                 </li>
               ))}
             </ul>
@@ -109,39 +104,31 @@ export default function TeamPage() {
             </div>
             <dl className="mx-auto mt-16 grid max-w-2xl grid-cols-1 gap-8 text-base leading-7 sm:grid-cols-2 lg:mx-0 lg:max-w-none lg:gap-x-16">
               <div className="relative pl-10 border-l-4 border-blue-600 pl-6">
-                <dt className="inline font-semibold text-gray-900">
-                  Innovation with Purpose.
-                </dt>{' '}
+                <dt className="inline font-semibold text-gray-900">Innovation with Purpose.</dt>{' '}
                 <dd className="inline">
-                  We don't build technology for its own sake—we create tools
-                  that solve real problems for fitness professionals.
+                  We don't build technology for its own sake—we create tools that solve real
+                  problems for fitness professionals.
                 </dd>
               </div>
               <div className="relative pl-10 border-l-4 border-blue-600 pl-6">
-                <dt className="inline font-semibold text-gray-900">
-                  Quality Above All.
-                </dt>{' '}
+                <dt className="inline font-semibold text-gray-900">Quality Above All.</dt>{' '}
                 <dd className="inline">
-                  From our algorithms to our user experience, we maintain the
-                  highest standards in everything we create.
+                  From our algorithms to our user experience, we maintain the highest standards in
+                  everything we create.
                 </dd>
               </div>
               <div className="relative pl-10 border-l-4 border-blue-600 pl-6">
-                <dt className="inline font-semibold text-gray-900">
-                  Client Success.
-                </dt>{' '}
+                <dt className="inline font-semibold text-gray-900">Client Success.</dt>{' '}
                 <dd className="inline">
-                  We measure our success by how much time we save coaches and
-                  how much value we add to their businesses.
+                  We measure our success by how much time we save coaches and how much value we add
+                  to their businesses.
                 </dd>
               </div>
               <div className="relative pl-10 border-l-4 border-blue-600 pl-6">
-                <dt className="inline font-semibold text-gray-900">
-                  Continuous Improvement.
-                </dt>{' '}
+                <dt className="inline font-semibold text-gray-900">Continuous Improvement.</dt>{' '}
                 <dd className="inline">
-                  We're constantly learning, iterating, and evolving our
-                  platform based on research and user feedback.
+                  We're constantly learning, iterating, and evolving our platform based on research
+                  and user feedback.
                 </dd>
               </div>
             </dl>
@@ -156,8 +143,8 @@ export default function TeamPage() {
                 Join Our Team
               </h2>
               <p className="mx-auto mt-6 max-w-xl text-lg leading-8 text-blue-100">
-                Passionate about fitness and technology? We're always looking
-                for talented individuals to join us in our mission.
+                Passionate about fitness and technology? We're always looking for talented
+                individuals to join us in our mission.
               </p>
               <div className="mt-10 flex items-center justify-center gap-x-6">
                 <Link

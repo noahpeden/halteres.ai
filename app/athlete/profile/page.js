@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function AthleteProfilePage() {
@@ -177,10 +177,7 @@ export default function AthleteProfilePage() {
                   <h3 className="text-lg font-semibold mb-3 capitalize">{category}</h3>
                   <div className="grid grid-cols-1 gap-2">
                     {categoryPrs.map((pr) => (
-                      <div
-                        key={pr.id}
-                        className="card bg-base-100 shadow-sm"
-                      >
+                      <div key={pr.id} className="card bg-base-100 shadow-sm">
                         <div className="card-body p-4 flex-row justify-between items-center">
                           <div>
                             <p className="font-medium">{pr.custom_name || pr.category}</p>
@@ -325,11 +322,7 @@ export default function AthleteProfilePage() {
                   >
                     Cancel
                   </button>
-                  <button
-                    className="btn btn-primary"
-                    onClick={saveProfile}
-                    disabled={saving}
-                  >
+                  <button className="btn btn-primary" onClick={saveProfile} disabled={saving}>
                     {saving ? (
                       <>
                         <span className="loading loading-spinner loading-sm" />
@@ -365,10 +358,7 @@ export default function AthleteProfilePage() {
                   </div>
                 </div>
 
-                <button
-                  className="btn btn-outline btn-block"
-                  onClick={startEditing}
-                >
+                <button className="btn btn-outline btn-block" onClick={startEditing}>
                   Edit My Metrics
                 </button>
               </>
@@ -384,9 +374,7 @@ function MetricItem({ label, value, unit }) {
   return (
     <div>
       <p className="text-sm text-base-content/60">{label}</p>
-      <p className="text-lg font-bold">
-        {value ? `${value}${unit ? ` ${unit}` : ''}` : '-'}
-      </p>
+      <p className="text-lg font-bold">{value ? `${value}${unit ? ` ${unit}` : ''}` : '-'}</p>
     </div>
   );
 }

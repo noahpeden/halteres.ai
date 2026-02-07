@@ -1,6 +1,6 @@
-import { createClient } from '@/utils/supabase/server';
-import { stripe } from '@/utils/stripe';
 import { NextResponse } from 'next/server';
+import { stripe } from '@/utils/stripe';
+import { createClient } from '@/utils/supabase/server';
 
 export async function POST(req) {
   try {
@@ -11,10 +11,7 @@ export async function POST(req) {
     } = await supabase.auth.getSession();
 
     if (!session) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
     const userId = session.user.id;
@@ -28,10 +25,7 @@ export async function POST(req) {
 
     if (profileError && profileError.code !== 'PGRST116') {
       console.error('Error fetching profile data:', profileError);
-      return NextResponse.json(
-        { error: 'Failed to fetch profile data' },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: 'Failed to fetch profile data' }, { status: 500 });
     }
 
     // If the user has an active subscription, cancel it
@@ -61,10 +55,7 @@ export async function POST(req) {
         console.error('Error deleting user data:', workoutsError);
 
         // For column ambiguity error, suggest fix
-        if (
-          workoutsError.code === '42702' &&
-          workoutsError.message.includes('ambiguous')
-        ) {
+        if (workoutsError.code === '42702' && workoutsError.message.includes('ambiguous')) {
           console.error(
             'SQL function parameter name conflicts with column name. Please update the function.'
           );
@@ -94,11 +85,7 @@ export async function POST(req) {
               .eq('entity_id', entity.id);
 
             if (workoutsError) {
-              console.error(
-                'Error deleting workouts for entity:',
-                entity.id,
-                workoutsError
-              );
+              console.error('Error deleting workouts for entity:', entity.id, workoutsError);
             }
           }
 

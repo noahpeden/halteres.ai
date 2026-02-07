@@ -23,19 +23,13 @@ const CHAT_COMPLETIONS_URL = 'https://api.openai.com/v1/chat/completions';
 
 const textDecoder = new TextDecoder('utf-8');
 
-export const openAiStreamingDataHandler = async (
-  requestOpts,
-  onIncomingChunk,
-  onCloseStream
-) => {
+export const openAiStreamingDataHandler = async (requestOpts, onIncomingChunk, onCloseStream) => {
   const beforeTimestamp = Date.now();
 
   const response = await fetch(CHAT_COMPLETIONS_URL, requestOpts);
 
   if (!response.ok) {
-    throw new Error(
-      `Network response was not ok: ${response.status} - ${response.statusText}`
-    );
+    throw new Error(`Network response was not ok: ${response.status} - ${response.statusText}`);
   }
 
   if (!response.body) {
@@ -71,10 +65,7 @@ export const openAiStreamingDataHandler = async (
       .map((line) => JSON.parse(line));
 
     for (const chunk of chunks) {
-      const contentChunk = (chunk.choices[0].delta.content ?? '').replace(
-        /^`\s*/,
-        '`'
-      );
+      const contentChunk = (chunk.choices[0].delta.content ?? '').replace(/^`\s*/, '`');
       const roleChunk = chunk.choices[0].delta.role ?? '';
 
       content = `${content}${contentChunk}`;

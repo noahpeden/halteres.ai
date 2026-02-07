@@ -3,10 +3,7 @@
  * @param {Object} context - The full context for prompt generation
  * @returns {string} The assembled prompt string
  */
-import {
-  formatEquipmentRestrictions,
-  formatSchedulingRequirements,
-} from '../promptBuilder.js';
+import { formatEquipmentRestrictions, formatSchedulingRequirements } from '../promptBuilder.js';
 
 export function powerliftingPrompt(context) {
   // Extract all relevant parameters with fallbacks
@@ -34,8 +31,7 @@ export function powerliftingPrompt(context) {
   // Get more specific parameters
   const numberOfWeeks = parseInt(duration_weeks || context.numberOfWeeks || 8);
   const daysPerWeek = parseInt(days_per_week || context.daysPerWeek || 4);
-  const programType =
-    periodization?.program_type || context.programType || 'linear';
+  const programType = periodization?.program_type || context.programType || 'linear';
   const equipment = gym_details?.equipment || context.equipment || [];
   const startDate = calendar_data?.start_date || context.startDate || '';
   const totalWorkouts = numberOfWeeks * daysPerWeek;
@@ -49,18 +45,8 @@ export function powerliftingPrompt(context) {
       : 'Powerlifting Focus (Squat, Bench, Deadlift variations, Accessories)';
 
   // Get day names for better readability
-  const dayNames = [
-    'Sunday',
-    'Monday',
-    'Tuesday',
-    'Wednesday',
-    'Thursday',
-    'Friday',
-    'Saturday',
-  ];
-  const selectedDayNames = selectedDaysOfWeek
-    .map((dayNum) => dayNames[dayNum])
-    .join(', ');
+  const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const selectedDayNames = selectedDaysOfWeek.map((dayNum) => dayNames[dayNum]).join(', ');
 
   // Determine if scaling options should be included (less common in pure powerlifting)
   const includeScaling = ['Beginner'].includes(difficulty);
@@ -68,9 +54,9 @@ export function powerliftingPrompt(context) {
 
   // Build the Powerlifting prompt
   const isGeneratingSpecificWeek = context.isWeekSpecific;
-  const weekSpecificInfo = isGeneratingSpecificWeek ?
-    `Week ${context.weekNumber} of ${context.totalWeeks}` :
-    `${numberOfWeeks}-week`;
+  const weekSpecificInfo = isGeneratingSpecificWeek
+    ? `Week ${context.weekNumber} of ${context.totalWeeks}`
+    : `${numberOfWeeks}-week`;
 
   return `Generate a ${isGeneratingSpecificWeek ? 'single week' : numberOfWeeks + '-week'} powerlifting training program focused on maximal strength development.
 
@@ -84,11 +70,15 @@ ${focus_area ? `Focus Area: ${focus_area}` : ''}
 Periodization: ${programType}
 </program_parameters>
 
-${description ? `<client_requirements priority="high">
+${
+  description
+    ? `<client_requirements priority="high">
 ${description}
 These requirements take precedence over general guidelines below.
 </client_requirements>
-` : ''}
+`
+    : ''
+}
 ${formatEquipmentRestrictions(equipment)}
 
 <workout_formats required="${formattedWorkoutFormats}">
@@ -96,9 +86,11 @@ Focus primarily on Squat, Bench Press, and Deadlift variations with strategic ac
 </workout_formats>
 
 <output_quantity>
-${isGeneratingSpecificWeek
-  ? `Generate exactly ${context.workoutsThisWeek || daysPerWeek} workouts for Week ${context.weekNumber} only.`
-  : `Generate exactly ${totalWorkouts} workouts total (${numberOfWeeks} weeks × ${daysPerWeek} days).`}
+${
+  isGeneratingSpecificWeek
+    ? `Generate exactly ${context.workoutsThisWeek || daysPerWeek} workouts for Week ${context.weekNumber} only.`
+    : `Generate exactly ${totalWorkouts} workouts total (${numberOfWeeks} weeks × ${daysPerWeek} days).`
+}
 </output_quantity>
 
 ${personalization ? `<personalization>${personalization}</personalization>` : ''}
@@ -108,14 +100,18 @@ ${clientMetrics ? `\n${clientMetrics}` : ''}
 ${referenceWorkouts ? `\n${referenceWorkouts}` : ''}
 ${additionalNotes ? `\nAdditional Notes: ${additionalNotes}` : ''}
 ${formattedPeriodizationGuidelines}
-${context.formattedDates ? `
+${
+  context.formattedDates
+    ? `
 <scheduling>
 Training Days: ${selectedDayNames || 'All available days'}
 Assign workouts to these exact dates:
 ${context.formattedDates}
 Each workout's "date" field must match one of these dates exactly.
 </scheduling>
-` : formatSchedulingRequirements(suggestedDates, daysPerWeek, selectedDayNames)}
+`
+    : formatSchedulingRequirements(suggestedDates, daysPerWeek, selectedDayNames)
+}
 
 <description_requirements>
 Include in the program description:
@@ -159,11 +155,15 @@ Example: "Week 3, Day 1: [Main Lift Focus] Powerlifting Session"
 ## Workout Focus
 Session purpose, targeted lift(s), RPE/percentage targets, accessory goals
 
-${includeScaling ? `## Scaling Options
+${
+  includeScaling
+    ? `## Scaling Options
 ### Beginner Option
 Modifications focusing on form development
 ${hasInjuryHistory ? `\n### Injury Considerations\nModifications for noted limitations` : ''}
-` : ''}
+`
+    : ''
+}
 ## Warm-up
 Dynamic stretching, activation drills, light sets of main lift
 
@@ -181,8 +181,10 @@ Light stretching or mobility work for targeted areas
 3-5 technical cues for main lifts, form tips, common errors to avoid
 </workout_body_structure>
 
-${isGeneratingSpecificWeek
-  ? `Generate exactly ${context.workoutsThisWeek || daysPerWeek} workouts for Week ${context.weekNumber}.`
-  : `Generate exactly ${totalWorkouts} workouts covering ${numberOfWeeks} week(s).`}
+${
+  isGeneratingSpecificWeek
+    ? `Generate exactly ${context.workoutsThisWeek || daysPerWeek} workouts for Week ${context.weekNumber}.`
+    : `Generate exactly ${totalWorkouts} workouts covering ${numberOfWeeks} week(s).`
+}
 `;
 }

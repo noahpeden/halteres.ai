@@ -1,15 +1,15 @@
 'use client';
-import { useState, useEffect, useTransition, useMemo } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { PlusCircle, Edit, Trash2, Users, GraduationCap, User, Search, Filter } from 'lucide-react';
+import { Edit, Filter, GraduationCap, PlusCircle, Search, Trash2, User, Users } from 'lucide-react';
 import Link from 'next/link';
-import ConfirmationModal from '@/components/ConfirmationModal.jsx';
-import CreateEditEntityModal from '@/components/CreateEditEntityModal.jsx';
+import { useEffect, useMemo, useState, useTransition } from 'react';
 import {
   createEntityAction,
-  updateEntityAction,
   deleteEntityAction,
+  updateEntityAction,
 } from '@/actions/entityActions';
+import ConfirmationModal from '@/components/ConfirmationModal.jsx';
+import CreateEditEntityModal from '@/components/CreateEditEntityModal.jsx';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function ManageEntitiesPage() {
   const { user, supabase } = useAuth();
@@ -28,14 +28,14 @@ export default function ManageEntitiesPage() {
 
   // Calculate stats
   const stats = useMemo(() => {
-    const clients = entities.filter(e => e.type === 'CLIENT').length;
-    const classes = entities.filter(e => e.type === 'CLASS').length;
+    const clients = entities.filter((e) => e.type === 'CLIENT').length;
+    const classes = entities.filter((e) => e.type === 'CLASS').length;
     return { clients, classes, total: entities.length };
   }, [entities]);
 
   // Filter entities
   const filteredEntities = useMemo(() => {
-    return entities.filter(entity => {
+    return entities.filter((entity) => {
       const matchesSearch = entity.name.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesType = filterType === 'ALL' || entity.type === filterType;
       return matchesSearch && matchesType;
@@ -93,9 +93,7 @@ export default function ManageEntitiesPage() {
       const result = await updateEntityAction(selectedEntity.id, formData);
       if (result.success) {
         setEntities(
-          entities.map((entity) =>
-            entity.id === selectedEntity.id ? result.data : entity
-          )
+          entities.map((entity) => (entity.id === selectedEntity.id ? result.data : entity))
         );
         setShowEditModal(false);
         setSelectedEntity(null);
@@ -111,9 +109,7 @@ export default function ManageEntitiesPage() {
     startTransitionDelete(async () => {
       const result = await deleteEntityAction(selectedEntity.id);
       if (result.success) {
-        setEntities(
-          entities.filter((entity) => entity.id !== selectedEntity.id)
-        );
+        setEntities(entities.filter((entity) => entity.id !== selectedEntity.id));
         setShowDeleteModal(false);
         setSelectedEntity(null);
       } else {
@@ -166,7 +162,9 @@ export default function ManageEntitiesPage() {
               </div>
               <h1 className="text-2xl font-bold text-slate-800">Clients & Classes</h1>
             </div>
-            <p className="text-slate-500 text-sm">Manage your individual clients and group classes</p>
+            <p className="text-slate-500 text-sm">
+              Manage your individual clients and group classes
+            </p>
           </div>
           <button
             onClick={() => {
@@ -183,7 +181,10 @@ export default function ManageEntitiesPage() {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-          <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm hover:shadow-md transition-shadow" style={{ animationDelay: '0.1s' }}>
+          <div
+            className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm hover:shadow-md transition-shadow"
+            style={{ animationDelay: '0.1s' }}
+          >
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center">
                 <Users className="w-5 h-5 text-blue-600" />
@@ -194,7 +195,10 @@ export default function ManageEntitiesPage() {
               </div>
             </div>
           </div>
-          <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm hover:shadow-md transition-shadow" style={{ animationDelay: '0.2s' }}>
+          <div
+            className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm hover:shadow-md transition-shadow"
+            style={{ animationDelay: '0.2s' }}
+          >
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center">
                 <User className="w-5 h-5 text-emerald-600" />
@@ -205,7 +209,10 @@ export default function ManageEntitiesPage() {
               </div>
             </div>
           </div>
-          <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm hover:shadow-md transition-shadow" style={{ animationDelay: '0.3s' }}>
+          <div
+            className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm hover:shadow-md transition-shadow"
+            style={{ animationDelay: '0.3s' }}
+          >
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-purple-50 rounded-xl flex items-center justify-center">
                 <GraduationCap className="w-5 h-5 text-purple-600" />
@@ -260,11 +267,10 @@ export default function ManageEntitiesPage() {
           <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
             <Users className="w-8 h-8 text-slate-400" />
           </div>
-          <h3 className="text-lg font-semibold text-slate-800 mb-2">
-            No Clients or Classes Yet
-          </h3>
+          <h3 className="text-lg font-semibold text-slate-800 mb-2">No Clients or Classes Yet</h3>
           <p className="text-slate-500 mb-6 max-w-sm mx-auto">
-            Get started by adding your first client or class. You can track their progress and create personalized programs.
+            Get started by adding your first client or class. You can track their progress and
+            create personalized programs.
           </p>
           <button
             onClick={() => setShowCreateModal(true)}
@@ -279,14 +285,13 @@ export default function ManageEntitiesPage() {
           <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
             <Search className="w-8 h-8 text-slate-400" />
           </div>
-          <h3 className="text-lg font-semibold text-slate-800 mb-2">
-            No Results Found
-          </h3>
-          <p className="text-slate-500 mb-4">
-            Try adjusting your search or filter criteria.
-          </p>
+          <h3 className="text-lg font-semibold text-slate-800 mb-2">No Results Found</h3>
+          <p className="text-slate-500 mb-4">Try adjusting your search or filter criteria.</p>
           <button
-            onClick={() => { setSearchQuery(''); setFilterType('ALL'); }}
+            onClick={() => {
+              setSearchQuery('');
+              setFilterType('ALL');
+            }}
             className="text-blue-600 hover:text-blue-700 font-medium text-sm"
           >
             Clear Filters
@@ -304,11 +309,11 @@ export default function ManageEntitiesPage() {
               <div className="p-5">
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                      entity.type === 'CLIENT'
-                        ? 'bg-emerald-50'
-                        : 'bg-purple-50'
-                    }`}>
+                    <div
+                      className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                        entity.type === 'CLIENT' ? 'bg-emerald-50' : 'bg-purple-50'
+                      }`}
+                    >
                       {entity.type === 'CLIENT' ? (
                         <User className="w-5 h-5 text-emerald-600" />
                       ) : (
@@ -317,11 +322,13 @@ export default function ManageEntitiesPage() {
                     </div>
                     <div>
                       <h3 className="font-semibold text-slate-800 line-clamp-1">{entity.name}</h3>
-                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                        entity.type === 'CLIENT'
-                          ? 'bg-emerald-100 text-emerald-700'
-                          : 'bg-purple-100 text-purple-700'
-                      }`}>
+                      <span
+                        className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                          entity.type === 'CLIENT'
+                            ? 'bg-emerald-100 text-emerald-700'
+                            : 'bg-purple-100 text-purple-700'
+                        }`}
+                      >
                         {entity.type === 'CLIENT' ? 'Client' : 'Class'}
                       </span>
                     </div>
@@ -329,10 +336,11 @@ export default function ManageEntitiesPage() {
                 </div>
 
                 <p className="text-xs text-slate-400 mb-4">
-                  Created {new Date(entity.created_at).toLocaleDateString('en-US', {
+                  Created{' '}
+                  {new Date(entity.created_at).toLocaleDateString('en-US', {
                     month: 'short',
                     day: 'numeric',
-                    year: 'numeric'
+                    year: 'numeric',
                   })}
                 </p>
 
@@ -379,7 +387,7 @@ export default function ManageEntitiesPage() {
           message: `Are you sure you want to delete ${selectedEntity?.type?.toLowerCase()} '${
             selectedEntity?.name
           }'? This action cannot be undone.`,
-          confirmText: "Delete"
+          confirmText: 'Delete',
         }}
         isConfirming={isPendingDelete}
       />

@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { useStripeContext } from '../contexts/StripeContext'; // Adjust path if needed
+import { AlertCircle, CheckCircle, ChevronDown, ChevronUp, Settings } from 'lucide-react';
 import { useRouter } from 'next/navigation'; // Use App Router's router
-import { CheckCircle, AlertCircle, ChevronDown, ChevronUp, Settings } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { useStripeContext } from '../contexts/StripeContext'; // Adjust path if needed
 
 function calculateRemainingTrialDays(trialEndDateStr) {
   if (!trialEndDateStr) return 0;
@@ -79,7 +79,7 @@ export default function PricingClient({ user, profile, plans }) {
 
   const handleManageSubscription = async () => {
     setError(null);
-    
+
     try {
       const res = await fetch('/api/billing-portal', {
         method: 'POST',
@@ -106,13 +106,10 @@ export default function PricingClient({ user, profile, plans }) {
   const isTrialing = profile?.subscription_status === 'trialing';
   const isActive = profile?.subscription_status === 'active';
   const currentPlanLookupKey = isActive
-    ? plans.find((p) => p.name.toLowerCase() === profile?.subscription_plan)
-        ?.lookupKey
+    ? plans.find((p) => p.name.toLowerCase() === profile?.subscription_plan)?.lookupKey
     : null;
 
-  const remainingDays = isTrialing
-    ? calculateRemainingTrialDays(profile.trial_end_date)
-    : 0;
+  const remainingDays = isTrialing ? calculateRemainingTrialDays(profile.trial_end_date) : 0;
   const generationsLeft = profile?.generations_remaining ?? 0;
 
   // Use all plans (no personal plan filtering needed anymore)
@@ -141,7 +138,7 @@ export default function PricingClient({ user, profile, plans }) {
           </div>
         </div>
       )}
-      
+
       {error && (
         <div className="col-span-full alert alert-error shadow-lg">
           <div>
@@ -160,8 +157,7 @@ export default function PricingClient({ user, profile, plans }) {
         <div className="space-y-8 lg:space-y-0 lg:grid lg:grid-cols-3 lg:gap-6">
           {/* Professional Plans */}
           {professionalPlans.map((plan) => {
-            const isCurrentPlan =
-              isActive && currentPlanLookupKey === plan.lookupKey;
+            const isCurrentPlan = isActive && currentPlanLookupKey === plan.lookupKey;
             const isLoading = loadingPriceId === plan.priceId;
 
             return (
@@ -180,9 +176,7 @@ export default function PricingClient({ user, profile, plans }) {
                   <h2 className="card-title text-2xl mb-4">{plan.name}</h2>
                   <p className="text-4xl font-bold mb-1">
                     {plan.price}
-                    <span className="text-lg font-normal text-gray-500">
-                      {plan.interval}
-                    </span>
+                    <span className="text-lg font-normal text-gray-500">{plan.interval}</span>
                   </p>
                   <ul className="space-y-2 mb-6 mt-4 text-left">
                     {plan.features.map((feature, index) => (
@@ -200,10 +194,7 @@ export default function PricingClient({ user, profile, plans }) {
                             Current Plan
                           </button>
                         )}
-                        <button
-                          onClick={handleManageSubscription}
-                          className="btn btn-ghost w-full"
-                        >
+                        <button onClick={handleManageSubscription} className="btn btn-ghost w-full">
                           Manage in Billing Portal
                         </button>
                       </div>
@@ -211,21 +202,17 @@ export default function PricingClient({ user, profile, plans }) {
                       <button
                         onClick={() => handleSubscribe(plan.priceId)}
                         className={`btn ${
-                          plan.lookupKey === 'standard_annual'
-                            ? 'btn-primary'
-                            : 'btn-outline'
+                          plan.lookupKey === 'standard_annual' ? 'btn-primary' : 'btn-outline'
                         } w-full ${isLoading ? 'loading' : ''}`}
-                        disabled={
-                          isLoading || (isTrialing && generationsLeft <= 0)
-                        }
+                        disabled={isLoading || (isTrialing && generationsLeft <= 0)}
                       >
                         {isLoading
                           ? 'Processing...'
                           : user
-                          ? isTrialing
-                            ? 'Upgrade Now'
-                            : 'Choose Plan'
-                          : 'Get Started'}
+                            ? isTrialing
+                              ? 'Upgrade Now'
+                              : 'Choose Plan'
+                            : 'Get Started'}
                       </button>
                     )}
                   </div>
@@ -260,16 +247,11 @@ export default function PricingClient({ user, profile, plans }) {
                 </div>
               )}
               {!isActive && !isTrialing && (
-                <p className="text-sm text-base-content/70">
-                  No active subscription
-                </p>
+                <p className="text-sm text-base-content/70">No active subscription</p>
               )}
-              
+
               {isActive && (
-                <button
-                  onClick={handleManageSubscription}
-                  className="btn btn-outline btn-sm mt-4"
-                >
+                <button onClick={handleManageSubscription} className="btn btn-outline btn-sm mt-4">
                   <Settings className="w-4 h-4 mr-2" />
                   Manage Subscription
                 </button>

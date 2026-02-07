@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { AlertTriangle, ArrowLeft, Home, Mail, RefreshCw } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { AlertTriangle, Home, ArrowLeft, RefreshCw, Mail } from 'lucide-react';
 
 export default function Error({ error, reset }) {
   const router = useRouter();
@@ -28,9 +28,7 @@ export default function Error({ error, reset }) {
         <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
           <AlertTriangle className="w-8 h-8 text-red-500" />
         </div>
-        <h1 className="text-2xl font-bold text-gray-800 mb-2">
-          Oops! Something Went Wrong
-        </h1>
+        <h1 className="text-2xl font-bold text-gray-800 mb-2">Oops! Something Went Wrong</h1>
         <p className="text-gray-600 mb-4">
           We're sorry, but there was an error processing your request.
         </p>
@@ -38,9 +36,7 @@ export default function Error({ error, reset }) {
         {errorDetails && (
           <div className="bg-gray-100 p-3 rounded-md mb-4 text-left">
             <p className="text-xs text-gray-600 font-mono break-all overflow-hidden">
-              {errorDetails.length > 150
-                ? errorDetails.substring(0, 150) + '...'
-                : errorDetails}
+              {errorDetails.length > 150 ? errorDetails.substring(0, 150) + '...' : errorDetails}
             </p>
           </div>
         )}

@@ -3,10 +3,7 @@
  * @param {Object} context - The full context for prompt generation
  * @returns {string} The assembled prompt string
  */
-import {
-  formatEquipmentRestrictions,
-  formatSchedulingRequirements,
-} from '../promptBuilder.js';
+import { formatEquipmentRestrictions, formatSchedulingRequirements } from '../promptBuilder.js';
 
 export function generalGymPrompt(context) {
   // Extract all relevant parameters with fallbacks
@@ -32,8 +29,7 @@ export function generalGymPrompt(context) {
   // Get more specific parameters
   const numberOfWeeks = context.numberOfWeeks;
   const daysPerWeek = context.daysPerWeek;
-  const programType =
-    periodization?.program_type || context.programType || 'linear';
+  const programType = periodization?.program_type || context.programType || 'linear';
   const equipment = gym_details?.equipment || context.equipment || [];
   const startDate = calendar_data?.start_date || context.startDate || '';
   const totalWorkouts = numberOfWeeks * daysPerWeek;
@@ -47,18 +43,8 @@ export function generalGymPrompt(context) {
       : 'Standard Gym Mix (Strength, Hypertrophy, Conditioning)';
 
   // Get day names for better readability
-  const dayNames = [
-    'Sunday',
-    'Monday',
-    'Tuesday',
-    'Wednesday',
-    'Thursday',
-    'Friday',
-    'Saturday',
-  ];
-  const selectedDayNames = selectedDaysOfWeek
-    .map((dayNum) => dayNames[dayNum])
-    .join(', ');
+  const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const selectedDayNames = selectedDaysOfWeek.map((dayNum) => dayNames[dayNum]).join(', ');
 
   // Determine if scaling options should be included
   const includeScaling = ['Beginner', 'Intermediate'].includes(difficulty);
@@ -66,10 +52,10 @@ export function generalGymPrompt(context) {
 
   // Build the General Gym Training prompt
   const isGeneratingSpecificWeek = context.isWeekSpecific;
-  const weekSpecificInfo = isGeneratingSpecificWeek ? 
-    `Week ${context.weekNumber} of ${context.totalWeeks}` : 
-    `${numberOfWeeks}-week`;
-  
+  const weekSpecificInfo = isGeneratingSpecificWeek
+    ? `Week ${context.weekNumber} of ${context.totalWeeks}`
+    : `${numberOfWeeks}-week`;
+
   return `Generate a ${isGeneratingSpecificWeek ? 'single week' : numberOfWeeks + '-week'} general gym training program for ${goal}.
 
 <program_parameters>
@@ -82,23 +68,31 @@ ${focus_area ? `Focus Area: ${focus_area}` : ''}
 Periodization: ${programType}
 </program_parameters>
 
-${description ? `<client_requirements priority="high">
+${
+  description
+    ? `<client_requirements priority="high">
 ${description}
 These requirements take precedence over general guidelines below.
 </client_requirements>
-` : ''}
+`
+    : ''
+}
 ${formatEquipmentRestrictions(equipment)}
 
 <workout_formats required="${formattedWorkoutFormats}">
-${workoutFormats.length > 0
+${
+  workoutFormats.length > 0
     ? `Use primarily these formats: ${formattedWorkoutFormats}. Use only the available equipment listed.`
-    : 'Use standard gym mix: full body, upper/lower split, push/pull/legs with machines, free weights, and cardio'}
+    : 'Use standard gym mix: full body, upper/lower split, push/pull/legs with machines, free weights, and cardio'
+}
 </workout_formats>
 
 <output_quantity>
-${isGeneratingSpecificWeek
-  ? `Generate exactly ${context.workoutsThisWeek || daysPerWeek} workouts for Week ${context.weekNumber} only.`
-  : `Generate exactly ${totalWorkouts} workouts total (${numberOfWeeks} weeks × ${daysPerWeek} days).`}
+${
+  isGeneratingSpecificWeek
+    ? `Generate exactly ${context.workoutsThisWeek || daysPerWeek} workouts for Week ${context.weekNumber} only.`
+    : `Generate exactly ${totalWorkouts} workouts total (${numberOfWeeks} weeks × ${daysPerWeek} days).`
+}
 </output_quantity>
 
 ${personalization ? `<personalization>${personalization}</personalization>` : ''}
@@ -106,21 +100,30 @@ ${context.formattedReferenceInput}
 ${context.formattedRagMatchedWorkouts}
 ${context.clientMetrics ? `\n${context.clientMetrics}` : ''}
 ${context.referenceWorkouts ? `\n${context.referenceWorkouts}` : ''}
-${context.formattedPeriodizationGuidelines || (periodization?.approach && periodization?.why_appropriate ? `
+${
+  context.formattedPeriodizationGuidelines ||
+  (periodization?.approach && periodization?.why_appropriate
+    ? `
 Periodization Guidelines:
 ${periodization.approach}
 
 Why it's appropriate for the client requirements:
 ${periodization.why_appropriate}
-` : '')}
-${context.formattedDates ? `
+`
+    : '')
+}
+${
+  context.formattedDates
+    ? `
 <scheduling>
 Training Days: ${selectedDayNames || 'All available days'}
 Assign workouts to these exact dates:
 ${context.formattedDates}
 Each workout's "date" field must match one of these dates exactly.
 </scheduling>
-` : formatSchedulingRequirements(suggestedDates, daysPerWeek, selectedDayNames)}
+`
+    : formatSchedulingRequirements(suggestedDates, daysPerWeek, selectedDayNames)
+}
 
 <description_requirements>
 Include in the program description:
@@ -167,14 +170,18 @@ Target muscle groups, fitness components (Strength, Hypertrophy, Conditioning)
 Intensity guidance (RPE, weight selection)
 How this fits the weekly structure
 
-${includeScaling ? `## Scaling Options
+${
+  includeScaling
+    ? `## Scaling Options
 ### Intermediate Option
 Specific weight/rep adjustments for intermediate level
 
 ### Beginner Option
 Lighter weights, machine alternatives, reduced volume
 ${hasInjuryHistory ? `\n### Injury Considerations\nModifications for noted limitations using gym equipment` : ''}
-` : ''}
+`
+    : ''
+}
 ## Warm-up
 5-10 minutes light cardio (treadmill, bike, elliptical)
 Dynamic stretching for relevant joints
@@ -204,8 +211,10 @@ Machine safety and effectiveness
 Breathing technique
 </workout_body_structure>
 
-${isGeneratingSpecificWeek
-  ? `Generate exactly ${context.workoutsThisWeek || daysPerWeek} workouts for Week ${context.weekNumber}.`
-  : `Generate exactly ${totalWorkouts} workouts covering ${numberOfWeeks} week(s).`}
+${
+  isGeneratingSpecificWeek
+    ? `Generate exactly ${context.workoutsThisWeek || daysPerWeek} workouts for Week ${context.weekNumber}.`
+    : `Generate exactly ${totalWorkouts} workouts covering ${numberOfWeeks} week(s).`
+}
 `;
 }

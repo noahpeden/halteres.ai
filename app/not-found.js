@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect } from 'react';
+import { FileX, Home, Loader, LogIn, Mail } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { createClient } from '@/utils/supabase/client';
-import { FileX, Home, LogIn, Loader, Mail } from 'lucide-react';
 
 export default function NotFound() {
   const router = useRouter();
@@ -50,9 +50,7 @@ export default function NotFound() {
         </p>
         <div className="mb-6">
           <Loader className="animate-spin w-8 h-8 mx-auto text-blue-500" />
-          <p className="text-sm text-gray-500 mt-2">
-            Redirecting you to the appropriate page...
-          </p>
+          <p className="text-sm text-gray-500 mt-2">Redirecting you to the appropriate page...</p>
         </div>
         <div className="flex flex-col space-y-2 mb-6">
           <button

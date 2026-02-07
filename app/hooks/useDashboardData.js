@@ -68,9 +68,7 @@ export function useDashboardData() {
             // Check both scheduled_date and tags fields
             const scheduledDate = workout.scheduled_date;
             const tagDate =
-              workout.tags?.scheduled_date ||
-              workout.tags?.suggestedDate ||
-              workout.tags?.date;
+              workout.tags?.scheduled_date || workout.tags?.suggestedDate || workout.tags?.date;
 
             let workoutDate = null;
 
@@ -111,9 +109,7 @@ export function useDashboardData() {
             // Check both scheduled_date and tags fields
             const scheduledDate = workout.scheduled_date;
             const tagDate =
-              workout.tags?.scheduled_date ||
-              workout.tags?.suggestedDate ||
-              workout.tags?.date;
+              workout.tags?.scheduled_date || workout.tags?.suggestedDate || workout.tags?.date;
 
             let workoutDate = null;
 

@@ -1,11 +1,7 @@
 'use client';
 
 // Handle viewing workout details
-export const handleViewWorkoutDetails = (
-  workout,
-  setSelectedWorkout,
-  setIsModalOpen
-) => {
+export const handleViewWorkoutDetails = (workout, setSelectedWorkout, setIsModalOpen) => {
   setSelectedWorkout(workout);
   setIsModalOpen(true);
 };

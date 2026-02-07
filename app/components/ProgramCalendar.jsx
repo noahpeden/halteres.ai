@@ -1,21 +1,20 @@
 'use client';
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { Calendar, Views, dateFnsLocalizer } from 'react-big-calendar';
-import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop';
 import format from 'date-fns/format';
-import parse from 'date-fns/parse';
-import startOfWeek from 'date-fns/startOfWeek';
 import getDay from 'date-fns/getDay';
 import enUS from 'date-fns/locale/en-US';
+import parse from 'date-fns/parse';
+import startOfWeek from 'date-fns/startOfWeek';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Calendar, dateFnsLocalizer, Views } from 'react-big-calendar';
+import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop';
+import { useAuth } from '@/contexts/AuthContext';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
-import { parseISO, isValid } from 'date-fns';
-
+import { isValid, parseISO } from 'date-fns';
+import EditWorkoutModal from './AIProgramWriter/EditWorkoutModal';
+import { formatDate } from './AIProgramWriter/utils';
 // Import the simpler version of WorkoutModal
 import CalendarWorkoutModal from './CalendarWorkoutModal';
-import EditWorkoutModal from './AIProgramWriter/EditWorkoutModal';
 import Toast from './Toast';
-import { formatDate } from './AIProgramWriter/utils';
 
 const locales = {
   'en-US': enUS,
@@ -57,10 +56,7 @@ const mapWorkoutToEvent = (workout) => {
     }
     workoutDate = parsedDate;
   } catch (e) {
-    console.error(
-      `Error parsing date string "${workoutDateStr}" for workout ID ${workout.id}:`,
-      e
-    );
+    console.error(`Error parsing date string "${workoutDateStr}" for workout ID ${workout.id}:`, e);
     return null;
   }
 
@@ -115,9 +111,7 @@ export default function ProgramCalendar({
         if (workoutsError) throw workoutsError;
 
         // Filter out workouts without a scheduled_date before setting state
-        const validWorkouts = (workoutsData || []).filter(
-          (w) => w.scheduled_date
-        );
+        const validWorkouts = (workoutsData || []).filter((w) => w.scheduled_date);
         setWorkouts(validWorkouts);
 
         // Removed fetch for workout_schedule
@@ -161,9 +155,7 @@ export default function ProgramCalendar({
     }
 
     // Map directly from workouts state
-    const eventsData = workouts
-      .map(mapWorkoutToEvent)
-      .filter((event) => event !== null); // Filter out nulls (workouts without dates)
+    const eventsData = workouts.map(mapWorkoutToEvent).filter((event) => event !== null); // Filter out nulls (workouts without dates)
 
     setMyEvents(eventsData);
     // Depend only on workouts state now
@@ -178,10 +170,7 @@ export default function ProgramCalendar({
       const originalWorkout = workouts.find((w) => w.id === workoutId);
 
       if (!originalWorkout || !originalWorkout.scheduled_date) {
-        console.error(
-          'Original workout or its scheduled_date not found for event:',
-          event
-        );
+        console.error('Original workout or its scheduled_date not found for event:', event);
         return;
       }
 
@@ -198,10 +187,7 @@ export default function ProgramCalendar({
       let originalFormattedDate;
       try {
         let originalDate = parseISO(originalWorkout.scheduled_date);
-        if (
-          !isValid(originalDate) &&
-          /^\d{4}-\d{2}-\d{2}$/.test(originalWorkout.scheduled_date)
-        ) {
+        if (!isValid(originalDate) && /^\d{4}-\d{2}-\d{2}$/.test(originalWorkout.scheduled_date)) {
           originalDate = new Date(originalWorkout.scheduled_date + 'T00:00:00');
         }
         if (!isValid(originalDate)) {
@@ -209,11 +195,7 @@ export default function ProgramCalendar({
         }
         originalFormattedDate = format(originalDate, 'yyyy-MM-dd');
       } catch (e) {
-        console.error(
-          'Error parsing original scheduled_date:',
-          originalWorkout.scheduled_date,
-          e
-        );
+        console.error('Error parsing original scheduled_date:', originalWorkout.scheduled_date, e);
         return; // Don't proceed if the original date is invalid
       }
 
@@ -247,10 +229,7 @@ export default function ProgramCalendar({
         );
         // The mapping effect will automatically update myEvents
       } catch (error) {
-        console.error(
-          'Error moving event (updating program_workout scheduled_date):',
-          error
-        );
+        console.error('Error moving event (updating program_workout scheduled_date):', error);
         // Consider a more robust error handling/revert mechanism if needed
         // For now, just log and prevent UI snapping back by NOT forcing re-render
         // setMyEvents((prev) => [...prev]); // Removing this line - let state update handle it
@@ -334,9 +313,7 @@ export default function ProgramCalendar({
 
         // Update local state
         setWorkouts((prev) =>
-          prev.map((w) =>
-            w.id === editedWorkout.id ? { ...w, ...editedWorkout } : w
-          )
+          prev.map((w) => (w.id === editedWorkout.id ? { ...w, ...editedWorkout } : w))
         );
         handleCloseEditModal();
         showToastMessage('Workout updated successfully.', 'success');
@@ -358,18 +335,13 @@ export default function ProgramCalendar({
         return;
       }
 
-      if (
-        !confirm('Are you sure you want to permanently delete this workout?')
-      ) {
+      if (!confirm('Are you sure you want to permanently delete this workout?')) {
         return;
       }
 
       setIsLoading(true);
       try {
-        const { error } = await supabase
-          .from('program_workouts')
-          .delete()
-          .eq('id', workoutId);
+        const { error } = await supabase.from('program_workouts').delete().eq('id', workoutId);
 
         if (error) throw error;
 
@@ -388,14 +360,8 @@ export default function ProgramCalendar({
   ); // Added handleCloseModal dependency
 
   // Handlers for controlled calendar
-  const handleNavigate = useCallback(
-    (newDate) => setCurrentDate(newDate),
-    [setCurrentDate]
-  );
-  const handleViewChange = useCallback(
-    (newView) => setCurrentView(newView),
-    [setCurrentView]
-  );
+  const handleNavigate = useCallback((newDate) => setCurrentDate(newDate), [setCurrentDate]);
+  const handleViewChange = useCallback((newView) => setCurrentView(newView), [setCurrentView]);
 
   return (
     <div className="bg-white rounded-lg shadow-md p-4 relative">
@@ -408,11 +374,7 @@ export default function ProgramCalendar({
 
       {/* Toast Container */}
       {showToast && (
-        <Toast
-          message={toastMessage}
-          type={toastType}
-          onClose={() => setShowToast(false)}
-        />
+        <Toast message={toastMessage} type={toastType} onClose={() => setShowToast(false)} />
       )}
 
       {isLoading && (

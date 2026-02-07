@@ -42,13 +42,10 @@ export async function generateEmbedding(text) {
 export async function fetchFeedbackPatterns(supabase, { gymId, methodology, limit = 20 }) {
   try {
     // Get aggregation from RPC
-    const { data: aggregation, error: aggError } = await supabase.rpc(
-      'get_feedback_aggregation',
-      {
-        p_gym_id: gymId || null,
-        p_methodology: methodology || null,
-      }
-    );
+    const { data: aggregation, error: aggError } = await supabase.rpc('get_feedback_aggregation', {
+      p_gym_id: gymId || null,
+      p_methodology: methodology || null,
+    });
 
     if (aggError || !aggregation || aggregation.length === 0) {
       return null;
@@ -148,7 +145,9 @@ export function formatFeedbackForPrompt(feedbackPatterns) {
 
   // Add pattern insights
   if (feedbackPatterns.patterns.length > 0) {
-    sections.push(`Insights from ${feedbackPatterns.totalFeedback} coach/athlete feedback ratings:`);
+    sections.push(
+      `Insights from ${feedbackPatterns.totalFeedback} coach/athlete feedback ratings:`
+    );
     sections.push(feedbackPatterns.patterns.map((p) => `- ${p}`).join('\n'));
   }
 
@@ -267,12 +266,10 @@ function extractCommonThemes(notes) {
  * Get comprehensive feedback context for program generation
  * Combines both pattern aggregation and RAG retrieval
  */
-export async function getFeedbackContextForGeneration(supabase, {
-  gymId,
-  methodology,
-  goal,
-  focusArea,
-}) {
+export async function getFeedbackContextForGeneration(
+  supabase,
+  { gymId, methodology, goal, focusArea }
+) {
   try {
     // Fetch both in parallel
     const [patterns, ragWorkouts] = await Promise.all([

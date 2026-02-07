@@ -1,13 +1,7 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
-export default function EditWorkoutModal({
-  isOpen,
-  workout,
-  onClose,
-  onSave,
-  isLoading,
-}) {
+export default function EditWorkoutModal({ isOpen, workout, onClose, onSave, isLoading }) {
   const [editedWorkout, setEditedWorkout] = useState({
     title: '',
     body: '',
@@ -57,11 +51,7 @@ export default function EditWorkoutModal({
           <div className="p-6">
             <div className="flex justify-between items-start mb-4">
               <h3 className="text-xl font-bold">Edit Workout</h3>
-              <button
-                type="button"
-                onClick={onClose}
-                className="btn btn-sm btn-circle btn-ghost"
-              >
+              <button type="button" onClick={onClose} className="btn btn-sm btn-circle btn-ghost">
                 ✕
               </button>
             </div>
@@ -79,9 +69,7 @@ export default function EditWorkoutModal({
             </div>
 
             <div className="mb-4">
-              <label className="block text-sm font-medium mb-1">
-                Description
-              </label>
+              <label className="block text-sm font-medium mb-1">Description</label>
               <textarea
                 name="body"
                 value={editedWorkout.body}
@@ -100,11 +88,7 @@ export default function EditWorkoutModal({
               >
                 Cancel
               </button>
-              <button
-                type="submit"
-                className="btn btn-primary text-white"
-                disabled={isLoading}
-              >
+              <button type="submit" className="btn btn-primary text-white" disabled={isLoading}>
                 {isLoading ? (
                   <>
                     <span className="loading loading-spinner loading-xs"></span>

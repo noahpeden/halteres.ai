@@ -1,7 +1,7 @@
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
-import PricingClient from '../components/PricingClient'; // Adjust path if needed
 import Link from 'next/link';
+import PricingClient from '../components/PricingClient'; // Adjust path if needed
 import { metadata as baseMetadata } from '../metadata'; // Import base metadata
 
 // Generate Metadata (using function from old page.js)
@@ -197,8 +197,8 @@ export default async function PricingPage({ searchParams }) {
             One Platform. Complete Gym Integration.
           </h1>
           <p className="mt-5 max-w-xl mx-auto text-xl text-base-content/80">
-            AI programming for coaches. Leaderboards and feedback for athletes.
-            All in one connected platform.
+            AI programming for coaches. Leaderboards and feedback for athletes. All in one connected
+            platform.
           </p>
           <p className="mt-2 text-sm text-base-content/60">
             Athletes join free. Coaches start with a 14-day trial.
@@ -259,30 +259,19 @@ export default async function PricingPage({ searchParams }) {
         {!user && (
           <div className="text-center mt-16">
             <p className="mb-4 text-lg">Already have an account?</p>
-            <Link
-              href="/login?redirectedFrom=/pricing"
-              className="btn btn-primary"
-            >
+            <Link href="/login?redirectedFrom=/pricing" className="btn btn-primary">
               Log In to Subscribe
             </Link>
           </div>
         )}
 
         <div className="mt-20 text-center">
-          <h2 className="text-3xl font-bold text-base-content">
-            Frequently Asked Questions
-          </h2>
+          <h2 className="text-3xl font-bold text-base-content">Frequently Asked Questions</h2>
           <dl className="mt-8 space-y-6 max-w-3xl mx-auto text-left">
             {faqs.map((faq, index) => (
               <div key={index} className="collapse collapse-arrow bg-base-200">
-                <input
-                  type="radio"
-                  name="pricing-faq"
-                  defaultChecked={index === 0}
-                />
-                <div className="collapse-title text-xl font-medium">
-                  {faq.question}
-                </div>
+                <input type="radio" name="pricing-faq" defaultChecked={index === 0} />
+                <div className="collapse-title text-xl font-medium">{faq.question}</div>
                 <div className="collapse-content">
                   <p className="text-base-content/80">{faq.answer}</p>
                 </div>

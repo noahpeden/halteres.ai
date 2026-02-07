@@ -1,6 +1,6 @@
+import { createServerClient } from '@supabase/ssr';
 import { createClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
-import { createServerClient } from '@supabase/ssr';
 
 async function getSupabaseClient() {
   const cookieStore = await cookies();
@@ -24,7 +24,9 @@ export async function GET(request) {
 
   try {
     const supabase = await getSupabaseClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
     if (!user) {
       return Response.json({ error: 'Not authenticated' }, { status: 401 });
@@ -53,7 +55,7 @@ export async function GET(request) {
     }
 
     // Get user's results for today's workouts
-    const workoutIds = (workouts || []).map(w => w.id);
+    const workoutIds = (workouts || []).map((w) => w.id);
     const { data: userResults } = await supabase
       .from('workout_results')
       .select('workout_id')
@@ -61,10 +63,10 @@ export async function GET(request) {
       .in('workout_id', workoutIds)
       .is('deleted_at', null);
 
-    const loggedWorkoutIds = new Set((userResults || []).map(r => r.workout_id));
+    const loggedWorkoutIds = new Set((userResults || []).map((r) => r.workout_id));
 
     // Add hasLogged flag to workouts
-    const workoutsWithStatus = (workouts || []).map(w => ({
+    const workoutsWithStatus = (workouts || []).map((w) => ({
       ...w,
       hasLogged: loggedWorkoutIds.has(w.id),
     }));
@@ -91,7 +93,7 @@ export async function GET(request) {
       .limit(10);
 
     // Format results with display values
-    const formattedResults = (recentResults || []).map(r => ({
+    const formattedResults = (recentResults || []).map((r) => ({
       ...r,
       displayValue: formatResult(r),
     }));
@@ -133,11 +135,12 @@ export async function GET(request) {
 
 function formatResult(result) {
   switch (result.result_type) {
-    case 'time':
+    case 'time': {
       if (!result.time_seconds) return '-';
       const mins = Math.floor(result.time_seconds / 60);
       const secs = result.time_seconds % 60;
       return `${mins}:${secs.toString().padStart(2, '0')}`;
+    }
     case 'rounds_reps':
       return `${result.rounds || 0} + ${result.reps || 0}`;
     case 'weight':

@@ -1,5 +1,5 @@
-import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
 
 async function getSupabaseClient() {
   const cookieStore = await cookies();
@@ -69,11 +69,12 @@ export async function GET(request) {
 
 function formatResult(result) {
   switch (result.result_type) {
-    case 'time':
+    case 'time': {
       if (!result.time_seconds) return '-';
       const mins = Math.floor(result.time_seconds / 60);
       const secs = result.time_seconds % 60;
       return `${mins}:${secs.toString().padStart(2, '0')}`;
+    }
     case 'rounds_reps':
       return `${result.rounds || 0} + ${result.reps || 0}`;
     case 'weight':

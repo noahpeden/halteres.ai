@@ -1,33 +1,29 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
-import { useAuth } from '@/contexts/AuthContext';
-import WizardProgress from '../../components/ProgramWizard/WizardProgress';
-import equipmentList from '@/utils/equipmentList';
 import {
+  Brain,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  ExternalLink,
+  Eye,
+  FileText,
+  Globe,
+  Info,
+  Loader2,
   Search,
   Sparkles,
-  Globe,
-  FileText,
-  CheckCircle2,
-  Eye,
-  Trash2,
-  ExternalLink,
-  Loader2,
-  Info,
-  ChevronRight,
-  ChevronLeft,
-  Brain,
-  Zap,
   Target,
+  Trash2,
   X,
+  Zap,
 } from 'lucide-react';
-import {
-  goals,
-  difficulties,
-  gymEquipmentPresets,
-} from '../../components/utils';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import equipmentList from '@/utils/equipmentList';
+import WizardProgress from '../../components/ProgramWizard/WizardProgress';
+import { difficulties, goals, gymEquipmentPresets } from '../../components/utils';
 
 export default function Step3Page() {
   const searchParams = useSearchParams();
@@ -55,9 +51,7 @@ export default function Step3Page() {
   const [activeTab, setActiveTab] = useState('ai'); // 'manual' or 'ai'
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [previousGeneratedWorkouts, setPreviousGeneratedWorkouts] = useState(
-    []
-  );
+  const [previousGeneratedWorkouts, setPreviousGeneratedWorkouts] = useState([]);
 
   // Helper function to create unique workout identifier
   const getWorkoutId = (workout) => {
@@ -84,9 +78,7 @@ export default function Step3Page() {
 
           if (program) {
             // Update local state with fetched data
-            setPreviousWorkout(
-              program.reference_input || ''
-            );
+            setPreviousWorkout(program.reference_input || '');
 
             // Load reference workouts (previously selected workouts)
             const { data: referenceWorkouts, error: refError } = await supabase
@@ -108,9 +100,7 @@ export default function Step3Page() {
                 // Add any other fields that might be needed
               }));
 
-              setSelectedWorkouts(
-                Array.isArray(formattedWorkouts) ? formattedWorkouts : []
-              );
+              setSelectedWorkouts(Array.isArray(formattedWorkouts) ? formattedWorkouts : []);
             }
 
             // Load previously generated workouts (from AI writer)
@@ -148,7 +138,6 @@ export default function Step3Page() {
 
     loadProgram();
   }, [programId, supabase]);
-
 
   const handleNext = async () => {
     if (!programId) {
@@ -298,13 +287,17 @@ export default function Step3Page() {
       }
 
       const data = await response.json();
-      
+
       // Handle the new Tavily response format
       if (data.workouts && data.workouts.length > 0) {
         const firstWorkout = data.workouts[0];
-        
+
         // Check if the body contains a JSON array string
-        if (firstWorkout.body && typeof firstWorkout.body === 'string' && firstWorkout.body.trim().startsWith('[')) {
+        if (
+          firstWorkout.body &&
+          typeof firstWorkout.body === 'string' &&
+          firstWorkout.body.trim().startsWith('[')
+        ) {
           try {
             // Parse the JSON array from the body
             const parsedWorkouts = JSON.parse(firstWorkout.body);
@@ -331,14 +324,10 @@ export default function Step3Page() {
 
   const handleSelectWorkout = (workout) => {
     const workoutId = getWorkoutId(workout);
-    const isSelected = selectedWorkouts.some(
-      (w) => getWorkoutId(w) === workoutId
-    );
+    const isSelected = selectedWorkouts.some((w) => getWorkoutId(w) === workoutId);
 
     if (isSelected) {
-      setSelectedWorkouts((prev) =>
-        prev.filter((w) => getWorkoutId(w) !== workoutId)
-      );
+      setSelectedWorkouts((prev) => prev.filter((w) => getWorkoutId(w) !== workoutId));
     } else {
       setSelectedWorkouts((prev) => [...prev, workout]);
     }
@@ -346,9 +335,7 @@ export default function Step3Page() {
 
   const handleRemoveSelectedWorkout = (workoutToRemove) => {
     const workoutId = getWorkoutId(workoutToRemove);
-    setSelectedWorkouts((prev) =>
-      prev.filter((w) => getWorkoutId(w) !== workoutId)
-    );
+    setSelectedWorkouts((prev) => prev.filter((w) => getWorkoutId(w) !== workoutId));
   };
 
   const handleViewWorkout = (workout, event) => {
@@ -404,9 +391,7 @@ Day 3: Leg Press 4x12, DB Press 4x10, Leg Curls 4x12`,
       {/* Exit button when there's a programId */}
       {programId && (
         <button
-          onClick={() =>
-            (window.location.href = `/program/${programId}/writer`)
-          }
+          onClick={() => (window.location.href = `/program/${programId}/writer`)}
           className="absolute top-4 right-4 btn btn-ghost btn-circle z-10"
           title="Exit wizard and go to program writer"
         >
@@ -425,12 +410,10 @@ Day 3: Leg Press 4x12, DB Press 4x10, Leg Curls 4x12`,
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         {/* Header */}
         <div className="bg-gradient-to-r from-primary/5 to-primary/10 p-8 text-center">
-          <h2 className="text-3xl font-bold text-gray-900 mb-3">
-            Personalize Your Program
-          </h2>
+          <h2 className="text-3xl font-bold text-gray-900 mb-3">Personalize Your Program</h2>
           <p className="text-gray-600 max-w-2xl mx-auto">
-            Share previous workouts or let our AI agents search the web for
-            reference workouts to inspire your custom program
+            Share previous workouts or let our AI agents search the web for reference workouts to
+            inspire your custom program
           </p>
         </div>
 
@@ -440,9 +423,7 @@ Day 3: Leg Press 4x12, DB Press 4x10, Leg Curls 4x12`,
             <button
               onClick={() => setActiveTab('ai')}
               className={`px-6 py-4 font-medium transition-all relative ${
-                activeTab === 'ai'
-                  ? 'text-primary'
-                  : 'text-gray-500 hover:text-gray-700'
+                activeTab === 'ai' ? 'text-primary' : 'text-gray-500 hover:text-gray-700'
               }`}
             >
               <div className="flex items-center gap-2">
@@ -456,9 +437,7 @@ Day 3: Leg Press 4x12, DB Press 4x10, Leg Curls 4x12`,
             <button
               onClick={() => setActiveTab('manual')}
               className={`px-6 py-4 font-medium transition-all relative ${
-                activeTab === 'manual'
-                  ? 'text-primary'
-                  : 'text-gray-500 hover:text-gray-700'
+                activeTab === 'manual' ? 'text-primary' : 'text-gray-500 hover:text-gray-700'
               }`}
             >
               <div className="flex items-center gap-2">
@@ -474,16 +453,12 @@ Day 3: Leg Press 4x12, DB Press 4x10, Leg Curls 4x12`,
               <button
                 onClick={() => setActiveTab('previous')}
                 className={`px-6 py-4 font-medium transition-all relative ${
-                  activeTab === 'previous'
-                    ? 'text-primary'
-                    : 'text-gray-500 hover:text-gray-700'
+                  activeTab === 'previous' ? 'text-primary' : 'text-gray-500 hover:text-gray-700'
                 }`}
               >
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="w-5 h-5" />
-                  <span>
-                    Previous Workouts ({previousGeneratedWorkouts.length})
-                  </span>
+                  <span>Previous Workouts ({previousGeneratedWorkouts.length})</span>
                 </div>
                 {activeTab === 'previous' && (
                   <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
@@ -529,8 +504,7 @@ Day 3: Leg Press 4x12, DB Press 4x10, Leg Curls 4x12`,
                   Share Your Recent Training
                 </label>
                 <p className="text-sm text-gray-600 mb-4">
-                  Paste or describe your recent workouts to help create a more
-                  personalized program
+                  Paste or describe your recent workouts to help create a more personalized program
                 </p>
                 <textarea
                   value={previousWorkout}
@@ -540,9 +514,7 @@ Day 3: Leg Press 4x12, DB Press 4x10, Leg Curls 4x12`,
                 />
 
                 <div className="mt-6">
-                  <p className="text-sm font-medium text-gray-700 mb-3">
-                    Example formats:
-                  </p>
+                  <p className="text-sm font-medium text-gray-700 mb-3">Example formats:</p>
                   <div className="grid gap-3">
                     {exampleWorkouts.map((workout, index) => (
                       <button
@@ -570,20 +542,10 @@ Day 3: Leg Press 4x12, DB Press 4x10, Leg Curls 4x12`,
                       Why share previous workouts?
                     </h3>
                     <ul className="text-sm text-blue-800 space-y-1">
-                      <li>
-                        • Ensures appropriate progression from your current
-                        level
-                      </li>
-                      <li>
-                        • Maintains familiar exercise patterns while introducing
-                        new ones
-                      </li>
-                      <li>
-                        • Helps identify strengths and areas for improvement
-                      </li>
-                      <li>
-                        • Creates a more personalized and effective program
-                      </li>
+                      <li>• Ensures appropriate progression from your current level</li>
+                      <li>• Maintains familiar exercise patterns while introducing new ones</li>
+                      <li>• Helps identify strengths and areas for improvement</li>
+                      <li>• Creates a more personalized and effective program</li>
                     </ul>
                   </div>
                 </div>
@@ -600,8 +562,8 @@ Day 3: Leg Press 4x12, DB Press 4x10, Leg Curls 4x12`,
                   Previously Generated Workouts
                 </h3>
                 <p className="text-gray-600 max-w-2xl mx-auto">
-                  Review workouts from your current program. You can select any
-                  of these as reference for your updated program.
+                  Review workouts from your current program. You can select any of these as
+                  reference for your updated program.
                 </p>
               </div>
 
@@ -609,9 +571,7 @@ Day 3: Leg Press 4x12, DB Press 4x10, Leg Curls 4x12`,
               <div className="grid gap-4">
                 {previousGeneratedWorkouts.map((workout, index) => {
                   const workoutId = getWorkoutId(workout);
-                  const isSelected = selectedWorkouts.some(
-                    (w) => getWorkoutId(w) === workoutId
-                  );
+                  const isSelected = selectedWorkouts.some((w) => getWorkoutId(w) === workoutId);
 
                   return (
                     <div
@@ -632,9 +592,7 @@ Day 3: Leg Press 4x12, DB Press 4x10, Leg Curls 4x12`,
                       <div className="flex items-start justify-between mb-4">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-2">
-                            <h5 className="font-semibold text-lg text-gray-900">
-                              {workout.title}
-                            </h5>
+                            <h5 className="font-semibold text-lg text-gray-900">{workout.title}</h5>
                             {workout.completed && (
                               <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
                                 <CheckCircle2 className="w-3 h-3" />
@@ -643,9 +601,7 @@ Day 3: Leg Press 4x12, DB Press 4x10, Leg Curls 4x12`,
                             )}
                             {workout.scheduled_date && (
                               <span className="text-xs text-gray-500">
-                                {new Date(
-                                  workout.scheduled_date
-                                ).toLocaleDateString()}
+                                {new Date(workout.scheduled_date).toLocaleDateString()}
                               </span>
                             )}
                           </div>
@@ -656,9 +612,7 @@ Day 3: Leg Press 4x12, DB Press 4x10, Leg Curls 4x12`,
                       </div>
 
                       <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-500">
-                          From your current program
-                        </span>
+                        <span className="text-sm text-gray-500">From your current program</span>
 
                         <div className="flex gap-2">
                           <button
@@ -686,9 +640,7 @@ Day 3: Leg Press 4x12, DB Press 4x10, Leg Curls 4x12`,
 
               {previousGeneratedWorkouts.length === 0 && (
                 <div className="text-center py-8">
-                  <p className="text-gray-500">
-                    No previously generated workouts found.
-                  </p>
+                  <p className="text-gray-500">No previously generated workouts found.</p>
                 </div>
               )}
             </div>
@@ -703,8 +655,8 @@ Day 3: Leg Press 4x12, DB Press 4x10, Leg Curls 4x12`,
                   AI-Powered Workout Discovery
                 </h3>
                 <p className="text-gray-600 max-w-2xl mx-auto">
-                  Our AI agents search across the web to find workouts that
-                  match your specific needs and preferences
+                  Our AI agents search across the web to find workouts that match your specific
+                  needs and preferences
                 </p>
               </div>
 
@@ -728,14 +680,10 @@ Day 3: Leg Press 4x12, DB Press 4x10, Leg Curls 4x12`,
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Goal
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Goal</label>
                     <select
                       value={searchCriteria.goal}
-                      onChange={(e) =>
-                        handleCriteriaChange('goal', e.target.value)
-                      }
+                      onChange={(e) => handleCriteriaChange('goal', e.target.value)}
                       className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                     >
                       {goals.map((goal) => (
@@ -752,9 +700,7 @@ Day 3: Leg Press 4x12, DB Press 4x10, Leg Curls 4x12`,
                     </label>
                     <select
                       value={searchCriteria.difficulty}
-                      onChange={(e) =>
-                        handleCriteriaChange('difficulty', e.target.value)
-                      }
+                      onChange={(e) => handleCriteriaChange('difficulty', e.target.value)}
                       className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                     >
                       {difficulties.map((diff) => (
@@ -793,9 +739,7 @@ Day 3: Leg Press 4x12, DB Press 4x10, Leg Curls 4x12`,
                       <Globe className="w-5 h-5 text-blue-700" />
                     </div>
                     <div>
-                      <h4 className="font-semibold text-blue-900">
-                        Web-Wide Search
-                      </h4>
+                      <h4 className="font-semibold text-blue-900">Web-Wide Search</h4>
                       <p className="text-sm text-blue-700 mt-1">
                         Searches across fitness websites and forums
                       </p>
@@ -809,9 +753,7 @@ Day 3: Leg Press 4x12, DB Press 4x10, Leg Curls 4x12`,
                       <Zap className="w-5 h-5 text-purple-700" />
                     </div>
                     <div>
-                      <h4 className="font-semibold text-purple-900">
-                        Smart Matching
-                      </h4>
+                      <h4 className="font-semibold text-purple-900">Smart Matching</h4>
                       <p className="text-sm text-purple-700 mt-1">
                         Finds workouts that match your criteria
                       </p>
@@ -825,9 +767,7 @@ Day 3: Leg Press 4x12, DB Press 4x10, Leg Curls 4x12`,
                       <Target className="w-5 h-5 text-green-700" />
                     </div>
                     <div>
-                      <h4 className="font-semibold text-green-900">
-                        Personalized Results
-                      </h4>
+                      <h4 className="font-semibold text-green-900">Personalized Results</h4>
                       <p className="text-sm text-green-700 mt-1">
                         Tailored to your goals and equipment
                       </p>
@@ -933,9 +873,7 @@ Day 3: Leg Press 4x12, DB Press 4x10, Leg Curls 4x12`,
           {/* Selected Workouts Display */}
           {selectedWorkouts.length > 0 && (
             <div className="mt-8 pt-8 border-t border-gray-200">
-              <h4 className="font-semibold text-gray-900 mb-4">
-                Selected Reference Workouts
-              </h4>
+              <h4 className="font-semibold text-gray-900 mb-4">Selected Reference Workouts</h4>
               <div className="grid gap-3">
                 {selectedWorkouts.map((workout) => (
                   <div
@@ -944,12 +882,8 @@ Day 3: Leg Press 4x12, DB Press 4x10, Leg Curls 4x12`,
                   >
                     <CheckCircle2 className="w-5 h-5 text-primary flex-shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-gray-900 truncate">
-                        {workout.title}
-                      </p>
-                      <p className="text-sm text-gray-600">
-                        {workout.source || 'Web Search'}
-                      </p>
+                      <p className="font-medium text-gray-900 truncate">{workout.title}</p>
+                      <p className="text-sm text-gray-600">{workout.source || 'Web Search'}</p>
                     </div>
                     <div className="flex gap-2">
                       <button
@@ -1029,9 +963,7 @@ Day 3: Leg Press 4x12, DB Press 4x10, Leg Curls 4x12`,
             <div className="p-6 border-b border-gray-200">
               <div className="flex justify-between items-start">
                 <div className="flex-1">
-                  <h3 className="text-xl font-bold text-gray-900">
-                    {selectedWorkoutModal.title}
-                  </h3>
+                  <h3 className="text-xl font-bold text-gray-900">{selectedWorkoutModal.title}</h3>
                   <div className="flex items-center gap-3 mt-2">
                     {isValidUrl(selectedWorkoutModal.source) ? (
                       <a
@@ -1075,8 +1007,7 @@ Day 3: Leg Press 4x12, DB Press 4x10, Leg Curls 4x12`,
                 }}
                 className={`flex-1 py-2.5 font-medium rounded-lg transition-colors ${
                   selectedWorkouts.some(
-                    (w) =>
-                      getWorkoutId(w) === getWorkoutId(selectedWorkoutModal)
+                    (w) => getWorkoutId(w) === getWorkoutId(selectedWorkoutModal)
                   )
                     ? 'bg-red-500 hover:bg-red-600 text-white'
                     : 'bg-primary hover:bg-primary-dark text-white'

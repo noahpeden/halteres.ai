@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function PeriodizationView({ id }) {
@@ -129,10 +129,7 @@ export default function PeriodizationView({ id }) {
     if (confirm('Are you sure you want to delete this phase?')) {
       setIsLoading(true);
       try {
-        const { error } = await supabase
-          .from('program_periodization')
-          .delete()
-          .eq('id', id);
+        const { error } = await supabase.from('program_periodization').delete().eq('id', id);
 
         if (error) throw error;
 
@@ -255,16 +252,10 @@ export default function PeriodizationView({ id }) {
           </div>
 
           <div className="flex justify-end gap-2">
-            <button
-              onClick={handleCancelEdit}
-              className="btn btn-outline btn-sm"
-            >
+            <button onClick={handleCancelEdit} className="btn btn-outline btn-sm">
               Cancel
             </button>
-            <button
-              onClick={handleSavePhase}
-              className="btn btn-primary btn-sm"
-            >
+            <button onClick={handleSavePhase} className="btn btn-primary btn-sm">
               Save Phase
             </button>
           </div>
@@ -276,30 +267,19 @@ export default function PeriodizationView({ id }) {
           <div className="overflow-x-auto">
             <div className="flex w-full min-w-[600px]">
               {periodization.map((phase, index) => {
-                const duration = calculateDuration(
-                  phase.start_date,
-                  phase.end_date
-                );
+                const duration = calculateDuration(phase.start_date, phase.end_date);
                 const durationInDays = Math.ceil(
-                  (new Date(phase.end_date) - new Date(phase.start_date)) /
-                    (1000 * 60 * 60 * 24)
+                  (new Date(phase.end_date) - new Date(phase.start_date)) / (1000 * 60 * 60 * 24)
                 );
-                const widthPercentage = Math.max(
-                  10,
-                  Math.min(100, durationInDays / 2)
-                );
+                const widthPercentage = Math.max(10, Math.min(100, durationInDays / 2));
 
                 return (
                   <div
                     key={phase.id}
-                    className={`${getPhaseColor(
-                      phase.phase_type
-                    )} text-white rounded-md p-3 mx-1`}
+                    className={`${getPhaseColor(phase.phase_type)} text-white rounded-md p-3 mx-1`}
                     style={{ width: `${widthPercentage}%` }}
                   >
-                    <div className="font-medium">
-                      {getPhaseLabel(phase.phase_type)}
-                    </div>
+                    <div className="font-medium">{getPhaseLabel(phase.phase_type)}</div>
                     <div className="text-xs opacity-90">
                       {new Date(phase.start_date).toLocaleDateString()} -{' '}
                       {new Date(phase.end_date).toLocaleDateString()}
@@ -317,13 +297,9 @@ export default function PeriodizationView({ id }) {
                 <div className="flex justify-between items-center">
                   <div className="flex items-center">
                     <div
-                      className={`w-4 h-4 rounded-full ${getPhaseColor(
-                        phase.phase_type
-                      )} mr-2`}
+                      className={`w-4 h-4 rounded-full ${getPhaseColor(phase.phase_type)} mr-2`}
                     ></div>
-                    <h4 className="font-medium">
-                      {getPhaseLabel(phase.phase_type)}
-                    </h4>
+                    <h4 className="font-medium">{getPhaseLabel(phase.phase_type)}</h4>
                   </div>
                   <div className="flex gap-2">
                     <button
@@ -373,13 +349,9 @@ export default function PeriodizationView({ id }) {
                       {new Date(phase.start_date).toLocaleDateString()} -{' '}
                       {new Date(phase.end_date).toLocaleDateString()}
                     </span>
-                    <span>
-                      {calculateDuration(phase.start_date, phase.end_date)}
-                    </span>
+                    <span>{calculateDuration(phase.start_date, phase.end_date)}</span>
                   </div>
-                  {phase.description && (
-                    <p className="mt-2">{phase.description}</p>
-                  )}
+                  {phase.description && <p className="mt-2">{phase.description}</p>}
                 </div>
               </div>
             ))}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { getLeaderboardAction, toggleFistBumpAction } from '@/actions/workoutResultActions';
 
 export default function LeaderboardView({ workoutId, gymId, workoutTitle }) {
@@ -115,15 +115,11 @@ export default function LeaderboardView({ workoutId, gymId, workoutTitle }) {
             <div
               key={entry.id}
               className={`flex items-center gap-3 p-3 rounded-lg ${
-                entry.isCurrentUser
-                  ? 'bg-primary/10 border-2 border-primary'
-                  : 'bg-base-200'
+                entry.isCurrentUser ? 'bg-primary/10 border-2 border-primary' : 'bg-base-200'
               }`}
             >
               {/* Rank */}
-              <div className="w-10 flex justify-center">
-                {getRankBadge(entry.rank)}
-              </div>
+              <div className="w-10 flex justify-center">{getRankBadge(entry.rank)}</div>
 
               {/* Avatar */}
               <div className="avatar placeholder">
@@ -150,12 +146,8 @@ export default function LeaderboardView({ workoutId, gymId, workoutTitle }) {
                 </p>
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-bold">{entry.displayValue}</span>
-                  <span className="badge badge-ghost badge-xs uppercase">
-                    {entry.scale}
-                  </span>
-                  {entry.is_pr && (
-                    <span className="text-xs">🏆 PR</span>
-                  )}
+                  <span className="badge badge-ghost badge-xs uppercase">{entry.scale}</span>
+                  {entry.is_pr && <span className="text-xs">🏆 PR</span>}
                 </div>
               </div>
 

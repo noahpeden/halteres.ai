@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 export default function AIFeedbackCard({ workoutResultId, userId, autoGenerate = false }) {
   const [feedback, setFeedback] = useState(null);
@@ -187,21 +187,22 @@ export default function AIFeedbackCard({ workoutResultId, userId, autoGenerate =
             )}
 
             {/* Next Workout Recommendations */}
-            {feedback.next_workout_recommendations && feedback.next_workout_recommendations.length > 0 && (
-              <div>
-                <h4 className="font-semibold text-secondary flex items-center gap-2 mb-2">
-                  <span>📋</span> For Your Next Workout
-                </h4>
-                <ul className="space-y-1">
-                  {feedback.next_workout_recommendations.map((rec, i) => (
-                    <li key={i} className="flex items-start gap-2 text-sm">
-                      <span className="text-secondary">→</span>
-                      {rec}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
+            {feedback.next_workout_recommendations &&
+              feedback.next_workout_recommendations.length > 0 && (
+                <div>
+                  <h4 className="font-semibold text-secondary flex items-center gap-2 mb-2">
+                    <span>📋</span> For Your Next Workout
+                  </h4>
+                  <ul className="space-y-1">
+                    {feedback.next_workout_recommendations.map((rec, i) => (
+                      <li key={i} className="flex items-start gap-2 text-sm">
+                        <span className="text-secondary">→</span>
+                        {rec}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
           </div>
         )}
 

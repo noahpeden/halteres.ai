@@ -1,5 +1,5 @@
-import { metadata } from '../metadata';
 import Link from 'next/link';
+import { metadata } from '../metadata';
 
 export const generateMetadata = () => {
   return {
@@ -55,8 +55,7 @@ export default function UpdatesPage() {
                 Latest Updates
               </h1>
               <p className="mt-6 text-lg leading-8 text-blue-100">
-                Stay informed about the latest developments and announcements
-                from HalteresAI.
+                Stay informed about the latest developments and announcements from HalteresAI.
               </p>
             </div>
           </div>
@@ -70,28 +69,21 @@ export default function UpdatesPage() {
                 Product Updates
               </h2>
               <p className="mt-6 text-lg leading-8 text-gray-600">
-                Follow our journey as we build and improve HalteresAI to
-                revolutionize fitness programming.
+                Follow our journey as we build and improve HalteresAI to revolutionize fitness
+                programming.
               </p>
             </div>
 
             <div className="mx-auto mt-16 max-w-2xl lg:mx-0 lg:max-w-none">
               {updates.map((update, index) => (
-                <div
-                  key={index}
-                  className="mb-16 border-l-4 border-blue-600 pl-6"
-                >
+                <div key={index} className="mb-16 border-l-4 border-blue-600 pl-6">
                   <div className="flex items-baseline gap-x-2">
                     <h3 className="text-2xl font-bold tracking-tight text-gray-900">
                       {update.title}
                     </h3>
-                    <span className="text-sm font-medium text-blue-600">
-                      {update.date}
-                    </span>
+                    <span className="text-sm font-medium text-blue-600">{update.date}</span>
                   </div>
-                  <p className="mt-4 text-lg text-gray-600">
-                    {update.description}
-                  </p>
+                  <p className="mt-4 text-lg text-gray-600">{update.description}</p>
                 </div>
               ))}
             </div>
@@ -114,13 +106,12 @@ export default function UpdatesPage() {
               <div className="flex flex-col md:flex-row justify-between items-start gap-8">
                 <div className="max-w-xl">
                   <p className="text-gray-600 mb-6">
-                    As we continue to develop HalteresAI, your feedback is
-                    invaluable in helping us create the best possible platform
-                    for fitness professionals.
+                    As we continue to develop HalteresAI, your feedback is invaluable in helping us
+                    create the best possible platform for fitness professionals.
                   </p>
                   <p className="text-gray-600 mb-6">
-                    Please share your thoughts, suggestions, and any issues you
-                    encounter while using our platform.
+                    Please share your thoughts, suggestions, and any issues you encounter while
+                    using our platform.
                   </p>
                   <a
                     href="https://docs.google.com/forms/d/e/1FAIpQLScwKMmjHLqIq4bmOlFKaVHFIowqX1-CwZ3HRNXWZyxpBb3VVw/viewform?usp=dialog"
@@ -132,9 +123,7 @@ export default function UpdatesPage() {
                   </a>
                 </div>
                 <div className="bg-blue-50 p-6 rounded-lg w-full md:w-auto">
-                  <h3 className="font-medium text-xl mb-4">
-                    Questions or issues?
-                  </h3>
+                  <h3 className="font-medium text-xl mb-4">Questions or issues?</h3>
                   <p className="mb-2">Contact our co-founder Ben:</p>
                   <p className="mb-1">
                     <span className="font-medium">Phone:</span> (314) 827-4744
@@ -142,10 +131,7 @@ export default function UpdatesPage() {
                   <p className="mb-4">
                     <span className="font-medium">Email:</span> ben@halteres.ai
                   </p>
-                  <Link
-                    href="/contact"
-                    className="text-blue-600 hover:text-blue-500 font-medium"
-                  >
+                  <Link href="/contact" className="text-blue-600 hover:text-blue-500 font-medium">
                     Visit Contact Page →
                   </Link>
                 </div>
@@ -162,8 +148,7 @@ export default function UpdatesPage() {
                 Ready to get started?
               </h2>
               <p className="mx-auto mt-6 max-w-xl text-lg leading-8 text-blue-100">
-                Join our early access program and transform your fitness
-                programming with AI.
+                Join our early access program and transform your fitness programming with AI.
               </p>
               <div className="mt-10 flex items-center justify-center gap-x-6">
                 <Link
@@ -172,10 +157,7 @@ export default function UpdatesPage() {
                 >
                   Go to Dashboard
                 </Link>
-                <Link
-                  href="/contact"
-                  className="text-sm font-semibold leading-6 text-white"
-                >
+                <Link href="/contact" className="text-sm font-semibold leading-6 text-white">
                   Contact Us <span aria-hidden="true">→</span>
                 </Link>
               </div>

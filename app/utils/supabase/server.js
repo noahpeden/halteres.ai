@@ -14,7 +14,7 @@ async function createClient() {
         },
         async set(name, value, options) {
           try {
-            const cookieStore = cookies();
+            const cookieStore = await cookies();
             cookieStore.set({ name, value, ...options });
           } catch (error) {
             // The `set` method was called from a Server Component.
@@ -24,7 +24,7 @@ async function createClient() {
         },
         async remove(name, options) {
           try {
-            const cookieStore = cookies();
+            const cookieStore = await cookies();
             cookieStore.set({ name, value: '', ...options });
           } catch (error) {
             // The `delete` method was called from a Server Component.

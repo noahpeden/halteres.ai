@@ -18,19 +18,15 @@ export default function RescheduleModal({
         <div className="p-6">
           <div className="flex justify-between items-start mb-4">
             <h3 className="text-xl font-bold">Re-Schedule Program</h3>
-            <button
-              onClick={onClose}
-              className="btn btn-sm btn-circle btn-ghost"
-            >
+            <button onClick={onClose} className="btn btn-sm btn-circle btn-ghost">
               ✕
             </button>
           </div>
 
           <div className="mb-4">
             <p className="text-sm text-gray-600 mb-2">
-              Select a new start date for your program. All workouts will be
-              rescheduled based on this new date while maintaining your selected
-              days of the week.
+              Select a new start date for your program. All workouts will be rescheduled based on
+              this new date while maintaining your selected days of the week.
             </p>
             <div className="alert alert-info text-sm">
               <div className="flex items-center gap-2">
@@ -43,9 +39,7 @@ export default function RescheduleModal({
           </div>
 
           <div className="mb-4">
-            <label className="block text-sm font-medium mb-1">
-              New Start Date
-            </label>
+            <label className="block text-sm font-medium mb-1">New Start Date</label>
             <input
               type="date"
               value={newStartDate || ''}

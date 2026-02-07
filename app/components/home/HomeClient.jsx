@@ -1,32 +1,32 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
 import {
   ArrowRight,
-  Clock,
-  Users,
-  TrendingUp,
-  Target,
-  CheckCircle,
   BarChart3,
-  Sparkles,
-  Trophy,
-  MessageSquare,
   Brain,
-  Dumbbell,
-  Zap,
-  Play,
+  CheckCircle,
   ChevronRight,
+  Clock,
+  Dumbbell,
+  MessageSquare,
+  Play,
+  Sparkles,
   Star,
+  Target,
+  TrendingUp,
+  Trophy,
+  Users,
+  Zap,
 } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
 import Image from 'next/image';
-import programWriter from '@/assets/program writer.gif';
-import dashboard from '@/assets/dashboard.gif';
-import referencer from '@/assets/referencer.gif';
-import logo from '@/assets/logo.png';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import dashboard from '@/assets/dashboard.gif';
+import logo from '@/assets/logo.png';
+import programWriter from '@/assets/program writer.gif';
+import referencer from '@/assets/referencer.gif';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function HomeClient() {
   const { session } = useAuth();
@@ -56,10 +56,13 @@ export default function HomeClient() {
           <div className="absolute bottom-0 left-0 w-96 h-96 bg-accent/10 rounded-full blur-3xl -translate-x-1/2 translate-y-1/2" />
           <div className="absolute top-20 right-20 w-72 h-72 bg-secondary/10 rounded-full blur-3xl" />
           {/* Decorative grid */}
-          <div className="absolute inset-0 opacity-[0.02]" style={{
-            backgroundImage: `linear-gradient(#1771dc 1px, transparent 1px), linear-gradient(90deg, #1771dc 1px, transparent 1px)`,
-            backgroundSize: '60px 60px'
-          }} />
+          <div
+            className="absolute inset-0 opacity-[0.02]"
+            style={{
+              backgroundImage: `linear-gradient(#1771dc 1px, transparent 1px), linear-gradient(90deg, #1771dc 1px, transparent 1px)`,
+              backgroundSize: '60px 60px',
+            }}
+          />
         </div>
 
         <div className="relative container mx-auto px-4 py-20 lg:py-0">
@@ -88,9 +91,9 @@ export default function HomeClient() {
                 </h1>
 
                 <p className="text-lg sm:text-xl text-neutral max-w-xl leading-relaxed">
-                  Stop juggling separate tools for programming and athlete tracking.
-                  Generate intelligent 8-week programs. Let athletes log results and compete.
-                  Watch AI learn from everyone.
+                  Stop juggling separate tools for programming and athlete tracking. Generate
+                  intelligent 8-week programs. Let athletes log results and compete. Watch AI learn
+                  from everyone.
                 </p>
               </div>
 
@@ -119,10 +122,7 @@ export default function HomeClient() {
                   {session ? 'Go to Dashboard' : 'Start Free Trial'}
                   <ArrowRight className="w-5 h-5" />
                 </button>
-                <Link
-                  href="/login?role=athlete"
-                  className="btn btn-outline btn-lg gap-2"
-                >
+                <Link href="/login?role=athlete" className="btn btn-outline btn-lg gap-2">
                   <Dumbbell className="w-5 h-5" />
                   Join as Athlete
                 </Link>
@@ -146,7 +146,10 @@ export default function HomeClient() {
             </div>
 
             {/* Right Column - Video with floating elements */}
-            <div className={`lg:col-span-6 relative ${mounted ? 'animate-fadeIn' : 'opacity-0'}`} style={{ animationDelay: '0.2s' }}>
+            <div
+              className={`lg:col-span-6 relative ${mounted ? 'animate-fadeIn' : 'opacity-0'}`}
+              style={{ animationDelay: '0.2s' }}
+            >
               {/* Main Video Card */}
               <div className="relative">
                 <div className="card bg-base-100 shadow-2xl border border-base-200 overflow-hidden">
@@ -173,7 +176,10 @@ export default function HomeClient() {
                   </div>
                 </div>
 
-                <div className="absolute -right-4 sm:-right-8 bottom-1/4 card bg-base-100 shadow-xl border border-base-200 p-4 animate-float" style={{ animationDelay: '1s' }}>
+                <div
+                  className="absolute -right-4 sm:-right-8 bottom-1/4 card bg-base-100 shadow-xl border border-base-200 p-4 animate-float"
+                  style={{ animationDelay: '1s' }}
+                >
                   <div className="flex items-center gap-3">
                     <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center">
                       <Users className="w-6 h-6 text-accent" />
@@ -185,7 +191,10 @@ export default function HomeClient() {
                   </div>
                 </div>
 
-                <div className="absolute -bottom-4 left-1/4 card bg-primary text-white shadow-xl p-3 animate-float" style={{ animationDelay: '0.5s' }}>
+                <div
+                  className="absolute -bottom-4 left-1/4 card bg-primary text-white shadow-xl p-3 animate-float"
+                  style={{ animationDelay: '0.5s' }}
+                >
                   <div className="flex items-center gap-2">
                     <Trophy className="w-5 h-5" />
                     <span className="text-sm font-semibold">Leaderboards Live</span>
@@ -206,8 +215,8 @@ export default function HomeClient() {
               You're using two tools when you need one.
             </h2>
             <p className="text-lg text-neutral max-w-2xl mx-auto">
-              Gym owners pay for programming services that don't fit their equipment.
-              Then pay again for athlete tracking that doesn't connect. We built the bridge.
+              Gym owners pay for programming services that don't fit their equipment. Then pay again
+              for athlete tracking that doesn't connect. We built the bridge.
             </p>
           </div>
 
@@ -224,11 +233,11 @@ export default function HomeClient() {
                 </div>
                 <ul className="space-y-3">
                   {[
-                    'Pay for generic programming that assumes equipment you don\'t have',
+                    "Pay for generic programming that assumes equipment you don't have",
                     'Separate app for athletes to log workouts',
                     'No connection between programming and athlete feedback',
                     'Hours spent writing or adapting workouts',
-                    'Athletes don\'t know what\'s coming'
+                    "Athletes don't know what's coming",
                   ].map((item, i) => (
                     <li key={i} className="flex items-start gap-3 text-neutral">
                       <div className="w-1.5 h-1.5 rounded-full bg-error mt-2 flex-shrink-0" />
@@ -254,7 +263,7 @@ export default function HomeClient() {
                     'Athletes log results in the same platform',
                     'AI learns from coach AND athlete feedback',
                     '8 weeks of programming in ~10 minutes',
-                    'Leaderboards drive engagement automatically'
+                    'Leaderboards drive engagement automatically',
                   ].map((item, i) => (
                     <li key={i} className="flex items-start gap-3 text-base-content">
                       <CheckCircle className="w-4 h-4 text-accent mt-1 flex-shrink-0" />
@@ -335,7 +344,7 @@ export default function HomeClient() {
 
                 <div className="space-y-4 mb-8">
                   {[
-                    { icon: Calendar, text: 'See today\'s workout and what\'s coming' },
+                    { icon: Calendar, text: "See today's workout and what's coming" },
                     { icon: CheckCircle, text: 'Log results, times, weights, and notes' },
                     { icon: Trophy, text: 'Compete on weekly & monthly leaderboards' },
                     { icon: MessageSquare, text: 'Get personalized AI feedback on performance' },
@@ -375,50 +384,61 @@ export default function HomeClient() {
               {
                 icon: Sparkles,
                 title: 'AI Program Generation',
-                description: 'Describe your focus, pick your equipment, get 8 weeks of periodized programming instantly.',
+                description:
+                  'Describe your focus, pick your equipment, get 8 weeks of periodized programming instantly.',
                 color: 'primary',
-                tag: 'Core'
+                tag: 'Core',
               },
               {
                 icon: Trophy,
                 title: 'Gym Leaderboards',
-                description: 'Weekly & monthly rankings. Points for logging, PRs, RX, and podium finishes.',
+                description:
+                  'Weekly & monthly rankings. Points for logging, PRs, RX, and podium finishes.',
                 color: 'warning',
-                tag: 'Engagement'
+                tag: 'Engagement',
               },
               {
                 icon: MessageSquare,
                 title: 'AI Workout Feedback',
-                description: 'Athletes get personalized insights after every workout. The AI learns their patterns.',
+                description:
+                  'Athletes get personalized insights after every workout. The AI learns their patterns.',
                 color: 'accent',
-                tag: 'Insights'
+                tag: 'Insights',
               },
               {
                 icon: Zap,
                 title: 'Day-Of Modifications',
-                description: 'Equipment broken? Class size changed? Regenerate any workout instantly.',
+                description:
+                  'Equipment broken? Class size changed? Regenerate any workout instantly.',
                 color: 'secondary',
-                tag: 'Flexible'
+                tag: 'Flexible',
               },
               {
                 icon: Users,
                 title: 'Gym Invite Codes',
-                description: 'Share a code. Athletes join and instantly see workouts, leaderboards, everything.',
+                description:
+                  'Share a code. Athletes join and instantly see workouts, leaderboards, everything.',
                 color: 'primary',
-                tag: 'Simple'
+                tag: 'Simple',
               },
               {
                 icon: TrendingUp,
                 title: 'Progress Tracking',
-                description: 'Athletes track 1RMs, benchmarks, and see AI-generated weekly trend reports.',
+                description:
+                  'Athletes track 1RMs, benchmarks, and see AI-generated weekly trend reports.',
                 color: 'accent',
-                tag: 'Data'
+                tag: 'Data',
               },
             ].map((feature, i) => (
-              <div key={i} className="card bg-base-100 border border-base-200 hover:border-base-300 hover:shadow-lg transition-all duration-300">
+              <div
+                key={i}
+                className="card bg-base-100 border border-base-200 hover:border-base-300 hover:shadow-lg transition-all duration-300"
+              >
                 <div className="card-body">
                   <div className="flex items-start justify-between mb-4">
-                    <div className={`w-12 h-12 rounded-xl bg-${feature.color}/10 flex items-center justify-center`}>
+                    <div
+                      className={`w-12 h-12 rounded-xl bg-${feature.color}/10 flex items-center justify-center`}
+                    >
                       <feature.icon className={`w-6 h-6 text-${feature.color}`} />
                     </div>
                     <span className={`badge badge-${feature.color} badge-sm`}>{feature.tag}</span>
@@ -435,10 +455,13 @@ export default function HomeClient() {
       {/* Stats Section */}
       <section className="py-20 bg-primary text-white relative overflow-hidden">
         <div className="absolute inset-0 opacity-10">
-          <div className="absolute inset-0" style={{
-            backgroundImage: `radial-gradient(circle at 2px 2px, white 1px, transparent 0)`,
-            backgroundSize: '32px 32px'
-          }} />
+          <div
+            className="absolute inset-0"
+            style={{
+              backgroundImage: `radial-gradient(circle at 2px 2px, white 1px, transparent 0)`,
+              backgroundSize: '32px 32px',
+            }}
+          />
         </div>
 
         <div className="container mx-auto px-4 relative">
@@ -451,7 +474,8 @@ export default function HomeClient() {
             ].map((stat, i) => (
               <div key={i} className="space-y-2">
                 <p className="text-5xl lg:text-6xl font-black">
-                  {stat.value}<span className="text-white/60">{stat.suffix}</span>
+                  {stat.value}
+                  <span className="text-white/60">{stat.suffix}</span>
                 </p>
                 <p className="text-white/80 font-medium">{stat.label}</p>
               </div>
@@ -473,8 +497,8 @@ export default function HomeClient() {
               Ready to run a smarter gym?
             </h2>
             <p className="text-lg text-neutral mb-10 max-w-xl mx-auto">
-              Join gyms already using HalteresAI to generate intelligent programming
-              and keep athletes engaged.
+              Join gyms already using HalteresAI to generate intelligent programming and keep
+              athletes engaged.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
@@ -485,10 +509,7 @@ export default function HomeClient() {
                 <Users className="w-5 h-5" />
                 I'm a Coach
               </button>
-              <Link
-                href="/login?role=athlete"
-                className="btn btn-accent btn-lg gap-2"
-              >
+              <Link href="/login?role=athlete" className="btn btn-accent btn-lg gap-2">
                 <Dumbbell className="w-5 h-5" />
                 I'm an Athlete
               </Link>
@@ -517,22 +538,46 @@ export default function HomeClient() {
             <div>
               <h4 className="font-semibold text-base-content mb-3">Product</h4>
               <ul className="space-y-2 text-sm text-neutral">
-                <li><Link href="/features" className="hover:text-primary transition-colors">Features</Link></li>
-                <li><Link href="/pricing" className="hover:text-primary transition-colors">Pricing</Link></li>
-                <li><Link href="/tutorials" className="hover:text-primary transition-colors">Tutorials</Link></li>
+                <li>
+                  <Link href="/features" className="hover:text-primary transition-colors">
+                    Features
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/pricing" className="hover:text-primary transition-colors">
+                    Pricing
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/tutorials" className="hover:text-primary transition-colors">
+                    Tutorials
+                  </Link>
+                </li>
               </ul>
             </div>
             <div>
               <h4 className="font-semibold text-base-content mb-3">Resources</h4>
               <ul className="space-y-2 text-sm text-neutral">
-                <li><Link href="/help" className="hover:text-primary transition-colors">Help Center</Link></li>
-                <li><Link href="/contact" className="hover:text-primary transition-colors">Contact</Link></li>
+                <li>
+                  <Link href="/help" className="hover:text-primary transition-colors">
+                    Help Center
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/contact" className="hover:text-primary transition-colors">
+                    Contact
+                  </Link>
+                </li>
               </ul>
             </div>
             <div>
               <h4 className="font-semibold text-base-content mb-3">Company</h4>
               <ul className="space-y-2 text-sm text-neutral">
-                <li><Link href="/company" className="hover:text-primary transition-colors">About</Link></li>
+                <li>
+                  <Link href="/company" className="hover:text-primary transition-colors">
+                    About
+                  </Link>
+                </li>
               </ul>
             </div>
           </div>
@@ -567,10 +612,21 @@ export default function HomeClient() {
 
 // Need to add Calendar import
 const Calendar = ({ className }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-    <rect width="18" height="18" x="3" y="4" rx="2" ry="2"/>
-    <line x1="16" x2="16" y1="2" y2="6"/>
-    <line x1="8" x2="8" y1="2" y2="6"/>
-    <line x1="3" x2="21" y1="10" y2="10"/>
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+  >
+    <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
+    <line x1="16" x2="16" y1="2" y2="6" />
+    <line x1="8" x2="8" y1="2" y2="6" />
+    <line x1="3" x2="21" y1="10" y2="10" />
   </svg>
 );

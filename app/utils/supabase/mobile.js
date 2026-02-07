@@ -22,8 +22,8 @@ async function createMobileCompatibleClient(request) {
       {
         global: {
           headers: {
-            Authorization: `Bearer ${token}`
-          }
+            Authorization: `Bearer ${token}`,
+          },
         },
         auth: {
           persistSession: false,
@@ -79,9 +79,11 @@ function corsHeaders(requestOrOrigin = null) {
     const requestOrigin = requestOrOrigin.headers.get('origin');
     // Allow specific known origins, otherwise use wildcard for mobile apps
     if (requestOrigin) {
-      if (requestOrigin.includes('halteres') ||
-          requestOrigin === 'capacitor://localhost' ||
-          requestOrigin.startsWith('http://localhost')) {
+      if (
+        requestOrigin.includes('halteres') ||
+        requestOrigin === 'capacitor://localhost' ||
+        requestOrigin.startsWith('http://localhost')
+      ) {
         origin = requestOrigin;
       }
     }
@@ -104,14 +106,10 @@ async function handleCors(request) {
   if (request.method === 'OPTIONS') {
     return new Response(null, {
       status: 200,
-      headers: corsHeaders(request)
+      headers: corsHeaders(request),
     });
   }
   return null;
 }
 
-export {
-  createMobileCompatibleClient,
-  corsHeaders,
-  handleCors
-};
+export { createMobileCompatibleClient, corsHeaders, handleCors };

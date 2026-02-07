@@ -1,11 +1,10 @@
 import './globals.css';
-import { Nunito_Sans, Poppins } from 'next/font/google';
-import { metadata } from './simple-metadata';
-import { Inter } from 'next/font/google';
+import { Inter, Nunito_Sans, Poppins } from 'next/font/google';
 import { AuthProvider } from '@/contexts/AuthContext';
 import Navbar from './components/Navbar';
 import TrialStatusBanner from './components/TrialStatusBanner';
 import { StripeProvider } from './contexts/StripeContext';
+import { metadata } from './simple-metadata';
 
 export const nunitoSans = Nunito_Sans({
   weight: ['300', '400', '600', '700'],

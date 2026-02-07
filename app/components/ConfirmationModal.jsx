@@ -1,14 +1,8 @@
 'use client';
-import { MessageCircleWarningIcon, InfoIcon } from 'lucide-react';
+import { InfoIcon, MessageCircleWarningIcon } from 'lucide-react';
 import React from 'react';
 
-const ConfirmationModal = ({
-  isOpen,
-  onClose,
-  onConfirm,
-  content,
-  isConfirming = false,
-}) => {
+const ConfirmationModal = ({ isOpen, onClose, onConfirm, content, isConfirming = false }) => {
   if (!isOpen) return null;
 
   const {
@@ -48,24 +42,20 @@ const ConfirmationModal = ({
               <div>
                 <h4 className="font-bold">Required Fields Missing</h4>
                 <p className="text-sm">
-                  The following fields need to be completed before generating
-                  your program:
+                  The following fields need to be completed before generating your program:
                 </p>
               </div>
             </div>
-            {validation.missingFields &&
-              validation.missingFields.length > 0 && (
-                <ul className="list-disc list-inside space-y-1 text-sm mb-4">
-                  {validation.missingFields.map((field) => (
-                    <li key={field}>{getFieldLabel(field)}</li>
-                  ))}
-                </ul>
-              )}
-            {(!validation.missingFields ||
-              validation.missingFields.length === 0) && (
+            {validation.missingFields && validation.missingFields.length > 0 && (
+              <ul className="list-disc list-inside space-y-1 text-sm mb-4">
+                {validation.missingFields.map((field) => (
+                  <li key={field}>{getFieldLabel(field)}</li>
+                ))}
+              </ul>
+            )}
+            {(!validation.missingFields || validation.missingFields.length === 0) && (
               <p className="text-sm text-gray-600 mb-4">
-                Please complete the required fields before generating your
-                program.
+                Please complete the required fields before generating your program.
               </p>
             )}
           </div>
@@ -81,8 +71,7 @@ const ConfirmationModal = ({
                     <div>
                       <h4 className="font-bold">Optional Fields to Consider</h4>
                       <p className="text-sm">
-                        For better results, consider filling out these optional
-                        fields:
+                        For better results, consider filling out these optional fields:
                       </p>
                     </div>
                   </div>

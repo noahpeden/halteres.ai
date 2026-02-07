@@ -26,8 +26,7 @@ const workoutFormats = [
   {
     id: 'metcon',
     name: 'Metabolic Conditioning',
-    description:
-      'High-intensity workouts focused on cardiovascular conditioning',
+    description: 'High-intensity workouts focused on cardiovascular conditioning',
     icon: '🔥',
   },
   {
@@ -75,8 +74,7 @@ const workoutFormats = [
   {
     id: 'complex',
     name: 'Barbell/Dumbbell Complex',
-    description:
-      'Series of movements performed without putting the weight down',
+    description: 'Series of movements performed without putting the weight down',
     icon: '🏆',
   },
   {
@@ -99,7 +97,7 @@ export default function WorkoutFormatSelector({
 }) {
   // Ensure selectedFormats is always an array
   const safeSelectedFormats = Array.isArray(selectedFormats) ? selectedFormats : [];
-  
+
   const handleFormatChange = (formatId) => {
     const isSelected = safeSelectedFormats.includes(formatId);
     let newFormats;

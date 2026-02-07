@@ -1,12 +1,12 @@
-import { createClient } from '@/utils/supabase/server';
-import { createMobileCompatibleClient, corsHeaders } from '@/utils/supabase/mobile';
 import { NextResponse } from 'next/server';
+import { corsHeaders, createMobileCompatibleClient } from '@/utils/supabase/mobile';
+import { createClient } from '@/utils/supabase/server';
 
 // Handle OPTIONS for CORS preflight
 export async function OPTIONS(request) {
   return new Response(null, {
     status: 200,
-    headers: corsHeaders()
+    headers: corsHeaders(),
   });
 }
 
@@ -45,7 +45,7 @@ export async function POST(req) {
         { error: 'Missing required fields' },
         {
           status: 400,
-          headers: corsHeaders()
+          headers: corsHeaders(),
         }
       );
     }
@@ -63,7 +63,7 @@ export async function POST(req) {
         { error: 'Not authenticated' },
         {
           status: 401,
-          headers: corsHeaders()
+          headers: corsHeaders(),
         }
       );
     }
@@ -82,13 +82,16 @@ export async function POST(req) {
 
     if (existingPrograms && existingPrograms.length > 0) {
       console.log('Duplicate program creation prevented:', existingPrograms[0]);
-      return NextResponse.json({
-        data: [existingPrograms[0]],
-        message: 'Program already exists (duplicate prevented)'
-      }, {
-        status: 200,
-        headers: corsHeaders()
-      });
+      return NextResponse.json(
+        {
+          data: [existingPrograms[0]],
+          message: 'Program already exists (duplicate prevented)',
+        },
+        {
+          status: 200,
+          headers: corsHeaders(),
+        }
+      );
     }
 
     // Get the coach's gym if gym_id not provided
@@ -152,7 +155,7 @@ export async function POST(req) {
         { error: error.message },
         {
           status: 500,
-          headers: corsHeaders()
+          headers: corsHeaders(),
         }
       );
     }
@@ -162,7 +165,7 @@ export async function POST(req) {
       { data: [data] },
       {
         status: 200,
-        headers: corsHeaders()
+        headers: corsHeaders(),
       }
     );
   } catch (error) {

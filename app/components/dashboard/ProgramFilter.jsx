@@ -1,10 +1,6 @@
 'use client';
 
-export default function ProgramFilter({
-  entities,
-  filterEntityId,
-  onFilterChange,
-}) {
+export default function ProgramFilter({ entities, filterEntityId, onFilterChange }) {
   return (
     <div className="flex justify-between items-center mb-4">
       <div className="flex justify-between items-center w-full">
