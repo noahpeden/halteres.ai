@@ -264,15 +264,12 @@ export async function getLeaderboardAction(workoutId, options = {}) {
   try {
     const { gymId, scale, limit = 50 } = options;
 
+    // First, get workout results
     let query = supabase
       .from('workout_results')
-      .select(`
-        id, result_type, time_seconds, rounds, reps, weight_kg, count,
-        scale, is_pr, created_at,
-        user:profiles (
-          id, display_name, full_name, profile_photo_url
-        )
-      `)
+      .select(
+        'id, user_id, result_type, time_seconds, rounds, reps, weight_kg, count, scale, is_pr, created_at'
+      )
       .eq('workout_id', workoutId)
       .eq('include_in_leaderboard', true)
       .is('deleted_at', null);
@@ -285,9 +282,34 @@ export async function getLeaderboardAction(workoutId, options = {}) {
       query = query.eq('scale', scale);
     }
 
-    const { data, error } = await query.limit(limit);
+    const { data: results, error: resultsError } = await query.limit(limit);
 
-    if (error) throw error;
+    if (resultsError) throw resultsError;
+
+    if (!results || results.length === 0) {
+      return { success: true, data: [] };
+    }
+
+    // Get unique user IDs and fetch their profiles
+    const userIds = [...new Set(results.map((r) => r.user_id))];
+    const { data: profiles, error: profilesError } = await supabase
+      .from('profiles')
+      .select('id, display_name, full_name, profile_photo_url')
+      .in('id', userIds);
+
+    if (profilesError) throw profilesError;
+
+    // Create a profiles lookup map
+    const profilesMap = {};
+    (profiles || []).forEach((p) => {
+      profilesMap[p.id] = p;
+    });
+
+    // Merge profiles with results
+    const data = results.map((r) => ({
+      ...r,
+      user: profilesMap[r.user_id] || { id: r.user_id, display_name: 'Anonymous' },
+    }));
 
     // Sort based on result_type
     const sortedData = sortLeaderboardResults(data);

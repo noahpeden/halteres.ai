@@ -55,7 +55,9 @@ export async function POST(req) {
         // Insert into program_workouts
         workouts.push({
           program_id: programId,
+          gym_id: program.gym_id,
           entity_id: program.entity_id,
+          week_number: week + 1,
           title: workoutTitle,
           body: `Auto-generated ${workoutType} workout for ${workoutDate.toLocaleDateString()}`,
           workout_type: workoutType,

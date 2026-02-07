@@ -1,21 +1,22 @@
 'use client';
 
+import { AlertCircle, Clock, Flame, Repeat, Weight } from 'lucide-react';
 import { useState } from 'react';
 import { logWorkoutResultAction } from '@/actions/workoutResultActions';
 
 const RESULT_TYPES = [
-  { value: 'time', label: 'Time', description: 'For time-based workouts' },
-  { value: 'rounds_reps', label: 'Rounds + Reps', description: 'For AMRAP workouts' },
-  { value: 'weight', label: 'Weight', description: 'For max lift attempts' },
-  { value: 'reps', label: 'Reps', description: 'For max rep workouts' },
-  { value: 'distance', label: 'Distance', description: 'For distance-based workouts' },
-  { value: 'calories', label: 'Calories', description: 'For calorie-based workouts' },
+  { value: 'time', label: 'Time', icon: Clock },
+  { value: 'rounds_reps', label: 'Rounds', icon: Repeat },
+  { value: 'weight', label: 'Weight', icon: Weight },
+  { value: 'reps', label: 'Reps', icon: Flame },
+  { value: 'distance', label: 'Distance', icon: null },
+  { value: 'calories', label: 'Cals', icon: null },
 ];
 
 const SCALE_OPTIONS = [
   { value: 'rx', label: 'RX', description: 'As prescribed' },
-  { value: 'scaled', label: 'Scaled', description: 'Modified weights/movements' },
-  { value: 'rx_plus', label: 'RX+', description: 'Heavier than prescribed' },
+  { value: 'scaled', label: 'Scaled', description: 'Modified' },
+  { value: 'rx_plus', label: 'RX+', description: 'Heavier' },
 ];
 
 export default function ResultEntryForm({
@@ -25,31 +26,90 @@ export default function ResultEntryForm({
   onSuccess,
   onCancel,
   defaultResultType = 'time',
+  formState,
+  onFormChange,
 }) {
-  const [resultType, setResultType] = useState(defaultResultType);
-  const [scale, setScale] = useState('rx');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Result values
-  const [minutes, setMinutes] = useState('');
-  const [seconds, setSeconds] = useState('');
-  const [rounds, setRounds] = useState('');
-  const [reps, setReps] = useState('');
-  const [weight, setWeight] = useState('');
-  const [count, setCount] = useState('');
+  // Use external state if provided, otherwise fall back to internal state
+  const useExternalState = formState && onFormChange;
 
-  // Additional fields
-  const [modifications, setModifications] = useState('');
-  const [notes, setNotes] = useState('');
-  const [perceivedEffort, setPerceivedEffort] = useState(null);
+  // Internal state (fallback when external state is not provided)
+  const [internalResultType, setInternalResultType] = useState(defaultResultType);
+  const [internalScale, setInternalScale] = useState('rx');
+  const [internalMinutes, setInternalMinutes] = useState('');
+  const [internalSeconds, setInternalSeconds] = useState('');
+  const [internalRounds, setInternalRounds] = useState('');
+  const [internalReps, setInternalReps] = useState('');
+  const [internalWeight, setInternalWeight] = useState('');
+  const [internalCount, setInternalCount] = useState('');
+  const [internalModifications, setInternalModifications] = useState('');
+  const [internalNotes, setInternalNotes] = useState('');
+  const [internalPerceivedEffort, setInternalPerceivedEffort] = useState(null);
+
+  // Get values from either external or internal state
+  const resultType = useExternalState ? formState.resultType : internalResultType;
+  const scale = useExternalState ? formState.scale : internalScale;
+  const minutes = useExternalState ? formState.minutes : internalMinutes;
+  const seconds = useExternalState ? formState.seconds : internalSeconds;
+  const rounds = useExternalState ? formState.rounds : internalRounds;
+  const reps = useExternalState ? formState.reps : internalReps;
+  const weight = useExternalState ? formState.weight : internalWeight;
+  const count = useExternalState ? formState.count : internalCount;
+  const modifications = useExternalState ? formState.modifications : internalModifications;
+  const notes = useExternalState ? formState.notes : internalNotes;
+  const perceivedEffort = useExternalState ? formState.perceivedEffort : internalPerceivedEffort;
+
+  // Helper to update a field in either external or internal state
+  const updateField = (field, value) => {
+    if (useExternalState) {
+      onFormChange({ ...formState, [field]: value });
+    } else {
+      // Update internal state
+      switch (field) {
+        case 'resultType':
+          setInternalResultType(value);
+          break;
+        case 'scale':
+          setInternalScale(value);
+          break;
+        case 'minutes':
+          setInternalMinutes(value);
+          break;
+        case 'seconds':
+          setInternalSeconds(value);
+          break;
+        case 'rounds':
+          setInternalRounds(value);
+          break;
+        case 'reps':
+          setInternalReps(value);
+          break;
+        case 'weight':
+          setInternalWeight(value);
+          break;
+        case 'count':
+          setInternalCount(value);
+          break;
+        case 'modifications':
+          setInternalModifications(value);
+          break;
+        case 'notes':
+          setInternalNotes(value);
+          break;
+        case 'perceivedEffort':
+          setInternalPerceivedEffort(value);
+          break;
+      }
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
-    // Build result data based on type
     const formData = {
       workout_id: workoutId,
       gym_id: gymId,
@@ -60,7 +120,6 @@ export default function ResultEntryForm({
       perceived_effort: perceivedEffort,
     };
 
-    // Add type-specific values
     switch (resultType) {
       case 'time': {
         const totalSeconds = (parseInt(minutes) || 0) * 60 + (parseInt(seconds) || 0);
@@ -113,98 +172,115 @@ export default function ResultEntryForm({
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* Workout Title */}
       {workoutTitle && (
-        <div className="text-center pb-4 border-b border-base-200">
-          <h3 className="text-lg font-semibold">{workoutTitle}</h3>
+        <div className="text-center pb-4 border-b border-[var(--athlete-border)]">
+          <h3 className="athlete-heading-lg text-[var(--athlete-text-primary)]">{workoutTitle}</h3>
+          <p className="athlete-label mt-1">Log your result</p>
         </div>
       )}
 
       {/* Result Type Selection */}
-      <div className="form-control">
-        <label className="label">
-          <span className="label-text font-medium">Result Type</span>
-        </label>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-          {RESULT_TYPES.map((type) => (
-            <button
-              key={type.value}
-              type="button"
-              onClick={() => setResultType(type.value)}
-              className={`btn btn-sm ${resultType === type.value ? 'btn-primary' : 'btn-outline'}`}
-            >
-              {type.label}
-            </button>
-          ))}
+      <div>
+        <label className="athlete-label block mb-2">Result Type</label>
+        <div className="grid grid-cols-3 gap-2">
+          {RESULT_TYPES.map((type) => {
+            const Icon = type.icon;
+            return (
+              <button
+                key={type.value}
+                type="button"
+                onClick={() => updateField('resultType', type.value)}
+                className={`flex items-center justify-center gap-2 py-3 px-3 rounded-lg text-sm font-medium transition-all ${
+                  resultType === type.value
+                    ? 'bg-[var(--athlete-accent-primary)] text-black'
+                    : 'bg-[var(--athlete-bg-card)] text-[var(--athlete-text-secondary)] border border-[var(--athlete-border)]'
+                }`}
+              >
+                {Icon && <Icon className="w-4 h-4" />}
+                {type.label}
+              </button>
+            );
+          })}
         </div>
       </div>
 
       {/* Result Input based on type */}
-      <div className="form-control">
-        <label className="label">
-          <span className="label-text font-medium">Your Result</span>
-        </label>
+      <div>
+        <label className="athlete-label block mb-2">Your Result</label>
 
         {resultType === 'time' && (
-          <div className="flex gap-2 items-center">
-            <input
-              type="number"
-              placeholder="Min"
-              className="input input-bordered w-24"
-              value={minutes}
-              onChange={(e) => setMinutes(e.target.value)}
-              min="0"
-            />
-            <span className="text-xl">:</span>
-            <input
-              type="number"
-              placeholder="Sec"
-              className="input input-bordered w-24"
-              value={seconds}
-              onChange={(e) => setSeconds(e.target.value)}
-              min="0"
-              max="59"
-            />
+          <div className="flex gap-3 items-center">
+            <div className="flex-1">
+              <input
+                type="number"
+                placeholder="Min"
+                className="athlete-input w-full text-center text-lg"
+                value={minutes}
+                onChange={(e) => updateField('minutes', e.target.value)}
+                min="0"
+              />
+            </div>
+            <span className="text-2xl text-[var(--athlete-text-muted)]">:</span>
+            <div className="flex-1">
+              <input
+                type="number"
+                placeholder="Sec"
+                className="athlete-input w-full text-center text-lg"
+                value={seconds}
+                onChange={(e) => updateField('seconds', e.target.value)}
+                min="0"
+                max="59"
+              />
+            </div>
           </div>
         )}
 
         {resultType === 'rounds_reps' && (
-          <div className="flex gap-2 items-center">
-            <input
-              type="number"
-              placeholder="Rounds"
-              className="input input-bordered w-24"
-              value={rounds}
-              onChange={(e) => setRounds(e.target.value)}
-              min="0"
-            />
-            <span className="text-xl">+</span>
-            <input
-              type="number"
-              placeholder="Reps"
-              className="input input-bordered w-24"
-              value={reps}
-              onChange={(e) => setReps(e.target.value)}
-              min="0"
-            />
+          <div className="flex gap-3 items-center">
+            <div className="flex-1">
+              <input
+                type="number"
+                placeholder="Rounds"
+                className="athlete-input w-full text-center text-lg"
+                value={rounds}
+                onChange={(e) => updateField('rounds', e.target.value)}
+                min="0"
+              />
+              <p className="text-[10px] text-center text-[var(--athlete-text-muted)] mt-1">
+                ROUNDS
+              </p>
+            </div>
+            <span className="text-2xl text-[var(--athlete-text-muted)]">+</span>
+            <div className="flex-1">
+              <input
+                type="number"
+                placeholder="Reps"
+                className="athlete-input w-full text-center text-lg"
+                value={reps}
+                onChange={(e) => updateField('reps', e.target.value)}
+                min="0"
+              />
+              <p className="text-[10px] text-center text-[var(--athlete-text-muted)] mt-1">REPS</p>
+            </div>
           </div>
         )}
 
         {resultType === 'weight' && (
-          <div className="flex gap-2 items-center">
+          <div className="flex gap-3 items-center">
             <input
               type="number"
               placeholder="Weight"
-              className="input input-bordered w-32"
+              className="athlete-input flex-1 text-center text-lg"
               value={weight}
-              onChange={(e) => setWeight(e.target.value)}
+              onChange={(e) => updateField('weight', e.target.value)}
               min="0"
               step="0.5"
             />
-            <span className="text-base-content/70">kg</span>
+            <span className="text-lg text-[var(--athlete-text-muted)] font-medium">kg</span>
           </div>
         )}
 
         {['reps', 'distance', 'calories'].includes(resultType) && (
-          <div className="flex gap-2 items-center">
+          <div className="flex gap-3 items-center">
             <input
               type="number"
               placeholder={
@@ -214,12 +290,12 @@ export default function ResultEntryForm({
                     ? 'Calories'
                     : 'Reps'
               }
-              className="input input-bordered w-32"
+              className="athlete-input flex-1 text-center text-lg"
               value={count}
-              onChange={(e) => setCount(e.target.value)}
+              onChange={(e) => updateField('count', e.target.value)}
               min="0"
             />
-            <span className="text-base-content/70">
+            <span className="text-lg text-[var(--athlete-text-muted)] font-medium">
               {resultType === 'distance' ? 'm' : resultType === 'calories' ? 'cal' : 'reps'}
             </span>
           </div>
@@ -227,18 +303,18 @@ export default function ResultEntryForm({
       </div>
 
       {/* Scale Selection */}
-      <div className="form-control">
-        <label className="label">
-          <span className="label-text font-medium">Scale</span>
-        </label>
+      <div>
+        <label className="athlete-label block mb-2">Scale</label>
         <div className="flex gap-2">
           {SCALE_OPTIONS.map((option) => (
             <button
               key={option.value}
               type="button"
-              onClick={() => setScale(option.value)}
-              className={`btn btn-sm flex-1 ${
-                scale === option.value ? 'btn-primary' : 'btn-outline'
+              onClick={() => updateField('scale', option.value)}
+              className={`flex-1 py-3 rounded-lg text-sm font-medium transition-all ${
+                scale === option.value
+                  ? 'bg-[var(--athlete-accent-primary)] text-black'
+                  : 'bg-[var(--athlete-bg-card)] text-[var(--athlete-text-secondary)] border border-[var(--athlete-border)]'
               }`}
             >
               {option.label}
@@ -249,80 +325,79 @@ export default function ResultEntryForm({
 
       {/* Modifications (if scaled) */}
       {scale === 'scaled' && (
-        <div className="form-control">
-          <label className="label">
-            <span className="label-text font-medium">What did you modify?</span>
-          </label>
+        <div>
+          <label className="athlete-label block mb-2">What did you modify?</label>
           <textarea
             placeholder="e.g., 95# instead of 135#, ring rows instead of pull-ups"
-            className="textarea textarea-bordered"
+            className="athlete-input w-full min-h-[80px] resize-none"
             value={modifications}
-            onChange={(e) => setModifications(e.target.value)}
-            rows={2}
+            onChange={(e) => updateField('modifications', e.target.value)}
           />
         </div>
       )}
 
       {/* Perceived Effort */}
-      <div className="form-control">
-        <label className="label">
-          <span className="label-text font-medium">Perceived Effort (1-10)</span>
-        </label>
-        <div className="flex gap-1">
+      <div>
+        <label className="athlete-label block mb-2">Perceived Effort (1-10)</label>
+        <div className="flex gap-1.5 justify-between">
           {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
             <button
               key={num}
               type="button"
-              onClick={() => setPerceivedEffort(num)}
-              className={`btn btn-sm btn-circle ${
-                perceivedEffort === num ? 'btn-primary' : 'btn-outline'
+              onClick={() => updateField('perceivedEffort', num)}
+              className={`w-9 h-9 rounded-full text-sm font-medium transition-all ${
+                perceivedEffort === num
+                  ? 'bg-[var(--athlete-accent-primary)] text-black'
+                  : 'bg-[var(--athlete-bg-card)] text-[var(--athlete-text-secondary)] border border-[var(--athlete-border)]'
               }`}
             >
               {num}
             </button>
           ))}
         </div>
+        <div className="flex justify-between text-[10px] text-[var(--athlete-text-muted)] mt-1 px-1">
+          <span>Easy</span>
+          <span>Max effort</span>
+        </div>
       </div>
 
       {/* Notes */}
-      <div className="form-control">
-        <label className="label">
-          <span className="label-text font-medium">Notes (optional)</span>
-        </label>
+      <div>
+        <label className="athlete-label block mb-2">Notes (optional)</label>
         <textarea
           placeholder="How did it feel? Any observations?"
-          className="textarea textarea-bordered"
+          className="athlete-input w-full min-h-[80px] resize-none"
           value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          rows={2}
+          onChange={(e) => updateField('notes', e.target.value)}
         />
       </div>
 
       {/* Error */}
       {error && (
-        <div className="alert alert-error">
-          <span>{error}</span>
+        <div className="athlete-card-static border-l-4 border-l-red-500 p-4 flex items-center gap-3">
+          <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
+          <p className="athlete-body text-red-400">{error}</p>
         </div>
       )}
 
       {/* Actions */}
-      <div className="flex gap-2">
+      <div className="flex gap-3 pt-2">
         {onCancel && (
           <button
             type="button"
             onClick={onCancel}
-            className="btn btn-outline flex-1"
+            className="athlete-btn-secondary flex-1 py-3"
             disabled={loading}
           >
             Cancel
           </button>
         )}
-        <button type="submit" className="btn btn-primary flex-1" disabled={loading}>
+        <button type="submit" className="athlete-btn-primary flex-1 py-3" disabled={loading}>
           {loading ? (
-            <>
-              <span className="loading loading-spinner loading-sm"></span>
+            <div className="flex items-center justify-center gap-2">
+              <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
               Logging...
-            </>
+            </div>
           ) : (
             'Log Result'
           )}

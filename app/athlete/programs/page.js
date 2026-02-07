@@ -1,8 +1,12 @@
 'use client';
 
+import { Calendar, ChevronLeft, ChevronRight, Clock, Dumbbell, Target } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import CircularProgress from '@/components/athlete/CircularProgress';
+import EmptyState from '@/components/athlete/EmptyState';
+import StatusBadge from '@/components/athlete/StatusBadge';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function AthleteProgramsPage() {
@@ -11,7 +15,7 @@ export default function AthleteProgramsPage() {
   const [programs, setPrograms] = useState([]);
   const [activeProgram, setActiveProgram] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState('all'); // all, active, upcoming, completed
+  const [filter, setFilter] = useState('all');
 
   useEffect(() => {
     if (!user) {
@@ -44,141 +48,193 @@ export default function AthleteProgramsPage() {
     return p.status === filter;
   });
 
-  const getStatusBadge = (status) => {
-    switch (status) {
-      case 'active':
-        return <span className="badge badge-success">Active</span>;
-      case 'upcoming':
-        return <span className="badge badge-info">Upcoming</span>;
-      case 'completed':
-        return <span className="badge badge-ghost">Completed</span>;
-      default:
-        return <span className="badge badge-ghost">Unknown</span>;
-    }
-  };
-
   const formatDate = (dateStr) => {
-    if (!dateStr) return '-';
+    if (!dateStr) return null;
     return new Date(dateStr).toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
-      year: 'numeric',
     });
   };
 
+  const getStatusStripe = (status) => {
+    switch (status) {
+      case 'active':
+        return 'athlete-stripe-today';
+      case 'completed':
+        return 'athlete-stripe-complete';
+      default:
+        return 'athlete-stripe-upcoming';
+    }
+  };
+
+  const filterOptions = [
+    { value: 'all', label: 'All' },
+    { value: 'active', label: 'Active' },
+    { value: 'upcoming', label: 'Upcoming' },
+    { value: 'completed', label: 'Completed' },
+  ];
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-base-200 flex items-center justify-center">
-        <span className="loading loading-spinner loading-lg"></span>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-10 h-10 border-2 border-[var(--athlete-accent-primary)] border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-base-200">
+    <div className="min-h-screen">
       {/* Header */}
-      <div className="bg-primary text-primary-content p-4">
-        <button
-          onClick={() => router.push('/athlete')}
-          className="btn btn-ghost btn-sm text-primary-content mb-2"
-        >
-          ← Dashboard
-        </button>
-        <h1 className="text-xl font-bold">Programs</h1>
-        <p className="text-primary-content/70">{currentGym?.name}</p>
+      <div className="sticky top-0 z-40 bg-[var(--athlete-bg-card)] border-b border-[var(--athlete-border)] px-4 py-4">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => router.push('/athlete')}
+            className="w-8 h-8 rounded-lg bg-[var(--athlete-bg-secondary)] flex items-center justify-center"
+          >
+            <ChevronLeft className="w-5 h-5 text-[var(--athlete-text-primary)]" />
+          </button>
+          <div>
+            <h1 className="athlete-heading-lg">Programs</h1>
+            <p className="athlete-label">{currentGym?.name}</p>
+          </div>
+        </div>
       </div>
 
-      <div className="p-4 space-y-4">
-        {/* Active Program Highlight */}
+      <div className="px-4 space-y-4 pb-8 pt-4">
+        {/* Active Program Hero */}
         {activeProgram && (
           <Link href={`/athlete/programs/${activeProgram.id}`}>
-            <div className="card bg-gradient-to-br from-primary to-primary/80 text-primary-content shadow-lg">
-              <div className="card-body">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="text-sm opacity-80">Current Program</p>
-                    <h2 className="card-title text-xl">{activeProgram.name}</h2>
-                  </div>
-                  <span className="badge badge-success">Active</span>
+            <div className="athlete-card p-5 border-l-4 border-l-[var(--athlete-accent-primary)] animate-athlete-slide-up">
+              <div className="flex items-start justify-between mb-4">
+                <div>
+                  <StatusBadge variant="today" label="Current" />
+                  <h2 className="athlete-heading-lg mt-2">{activeProgram.name}</h2>
                 </div>
-                {activeProgram.description && (
-                  <p className="text-sm opacity-90 line-clamp-2">{activeProgram.description}</p>
-                )}
-                <div className="flex gap-4 mt-2 text-sm opacity-80">
-                  <span>{activeProgram.duration_weeks} weeks</span>
-                  <span>
-                    {formatDate(activeProgram.startDate)} - {formatDate(activeProgram.endDate)}
+                <CircularProgress
+                  value={activeProgram.completedWorkouts || 0}
+                  max={activeProgram.totalWorkouts || 1}
+                  size={70}
+                  strokeWidth={6}
+                />
+              </div>
+
+              {activeProgram.description && (
+                <p className="athlete-body line-clamp-2 mb-4">{activeProgram.description}</p>
+              )}
+
+              <div className="flex items-center gap-4 text-sm">
+                <span className="flex items-center gap-1.5 text-[var(--athlete-text-muted)]">
+                  <Clock className="w-4 h-4" />
+                  {activeProgram.duration_weeks} weeks
+                </span>
+                {activeProgram.focus_area && (
+                  <span className="flex items-center gap-1.5 text-[var(--athlete-text-muted)]">
+                    <Target className="w-4 h-4" />
+                    {activeProgram.focus_area}
                   </span>
-                </div>
-                <div className="card-actions justify-end mt-2">
-                  <span className="text-sm">View Full Program →</span>
-                </div>
+                )}
+              </div>
+
+              <div className="flex items-center justify-between mt-4 pt-4 border-t border-[var(--athlete-border)]">
+                <span className="athlete-body text-[var(--athlete-text-muted)]">
+                  {formatDate(activeProgram.startDate)} - {formatDate(activeProgram.endDate)}
+                </span>
+                <span className="flex items-center gap-1 text-[var(--athlete-accent-primary)] text-sm font-medium">
+                  View Program <ChevronRight className="w-4 h-4" />
+                </span>
               </div>
             </div>
           </Link>
         )}
 
-        {/* Filter Tabs */}
-        <div className="flex gap-2 overflow-x-auto pb-2">
-          {['all', 'active', 'upcoming', 'completed'].map((f) => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={`btn btn-sm ${filter === f ? 'btn-primary' : 'btn-outline'}`}
-            >
-              {f.charAt(0).toUpperCase() + f.slice(1)}
-              <span className="badge badge-sm ml-1">
-                {f === 'all' ? programs.length : programs.filter((p) => p.status === f).length}
-              </span>
-            </button>
-          ))}
+        {/* Filter Pills */}
+        <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 scrollbar-hide">
+          {filterOptions.map((opt) => {
+            const count =
+              opt.value === 'all'
+                ? programs.length
+                : programs.filter((p) => p.status === opt.value).length;
+
+            return (
+              <button
+                key={opt.value}
+                onClick={() => setFilter(opt.value)}
+                className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                  filter === opt.value
+                    ? 'bg-[var(--athlete-accent-primary)] text-white'
+                    : 'bg-[var(--athlete-bg-card)] text-[var(--athlete-text-secondary)] border border-[var(--athlete-border)]'
+                }`}
+              >
+                {opt.label}
+                <span className={`ml-1.5 ${filter === opt.value ? 'opacity-80' : 'opacity-60'}`}>
+                  {count}
+                </span>
+              </button>
+            );
+          })}
         </div>
 
         {/* Programs List */}
         {filteredPrograms.length === 0 ? (
-          <div className="card bg-base-100 shadow">
-            <div className="card-body text-center">
-              <p className="text-base-content/60">
-                No {filter !== 'all' ? filter : ''} programs found.
-              </p>
-            </div>
-          </div>
+          <EmptyState
+            icon={Dumbbell}
+            title="No programs found"
+            message={
+              filter !== 'all'
+                ? `No ${filter} programs yet. Check back later.`
+                : "Your coach hasn't assigned any programs yet."
+            }
+          />
         ) : (
           <div className="space-y-3">
-            {filteredPrograms.map((program) => (
-              <Link key={program.id} href={`/athlete/programs/${program.id}`}>
-                <div
-                  className={`card bg-base-100 shadow hover:shadow-lg transition-shadow ${
-                    program.status === 'active' ? 'border-2 border-primary' : ''
-                  }`}
-                >
-                  <div className="card-body p-4">
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <h3 className="font-bold">{program.name}</h3>
-                        <p className="text-sm text-base-content/60">
-                          {program.duration_weeks} weeks
-                          {program.focus_area && ` • ${program.focus_area}`}
-                          {program.difficulty && ` • ${program.difficulty}`}
-                        </p>
+            {filteredPrograms
+              .filter((p) => p.id !== activeProgram?.id)
+              .map((program, index) => (
+                <Link key={program.id} href={`/athlete/programs/${program.id}`}>
+                  <div
+                    className={`athlete-card ${getStatusStripe(program.status)} p-4 animate-athlete-stagger stagger-${Math.min(index + 1, 5)}`}
+                  >
+                    <div className="flex items-start gap-4">
+                      <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-[var(--athlete-bg-secondary)] flex items-center justify-center">
+                        <CircularProgress
+                          value={program.completedWorkouts || 0}
+                          max={program.totalWorkouts || 1}
+                          size={40}
+                          strokeWidth={3}
+                          showLabel={false}
+                        />
                       </div>
-                      {getStatusBadge(program.status)}
-                    </div>
-                    {program.description && (
-                      <p className="text-sm text-base-content/70 line-clamp-2 mt-1">
-                        {program.description}
-                      </p>
-                    )}
-                    <div className="flex justify-between items-center mt-2 text-xs text-base-content/50">
-                      <span>
-                        {formatDate(program.startDate)} - {formatDate(program.endDate)}
-                      </span>
-                      <span>View →</span>
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-2">
+                          <h3 className="athlete-heading-md truncate">{program.name}</h3>
+                          <ChevronRight className="w-5 h-5 text-[var(--athlete-text-muted)] flex-shrink-0" />
+                        </div>
+
+                        <div className="flex items-center gap-3 mt-1 text-sm text-[var(--athlete-text-muted)]">
+                          <span>{program.duration_weeks}w</span>
+                          {program.focus_area && (
+                            <>
+                              <span className="opacity-50">•</span>
+                              <span>{program.focus_area}</span>
+                            </>
+                          )}
+                          {program.difficulty && (
+                            <>
+                              <span className="opacity-50">•</span>
+                              <span className="capitalize">{program.difficulty}</span>
+                            </>
+                          )}
+                        </div>
+
+                        {program.status === 'completed' && (
+                          <StatusBadge variant="completed" className="mt-2" />
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              </Link>
-            ))}
+                </Link>
+              ))}
           </div>
         )}
       </div>

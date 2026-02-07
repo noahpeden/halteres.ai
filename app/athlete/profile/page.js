@@ -1,10 +1,29 @@
 'use client';
 
+import {
+  Activity,
+  Calendar,
+  Check,
+  ChevronLeft,
+  Dumbbell,
+  Edit3,
+  Ruler,
+  Timer,
+  Trophy,
+  User,
+  Weight,
+  X,
+} from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import EmptyState from '@/components/athlete/EmptyState';
+import SegmentedControl from '@/components/athlete/SegmentedControl';
+import StatusBadge from '@/components/athlete/StatusBadge';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function AthleteProfilePage() {
   const { user, profile, currentGym, refetchProfile } = useAuth();
+  const router = useRouter();
   const [prs, setPrs] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -86,279 +105,386 @@ export default function AthleteProfilePage() {
     return acc;
   }, {});
 
+  const tabs = [
+    { value: 'prs', label: 'Records', icon: Trophy },
+    { value: 'metrics', label: 'Metrics', icon: Activity },
+  ];
+
+  const getCategoryIcon = (category) => {
+    const lower = category?.toLowerCase() || '';
+    if (lower.includes('strength') || lower.includes('lift')) return Dumbbell;
+    if (lower.includes('cardio') || lower.includes('run')) return Timer;
+    if (lower.includes('benchmark') || lower.includes('wod')) return Trophy;
+    return Activity;
+  };
+
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-[60vh]">
-        <span className="loading loading-spinner loading-lg"></span>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-10 h-10 border-2 border-[var(--athlete-accent-primary)] border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
+  const displayName = profile?.display_name || profile?.full_name || 'Athlete';
+  const initials = displayName.charAt(0).toUpperCase();
+
   return (
     <div className="min-h-screen">
-      {/* Profile Header */}
-      <div className="bg-gradient-to-br from-primary to-secondary text-primary-content p-6 pb-12">
-        <div className="flex items-center gap-4">
-          <div className="avatar placeholder">
-            <div className="bg-primary-content/20 text-primary-content rounded-full w-20">
+      {/* Hero Header */}
+      <div className="relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-[var(--athlete-accent-primary)]/30 via-[var(--athlete-bg-primary)] to-[var(--athlete-accent-secondary)]/20" />
+        <div className="relative px-4 pt-4 pb-16">
+          <button
+            onClick={() => router.push('/athlete')}
+            className="w-8 h-8 rounded-lg bg-[var(--athlete-bg-card)]/50 backdrop-blur-sm flex items-center justify-center mb-6"
+          >
+            <ChevronLeft className="w-5 h-5 text-[var(--athlete-text-primary)]" />
+          </button>
+
+          <div className="flex items-center gap-4">
+            <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-[var(--athlete-accent-primary)] to-[var(--athlete-accent-secondary)] flex items-center justify-center shadow-lg shadow-[var(--athlete-accent-primary)]/30 overflow-hidden">
               {profile?.profile_photo_url ? (
-                <img src={profile.profile_photo_url} alt="" />
+                <img
+                  src={profile.profile_photo_url}
+                  alt=""
+                  className="w-full h-full object-cover"
+                />
               ) : (
-                <span className="text-3xl">
-                  {(profile?.display_name || profile?.full_name || 'A').charAt(0)}
-                </span>
+                <span className="text-3xl font-bold text-black">{initials}</span>
               )}
             </div>
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold">
-              {profile?.display_name || profile?.full_name || 'Athlete'}
-            </h1>
-            <p className="text-primary-content/70">{currentGym?.name || 'No gym'}</p>
+            <div>
+              <h1 className="athlete-heading-xl text-white">{displayName}</h1>
+              <p className="athlete-body text-[var(--athlete-text-secondary)]">
+                {currentGym?.name || 'No gym'}
+              </p>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="px-4 -mt-6">
+      {/* Overlapping Stats Cards */}
+      <div className="px-4 -mt-8 relative z-10">
         <div className="grid grid-cols-3 gap-3">
-          <div className="card bg-base-100 shadow-lg">
-            <div className="card-body p-3 text-center">
-              <p className="text-2xl font-bold text-primary">{stats?.totalWorkouts || 0}</p>
-              <p className="text-xs text-base-content/60">Workouts</p>
-            </div>
+          <div className="athlete-card-static p-4 text-center athlete-glow-subtle">
+            <Dumbbell className="w-5 h-5 text-[var(--athlete-accent-primary)] mx-auto mb-2" />
+            <p className="athlete-heading-lg text-white">{stats?.totalWorkouts || 0}</p>
+            <p className="text-[10px] text-[var(--athlete-text-muted)] uppercase tracking-wider">
+              Workouts
+            </p>
           </div>
-          <div className="card bg-base-100 shadow-lg">
-            <div className="card-body p-3 text-center">
-              <p className="text-2xl font-bold text-warning">{prs.length}</p>
-              <p className="text-xs text-base-content/60">PRs</p>
-            </div>
+          <div className="athlete-card-static p-4 text-center">
+            <Trophy className="w-5 h-5 text-[var(--athlete-accent-secondary)] mx-auto mb-2" />
+            <p className="athlete-heading-lg text-[var(--athlete-accent-secondary)]">
+              {prs.length}
+            </p>
+            <p className="text-[10px] text-[var(--athlete-text-muted)] uppercase tracking-wider">
+              PRs
+            </p>
           </div>
-          <div className="card bg-base-100 shadow-lg">
-            <div className="card-body p-3 text-center">
-              <p className="text-2xl font-bold text-success">{stats?.memberSince || '-'}</p>
-              <p className="text-xs text-base-content/60">Member Since</p>
-            </div>
+          <div className="athlete-card-static p-4 text-center">
+            <Calendar className="w-5 h-5 text-[var(--athlete-accent-complete)] mx-auto mb-2" />
+            <p className="athlete-heading-lg text-white">{stats?.memberSince || '-'}</p>
+            <p className="text-[10px] text-[var(--athlete-text-muted)] uppercase tracking-wider">
+              Since
+            </p>
           </div>
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="tabs tabs-boxed bg-base-200 mx-4 mt-6 w-fit">
-        <button
-          className={`tab ${activeTab === 'prs' ? 'tab-active' : ''}`}
-          onClick={() => setActiveTab('prs')}
-        >
-          Personal Records
-        </button>
-        <button
-          className={`tab ${activeTab === 'metrics' ? 'tab-active' : ''}`}
-          onClick={() => setActiveTab('metrics')}
-        >
-          My Metrics
-        </button>
+      {/* Tab Navigation */}
+      <div className="px-4 pt-6 pb-3">
+        <SegmentedControl options={tabs} value={activeTab} onChange={setActiveTab} />
       </div>
 
-      <div className="p-4">
+      <div className="px-4 pb-8">
         {/* PRs Tab */}
         {activeTab === 'prs' && (
-          <div className="space-y-6">
+          <div className="space-y-4 animate-athlete-slide-up">
             {prs.length === 0 ? (
-              <div className="text-center py-8">
-                <div className="text-5xl mb-4">🏆</div>
-                <p className="text-base-content/60">No PRs recorded yet</p>
-                <p className="text-sm text-base-content/40">
-                  Log workouts to start tracking your personal records!
-                </p>
-              </div>
+              <EmptyState
+                icon={Trophy}
+                title="No PRs yet"
+                message="Start logging workouts to track your personal records!"
+                action={() => router.push('/athlete/programs')}
+                actionLabel="View Programs"
+              />
             ) : (
-              Object.entries(prsByCategory).map(([category, categoryPrs]) => (
-                <div key={category}>
-                  <h3 className="text-lg font-semibold mb-3 capitalize">{category}</h3>
-                  <div className="grid grid-cols-1 gap-2">
-                    {categoryPrs.map((pr) => (
-                      <div key={pr.id} className="card bg-base-100 shadow-sm">
-                        <div className="card-body p-4 flex-row justify-between items-center">
-                          <div>
-                            <p className="font-medium">{pr.custom_name || pr.category}</p>
-                            <p className="text-sm text-base-content/60">
-                              {new Date(pr.achieved_at).toLocaleDateString()}
-                            </p>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-xl font-bold">{pr.displayValue}</p>
-                            <span className="badge badge-ghost badge-sm">
-                              {pr.scale?.toUpperCase() || 'RX'}
-                            </span>
+              Object.entries(prsByCategory).map(([category, categoryPrs], catIndex) => {
+                const CategoryIcon = getCategoryIcon(category);
+
+                return (
+                  <div
+                    key={category}
+                    className={`animate-athlete-stagger stagger-${Math.min(catIndex + 1, 5)}`}
+                  >
+                    <div className="flex items-center gap-2 mb-3">
+                      <CategoryIcon className="w-4 h-4 text-[var(--athlete-accent-primary)]" />
+                      <h3 className="athlete-heading-md text-white capitalize">{category}</h3>
+                      <span className="text-xs text-[var(--athlete-text-muted)] bg-[var(--athlete-bg-secondary)] px-2 py-0.5 rounded-full">
+                        {categoryPrs.length}
+                      </span>
+                    </div>
+
+                    <div className="space-y-2">
+                      {categoryPrs.map((pr, prIndex) => (
+                        <div
+                          key={pr.id}
+                          className={`athlete-card-static border-l-4 border-l-[var(--athlete-accent-secondary)] p-4 animate-athlete-stagger stagger-${Math.min(prIndex + 1, 5)}`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="athlete-body text-white font-medium">
+                                {pr.custom_name || pr.category}
+                              </p>
+                              <p className="text-xs text-[var(--athlete-text-muted)]">
+                                {new Date(pr.achieved_at).toLocaleDateString('en-US', {
+                                  month: 'short',
+                                  day: 'numeric',
+                                  year: 'numeric',
+                                })}
+                              </p>
+                            </div>
+                            <div className="text-right flex items-center gap-3">
+                              <div>
+                                <p className="athlete-heading-lg text-white">{pr.displayValue}</p>
+                                <span className="text-[10px] font-medium text-[var(--athlete-text-muted)] uppercase">
+                                  {pr.scale || 'RX'}
+                                </span>
+                              </div>
+                              <StatusBadge variant="pr" />
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         )}
 
         {/* Metrics Tab */}
         {activeTab === 'metrics' && (
-          <div className="space-y-4">
+          <div className="space-y-4 animate-athlete-slide-up">
             {isEditing ? (
               <>
-                <div className="card bg-base-100 shadow">
-                  <div className="card-body">
-                    <h3 className="card-title text-base">Profile</h3>
-                    <div className="form-control">
-                      <label className="label">
-                        <span className="label-text">Display Name</span>
-                      </label>
+                {/* Edit Mode Header */}
+                <div className="flex items-center justify-between">
+                  <h3 className="athlete-heading-md text-white">Edit Metrics</h3>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setIsEditing(false)}
+                      disabled={saving}
+                      className="w-10 h-10 rounded-lg bg-[var(--athlete-bg-card)] flex items-center justify-center"
+                    >
+                      <X className="w-5 h-5 text-[var(--athlete-text-muted)]" />
+                    </button>
+                    <button
+                      onClick={saveProfile}
+                      disabled={saving}
+                      className="w-10 h-10 rounded-lg bg-[var(--athlete-accent-primary)] flex items-center justify-center"
+                    >
+                      {saving ? (
+                        <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <Check className="w-5 h-5 text-black" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Profile Section */}
+                <div className="athlete-card-static p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <User className="w-4 h-4 text-[var(--athlete-accent-primary)]" />
+                    <h3 className="athlete-body text-white font-medium">Profile</h3>
+                  </div>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="athlete-label block mb-1">Display Name</label>
                       <input
                         type="text"
                         name="display_name"
                         value={editForm.display_name}
                         onChange={handleInputChange}
-                        className="input input-bordered"
+                        className="athlete-input w-full"
                         placeholder="Your name or nickname"
                       />
                     </div>
                   </div>
                 </div>
 
-                <div className="card bg-base-100 shadow">
-                  <div className="card-body">
-                    <h3 className="card-title text-base">Strength Metrics</h3>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="form-control">
-                        <label className="label">
-                          <span className="label-text">Back Squat 1RM (kg)</span>
-                        </label>
+                {/* Strength Metrics */}
+                <div className="athlete-card-static p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Dumbbell className="w-4 h-4 text-[var(--athlete-accent-primary)]" />
+                    <h3 className="athlete-body text-white font-medium">Strength</h3>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="athlete-label block mb-1">Back Squat 1RM</label>
+                      <div className="relative">
                         <input
                           type="number"
                           name="squat_1rm"
                           value={editForm.squat_1rm}
                           onChange={handleInputChange}
-                          className="input input-bordered"
+                          className="athlete-input w-full pr-10"
                         />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--athlete-text-muted)] text-sm">
+                          kg
+                        </span>
                       </div>
-                      <div className="form-control">
-                        <label className="label">
-                          <span className="label-text">Deadlift 1RM (kg)</span>
-                        </label>
+                    </div>
+                    <div>
+                      <label className="athlete-label block mb-1">Deadlift 1RM</label>
+                      <div className="relative">
                         <input
                           type="number"
                           name="deadlift_1rm"
                           value={editForm.deadlift_1rm}
                           onChange={handleInputChange}
-                          className="input input-bordered"
+                          className="athlete-input w-full pr-10"
                         />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--athlete-text-muted)] text-sm">
+                          kg
+                        </span>
                       </div>
-                      <div className="form-control">
-                        <label className="label">
-                          <span className="label-text">Bench Press 1RM (kg)</span>
-                        </label>
+                    </div>
+                    <div>
+                      <label className="athlete-label block mb-1">Bench Press 1RM</label>
+                      <div className="relative">
                         <input
                           type="number"
                           name="bench_1rm"
                           value={editForm.bench_1rm}
                           onChange={handleInputChange}
-                          className="input input-bordered"
+                          className="athlete-input w-full pr-10"
                         />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--athlete-text-muted)] text-sm">
+                          kg
+                        </span>
                       </div>
-                      <div className="form-control">
-                        <label className="label">
-                          <span className="label-text">Mile Time</span>
-                        </label>
-                        <input
-                          type="text"
-                          name="mile_time"
-                          value={editForm.mile_time}
-                          onChange={handleInputChange}
-                          className="input input-bordered"
-                          placeholder="e.g. 7:30"
-                        />
-                      </div>
+                    </div>
+                    <div>
+                      <label className="athlete-label block mb-1">Mile Time</label>
+                      <input
+                        type="text"
+                        name="mile_time"
+                        value={editForm.mile_time}
+                        onChange={handleInputChange}
+                        className="athlete-input w-full"
+                        placeholder="e.g. 7:30"
+                      />
                     </div>
                   </div>
                 </div>
 
-                <div className="card bg-base-100 shadow">
-                  <div className="card-body">
-                    <h3 className="card-title text-base">Body Metrics</h3>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="form-control">
-                        <label className="label">
-                          <span className="label-text">Weight (kg)</span>
-                        </label>
+                {/* Body Metrics */}
+                <div className="athlete-card-static p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Activity className="w-4 h-4 text-[var(--athlete-accent-primary)]" />
+                    <h3 className="athlete-body text-white font-medium">Body</h3>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="athlete-label block mb-1">Weight</label>
+                      <div className="relative">
                         <input
                           type="number"
                           name="weight_kg"
                           value={editForm.weight_kg}
                           onChange={handleInputChange}
-                          className="input input-bordered"
+                          className="athlete-input w-full pr-10"
                         />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--athlete-text-muted)] text-sm">
+                          kg
+                        </span>
                       </div>
-                      <div className="form-control">
-                        <label className="label">
-                          <span className="label-text">Height (cm)</span>
-                        </label>
+                    </div>
+                    <div>
+                      <label className="athlete-label block mb-1">Height</label>
+                      <div className="relative">
                         <input
                           type="number"
                           name="height_cm"
                           value={editForm.height_cm}
                           onChange={handleInputChange}
-                          className="input input-bordered"
+                          className="athlete-input w-full pr-10"
                         />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--athlete-text-muted)] text-sm">
+                          cm
+                        </span>
                       </div>
                     </div>
                   </div>
                 </div>
-
-                <div className="flex gap-2 justify-end">
-                  <button
-                    className="btn btn-ghost"
-                    onClick={() => setIsEditing(false)}
-                    disabled={saving}
-                  >
-                    Cancel
-                  </button>
-                  <button className="btn btn-primary" onClick={saveProfile} disabled={saving}>
-                    {saving ? (
-                      <>
-                        <span className="loading loading-spinner loading-sm" />
-                        Saving...
-                      </>
-                    ) : (
-                      'Save Changes'
-                    )}
-                  </button>
-                </div>
               </>
             ) : (
               <>
-                <div className="card bg-base-100 shadow">
-                  <div className="card-body">
-                    <h3 className="card-title text-base">Strength Metrics</h3>
-                    <div className="grid grid-cols-2 gap-4">
-                      <MetricItem label="Back Squat 1RM" value={profile?.squat_1rm} unit="kg" />
-                      <MetricItem label="Deadlift 1RM" value={profile?.deadlift_1rm} unit="kg" />
-                      <MetricItem label="Bench Press 1RM" value={profile?.bench_1rm} unit="kg" />
-                      <MetricItem label="Mile Time" value={profile?.mile_time} />
+                {/* View Mode */}
+                {/* Strength Metrics */}
+                <div className="athlete-card-static p-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <Dumbbell className="w-4 h-4 text-[var(--athlete-accent-primary)]" />
+                      <h3 className="athlete-body text-white font-medium">Strength</h3>
                     </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <MetricDisplay
+                      icon={Weight}
+                      label="Back Squat 1RM"
+                      value={profile?.squat_1rm}
+                      unit="kg"
+                    />
+                    <MetricDisplay
+                      icon={Weight}
+                      label="Deadlift 1RM"
+                      value={profile?.deadlift_1rm}
+                      unit="kg"
+                    />
+                    <MetricDisplay
+                      icon={Weight}
+                      label="Bench Press 1RM"
+                      value={profile?.bench_1rm}
+                      unit="kg"
+                    />
+                    <MetricDisplay icon={Timer} label="Mile Time" value={profile?.mile_time} />
                   </div>
                 </div>
 
-                <div className="card bg-base-100 shadow">
-                  <div className="card-body">
-                    <h3 className="card-title text-base">Body Metrics</h3>
-                    <div className="grid grid-cols-2 gap-4">
-                      <MetricItem label="Weight" value={profile?.weight_kg} unit="kg" />
-                      <MetricItem label="Height" value={profile?.height_cm} unit="cm" />
-                    </div>
+                {/* Body Metrics */}
+                <div className="athlete-card-static p-4">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Activity className="w-4 h-4 text-[var(--athlete-accent-primary)]" />
+                    <h3 className="athlete-body text-white font-medium">Body</h3>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <MetricDisplay
+                      icon={Weight}
+                      label="Weight"
+                      value={profile?.weight_kg}
+                      unit="kg"
+                    />
+                    <MetricDisplay
+                      icon={Ruler}
+                      label="Height"
+                      value={profile?.height_cm}
+                      unit="cm"
+                    />
                   </div>
                 </div>
 
-                <button className="btn btn-outline btn-block" onClick={startEditing}>
+                {/* Edit Button */}
+                <button
+                  onClick={startEditing}
+                  className="athlete-btn-secondary w-full flex items-center justify-center gap-2"
+                >
+                  <Edit3 className="w-4 h-4" />
                   Edit My Metrics
                 </button>
               </>
@@ -370,11 +496,16 @@ export default function AthleteProfilePage() {
   );
 }
 
-function MetricItem({ label, value, unit }) {
+function MetricDisplay({ icon: Icon, label, value, unit }) {
   return (
-    <div>
-      <p className="text-sm text-base-content/60">{label}</p>
-      <p className="text-lg font-bold">{value ? `${value}${unit ? ` ${unit}` : ''}` : '-'}</p>
+    <div className="p-3 rounded-lg bg-[var(--athlete-bg-secondary)]">
+      <div className="flex items-center gap-2 mb-1">
+        <Icon className="w-3.5 h-3.5 text-[var(--athlete-text-muted)]" />
+        <p className="text-xs text-[var(--athlete-text-muted)]">{label}</p>
+      </div>
+      <p className="athlete-heading-md text-white">
+        {value ? `${value}${unit ? ` ${unit}` : ''}` : '-'}
+      </p>
     </div>
   );
 }

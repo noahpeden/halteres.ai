@@ -1,45 +1,44 @@
 'use client';
 
+import { Calendar, Dumbbell, Home, Trophy, User } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function AthleteLayout({ children }) {
   const pathname = usePathname();
-  const { currentGym, profile, athleteNeedsSetup } = useAuth();
+  const { athleteNeedsSetup } = useAuth();
 
   const navItems = [
-    { href: '/athlete', label: 'Today', icon: '🏠' },
-    { href: '/athlete/leaderboard', label: 'Leaderboard', icon: '🏆' },
-    { href: '/athlete/history', label: 'History', icon: '📅' },
-    { href: '/athlete/profile', label: 'Profile', icon: '👤' },
+    { href: '/athlete', label: 'Today', icon: Home },
+    { href: '/athlete/programs', label: 'Programs', icon: Dumbbell },
+    { href: '/athlete/leaderboard', label: 'Board', icon: Trophy },
+    { href: '/athlete/history', label: 'History', icon: Calendar },
+    { href: '/athlete/profile', label: 'Profile', icon: User },
   ];
 
-  // Hide navigation when athlete needs to complete setup (no active gym or onboarding incomplete)
   const showNavigation = !athleteNeedsSetup;
 
   return (
-    <div className={`min-h-screen bg-base-200 ${showNavigation ? 'pb-20' : ''}`}>
+    <div className={`athlete-theme min-h-screen ${showNavigation ? 'athlete-safe-bottom' : ''}`}>
       {children}
 
-      {/* Bottom Navigation - only show when setup is complete */}
       {showNavigation && (
-        <nav className="fixed bottom-0 left-0 right-0 bg-base-100 border-t border-base-300 px-2 py-1 z-50">
+        <nav className="athlete-bottom-nav">
           <div className="flex justify-around items-center max-w-lg mx-auto">
             {navItems.map((item) => {
-              const isActive = pathname === item.href;
+              const Icon = item.icon;
+              const isActive =
+                item.href === '/athlete' ? pathname === '/athlete' : pathname.startsWith(item.href);
+
               return (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`flex flex-col items-center py-2 px-4 rounded-lg transition-colors ${
-                    isActive
-                      ? 'text-primary bg-primary/10'
-                      : 'text-base-content/60 hover:text-primary'
-                  }`}
+                  className={`athlete-nav-item relative ${isActive ? 'active' : ''}`}
                 >
-                  <span className="text-xl">{item.icon}</span>
-                  <span className="text-xs mt-1">{item.label}</span>
+                  <Icon className="w-5 h-5" />
+                  <span className="text-[10px] font-medium">{item.label}</span>
                 </Link>
               );
             })}

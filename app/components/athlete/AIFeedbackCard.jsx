@@ -1,5 +1,6 @@
 'use client';
 
+import { AlertCircle, Bot, ChevronDown, RefreshCw, Sparkles, Target, Zap } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 export default function AIFeedbackCard({ workoutResultId, userId, autoGenerate = false }) {
@@ -9,12 +10,10 @@ export default function AIFeedbackCard({ workoutResultId, userId, autoGenerate =
   const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
-    // Check for existing feedback
     fetchExistingFeedback();
   }, [workoutResultId]);
 
   useEffect(() => {
-    // Auto-generate if requested and no existing feedback
     if (autoGenerate && !feedback && !loading) {
       generateFeedback();
     }
@@ -61,26 +60,23 @@ export default function AIFeedbackCard({ workoutResultId, userId, autoGenerate =
 
   if (!feedback && !loading) {
     return (
-      <div className="card bg-base-200">
-        <div className="card-body">
-          <h3 className="card-title text-base">
-            <span className="text-xl">🤖</span>
-            AI Coach Feedback
-          </h3>
-          <p className="text-sm text-base-content/70">
-            Get personalized feedback on your workout performance
-          </p>
-          <div className="card-actions justify-end">
+      <div className="athlete-card-static p-5">
+        <div className="flex items-start gap-4">
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[var(--athlete-accent-primary)]/20 to-[var(--athlete-accent-secondary)]/20 flex items-center justify-center flex-shrink-0">
+            <Bot className="w-6 h-6 text-[var(--athlete-accent-primary)]" />
+          </div>
+          <div className="flex-1">
+            <h3 className="athlete-heading-md text-white mb-1">AI Coach Feedback</h3>
+            <p className="athlete-body text-[var(--athlete-text-secondary)] mb-4">
+              Get personalized insights on your workout performance
+            </p>
             <button
               onClick={generateFeedback}
-              className="btn btn-primary btn-sm"
+              className="athlete-btn-primary text-sm py-2 px-4 flex items-center gap-2"
               disabled={loading}
             >
-              {loading ? (
-                <span className="loading loading-spinner loading-sm"></span>
-              ) : (
-                'Get Feedback'
-              )}
+              <Sparkles className="w-4 h-4" />
+              Get Feedback
             </button>
           </div>
         </div>
@@ -90,10 +86,14 @@ export default function AIFeedbackCard({ workoutResultId, userId, autoGenerate =
 
   if (loading) {
     return (
-      <div className="card bg-base-200">
-        <div className="card-body items-center">
-          <span className="loading loading-spinner loading-lg text-primary"></span>
-          <p className="text-sm text-base-content/70">Analyzing your workout...</p>
+      <div className="athlete-card-static p-6">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 rounded-full bg-[var(--athlete-accent-primary)]/20 flex items-center justify-center">
+            <div className="w-6 h-6 border-2 border-[var(--athlete-accent-primary)] border-t-transparent rounded-full animate-spin" />
+          </div>
+          <p className="athlete-body text-[var(--athlete-text-secondary)]">
+            Analyzing your workout...
+          </p>
         </div>
       </div>
     );
@@ -101,121 +101,154 @@ export default function AIFeedbackCard({ workoutResultId, userId, autoGenerate =
 
   if (error) {
     return (
-      <div className="card bg-error/10 border border-error">
-        <div className="card-body">
-          <p className="text-error">{error}</p>
-          <button onClick={generateFeedback} className="btn btn-sm btn-outline">
-            Try Again
-          </button>
+      <div className="athlete-card-static border-l-4 border-l-red-500 p-4">
+        <div className="flex items-center gap-3 mb-3">
+          <AlertCircle className="w-5 h-5 text-red-500" />
+          <p className="athlete-body text-red-400">{error}</p>
         </div>
+        <button
+          onClick={generateFeedback}
+          className="athlete-btn-secondary text-sm py-2 px-4 flex items-center gap-2"
+        >
+          <RefreshCw className="w-4 h-4" />
+          Try Again
+        </button>
       </div>
     );
   }
 
   return (
-    <div className="card bg-gradient-to-br from-primary/5 to-secondary/5 border border-primary/20">
-      <div className="card-body">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <h3 className="card-title text-base">
-            <span className="text-xl">🤖</span>
-            AI Coach Feedback
-          </h3>
-          <button
-            onClick={() => setExpanded(!expanded)}
-            className="btn btn-ghost btn-sm btn-circle"
-          >
-            {expanded ? '−' : '+'}
-          </button>
-        </div>
-
-        {/* Performance Analysis - Always Visible */}
-        <p className="text-sm leading-relaxed">{feedback.performance_analysis}</p>
-
-        {/* Expanded Content */}
-        {expanded && (
-          <div className="space-y-4 mt-4">
-            {/* Strengths */}
-            {feedback.strengths && feedback.strengths.length > 0 && (
-              <div>
-                <h4 className="font-semibold text-success flex items-center gap-2 mb-2">
-                  <span>💪</span> Strengths
-                </h4>
-                <ul className="space-y-1">
-                  {feedback.strengths.map((strength, i) => (
-                    <li key={i} className="flex items-start gap-2 text-sm">
-                      <span className="text-success">✓</span>
-                      {strength}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            {/* Areas for Improvement */}
-            {feedback.areas_for_improvement && feedback.areas_for_improvement.length > 0 && (
-              <div>
-                <h4 className="font-semibold text-warning flex items-center gap-2 mb-2">
-                  <span>🎯</span> Areas to Focus On
-                </h4>
-                <ul className="space-y-1">
-                  {feedback.areas_for_improvement.map((area, i) => (
-                    <li key={i} className="flex items-start gap-2 text-sm">
-                      <span className="text-warning">→</span>
-                      {area}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            {/* Recovery Suggestions */}
-            {feedback.recovery_suggestions && feedback.recovery_suggestions.length > 0 && (
-              <div>
-                <h4 className="font-semibold text-info flex items-center gap-2 mb-2">
-                  <span>🧘</span> Recovery Tips
-                </h4>
-                <ul className="space-y-1">
-                  {feedback.recovery_suggestions.map((suggestion, i) => (
-                    <li key={i} className="flex items-start gap-2 text-sm">
-                      <span className="text-info">•</span>
-                      {suggestion}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            {/* Next Workout Recommendations */}
-            {feedback.next_workout_recommendations &&
-              feedback.next_workout_recommendations.length > 0 && (
-                <div>
-                  <h4 className="font-semibold text-secondary flex items-center gap-2 mb-2">
-                    <span>📋</span> For Your Next Workout
-                  </h4>
-                  <ul className="space-y-1">
-                    {feedback.next_workout_recommendations.map((rec, i) => (
-                      <li key={i} className="flex items-start gap-2 text-sm">
-                        <span className="text-secondary">→</span>
-                        {rec}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+    <div className="athlete-card-static overflow-hidden">
+      {/* Header */}
+      <div
+        className="p-4 flex items-center justify-between cursor-pointer hover:bg-[var(--athlete-bg-card-hover)] transition-colors"
+        onClick={() => setExpanded(!expanded)}
+      >
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[var(--athlete-accent-primary)]/20 to-[var(--athlete-accent-secondary)]/20 flex items-center justify-center">
+            <Bot className="w-5 h-5 text-[var(--athlete-accent-primary)]" />
           </div>
-        )}
+          <h3 className="athlete-heading-md text-white">AI Coach Feedback</h3>
+        </div>
+        <ChevronDown
+          className={`w-5 h-5 text-[var(--athlete-text-muted)] transition-transform ${expanded ? 'rotate-180' : ''}`}
+        />
+      </div>
 
-        {/* Show more/less toggle hint */}
-        {!expanded && (
+      {/* Performance Analysis - Always Visible */}
+      <div className="px-4 pb-4">
+        <p className="athlete-body text-[var(--athlete-text-secondary)] leading-relaxed">
+          {feedback.performance_analysis}
+        </p>
+      </div>
+
+      {/* Expanded Content */}
+      {expanded && (
+        <div className="border-t border-[var(--athlete-border)] px-4 py-4 space-y-4">
+          {/* Strengths */}
+          {feedback.strengths && feedback.strengths.length > 0 && (
+            <div>
+              <h4 className="flex items-center gap-2 mb-2">
+                <Zap className="w-4 h-4 text-[var(--athlete-accent-complete)]" />
+                <span className="athlete-body text-[var(--athlete-accent-complete)] font-medium">
+                  Strengths
+                </span>
+              </h4>
+              <ul className="space-y-1.5">
+                {feedback.strengths.map((strength, i) => (
+                  <li
+                    key={i}
+                    className="flex items-start gap-2 text-sm text-[var(--athlete-text-secondary)]"
+                  >
+                    <span className="text-[var(--athlete-accent-complete)] mt-1">✓</span>
+                    {strength}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Areas for Improvement */}
+          {feedback.areas_for_improvement && feedback.areas_for_improvement.length > 0 && (
+            <div>
+              <h4 className="flex items-center gap-2 mb-2">
+                <Target className="w-4 h-4 text-[var(--athlete-accent-warning)]" />
+                <span className="athlete-body text-[var(--athlete-accent-warning)] font-medium">
+                  Areas to Focus On
+                </span>
+              </h4>
+              <ul className="space-y-1.5">
+                {feedback.areas_for_improvement.map((area, i) => (
+                  <li
+                    key={i}
+                    className="flex items-start gap-2 text-sm text-[var(--athlete-text-secondary)]"
+                  >
+                    <span className="text-[var(--athlete-accent-warning)] mt-1">→</span>
+                    {area}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Recovery Suggestions */}
+          {feedback.recovery_suggestions && feedback.recovery_suggestions.length > 0 && (
+            <div>
+              <h4 className="flex items-center gap-2 mb-2">
+                <span className="text-purple-400">🧘</span>
+                <span className="athlete-body text-purple-400 font-medium">Recovery Tips</span>
+              </h4>
+              <ul className="space-y-1.5">
+                {feedback.recovery_suggestions.map((suggestion, i) => (
+                  <li
+                    key={i}
+                    className="flex items-start gap-2 text-sm text-[var(--athlete-text-secondary)]"
+                  >
+                    <span className="text-purple-400 mt-1">•</span>
+                    {suggestion}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Next Workout Recommendations */}
+          {feedback.next_workout_recommendations &&
+            feedback.next_workout_recommendations.length > 0 && (
+              <div>
+                <h4 className="flex items-center gap-2 mb-2">
+                  <Sparkles className="w-4 h-4 text-[var(--athlete-accent-secondary)]" />
+                  <span className="athlete-body text-[var(--athlete-accent-secondary)] font-medium">
+                    For Your Next Workout
+                  </span>
+                </h4>
+                <ul className="space-y-1.5">
+                  {feedback.next_workout_recommendations.map((rec, i) => (
+                    <li
+                      key={i}
+                      className="flex items-start gap-2 text-sm text-[var(--athlete-text-secondary)]"
+                    >
+                      <span className="text-[var(--athlete-accent-secondary)] mt-1">→</span>
+                      {rec}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+        </div>
+      )}
+
+      {/* Show more hint */}
+      {!expanded && (
+        <div className="px-4 pb-4">
           <button
             onClick={() => setExpanded(true)}
-            className="text-xs text-primary hover:underline text-left"
+            className="text-xs text-[var(--athlete-accent-primary)] hover:underline"
           >
             View detailed feedback →
           </button>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

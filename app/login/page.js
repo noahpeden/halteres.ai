@@ -315,7 +315,9 @@ export default function LoginPage() {
       </div>
 
       {/* Main Content */}
-      <div className={`relative z-10 w-full max-w-md px-4 py-8 ${mounted ? 'animate-fadeIn' : 'opacity-0'}`}>
+      <div
+        className={`relative z-10 w-full max-w-md px-4 py-8 ${mounted ? 'animate-fadeIn' : 'opacity-0'}`}
+      >
         {/* Back to home link with logo */}
         <Link
           href="/"
@@ -368,7 +370,9 @@ export default function LoginPage() {
               <div className="space-y-6">
                 <div className="text-center">
                   <h2 className="text-2xl font-bold text-base-content">Reset Password</h2>
-                  <p className="text-sm text-neutral mt-2">We'll send you a link to reset your password</p>
+                  <p className="text-sm text-neutral mt-2">
+                    We'll send you a link to reset your password
+                  </p>
                 </div>
                 <form onSubmit={handlePasswordReset} className="space-y-4">
                   <div className="form-control w-full">
@@ -385,11 +389,7 @@ export default function LoginPage() {
                     />
                   </div>
 
-                  <button
-                    type="submit"
-                    className="btn btn-primary w-full"
-                    disabled={loading}
-                  >
+                  <button type="submit" className="btn btn-primary w-full" disabled={loading}>
                     {loading && <span className="loading loading-spinner loading-sm"></span>}
                     Send Reset Link
                   </button>
@@ -471,7 +471,11 @@ export default function LoginPage() {
                           className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral hover:text-base-content"
                           onClick={() => setShowPassword(!showPassword)}
                         >
-                          {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                          {showPassword ? (
+                            <EyeOff className="w-5 h-5" />
+                          ) : (
+                            <Eye className="w-5 h-5" />
+                          )}
                         </button>
                       </div>
                       <label className="label">
@@ -531,7 +535,11 @@ export default function LoginPage() {
                               className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral hover:text-base-content"
                               onClick={() => setShowPassword(!showPassword)}
                             >
-                              {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                              {showPassword ? (
+                                <EyeOff className="w-5 h-5" />
+                              ) : (
+                                <Eye className="w-5 h-5" />
+                              )}
                             </button>
                           </div>
                         </div>
@@ -554,12 +562,19 @@ export default function LoginPage() {
                               className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral hover:text-base-content"
                               onClick={() => setShowPasswordConfirm(!showPasswordConfirm)}
                             >
-                              {showPasswordConfirm ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                              {showPasswordConfirm ? (
+                                <EyeOff className="w-5 h-5" />
+                              ) : (
+                                <Eye className="w-5 h-5" />
+                              )}
                             </button>
                           </div>
                         </div>
 
-                        <button type="submit" className="btn btn-primary w-full shadow-lg shadow-primary/25">
+                        <button
+                          type="submit"
+                          className="btn btn-primary w-full shadow-lg shadow-primary/25"
+                        >
                           Continue
                         </button>
                       </form>
@@ -585,7 +600,9 @@ export default function LoginPage() {
                                 <Building className="w-7 h-7 text-primary" />
                               </div>
                               <div>
-                                <h4 className="font-bold text-lg text-base-content">Coach / Gym Owner</h4>
+                                <h4 className="font-bold text-lg text-base-content">
+                                  Coach / Gym Owner
+                                </h4>
                                 <p className="text-sm text-neutral">
                                   Generate AI programming, track athletes, and grow your gym
                                 </p>
@@ -630,14 +647,18 @@ export default function LoginPage() {
                         <div className="text-center">
                           {comingFromJoinLink && gymInfo ? (
                             <>
-                              <h3 className="text-xl font-bold text-base-content">Join {gymInfo.name}</h3>
+                              <h3 className="text-xl font-bold text-base-content">
+                                Join {gymInfo.name}
+                              </h3>
                               <p className="text-sm text-neutral mt-1">
                                 Complete your account to join this gym
                               </p>
                             </>
                           ) : (
                             <>
-                              <h3 className="text-xl font-bold text-base-content">Enter Your Gym Code</h3>
+                              <h3 className="text-xl font-bold text-base-content">
+                                Enter Your Gym Code
+                              </h3>
                               <p className="text-sm text-neutral mt-1">
                                 Get this code from your coach or gym
                               </p>
@@ -685,7 +706,9 @@ export default function LoginPage() {
                           className="btn btn-primary w-full shadow-lg shadow-primary/25"
                           disabled={loading || validatingGymCode || !gymCode}
                         >
-                          {(loading || validatingGymCode) && <span className="loading loading-spinner loading-sm"></span>}
+                          {(loading || validatingGymCode) && (
+                            <span className="loading loading-spinner loading-sm"></span>
+                          )}
                           {validatingGymCode
                             ? 'Validating...'
                             : comingFromJoinLink

@@ -34,10 +34,20 @@ export async function POST(request) {
       );
     }
 
+    // Fetch program's gym_id for RLS policy compliance
+    const { data: programData } = await supabase
+      .from('programs')
+      .select('gym_id')
+      .eq('id', programId)
+      .single();
+
+    const gymId = programData?.gym_id || null;
+
     const { data, error } = await supabase
       .from('program_workouts')
       .insert({
         program_id: programId,
+        gym_id: gymId,
         title: title,
         body: description,
         tags: tags || {},

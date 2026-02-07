@@ -518,6 +518,10 @@ async function generateLargeProgram(requestData, params, supabase, openai, sendE
     const commonPromptElements = await Promise.race([preparePromptPromise, timeoutPromise]);
     logWithTimestamp('preparePromptElements completed successfully');
 
+    // Extract gym_id for workout insertion
+    const gymId = commonPromptElements.gymId || null;
+    logWithTimestamp('Extracted gym_id for workouts', { gymId });
+
     // Generate each chunk (week) separately
     const allWorkouts = [];
     let programOverview = '';
@@ -912,6 +916,8 @@ async function generateLargeProgram(requestData, params, supabase, openai, sendE
 
           workoutsToInsert = newWorkouts.map((workout, index) => ({
             program_id: programId,
+            gym_id: gymId,
+            week_number: Math.floor((existingCount + index) / daysPerWeek) + 1,
             title: workout.title,
             body: workout.body,
             scheduled_date: workout.date ? new Date(workout.date).toISOString() : null,
@@ -933,6 +939,8 @@ async function generateLargeProgram(requestData, params, supabase, openai, sendE
 
           workoutsToInsert = allWorkouts.map((workout, index) => ({
             program_id: programId,
+            gym_id: gymId,
+            week_number: Math.floor(index / daysPerWeek) + 1,
             title: workout.title,
             body: workout.body,
             scheduled_date: workout.date ? new Date(workout.date).toISOString() : null,
@@ -1407,17 +1415,20 @@ async function preparePromptElements(programId, supabase, params, openai) {
 
   logWithTimestamp('preparePromptElements: Day names processed');
 
-  // Fetch client metrics if program ID exists
+  // Fetch client metrics and gym_id if program ID exists
   let clientMetricsData = null;
+  let gymId = null;
   if (programId) {
     try {
       logWithTimestamp('preparePromptElements: About to fetch client metrics', { programId });
 
-      // Get entity_id from the program
-      logWithTimestamp('preparePromptElements: About to query programs table for entity_id');
+      // Get entity_id and gym_id from the program
+      logWithTimestamp(
+        'preparePromptElements: About to query programs table for entity_id and gym_id'
+      );
       const { data: programData, error: programError } = await supabase
         .from('programs')
-        .select('entity_id')
+        .select('entity_id, gym_id')
         .eq('id', programId)
         .single();
 
@@ -1427,26 +1438,32 @@ async function preparePromptElements(programId, supabase, params, openai) {
         logWithTimestamp('Error fetching program entity_id', {
           error: programError,
         });
-      } else if (programData && programData.entity_id) {
-        // Fetch metrics from entities table
-        logWithTimestamp('preparePromptElements: About to query entities table', {
-          entity_id: programData.entity_id,
-        });
-        const { data: entityData, error: entityError } = await supabase
-          .from('entities')
-          .select('*')
-          .eq('id', programData.entity_id)
-          .single();
+      } else if (programData) {
+        // Capture gym_id from program
+        gymId = programData.gym_id || null;
+        logWithTimestamp('preparePromptElements: Captured gym_id', { gymId });
 
-        logWithTimestamp('preparePromptElements: Entities table query completed');
-
-        if (entityError) {
-          logWithTimestamp('Error fetching client metrics', {
-            error: entityError,
+        if (programData.entity_id) {
+          // Fetch metrics from entities table
+          logWithTimestamp('preparePromptElements: About to query entities table', {
+            entity_id: programData.entity_id,
           });
-        } else if (entityData) {
-          logWithTimestamp('Found client metrics', { entityData });
-          clientMetricsData = entityData;
+          const { data: entityData, error: entityError } = await supabase
+            .from('entities')
+            .select('*')
+            .eq('id', programData.entity_id)
+            .single();
+
+          logWithTimestamp('preparePromptElements: Entities table query completed');
+
+          if (entityError) {
+            logWithTimestamp('Error fetching client metrics', {
+              error: entityError,
+            });
+          } else if (entityData) {
+            logWithTimestamp('Found client metrics', { entityData });
+            clientMetricsData = entityData;
+          }
         }
       }
     } catch (err) {
@@ -1578,6 +1595,7 @@ async function preparePromptElements(programId, supabase, params, openai) {
     trainingType,
     referenceInput,
     ragMatchedWorkouts,
+    gymId,
   };
 }
 

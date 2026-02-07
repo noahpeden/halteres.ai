@@ -615,6 +615,7 @@ async function saveSkeletonWorkouts(programId, workouts, weekNumber, sharedData,
   try {
     const workoutsToInsert = workouts.map((workout) => ({
       program_id: programId,
+      gym_id: sharedData.gymId || null,
       entity_id: sharedData.entityId || null,
       title: workout.title || 'Untitled Workout',
       body_skeleton: workout.body, // Store in body_skeleton column
@@ -710,34 +711,39 @@ async function extractSharedData(requestData, supabase) {
       .eq('is_reference', false);
   }
 
-  // Fetch client metrics
+  // Fetch client metrics and gym_id
   let clientMetricsContent = '';
   let entityId = null;
   let clientGender = '';
+  let gymId = null;
 
   if (programId) {
     try {
       const { data: programData } = await supabase
         .from('programs')
-        .select('entity_id')
+        .select('entity_id, gym_id')
         .eq('id', programId)
         .single();
 
-      if (programData?.entity_id) {
-        entityId = programData.entity_id;
-        const { data: entityData } = await supabase
-          .from('entities')
-          .select('*')
-          .eq('id', entityId)
-          .single();
+      if (programData) {
+        gymId = programData.gym_id || null;
 
-        if (entityData) {
-          clientGender = entityData.gender || '';
-          // Use appropriate formatter based on entity type
-          if (isClassMetrics(entityData)) {
-            clientMetricsContent = formatClassMetrics(entityData, useImperial);
-          } else {
-            clientMetricsContent = formatClientMetrics(entityData, useImperial);
+        if (programData.entity_id) {
+          entityId = programData.entity_id;
+          const { data: entityData } = await supabase
+            .from('entities')
+            .select('*')
+            .eq('id', entityId)
+            .single();
+
+          if (entityData) {
+            clientGender = entityData.gender || '';
+            // Use appropriate formatter based on entity type
+            if (isClassMetrics(entityData)) {
+              clientMetricsContent = formatClassMetrics(entityData, useImperial);
+            } else {
+              clientMetricsContent = formatClientMetrics(entityData, useImperial);
+            }
           }
         }
       }
@@ -749,6 +755,7 @@ async function extractSharedData(requestData, supabase) {
   return {
     programId,
     entityId,
+    gymId,
     goal,
     difficulty,
     focusArea,

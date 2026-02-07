@@ -1,9 +1,14 @@
 'use client';
 
+import { BarChart2, Calendar, ChevronRight, Clock, Dumbbell, Flame, Trophy } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import AthleteOnboardingModal from '@/components/athlete/AthleteOnboardingModal';
+import CircularProgress from '@/components/athlete/CircularProgress';
+import EmptyState from '@/components/athlete/EmptyState';
+import StatCard from '@/components/athlete/StatCard';
+import StatusBadge from '@/components/athlete/StatusBadge';
 import WeeklyTrendsCard from '@/components/athlete/WeeklyTrendsCard';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -29,14 +34,12 @@ export default function AthleteDashboard() {
       return;
     }
     if (!currentGym && gymMemberships?.length === 0) {
-      // No gym - show join prompt
       setLoading(false);
       return;
     }
     fetchDashboardData();
   }, [user, currentGym]);
 
-  // Show onboarding for new athletes
   useEffect(() => {
     if (profile && currentGym && !profile.onboarding_completed && isAthlete) {
       setShowOnboarding(true);
@@ -45,7 +48,6 @@ export default function AthleteDashboard() {
 
   const handleOnboardingComplete = async () => {
     setShowOnboarding(false);
-    // Refetch profile to get updated data
     if (refetchProfile) {
       await refetchProfile();
     }
@@ -60,7 +62,6 @@ export default function AthleteDashboard() {
     try {
       const today = new Date().toISOString().split('T')[0];
 
-      // Fetch today's workouts and active program in parallel
       const [workoutsRes, programsRes] = await Promise.all([
         fetch(`/api/athlete/today?gymId=${currentGym.id}&date=${today}`),
         fetch(`/api/athlete/programs?gymId=${currentGym.id}`),
@@ -86,47 +87,49 @@ export default function AthleteDashboard() {
     }
   };
 
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good morning';
+    if (hour < 17) return 'Good afternoon';
+    return 'Good evening';
+  };
+
+  const firstName = (profile?.display_name || profile?.full_name || 'Athlete').split(' ')[0];
+
   // No gym membership - show join prompt
   if (!currentGym && !loading) {
     return (
-      <div className="min-h-screen bg-base-200 flex items-center justify-center p-4">
-        <div className="card bg-base-100 shadow-xl max-w-md w-full">
-          <div className="card-body text-center">
-            <div className="text-6xl mb-4">🏋️</div>
-            <h2 className="card-title justify-center text-2xl">Join a Gym</h2>
-            <p className="text-base-content/70 mb-4">
-              You need to join a gym to start logging workouts and tracking your progress.
-            </p>
-            <p className="text-sm text-base-content/60 mb-6">
-              Ask your coach for an invite code or link to get started.
-            </p>
-            <div className="form-control">
-              <label className="label">
-                <span className="label-text">Have an invite code?</span>
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder="Enter code"
-                  className="input input-bordered flex-1"
-                  value={inviteCode}
-                  onChange={(e) => setInviteCode(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && inviteCode.trim()) {
-                      router.push(`/join/${inviteCode.trim()}`);
-                    }
-                  }}
-                />
-                <button
-                  className="btn btn-primary"
-                  onClick={() => {
-                    if (inviteCode.trim()) router.push(`/join/${inviteCode.trim()}`);
-                  }}
-                >
-                  Join
-                </button>
-              </div>
-            </div>
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="athlete-card-static max-w-md w-full p-8 text-center">
+          <div className="w-16 h-16 rounded-full bg-[var(--athlete-bg-secondary)] flex items-center justify-center mx-auto mb-6">
+            <Dumbbell className="w-8 h-8 text-[var(--athlete-accent-primary)]" />
+          </div>
+          <h2 className="athlete-heading-lg mb-2">Join a Gym</h2>
+          <p className="athlete-body mb-6">
+            Ask your coach for an invite code to start tracking your workouts and competing on the
+            leaderboard.
+          </p>
+          <div className="space-y-3">
+            <input
+              type="text"
+              placeholder="Enter invite code"
+              className="athlete-input w-full text-center"
+              value={inviteCode}
+              onChange={(e) => setInviteCode(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && inviteCode.trim()) {
+                  router.push(`/join/${inviteCode.trim()}`);
+                }
+              }}
+            />
+            <button
+              className="athlete-btn-primary w-full"
+              onClick={() => {
+                if (inviteCode.trim()) router.push(`/join/${inviteCode.trim()}`);
+              }}
+            >
+              Join Gym
+            </button>
           </div>
         </div>
       </div>
@@ -135,15 +138,14 @@ export default function AthleteDashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-base-200 flex items-center justify-center">
-        <span className="loading loading-spinner loading-lg"></span>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-10 h-10 border-2 border-[var(--athlete-accent-primary)] border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-base-200">
-      {/* Onboarding Modal */}
+    <div className="min-h-screen">
       {showOnboarding && (
         <AthleteOnboardingModal
           profile={profile}
@@ -152,36 +154,82 @@ export default function AthleteDashboard() {
         />
       )}
 
-      {/* Header */}
-      <div className="bg-primary text-primary-content p-6">
-        <div className="max-w-4xl mx-auto">
-          <p className="text-primary-content/70">{currentGym?.name}</p>
-          <h1 className="text-2xl font-bold">
-            Hey, {profile?.display_name || profile?.full_name || 'Athlete'}! 👋
+      {/* Hero Header */}
+      <div className="relative overflow-hidden bg-[var(--athlete-bg-card)] border-b border-[var(--athlete-border)]">
+        <div className="px-4 pt-8 pb-6">
+          <p className="athlete-label mb-1">{currentGym?.name}</p>
+          <h1 className="athlete-heading-xl mb-1">
+            {getGreeting()}, {firstName}
           </h1>
+          <p className="athlete-body">
+            {todaysWorkouts.length > 0
+              ? `You have ${todaysWorkouts.length} workout${todaysWorkouts.length > 1 ? 's' : ''} today`
+              : 'No workouts scheduled for today'}
+          </p>
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto p-4 space-y-6">
+      <div className="px-4 space-y-6 pb-8 pt-6">
+        {/* Today's Workout Hero Card */}
+        {todaysWorkouts.length > 0 && (
+          <Link href={`/athlete/workout/${todaysWorkouts[0].id}`}>
+            <div className="athlete-card p-5 border-l-4 border-l-[var(--athlete-accent-primary)] animate-athlete-slide-up">
+              <div className="flex items-start justify-between mb-3">
+                <StatusBadge variant="live" label="Live Now" />
+                <ChevronRight className="w-5 h-5 text-[var(--athlete-text-muted)]" />
+              </div>
+              <h2 className="athlete-heading-lg mb-2">{todaysWorkouts[0].title}</h2>
+              <p className="athlete-body line-clamp-2 mb-4">
+                {todaysWorkouts[0].body?.substring(0, 120)}...
+              </p>
+              <div className="flex items-center gap-4">
+                {todaysWorkouts[0].hasLogged ? (
+                  <StatusBadge variant="completed" />
+                ) : (
+                  <button className="athlete-btn-primary text-sm py-2 px-4">Log Result</button>
+                )}
+                {activeProgram && (
+                  <span className="athlete-body text-[var(--athlete-text-muted)]">
+                    from {activeProgram.name}
+                  </span>
+                )}
+              </div>
+            </div>
+          </Link>
+        )}
+
+        {/* Stats Grid */}
+        <div className="grid grid-cols-3 gap-3">
+          <StatCard label="This Week" value={stats.workoutsThisWeek} icon={Calendar} />
+          <StatCard
+            label="PRs"
+            value={stats.prsThisMonth}
+            icon={Trophy}
+            highlight={stats.prsThisMonth > 0}
+          />
+          <StatCard label="Streak" value={stats.currentStreak} icon={Flame} suffix="d" />
+        </div>
+
         {/* Active Program Banner */}
         {activeProgram && (
           <Link href={`/athlete/programs/${activeProgram.id}`}>
-            <div className="card bg-gradient-to-r from-primary to-primary/80 text-primary-content shadow-lg hover:shadow-xl transition-shadow">
-              <div className="card-body p-4">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <p className="text-xs opacity-70">Active Program</p>
-                    <h2 className="font-bold text-lg">{activeProgram.name}</h2>
-                    <p className="text-sm opacity-80">
-                      {activeProgram.duration_weeks} weeks
-                      {activeProgram.focus_area && ` • ${activeProgram.focus_area}`}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-sm opacity-70">View Full Program →</span>
-                  </div>
-                </div>
+            <div className="athlete-card p-4 flex items-center gap-4 animate-athlete-stagger stagger-1">
+              <CircularProgress
+                value={activeProgram.completedWorkouts || 0}
+                max={activeProgram.totalWorkouts || 1}
+                size={60}
+                strokeWidth={5}
+                showLabel={false}
+              />
+              <div className="flex-1 min-w-0">
+                <p className="athlete-label mb-0.5">Active Program</p>
+                <h3 className="athlete-heading-md truncate">{activeProgram.name}</h3>
+                <p className="athlete-body text-[var(--athlete-text-muted)]">
+                  {activeProgram.duration_weeks} weeks
+                  {activeProgram.focus_area && ` • ${activeProgram.focus_area}`}
+                </p>
               </div>
+              <ChevronRight className="w-5 h-5 text-[var(--athlete-text-muted)] flex-shrink-0" />
             </div>
           </Link>
         )}
@@ -189,155 +237,135 @@ export default function AthleteDashboard() {
         {/* Weekly AI Trends */}
         <WeeklyTrendsCard />
 
-        {/* Quick Stats */}
-        <div className="grid grid-cols-3 gap-4">
-          <div className="card bg-base-100 shadow">
-            <div className="card-body p-4 text-center">
-              <p className="text-3xl font-bold text-primary">{stats.workoutsThisWeek}</p>
-              <p className="text-xs text-base-content/60">This Week</p>
-            </div>
+        {/* More Today's Workouts */}
+        {todaysWorkouts.length > 1 && (
+          <div className="space-y-3">
+            <h2 className="athlete-heading-md">More Today</h2>
+            {todaysWorkouts.slice(1).map((workout, index) => (
+              <Link key={workout.id} href={`/athlete/workout/${workout.id}`}>
+                <div
+                  className={`athlete-card athlete-stripe-today p-4 flex items-center gap-4 animate-athlete-stagger stagger-${index + 2}`}
+                >
+                  <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-[var(--athlete-bg-secondary)] flex items-center justify-center">
+                    <Dumbbell className="w-5 h-5 text-[var(--athlete-text-muted)]" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="athlete-heading-md truncate">{workout.title}</h3>
+                    <p className="athlete-body text-[var(--athlete-text-muted)]">
+                      {workout.workout_type || 'Workout'}
+                    </p>
+                  </div>
+                  {workout.hasLogged ? (
+                    <StatusBadge variant="completed" showIcon={false} />
+                  ) : (
+                    <ChevronRight className="w-5 h-5 text-[var(--athlete-text-muted)]" />
+                  )}
+                </div>
+              </Link>
+            ))}
           </div>
-          <div className="card bg-base-100 shadow">
-            <div className="card-body p-4 text-center">
-              <p className="text-3xl font-bold text-warning">{stats.prsThisMonth}</p>
-              <p className="text-xs text-base-content/60">PRs This Month</p>
-            </div>
-          </div>
-          <div className="card bg-base-100 shadow">
-            <div className="card-body p-4 text-center">
-              <p className="text-3xl font-bold text-success">{stats.currentStreak}</p>
-              <p className="text-xs text-base-content/60">Day Streak 🔥</p>
-            </div>
-          </div>
-        </div>
+        )}
 
-        {/* Today's Workouts */}
-        <div className="card bg-base-100 shadow-lg">
-          <div className="card-body">
-            <div className="flex justify-between items-center">
-              <h2 className="card-title">Today's Workouts</h2>
-              {activeProgram && (
-                <span className="text-sm text-base-content/60">from {activeProgram.name}</span>
-              )}
-            </div>
-            {todaysWorkouts.length === 0 ? (
-              <div className="text-center py-8">
-                <div className="text-4xl mb-2">📅</div>
-                <p className="text-base-content/60">No workouts scheduled for today</p>
-                <p className="text-sm text-base-content/40">
-                  Check back tomorrow or view past workouts
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {todaysWorkouts.map((workout) => (
-                  <Link key={workout.id} href={`/athlete/workout/${workout.id}`} className="block">
-                    <div className="border rounded-lg p-4 hover:bg-base-200 transition-colors">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h3 className="font-bold">{workout.title}</h3>
-                          <p className="text-sm text-base-content/60">
-                            {workout.workout_type || workout.program?.name}
-                          </p>
-                        </div>
-                        {workout.hasLogged ? (
-                          <span className="badge badge-success">Completed</span>
-                        ) : (
-                          <span className="badge badge-outline">Log Result</span>
-                        )}
-                      </div>
-                      {workout.body && (
-                        <p className="text-sm mt-2 line-clamp-2 text-base-content/70">
-                          {workout.body.substring(0, 150)}...
-                        </p>
-                      )}
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
+        {/* No workouts today */}
+        {todaysWorkouts.length === 0 && (
+          <EmptyState
+            icon={Calendar}
+            title="Rest Day"
+            message="No workouts scheduled for today. Check back tomorrow or view your program."
+            action={() => router.push('/athlete/programs')}
+            actionLabel="View Programs"
+          />
+        )}
 
         {/* Recent Activity */}
-        <div className="card bg-base-100 shadow-lg">
-          <div className="card-body">
-            <div className="flex justify-between items-center">
-              <h2 className="card-title">Recent Activity</h2>
-              <Link href="/athlete/history" className="btn btn-ghost btn-sm">
+        {recentResults.length > 0 && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h2 className="athlete-heading-md">Recent Activity</h2>
+              <Link
+                href="/athlete/history"
+                className="athlete-body text-[var(--athlete-accent-primary)] font-medium"
+              >
                 View All
               </Link>
             </div>
-            {recentResults.length === 0 ? (
-              <p className="text-base-content/60 text-center py-4">
-                No recent activity. Start logging your workouts!
-              </p>
-            ) : (
-              <div className="space-y-2">
-                {recentResults.slice(0, 5).map((result) => (
-                  <div
-                    key={result.id}
-                    className="flex justify-between items-center py-2 border-b last:border-0"
-                  >
+            <div className="athlete-card-static divide-y divide-[var(--athlete-border)]">
+              {recentResults.slice(0, 4).map((result, index) => (
+                <div
+                  key={result.id}
+                  className={`p-4 flex items-center justify-between animate-athlete-stagger stagger-${index + 1}`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`w-2 h-2 rounded-full ${result.is_pr ? 'bg-[var(--athlete-accent-pr)]' : 'bg-[var(--athlete-accent-complete)]'}`}
+                    />
                     <div>
-                      <p className="font-medium">{result.workout?.name || 'Workout'}</p>
-                      <p className="text-sm text-base-content/60">
-                        {new Date(result.created_at).toLocaleDateString()}
+                      <p className="athlete-body text-[var(--athlete-text-primary)] font-medium">
+                        {result.workout?.name || 'Workout'}
+                      </p>
+                      <p className="text-xs text-[var(--athlete-text-muted)]">
+                        {new Date(result.created_at).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                        })}
                       </p>
                     </div>
-                    <div className="text-right">
-                      <p className="font-bold">{result.displayValue}</p>
-                      <div className="flex items-center gap-1">
-                        <span className="badge badge-ghost badge-xs">{result.scale}</span>
-                        {result.is_pr && <span className="text-xs">🏆</span>}
-                      </div>
-                    </div>
                   </div>
-                ))}
-              </div>
-            )}
+                  <div className="text-right flex items-center gap-2">
+                    <span className="athlete-heading-md">{result.displayValue}</span>
+                    {result.is_pr && <StatusBadge variant="pr" showIcon={false} />}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* Quick Links */}
-        <div className="grid grid-cols-2 gap-4">
-          <Link
-            href="/athlete/programs"
-            className="card bg-base-100 shadow hover:shadow-lg transition-shadow"
-          >
-            <div className="card-body items-center text-center p-4">
-              <span className="text-3xl">📋</span>
-              <p className="font-medium">Programs</p>
+        {/* Quick Actions */}
+        <div className="grid grid-cols-2 gap-3">
+          <Link href="/athlete/programs">
+            <div className="athlete-card p-4 flex flex-col items-center gap-2 text-center">
+              <div className="w-10 h-10 rounded-lg bg-[var(--athlete-accent-primary)]/10 flex items-center justify-center">
+                <Dumbbell className="w-5 h-5 text-[var(--athlete-accent-primary)]" />
+              </div>
+              <span className="athlete-body text-[var(--athlete-text-primary)] font-medium">
+                Programs
+              </span>
               {programCount > 0 && (
-                <span className="badge badge-sm badge-primary">{programCount}</span>
+                <span className="text-xs text-[var(--athlete-accent-primary)]">
+                  {programCount} active
+                </span>
               )}
             </div>
           </Link>
-          <Link
-            href="/athlete/leaderboard"
-            className="card bg-base-100 shadow hover:shadow-lg transition-shadow"
-          >
-            <div className="card-body items-center text-center p-4">
-              <span className="text-3xl">🏆</span>
-              <p className="font-medium">Leaderboards</p>
+          <Link href="/athlete/leaderboard">
+            <div className="athlete-card p-4 flex flex-col items-center gap-2 text-center">
+              <div className="w-10 h-10 rounded-lg bg-[var(--athlete-accent-complete)]/10 flex items-center justify-center">
+                <Trophy className="w-5 h-5 text-[var(--athlete-accent-complete)]" />
+              </div>
+              <span className="athlete-body text-[var(--athlete-text-primary)] font-medium">
+                Leaderboard
+              </span>
             </div>
           </Link>
-          <Link
-            href="/athlete/profile"
-            className="card bg-base-100 shadow hover:shadow-lg transition-shadow"
-          >
-            <div className="card-body items-center text-center p-4">
-              <span className="text-3xl">📊</span>
-              <p className="font-medium">My PRs</p>
+          <Link href="/athlete/profile">
+            <div className="athlete-card p-4 flex flex-col items-center gap-2 text-center">
+              <div className="w-10 h-10 rounded-lg bg-[var(--athlete-accent-pr)]/10 flex items-center justify-center">
+                <BarChart2 className="w-5 h-5 text-[var(--athlete-accent-pr)]" />
+              </div>
+              <span className="athlete-body text-[var(--athlete-text-primary)] font-medium">
+                My PRs
+              </span>
             </div>
           </Link>
-          <Link
-            href="/athlete/history"
-            className="card bg-base-100 shadow hover:shadow-lg transition-shadow"
-          >
-            <div className="card-body items-center text-center p-4">
-              <span className="text-3xl">📅</span>
-              <p className="font-medium">History</p>
+          <Link href="/athlete/history">
+            <div className="athlete-card p-4 flex flex-col items-center gap-2 text-center">
+              <div className="w-10 h-10 rounded-lg bg-[var(--athlete-bg-secondary)] flex items-center justify-center">
+                <Clock className="w-5 h-5 text-[var(--athlete-text-muted)]" />
+              </div>
+              <span className="athlete-body text-[var(--athlete-text-primary)] font-medium">
+                History
+              </span>
             </div>
           </Link>
         </div>

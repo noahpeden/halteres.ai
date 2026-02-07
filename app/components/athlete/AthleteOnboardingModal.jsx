@@ -1,12 +1,22 @@
 'use client';
 
+import {
+  Activity,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Dumbbell,
+  Sparkles,
+  Trophy,
+  User,
+} from 'lucide-react';
 import { useState } from 'react';
 
 const ONBOARDING_STEPS = [
   { id: 'welcome', title: 'Welcome' },
-  { id: 'profile', title: 'Your Profile' },
-  { id: 'metrics', title: 'Your Metrics' },
-  { id: 'complete', title: 'Ready!' },
+  { id: 'profile', title: 'Profile' },
+  { id: 'metrics', title: 'Metrics' },
+  { id: 'complete', title: 'Ready' },
 ];
 
 export default function AthleteOnboardingModal({ profile, gymName, onComplete }) {
@@ -67,30 +77,32 @@ export default function AthleteOnboardingModal({ profile, gymName, onComplete })
       case 'welcome':
         return (
           <div className="text-center py-6">
-            <div className="text-6xl mb-4">🏋️</div>
-            <h2 className="text-2xl font-bold mb-2">Welcome to {gymName}!</h2>
-            <p className="text-base-content/70 mb-4">
-              Let's get you set up so you can start tracking your workouts and crushing your goals.
+            <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-[var(--athlete-accent-primary)] to-[var(--athlete-accent-secondary)] flex items-center justify-center mx-auto mb-6 shadow-lg shadow-[var(--athlete-accent-primary)]/30">
+              <Dumbbell className="w-10 h-10 text-black" />
+            </div>
+            <h2 className="athlete-heading-xl text-white mb-2">Welcome to {gymName}!</h2>
+            <p className="athlete-body text-[var(--athlete-text-secondary)] mb-8">
+              Let's get you set up to crush your goals.
             </p>
-            <div className="space-y-2 text-left bg-base-200 rounded-lg p-4 mt-6">
-              <h3 className="font-semibold">Here's what you can do:</h3>
-              <ul className="space-y-2">
-                <li className="flex items-center gap-2">
-                  <span className="text-success">✓</span>
-                  View today's workouts from your coach
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="text-success">✓</span>
-                  Log your results and track PRs
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="text-success">✓</span>
-                  Get AI-powered feedback on your performance
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="text-success">✓</span>
-                  Compete on leaderboards with your gym
-                </li>
+
+            <div className="athlete-card-static p-5 text-left">
+              <h3 className="athlete-heading-md text-white mb-4">What you can do:</h3>
+              <ul className="space-y-3">
+                {[
+                  { icon: Activity, text: "View today's workouts from your coach" },
+                  { icon: Trophy, text: 'Log your results and track PRs' },
+                  { icon: Sparkles, text: 'Get AI-powered feedback on performance' },
+                  { icon: Dumbbell, text: 'Compete on leaderboards with your gym' },
+                ].map((item, i) => (
+                  <li key={i} className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-[var(--athlete-accent-complete)]/20 flex items-center justify-center flex-shrink-0">
+                      <item.icon className="w-4 h-4 text-[var(--athlete-accent-complete)]" />
+                    </div>
+                    <span className="athlete-body text-[var(--athlete-text-secondary)]">
+                      {item.text}
+                    </span>
+                  </li>
+                ))}
               </ul>
             </div>
           </div>
@@ -99,25 +111,33 @@ export default function AthleteOnboardingModal({ profile, gymName, onComplete })
       case 'profile':
         return (
           <div className="py-4">
-            <h2 className="text-xl font-bold mb-2">Set Up Your Profile</h2>
-            <p className="text-base-content/70 mb-6">How would you like to be known in the gym?</p>
-            <div className="form-control">
-              <label className="label">
-                <span className="label-text">Display Name</span>
-              </label>
-              <input
-                type="text"
-                name="display_name"
-                value={formData.display_name}
-                onChange={handleInputChange}
-                placeholder="Your name or nickname"
-                className="input input-bordered w-full"
-              />
-              <label className="label">
-                <span className="label-text-alt">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-12 h-12 rounded-xl bg-[var(--athlete-accent-primary)]/20 flex items-center justify-center">
+                <User className="w-6 h-6 text-[var(--athlete-accent-primary)]" />
+              </div>
+              <div>
+                <h2 className="athlete-heading-lg text-white">Set Up Your Profile</h2>
+                <p className="athlete-body text-[var(--athlete-text-secondary)]">
+                  How should we call you?
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="athlete-label block mb-2">Display Name</label>
+                <input
+                  type="text"
+                  name="display_name"
+                  value={formData.display_name}
+                  onChange={handleInputChange}
+                  placeholder="Your name or nickname"
+                  className="athlete-input w-full"
+                />
+                <p className="text-xs text-[var(--athlete-text-muted)] mt-2">
                   This is what others will see on the leaderboard
-                </span>
-              </label>
+                </p>
+              </div>
             </div>
           </div>
         );
@@ -125,96 +145,126 @@ export default function AthleteOnboardingModal({ profile, gymName, onComplete })
       case 'metrics':
         return (
           <div className="py-4">
-            <h2 className="text-xl font-bold mb-2">Your Baseline Metrics</h2>
-            <p className="text-base-content/70 mb-4">
-              Optional: Add your current PRs to help personalize your experience.
-            </p>
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-12 h-12 rounded-xl bg-[var(--athlete-accent-primary)]/20 flex items-center justify-center">
+                <Activity className="w-6 h-6 text-[var(--athlete-accent-primary)]" />
+              </div>
+              <div>
+                <h2 className="athlete-heading-lg text-white">Your Baseline Metrics</h2>
+                <p className="athlete-body text-[var(--athlete-text-secondary)]">
+                  Optional - helps personalize your experience
+                </p>
+              </div>
+            </div>
+
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="form-control">
-                  <label className="label">
-                    <span className="label-text">Back Squat 1RM (kg)</span>
-                  </label>
-                  <input
-                    type="number"
-                    name="squat_1rm"
-                    value={formData.squat_1rm}
-                    onChange={handleInputChange}
-                    placeholder="e.g. 120"
-                    className="input input-bordered"
-                  />
-                </div>
-                <div className="form-control">
-                  <label className="label">
-                    <span className="label-text">Deadlift 1RM (kg)</span>
-                  </label>
-                  <input
-                    type="number"
-                    name="deadlift_1rm"
-                    value={formData.deadlift_1rm}
-                    onChange={handleInputChange}
-                    placeholder="e.g. 150"
-                    className="input input-bordered"
-                  />
-                </div>
-                <div className="form-control">
-                  <label className="label">
-                    <span className="label-text">Bench Press 1RM (kg)</span>
-                  </label>
-                  <input
-                    type="number"
-                    name="bench_1rm"
-                    value={formData.bench_1rm}
-                    onChange={handleInputChange}
-                    placeholder="e.g. 80"
-                    className="input input-bordered"
-                  />
-                </div>
-                <div className="form-control">
-                  <label className="label">
-                    <span className="label-text">Mile Time</span>
-                  </label>
-                  <input
-                    type="text"
-                    name="mile_time"
-                    value={formData.mile_time}
-                    onChange={handleInputChange}
-                    placeholder="e.g. 7:30"
-                    className="input input-bordered"
-                  />
-                </div>
-              </div>
-              <div className="divider">Body Metrics</div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="form-control">
-                  <label className="label">
-                    <span className="label-text">Weight (kg)</span>
-                  </label>
-                  <input
-                    type="number"
-                    name="weight_kg"
-                    value={formData.weight_kg}
-                    onChange={handleInputChange}
-                    placeholder="e.g. 75"
-                    className="input input-bordered"
-                  />
-                </div>
-                <div className="form-control">
-                  <label className="label">
-                    <span className="label-text">Height (cm)</span>
-                  </label>
-                  <input
-                    type="number"
-                    name="height_cm"
-                    value={formData.height_cm}
-                    onChange={handleInputChange}
-                    placeholder="e.g. 175"
-                    className="input input-bordered"
-                  />
+              {/* Strength Metrics */}
+              <div className="athlete-card-static p-4">
+                <h3 className="athlete-body text-white font-medium mb-3">Strength</h3>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="athlete-label block mb-1">Back Squat 1RM</label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        name="squat_1rm"
+                        value={formData.squat_1rm}
+                        onChange={handleInputChange}
+                        placeholder="e.g. 120"
+                        className="athlete-input w-full pr-10"
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--athlete-text-muted)] text-sm">
+                        kg
+                      </span>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="athlete-label block mb-1">Deadlift 1RM</label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        name="deadlift_1rm"
+                        value={formData.deadlift_1rm}
+                        onChange={handleInputChange}
+                        placeholder="e.g. 150"
+                        className="athlete-input w-full pr-10"
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--athlete-text-muted)] text-sm">
+                        kg
+                      </span>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="athlete-label block mb-1">Bench 1RM</label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        name="bench_1rm"
+                        value={formData.bench_1rm}
+                        onChange={handleInputChange}
+                        placeholder="e.g. 80"
+                        className="athlete-input w-full pr-10"
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--athlete-text-muted)] text-sm">
+                        kg
+                      </span>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="athlete-label block mb-1">Mile Time</label>
+                    <input
+                      type="text"
+                      name="mile_time"
+                      value={formData.mile_time}
+                      onChange={handleInputChange}
+                      placeholder="e.g. 7:30"
+                      className="athlete-input w-full"
+                    />
+                  </div>
                 </div>
               </div>
-              <p className="text-sm text-base-content/50 mt-2">
-                You can skip this step and add metrics later from your profile.
+
+              {/* Body Metrics */}
+              <div className="athlete-card-static p-4">
+                <h3 className="athlete-body text-white font-medium mb-3">Body</h3>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="athlete-label block mb-1">Weight</label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        name="weight_kg"
+                        value={formData.weight_kg}
+                        onChange={handleInputChange}
+                        placeholder="e.g. 75"
+                        className="athlete-input w-full pr-10"
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--athlete-text-muted)] text-sm">
+                        kg
+                      </span>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="athlete-label block mb-1">Height</label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        name="height_cm"
+                        value={formData.height_cm}
+                        onChange={handleInputChange}
+                        placeholder="e.g. 175"
+                        className="athlete-input w-full pr-10"
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--athlete-text-muted)] text-sm">
+                        cm
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <p className="text-xs text-[var(--athlete-text-muted)]">
+                You can skip this and add metrics later from your profile.
               </p>
             </div>
           </div>
@@ -223,18 +273,33 @@ export default function AthleteOnboardingModal({ profile, gymName, onComplete })
       case 'complete':
         return (
           <div className="text-center py-6">
-            <div className="text-6xl mb-4">🎉</div>
-            <h2 className="text-2xl font-bold mb-2">You're All Set!</h2>
-            <p className="text-base-content/70 mb-6">
+            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[var(--athlete-accent-complete)] to-[var(--athlete-accent-primary)] flex items-center justify-center mx-auto mb-6 shadow-lg shadow-[var(--athlete-accent-complete)]/30">
+              <Check className="w-10 h-10 text-black" />
+            </div>
+            <h2 className="athlete-heading-xl text-white mb-2">You're All Set!</h2>
+            <p className="athlete-body text-[var(--athlete-text-secondary)] mb-8">
               Time to start crushing workouts and setting PRs.
             </p>
-            <div className="bg-primary/10 rounded-lg p-4 text-left">
-              <h3 className="font-semibold text-primary mb-2">Quick Tips:</h3>
-              <ul className="space-y-2 text-sm">
-                <li>• Check your dashboard daily for today's workouts</li>
-                <li>• Log your results immediately after each workout</li>
-                <li>• Request AI feedback for personalized coaching tips</li>
-                <li>• Check the leaderboard to see how you stack up!</li>
+
+            <div className="athlete-card-static border-l-4 border-l-[var(--athlete-accent-primary)] p-5 text-left">
+              <h3 className="athlete-heading-md text-[var(--athlete-accent-primary)] mb-3">
+                Quick Tips:
+              </h3>
+              <ul className="space-y-2">
+                {[
+                  "Check your dashboard daily for today's workouts",
+                  'Log your results immediately after each workout',
+                  'Request AI feedback for personalized coaching tips',
+                  'Check the leaderboard to see how you stack up!',
+                ].map((tip, i) => (
+                  <li
+                    key={i}
+                    className="flex items-start gap-2 text-sm text-[var(--athlete-text-secondary)]"
+                  >
+                    <span className="text-[var(--athlete-accent-primary)]">•</span>
+                    {tip}
+                  </li>
+                ))}
               </ul>
             </div>
           </div>
@@ -246,47 +311,86 @@ export default function AthleteOnboardingModal({ profile, gymName, onComplete })
   };
 
   return (
-    <dialog className="modal modal-open">
-      <div className="modal-box max-w-lg">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
+
+      {/* Modal */}
+      <div className="relative w-full max-w-lg athlete-card-static overflow-hidden">
         {/* Progress Steps */}
-        <ul className="steps steps-horizontal w-full mb-6">
-          {ONBOARDING_STEPS.map((step, index) => (
-            <li key={step.id} className={`step ${index <= currentStep ? 'step-primary' : ''}`}>
-              <span className="hidden sm:inline">{step.title}</span>
-            </li>
-          ))}
-        </ul>
+        <div className="p-4 border-b border-[var(--athlete-border)]">
+          <div className="flex justify-between items-center">
+            {ONBOARDING_STEPS.map((step, index) => (
+              <div key={step.id} className="flex items-center">
+                <div
+                  className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-all ${
+                    index < currentStep
+                      ? 'bg-[var(--athlete-accent-complete)] text-black'
+                      : index === currentStep
+                        ? 'bg-[var(--athlete-accent-primary)] text-black'
+                        : 'bg-[var(--athlete-bg-secondary)] text-[var(--athlete-text-muted)]'
+                  }`}
+                >
+                  {index < currentStep ? <Check className="w-4 h-4" /> : index + 1}
+                </div>
+                {index < ONBOARDING_STEPS.length - 1 && (
+                  <div
+                    className={`w-12 sm:w-20 h-0.5 mx-1 transition-all ${
+                      index < currentStep
+                        ? 'bg-[var(--athlete-accent-complete)]'
+                        : 'bg-[var(--athlete-bg-secondary)]'
+                    }`}
+                  />
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
 
         {/* Step Content */}
-        {renderStep()}
+        <div className="p-4 max-h-[60vh] overflow-y-auto">{renderStep()}</div>
 
         {/* Navigation */}
-        <div className="modal-action">
+        <div className="p-4 border-t border-[var(--athlete-border)] flex items-center gap-3">
           {currentStep > 0 && currentStep < ONBOARDING_STEPS.length - 1 && (
-            <button className="btn btn-ghost" onClick={handleBack}>
+            <button
+              className="athlete-btn-secondary py-3 px-4 flex items-center gap-2"
+              onClick={handleBack}
+            >
+              <ChevronLeft className="w-4 h-4" />
               Back
             </button>
           )}
           <div className="flex-1" />
           {currentStep < ONBOARDING_STEPS.length - 1 ? (
-            <button className="btn btn-primary" onClick={handleNext}>
+            <button
+              className="athlete-btn-primary py-3 px-6 flex items-center gap-2"
+              onClick={handleNext}
+            >
               {currentStep === ONBOARDING_STEPS.length - 2 ? 'Almost Done' : 'Next'}
+              <ChevronRight className="w-4 h-4" />
             </button>
           ) : (
-            <button className="btn btn-primary" onClick={handleComplete} disabled={saving}>
+            <button
+              className="athlete-btn-primary py-3 px-6 flex items-center gap-2"
+              onClick={handleComplete}
+              disabled={saving}
+            >
               {saving ? (
                 <>
-                  <span className="loading loading-spinner loading-sm" />
+                  <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
                   Saving...
                 </>
               ) : (
-                "Let's Go!"
+                <>
+                  <Sparkles className="w-4 h-4" />
+                  Let's Go!
+                </>
               )}
             </button>
           )}
         </div>
       </div>
-      <div className="modal-backdrop bg-black/50" />
-    </dialog>
+    </div>
   );
 }

@@ -44,9 +44,7 @@ export default function JoinGymPage() {
   // Check if user is already a member of this gym and redirect
   useEffect(() => {
     if (user && gym && !loadingGym && gymMemberships.length > 0) {
-      const isMember = gymMemberships.some(
-        (membership) => membership.gym?.id === gym.id
-      );
+      const isMember = gymMemberships.some((membership) => membership.gym?.id === gym.id);
       if (isMember) {
         // Already a member - redirect to athlete dashboard
         router.push('/athlete');
