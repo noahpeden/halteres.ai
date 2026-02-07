@@ -1,5 +1,5 @@
-import { createClient } from '@/utils/supabase/server';
 import { NextResponse } from 'next/server';
+import { createClient } from '@/utils/supabase/server';
 
 export async function GET(request) {
   const requestUrl = new URL(request.url);
@@ -36,13 +36,13 @@ export async function GET(request) {
   // For password reset requests, redirect to reset-password page
   if (isReset) {
     console.log('Password reset flow detected, redirecting to reset-password');
-    return NextResponse.redirect(
-      new URL('/reset-password?auth=success', request.url)
-    );
+    return NextResponse.redirect(new URL('/reset-password?auth=success', request.url));
   }
 
   // Get the user to determine their role
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   if (user) {
     // Check if this is a new signup with role metadata
@@ -59,17 +59,58 @@ export async function GET(request) {
       hasGymCode: !!signupGymCode,
     });
 
-    // If we have a role from signup, update the profile
+    // If we have a role from signup, ensure profile exists and update it
     if (signupRole) {
-      const { error: updateError } = await supabase
+      // First check if profile exists (trigger may have failed)
+      const { data: existingProfile } = await supabase
         .from('profiles')
-        .update({ role: signupRole })
-        .eq('id', user.id);
+        .select('id')
+        .eq('id', user.id)
+        .single();
 
-      if (updateError) {
-        console.error('Error updating profile role:', updateError);
+      if (!existingProfile) {
+        // Profile wasn't created by trigger - create it now
+        console.log('Profile missing for user, creating fallback profile');
+        const profileData =
+          signupRole === 'athlete'
+            ? {
+                id: user.id,
+                role: 'athlete',
+                subscription_status: null,
+                is_active: true,
+                onboarding_completed: false,
+              }
+            : {
+                id: user.id,
+                role: 'coach',
+                subscription_status: 'trialing',
+                trial_start_date: new Date().toISOString(),
+                trial_end_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+                generations_remaining: 15,
+                generations_today: 0,
+                is_active: true,
+                onboarding_completed: false,
+              };
+
+        const { error: insertError } = await supabase.from('profiles').insert([profileData]);
+
+        if (insertError) {
+          console.error('Error creating fallback profile:', insertError);
+        } else {
+          console.log('Fallback profile created for role:', signupRole);
+        }
       } else {
-        console.log('Profile role updated to:', signupRole);
+        // Profile exists, just update the role
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update({ role: signupRole })
+          .eq('id', user.id);
+
+        if (updateError) {
+          console.error('Error updating profile role:', updateError);
+        } else {
+          console.log('Profile role updated to:', signupRole);
+        }
       }
 
       // If athlete with gym code, auto-join the gym (always auto-approve, no approval process)
@@ -94,15 +135,15 @@ export async function GET(request) {
 
             if (!existingMembership) {
               // Create membership - always active (no approval process)
-              const { error: membershipError } = await supabase
-                .from('gym_memberships')
-                .insert([{
+              const { error: membershipError } = await supabase.from('gym_memberships').insert([
+                {
                   gym_id: gym.id,
                   user_id: user.id,
                   role: 'athlete',
                   status: 'active',
                   joined_at: new Date().toISOString(),
-                }]);
+                },
+              ]);
 
               if (membershipError) {
                 console.error('Error creating gym membership:', membershipError);
