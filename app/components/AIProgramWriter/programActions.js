@@ -180,6 +180,7 @@ export async function generateProgram({
           duration_weeks: parseInt(formData.numberOfWeeks, 10),
           days_per_week: parseInt(formData.daysPerWeek, 10),
           entityId: formData.entityId,
+          gymId: formData.gymId || null, // Include gym_id for proper analytics filtering
           gym_details: gymDetails,
           periodization: periodizationData,
           calendar_data: {
@@ -1166,6 +1167,7 @@ export async function createProgramRecord({ formData, supabase, showToastMessage
       name: formData.name || 'Untitled Program', // Default name if empty
       description: formData.description || '',
       entity_id: formData.entityId, // Make sure entityId is available
+      gym_id: formData.gymId || null, // Link program to the current gym
       // Add other non-nullable or essential default fields if necessary
       // For JSONB fields, provide empty objects or default structures
       goal: formData.goal || 'strength',

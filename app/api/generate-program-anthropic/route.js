@@ -1160,10 +1160,12 @@ async function extractSharedData(requestData, supabase) {
   let clientMetricsContent = '';
   let entityData;
   let clientGender = '';
-  let gymId = null;
+  // Use gymId from request body first, then fall back to program's gym_id
+  let gymId = requestData.gymId || null;
   // Determine unit preference - default to Imperial (true) if not specified in request
   const useImperial = requestData.useImperial !== undefined ? requestData.useImperial : true;
   logWithTimestamp('Unit preference determined', { useImperial });
+  logWithTimestamp('Initial gymId from request', { gymId });
 
   if (programId) {
     try {
@@ -1181,8 +1183,21 @@ async function extractSharedData(requestData, supabase) {
           error: programError,
         });
       } else if (programData) {
-        // Capture gym_id from program
-        gymId = programData.gym_id || null;
+        // Use gym_id from program if not provided in request, or update program if request has it
+        if (!gymId && programData.gym_id) {
+          gymId = programData.gym_id;
+        } else if (gymId && !programData.gym_id) {
+          // Update the program with the gymId from the request
+          const { error: updateError } = await supabase
+            .from('programs')
+            .update({ gym_id: gymId })
+            .eq('id', programId);
+          if (updateError) {
+            logWithTimestamp('Error updating program gym_id', { error: updateError });
+          } else {
+            logWithTimestamp('Updated program with gym_id', { gymId });
+          }
+        }
         logWithTimestamp('Found gym_id', { gymId });
       }
 

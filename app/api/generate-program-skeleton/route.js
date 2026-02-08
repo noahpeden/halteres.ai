@@ -715,7 +715,9 @@ async function extractSharedData(requestData, supabase) {
   let clientMetricsContent = '';
   let entityId = null;
   let clientGender = '';
-  let gymId = null;
+  // Use gymId from request body first, then fall back to program's gym_id
+  let gymId = requestData.gymId || null;
+  logWithTimestamp('Initial gymId from request', { gymId });
 
   if (programId) {
     try {
@@ -726,7 +728,22 @@ async function extractSharedData(requestData, supabase) {
         .single();
 
       if (programData) {
-        gymId = programData.gym_id || null;
+        // Use gym_id from program if not provided in request, or update program if request has it
+        if (!gymId && programData.gym_id) {
+          gymId = programData.gym_id;
+        } else if (gymId && !programData.gym_id) {
+          // Update the program with the gymId from the request
+          const { error: updateError } = await supabase
+            .from('programs')
+            .update({ gym_id: gymId })
+            .eq('id', programId);
+          if (updateError) {
+            logWithTimestamp('Error updating program gym_id', { error: updateError });
+          } else {
+            logWithTimestamp('Updated program with gym_id', { gymId });
+          }
+        }
+        logWithTimestamp('Final gymId', { gymId });
 
         if (programData.entity_id) {
           entityId = programData.entity_id;

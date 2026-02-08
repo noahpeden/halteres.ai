@@ -204,6 +204,7 @@ export function useProgramData(programId) {
       name: program.name || '',
       description: program.description || '',
       entityId: program.entity_id,
+      gymId: program.gym_id || null, // Include gym_id for program analytics filtering
       goal: program.goal || 'strength',
       difficulty: program.difficulty || 'intermediate',
       equipment: program.gym_details?.equipment || [],

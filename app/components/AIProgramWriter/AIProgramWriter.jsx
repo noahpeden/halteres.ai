@@ -349,7 +349,11 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
     try {
       await generateSkeletonProgram({
         programId,
-        formData: { ...formData, equipment: selectedEquipment },
+        formData: {
+          ...formData,
+          equipment: selectedEquipment,
+          gymId: currentGym?.id || formData.gymId,
+        },
         setIsLoading: () => {},
         setSuggestions: saveGeneratedWorkouts,
         addStreamingWorkout: (workout) => setStreamingWorkouts((prev) => [...prev, workout]),
@@ -924,7 +928,11 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
     try {
       await generateSkeletonProgram({
         programId,
-        formData: { ...formData, equipment: selectedEquipment },
+        formData: {
+          ...formData,
+          equipment: selectedEquipment,
+          gymId: currentGym?.id || formData.gymId,
+        },
         setIsLoading: () => {},
         setSuggestions: saveGeneratedWorkouts,
         addStreamingWorkout: (workout) => setStreamingWorkouts((prev) => [...prev, workout]),

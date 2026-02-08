@@ -436,7 +436,24 @@ export async function getProgramsForAnalyticsAction(gymId) {
   }
 
   try {
-    // Get programs that belong to the gym or are owned by the user
+    // First, get the coach's gym membership to verify they can access this gym's data
+    const { data: membership } = await supabase
+      .from('gym_memberships')
+      .select('role')
+      .eq('gym_id', gymId)
+      .eq('user_id', user.id)
+      .eq('status', 'active')
+      .single();
+
+    const isCoachOrOwner = membership?.role === 'coach' || membership?.role === 'owner';
+    console.log('Analytics - User membership:', {
+      gymId,
+      userId: user.id,
+      role: membership?.role,
+      isCoachOrOwner,
+    });
+
+    // Get programs - use left join to include programs even if entity is missing
     const { data: programs, error } = await supabase
       .from('programs')
       .select(`
@@ -444,16 +461,40 @@ export async function getProgramsForAnalyticsAction(gymId) {
         name,
         duration_weeks,
         created_at,
-        entity:entities(id, name, type)
+        gym_id,
+        entity_id,
+        entity:entities(id, name, type, user_id)
       `)
-      .or(`gym_id.eq.${gymId},user_id.eq.${user.id}`)
-      .is('deleted_at', null)
       .order('created_at', { ascending: false });
 
-    if (error) throw error;
+    if (error) {
+      console.error('Error fetching programs:', error);
+      throw error;
+    }
+
+    console.log('Analytics - All programs fetched:', programs?.length, 'Looking for gymId:', gymId);
+
+    // Filter programs that belong to the gym OR are owned by the current user (via entity)
+    // If user is coach/owner, they should see all programs for the gym
+    const filteredPrograms = (programs || []).filter((p) => {
+      const matchesGym = p.gym_id === gymId;
+      const isOwner = p.entity?.user_id === user.id;
+      const shouldInclude = matchesGym || isOwner;
+      if (!shouldInclude && (p.gym_id || p.entity?.user_id)) {
+        console.log('Program excluded:', {
+          id: p.id,
+          name: p.name,
+          gym_id: p.gym_id,
+          entity_user_id: p.entity?.user_id,
+        });
+      }
+      return shouldInclude;
+    });
+
+    console.log('Analytics - Filtered programs:', filteredPrograms.length);
 
     // Get workout counts for each program
-    const programIds = (programs || []).map((p) => p.id);
+    const programIds = filteredPrograms.map((p) => p.id);
 
     const workoutCounts = {};
     if (programIds.length > 0) {
@@ -468,7 +509,7 @@ export async function getProgramsForAnalyticsAction(gymId) {
       });
     }
 
-    const formattedPrograms = (programs || []).map((p) => ({
+    const formattedPrograms = filteredPrograms.map((p) => ({
       id: p.id,
       name: p.name,
       entityName: p.entity?.name || 'Unknown',
@@ -488,6 +529,8 @@ export async function getProgramsForAnalyticsAction(gymId) {
 // Get detailed analytics for a specific program
 export async function getProgramAnalyticsAction(programId, gymId) {
   const supabase = await createSupabaseClient();
+
+  console.log('getProgramAnalyticsAction called:', { programId, gymId });
 
   const {
     data: { user },
@@ -510,7 +553,11 @@ export async function getProgramAnalyticsAction(programId, gymId) {
       .eq('id', programId)
       .single();
 
-    if (programError) throw programError;
+    if (programError) {
+      console.error('Error fetching program details:', programError);
+      throw programError;
+    }
+    console.log('Program found:', program?.name);
 
     // Get all workouts in this program
     const { data: workouts, error: workoutsError } = await supabase
@@ -520,7 +567,11 @@ export async function getProgramAnalyticsAction(programId, gymId) {
       .is('deleted_at', null)
       .order('scheduled_date', { ascending: true });
 
-    if (workoutsError) throw workoutsError;
+    if (workoutsError) {
+      console.error('Error fetching program workouts:', workoutsError);
+      throw workoutsError;
+    }
+    console.log('Workouts found:', workouts?.length);
 
     const workoutIds = (workouts || []).map((w) => w.id);
     const totalWorkouts = workoutIds.length;
@@ -679,6 +730,8 @@ export async function getAthleteAnalyticsAction(gymId, athleteId) {
     return { success: false, error: 'Not authenticated' };
   }
 
+  console.log('getAthleteAnalyticsAction called:', { gymId, athleteId });
+
   try {
     // Get athlete profile
     const { data: profile, error: profileError } = await supabase
@@ -687,7 +740,11 @@ export async function getAthleteAnalyticsAction(gymId, athleteId) {
       .eq('id', athleteId)
       .single();
 
-    if (profileError) throw profileError;
+    if (profileError) {
+      console.error('Error fetching athlete profile:', profileError);
+      throw profileError;
+    }
+    console.log('Athlete profile:', profile);
 
     // Get membership info
     const { data: membership } = await supabase
@@ -697,7 +754,18 @@ export async function getAthleteAnalyticsAction(gymId, athleteId) {
       .eq('user_id', athleteId)
       .single();
 
-    // Get all workout results for this athlete
+    console.log('Athlete membership:', membership);
+
+    // Get all workout results for this athlete (don't filter by gym_id initially to see all results)
+    const { data: allResults } = await supabase
+      .from('workout_results')
+      .select('id, gym_id, user_id')
+      .eq('user_id', athleteId)
+      .is('deleted_at', null)
+      .limit(10);
+    console.log('All results for athlete (first 10):', allResults);
+
+    // Get all workout results for this athlete - filter by gym_id if set, otherwise get all
     const { data: results, error: resultsError } = await supabase
       .from('workout_results')
       .select(`
@@ -711,19 +779,26 @@ export async function getAthleteAnalyticsAction(gymId, athleteId) {
         weight_kg,
         is_pr,
         perceived_effort,
+        gym_id,
         workout:program_workouts(id, title, program_id)
       `)
       .eq('user_id', athleteId)
-      .eq('gym_id', gymId)
       .is('deleted_at', null)
       .order('created_at', { ascending: false });
 
-    if (resultsError) throw resultsError;
+    // Filter results to include those with matching gym_id OR null gym_id (for backwards compatibility)
+    const filteredResults = (results || []).filter((r) => r.gym_id === gymId || !r.gym_id);
+    console.log('Filtered results count:', filteredResults.length, 'of', results?.length);
 
-    // Calculate overall stats
-    const totalWorkouts = (results || []).length;
-    const totalPRs = (results || []).filter((r) => r.is_pr).length;
-    const effortValues = (results || [])
+    if (resultsError) {
+      console.error('Error fetching workout results:', resultsError);
+      throw resultsError;
+    }
+
+    // Calculate overall stats using filteredResults
+    const totalWorkouts = filteredResults.length;
+    const totalPRs = filteredResults.filter((r) => r.is_pr).length;
+    const effortValues = filteredResults
       .filter((r) => r.perceived_effort)
       .map((r) => r.perceived_effort);
     const avgEffort =
@@ -733,13 +808,13 @@ export async function getAthleteAnalyticsAction(gymId, athleteId) {
 
     // Calculate current streak
     let currentStreak = 0;
-    if (results && results.length > 0) {
+    if (filteredResults.length > 0) {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
       const checkDate = new Date(today);
       const resultDates = new Set(
-        results.map((r) => new Date(r.created_at).toISOString().split('T')[0])
+        filteredResults.map((r) => new Date(r.created_at).toISOString().split('T')[0])
       );
 
       while (resultDates.has(checkDate.toISOString().split('T')[0])) {
@@ -752,7 +827,7 @@ export async function getAthleteAnalyticsAction(gymId, athleteId) {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    const workoutHistory = (results || [])
+    const workoutHistory = filteredResults
       .filter((r) => new Date(r.created_at) >= thirtyDaysAgo)
       .slice(0, 20)
       .map((r) => ({
@@ -794,7 +869,7 @@ export async function getAthleteAnalyticsAction(gymId, athleteId) {
       const weekEnd = new Date(weekStart);
       weekEnd.setDate(weekEnd.getDate() + 7);
 
-      const weekResults = (results || []).filter((r) => {
+      const weekResults = filteredResults.filter((r) => {
         const resultDate = new Date(r.created_at);
         return resultDate >= weekStart && resultDate < weekEnd;
       });
@@ -808,7 +883,7 @@ export async function getAthleteAnalyticsAction(gymId, athleteId) {
 
     // Get program participation
     const programResults = {};
-    (results || []).forEach((r) => {
+    filteredResults.forEach((r) => {
       if (r.workout?.program_id) {
         if (!programResults[r.workout.program_id]) {
           programResults[r.workout.program_id] = {

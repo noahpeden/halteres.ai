@@ -1,4 +1,5 @@
 'use client';
+import { useRouter } from 'next/navigation';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { createClient } from '@/utils/supabase/client';
 
@@ -6,6 +7,7 @@ const AuthContext = createContext();
 const supabase = createClient();
 
 export function AuthProvider({ children, initialSession }) {
+  const router = useRouter();
   const [session, setSession] = useState(initialSession || null);
   const [user, setUser] = useState(initialSession?.user || null);
   const [profile, setProfile] = useState(null);
@@ -122,10 +124,16 @@ export function AuthProvider({ children, initialSession }) {
       setLoadingGym(false);
     }
 
-    const { data: authListener } = supabase.auth.onAuthStateChange((_event, currentSession) => {
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, currentSession) => {
       const currentUser = currentSession?.user || null;
       setSession(currentSession);
       setUser(currentUser);
+
+      // Handle password recovery flow - redirect to reset-password page
+      if (event === 'PASSWORD_RECOVERY') {
+        router.push('/reset-password?auth=success');
+        return;
+      }
 
       if (currentUser?.id) {
         fetchProfile(currentUser.id);
@@ -142,7 +150,7 @@ export function AuthProvider({ children, initialSession }) {
     return () => {
       authListener?.subscription?.unsubscribe();
     };
-  }, [user?.id, fetchProfile, fetchGymMemberships]);
+  }, [user?.id, fetchProfile, fetchGymMemberships, router]);
 
   // Derived values
   const isCoach = profile?.role === 'coach' || !profile?.role; // Default to coach for backward compatibility
