@@ -497,3 +497,60 @@
   background: var(--athlete-accent-complete);
   color: #ffffff;
 }
+
+/* ============================================
+   TV Display Mode Styles
+   ============================================ */
+
+/* TV Display Enter Animation */
+@keyframes tvFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.tv-display-enter {
+  animation: tvFadeIn 0.3s ease-out;
+}
+
+/* TV Section Navigation Dots */
+.tv-section-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #cbd5e1;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tv-section-dot:hover {
+  background: #94a3b8;
+  transform: scale(1.1);
+}
+
+.tv-section-dot.active {
+  background: #4f46e5;
+  box-shadow: 0 0 12px rgba(79, 70, 229, 0.5);
+  transform: scale(1.2);
+}
+
+/* TV Content Styling */
+.tv-content {
+  font-weight: 500;
+}
+
+/* Hide scrollbar for section buttons */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}

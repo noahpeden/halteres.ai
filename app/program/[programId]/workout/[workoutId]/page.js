@@ -13,9 +13,11 @@ import {
   X,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { use, useEffect, useRef, useState } from 'react';
+import { use, useEffect, useMemo, useRef, useState } from 'react';
 import TemplateFeedbackButton from '@/components/feedback/TemplateFeedbackButton';
+import { SectionButtons, TVDisplayMode, useTVDisplay } from '@/components/TVDisplayMode';
 import { useAuth } from '@/contexts/AuthContext';
+import { parseWorkoutSections } from '@/utils/workoutParser';
 
 export default function WorkoutDetailsPage(props) {
   const params = use(props.params);
@@ -43,6 +45,10 @@ export default function WorkoutDetailsPage(props) {
 
   // Check if user can generate coaching content (coach or gym owner only)
   const canGenerateCoachingContent = isCoach || isGymOwner;
+
+  // TV Display Mode - Parse sections from workout body
+  const sections = useMemo(() => parseWorkoutSections(workout?.body), [workout?.body]);
+  const tvDisplay = useTVDisplay(sections);
 
   useEffect(() => {
     async function fetchData() {
@@ -590,6 +596,11 @@ export default function WorkoutDetailsPage(props) {
           )}
         </div>
 
+        {/* TV Display Section Buttons */}
+        {!isEditing && sections.length > 0 && (
+          <SectionButtons sections={sections} onOpenSection={tvDisplay.openSection} />
+        )}
+
         {/* Workout Content */}
         <div className="bg-white/60 backdrop-blur-sm rounded-2xl border border-gray-200/50 shadow-sm overflow-hidden">
           {isEditing ? (
@@ -722,6 +733,19 @@ export default function WorkoutDetailsPage(props) {
           </div>
         </div>
       </div>
+
+      {/* TV Display Mode Overlay */}
+      <TVDisplayMode
+        isOpen={tvDisplay.isOpen}
+        currentSection={tvDisplay.currentSection}
+        sections={sections}
+        currentSectionId={tvDisplay.currentSectionId}
+        workoutTitle={workout?.title || 'Workout'}
+        onClose={tvDisplay.close}
+        onNext={tvDisplay.goToNext}
+        onPrevious={tvDisplay.goToPrevious}
+        onGoToSection={tvDisplay.goToSection}
+      />
     </div>
   );
 }

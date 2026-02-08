@@ -467,7 +467,14 @@ Selected Training Days: ${selectedDaysOfWeek
     .join(', ')}
 Week: ${weekNumber} of ${numberOfWeeks}
 ${focusArea ? `Focus Area: ${focusArea}` : ''}
-${equipment && equipment.length > 0 ? `Available Equipment: ${equipment.join(', ')}` : ''}
+${
+  equipment && equipment.length > 0
+    ? `<equipment_constraint priority="critical">
+AVAILABLE EQUIPMENT (use ONLY these): ${equipment.join(', ')}
+IMPORTANT: Do NOT program exercises requiring equipment not on this list.
+</equipment_constraint>`
+    : '<equipment_constraint priority="critical">AVAILABLE EQUIPMENT: Bodyweight only. Do NOT use any gym equipment.</equipment_constraint>'
+}
 ${
   workoutFormats && workoutFormats.length > 0
     ? `Workout Formats to Include: ${workoutFormats.join(', ')}`
@@ -556,6 +563,12 @@ ${getGenderWeightInstructions(clientGender)}
 ## Cool-down
 [Specific cool-down movements and durations]`;
 
+  // Build equipment constraint text for system prompt
+  const equipmentConstraintText =
+    equipment && equipment.length > 0
+      ? `ONLY the following equipment is available: ${equipment.join(', ')}`
+      : 'NO equipment available - Bodyweight exercises ONLY';
+
   const systemPrompt = `You are an expert strength and conditioning coach with deep knowledge of exercise science, periodization theory, and program design. You create professional, detailed training programs.
 
 <output_requirements>
@@ -565,14 +578,33 @@ Follow sound exercise science principles with appropriate weekly progression.
 ${weekNumber === 1 ? `For Week 1, include a personalized programDescription field (400-600 words) that references the client's specific metrics, explains the periodization approach with intensity percentages, describes session structure, provides specific adaptation timelines, and includes tailored nutrition/recovery guidance.` : ''}
 </output_requirements>
 
+<equipment_validation priority="critical">
+${equipmentConstraintText}
+
+BEFORE including any exercise, verify that ALL required equipment is on the available list.
+Common violations to AVOID:
+- Do NOT program barbell exercises if "Barbell" is not listed
+- Do NOT program rower/ski erg/air bike if those specific machines are not listed
+- Do NOT program pull-ups/muscle-ups if there is no Pull-up Bar or Gymnastic Rings listed
+- Do NOT program box jumps if "Plyo Box" is not listed
+- Do NOT program wall balls if "Wall Ball" is not listed
+- Do NOT program GHD sit-ups if "GHD Machine" is not listed
+- Do NOT program rope climbs if "Climbing Rope" is not listed
+
+When standard CrossFit/gym exercises require unavailable equipment:
+- Substitute barbell movements with dumbbell or kettlebell variations (if available)
+- Substitute rowing with air bike, jump rope, or running (if available)
+- Substitute pull-ups with ring rows, banded pull-ups, or inverted rows (if rings/bands available)
+- Substitute box jumps with broad jumps, tuck jumps, or step-ups
+</equipment_validation>
+
 <constraints>
-Only use the equipment explicitly specified by the user. If common exercises require unavailable equipment, substitute with alternatives using only available equipment.
 Express all weights in ${useImperial ? 'pounds (lbs)' : 'kilograms (kg)'} throughout the program.
 Schedule workouts on the exact dates provided.
 </constraints>
 
 <context>
-Users have specific equipment access and unit preferences. Including exercises requiring unlisted equipment or wrong units makes workouts impractical for them.
+Users have EXPLICITLY selected their available equipment. Including exercises requiring unlisted equipment makes the workout impossible to complete. Treat equipment availability as a hard constraint, not a suggestion.
 </context>`;
 
   try {

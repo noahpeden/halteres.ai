@@ -5,6 +5,10 @@
  * Easily extensible for new training styles.
  */
 
+import {
+  formatSubstitutionSuggestions,
+  getSubstitutionSuggestions,
+} from './equipmentSubstitutions.js';
 import { formatPeriodizationGuidelines } from './periodizationUtils.js';
 import { balancedFitnessPrompt } from './prompts/balanced-fitness.js';
 import { bodybuildingPrompt } from './prompts/bodybuilding.js';
@@ -20,22 +24,92 @@ import { powerliftingPrompt } from './prompts/powerlifting.js';
 import { sportSpecificPrompt } from './prompts/sport-specific.js';
 import { triathlonPrompt } from './prompts/triathlon.js';
 
+// Common equipment that users might not have - used to generate exclusion lists
+const COMMON_GYM_EQUIPMENT = [
+  'Barbell',
+  'Bumper Plates',
+  'Power Rack',
+  'Kettlebell',
+  'Rower',
+  'Treadmill',
+  'Dumbbell',
+  'Air Bike',
+  'Jump Rope',
+  'Medicine Ball',
+  'Plyo Box',
+  'SkiErg',
+  'Wall Ball',
+  'Gymnastic Rings',
+  'Climbing Rope',
+  'Resistance Bands',
+  'Sled',
+  'Battle Ropes',
+  'AbMat',
+  'Weight Vest',
+  'Hex Bar',
+  'Slam Ball',
+  'Sandbags',
+  'Suspension Trainer',
+  'Safety Squat Bar',
+  'Swiss Bar',
+  'Parallettes',
+  'Smith Machine',
+  'Leg Press Machine',
+  'Dip Machine',
+  'GHD Machine',
+  'Stationary Bike',
+  'Elliptical',
+  'Pull-up Bar',
+];
+
 /**
  * Creates equipment restriction notice using Claude 4.5 best practices
  * @param {Array} equipment - The list of available equipment
  * @returns {string} Formatted string with equipment restrictions
  */
 export function formatEquipmentRestrictions(equipment) {
-  const equipmentList =
-    Array.isArray(equipment) && equipment.length > 0 ? equipment.join(', ') : 'Bodyweight only';
+  const availableEquipment = Array.isArray(equipment) && equipment.length > 0 ? equipment : [];
+  const equipmentListStr =
+    availableEquipment.length > 0 ? availableEquipment.join(', ') : 'Bodyweight only';
+
+  // Calculate what equipment is NOT available
+  const unavailableEquipment = COMMON_GYM_EQUIPMENT.filter(
+    (item) => !availableEquipment.includes(item)
+  );
+
+  // Get substitution suggestions for common missing equipment
+  const substitutions = getSubstitutionSuggestions(availableEquipment, COMMON_GYM_EQUIPMENT);
+  const substitutionText = formatSubstitutionSuggestions(substitutions);
 
   return `
-<equipment_restrictions>
-Available equipment: ${equipmentList}
+<equipment_restrictions priority="critical">
+<available_equipment>
+${equipmentListStr}
+</available_equipment>
 
-Only program exercises using the equipment listed above, including warm-ups, main workouts, cooldowns, and finishers. If a common exercise requires unavailable equipment, substitute with an alternative using only the available equipment.
+<unavailable_equipment>
+DO NOT program any exercises requiring: ${unavailableEquipment.slice(0, 15).join(', ')}${unavailableEquipment.length > 15 ? ', and other unlisted equipment' : ''}
+</unavailable_equipment>
 
-Context: Users have specific equipment access, so including exercises requiring unlisted equipment makes the workout impractical.
+<strict_rules>
+1. ONLY use equipment from the available_equipment list above
+2. This applies to ALL workout sections: warm-ups, strength work, conditioning, accessory work, and cool-downs
+3. If a standard exercise requires unavailable equipment, you MUST substitute it
+4. Never assume equipment exists - if it's not listed above, the user does not have it
+5. Double-check every exercise before including it - does it require equipment not on the available list?
+</strict_rules>
+${
+  substitutionText
+    ? `
+<substitution_guidance>
+${substitutionText}
+</substitution_guidance>
+`
+    : ''
+}
+<context>
+Users have explicitly selected their available equipment. Programming exercises requiring unlisted equipment makes the workout impossible to complete. This is a hard constraint, not a preference.
+</context>
 </equipment_restrictions>`;
 }
 
