@@ -1,0 +1,22 @@
+{
+  "expo": {
+    "name": "Halteres",
+    "slug": "halteres",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "halteres",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "splash": { "backgroundColor": "#0b0b0e" },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "ai.halteres.app"
+    },
+    "android": {
+      "package": "ai.halteres.app",
+      "edgeToEdgeEnabled": true
+    },
+    "plugins": ["expo-router", "expo-secure-store"],
+    "experiments": { "typedRoutes": true }
+  }
+}

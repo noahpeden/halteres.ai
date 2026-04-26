@@ -19,3 +19,15 @@ coverage
 # Supabase
 supabase/.branches
 supabase/.temp
+
+# Expo
+.expo
+.expo-shared
+ios
+android
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*

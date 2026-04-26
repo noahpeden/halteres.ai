@@ -3,6 +3,7 @@ import { buildSkeletonMessages, buildWeekSkeletonUser } from '@halteres/prompts'
 import { NextResponse } from 'next/server';
 import { anthropic, estimateCost, HAIKU } from '@/lib/anthropic';
 import { authedClient } from '@/lib/auth';
+import { getEntitlement, paywallResponse } from '@/lib/entitlements';
 
 export const runtime = 'nodejs';
 export const maxDuration = 300;
@@ -23,6 +24,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'invalid', issues: parsed.error.issues }, { status: 400 });
   }
   const input = parsed.data;
+
+  const entitlement = await getEntitlement(supabase, userId);
+  if (!entitlement.can_create_program) {
+    return paywallResponse(entitlement, 'create_program');
+  }
 
   const { data: profile, error: profileErr } = await supabase
     .from('profiles')

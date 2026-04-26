@@ -14,6 +14,9 @@ export default function WorkoutClient({ workout: initial, log: initialLog }: Pro
   const [log, setLog] = useState(initialLog);
   const [enhancing, setEnhancing] = useState(false);
   const [enhanceInput, setEnhanceInput] = useState('');
+  const [adapting, setAdapting] = useState(false);
+  const [adaptConstraint, setAdaptConstraint] = useState('');
+  const [showAdapt, setShowAdapt] = useState(false);
   const [logging, setLogging] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -48,6 +51,41 @@ export default function WorkoutClient({ workout: initial, log: initialLog }: Pro
       setError((e as Error).message);
     } finally {
       setEnhancing(false);
+    }
+  }
+
+  async function adapt() {
+    if (!adaptConstraint.trim()) return;
+    setAdapting(true);
+    setError(null);
+    let body = '';
+    try {
+      const t = await token();
+      for await (const ev of streamFromApi(`/api/workouts/${workout.id}/adapt`, {
+        method: 'POST',
+        body: { constraint: adaptConstraint },
+        token: t,
+      })) {
+        if (ev.type === 'chunk') {
+          body += ev.text as string;
+          setWorkout({ ...workout, body_detailed: body });
+        } else if (ev.type === 'done') {
+          setWorkout({
+            ...workout,
+            body_detailed: body,
+            generation_status: 'detailed',
+            enhancement_input: adaptConstraint,
+          });
+          setShowAdapt(false);
+          setAdaptConstraint('');
+        } else if (ev.type === 'error') {
+          throw new Error(ev.message as string);
+        }
+      }
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setAdapting(false);
     }
   }
 
@@ -118,6 +156,53 @@ export default function WorkoutClient({ workout: initial, log: initialLog }: Pro
           >
             {enhancing ? 'Generating…' : 'Enhance workout'}
           </button>
+        </section>
+      )}
+
+      {detailed && !showAdapt && (
+        <button
+          type="button"
+          onClick={() => setShowAdapt(true)}
+          className="btn-ghost border border-zinc-800 w-full"
+        >
+          Change today&apos;s workout
+        </button>
+      )}
+
+      {detailed && showAdapt && (
+        <section className="card space-y-3">
+          <div className="text-sm font-medium">Adapt this workout</div>
+          <p className="text-xs text-zinc-500">
+            Tell us what&apos;s different today — injury, time crunch, want to focus on something
+            specific. The program intent stays intact.
+          </p>
+          <textarea
+            value={adaptConstraint}
+            onChange={(e) => setAdaptConstraint(e.target.value)}
+            rows={3}
+            className="input"
+            placeholder="My back is sore — swap deadlifts for something else. Only have 30 min today."
+          />
+          <div className="flex gap-2">
+            <button
+              onClick={adapt}
+              disabled={adapting || !adaptConstraint.trim()}
+              className="btn-primary"
+              type="button"
+            >
+              {adapting ? 'Adapting…' : 'Adapt workout'}
+            </button>
+            <button
+              onClick={() => {
+                setShowAdapt(false);
+                setAdaptConstraint('');
+              }}
+              className="btn-ghost"
+              type="button"
+            >
+              Cancel
+            </button>
+          </div>
         </section>
       )}
 

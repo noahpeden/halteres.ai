@@ -1,8 +1,8 @@
-import { EnhanceWorkout } from '@halteres/core';
-import { buildEnhanceMessages } from '@halteres/prompts';
-import { buildRetrievalQuery, retrieveSimilar } from '@halteres/rag';
 import { createServiceClient } from '@halteres/db/server';
+import { buildAdaptMessages } from '@halteres/prompts';
+import { buildRetrievalQuery, retrieveSimilar } from '@halteres/rag';
 import { NextResponse } from 'next/server';
+import { z } from 'zod';
 import { anthropic, estimateCost, SONNET } from '@/lib/anthropic';
 import { authedClient } from '@/lib/auth';
 import { getEntitlement, paywallResponse } from '@/lib/entitlements';
@@ -10,8 +10,12 @@ import { getEntitlement, paywallResponse } from '@/lib/entitlements';
 export const runtime = 'nodejs';
 export const maxDuration = 300;
 
-// POST /api/workouts/[id]/enhance — RAG-personalized enhancement.
-// This is where Sonnet 4.6 runs and where retrieval fires. Streamed.
+const AdaptInput = z.object({
+  constraint: z.string().min(3).max(1000),
+});
+
+// POST /api/workouts/[id]/adapt — day-of modification of an existing workout.
+// Counts toward the user's monthly enhance quota (same Sonnet call cost).
 export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
 
@@ -23,7 +27,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   }
 
   const body = await req.json().catch(() => ({}));
-  const parsed = EnhanceWorkout.safeParse({ ...body, workout_id: id });
+  const parsed = AdaptInput.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: 'invalid', issues: parsed.error.issues }, { status: 400 });
   }
@@ -41,43 +45,36 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       .single(),
     supabase.from('profiles').select('*').eq('user_id', userId).single(),
   ]);
-
   if (!workout || !profile) {
     return NextResponse.json({ error: 'not found' }, { status: 404 });
   }
-  const program = (workout as unknown as { programs: NonNullable<unknown> }).programs as {
+  const program = (workout as unknown as { programs: unknown }).programs as {
     description: string | null;
     methodology: string | null;
     duration_weeks: number;
   };
 
-  // RAG retrieval uses a service client to call the SECURITY DEFINER RPC.
-  // The RPC pre-filters by target_user_id so cross-user leakage is impossible.
   const service = createServiceClient();
   const queryText = buildRetrievalQuery({
     description: program.description,
     methodology: program.methodology,
+    weekIntent: parsed.data.constraint,
     skeletonBody: workout.body_skeleton,
   });
-  const retrievedHistory = await retrieveSimilar(service, userId, queryText, { k: 8 }).catch(
+  const retrievedHistory = await retrieveSimilar(service, userId, queryText, { k: 6 }).catch(
     () => []
   );
 
-  const { system, user } = buildEnhanceMessages({
+  const { system, user } = buildAdaptMessages({
     profile,
     program,
     workout,
+    constraint: parsed.data.constraint,
     retrievedHistory,
-    enhancementInput: parsed.data.enhancement_input,
   });
 
-  await supabase
-    .from('workouts')
-    .update({ generation_status: 'enhancing', enhancement_input: parsed.data.enhancement_input })
-    .eq('id', id);
-
-  const client = anthropic();
   const t0 = Date.now();
+  const client = anthropic();
   const encoder = new TextEncoder();
 
   const stream = new ReadableStream({
@@ -116,6 +113,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
           .update({
             body_detailed: body,
             generation_status: 'detailed',
+            enhancement_input: parsed.data.constraint,
             enhanced_at: new Date().toISOString(),
           })
           .eq('id', id);
@@ -123,7 +121,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
         await supabase.from('generation_runs').insert({
           user_id: userId,
           workout_id: id,
-          kind: 'enhance',
+          kind: 'enhance', // counts toward the same monthly quota
           model: SONNET,
           input_tokens: inputTokens,
           output_tokens: outputTokens,
@@ -134,10 +132,6 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
 
         send({ type: 'done' });
       } catch (err) {
-        await supabase
-          .from('workouts')
-          .update({ generation_status: 'failed' })
-          .eq('id', id);
         send({ type: 'error', message: (err as Error).message });
       } finally {
         controller.close();
