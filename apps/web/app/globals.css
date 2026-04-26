@@ -1,0 +1,25 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #0b0b0e;
+  --color-fg: #f4f4f5;
+  --color-muted: #71717a;
+  --color-accent: #f97316;
+}
+
+html, body {
+  background: var(--color-bg);
+  color: var(--color-fg);
+  font-family: ui-sans-serif, system-ui, sans-serif;
+}
+
+.btn {
+  @apply inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition disabled:opacity-50;
+}
+.btn-primary { @apply btn bg-orange-500 text-white hover:bg-orange-600; }
+.btn-ghost { @apply btn bg-transparent text-zinc-300 hover:bg-zinc-800; }
+.input {
+  @apply w-full rounded-md bg-zinc-900 border border-zinc-800 px-3 py-2 text-sm focus:outline-none focus:border-zinc-600;
+}
+.label { @apply text-sm font-medium text-zinc-300 mb-1; }
+.card { @apply rounded-lg border border-zinc-800 bg-zinc-950 p-4; }
