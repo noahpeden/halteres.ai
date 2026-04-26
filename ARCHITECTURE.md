@@ -129,11 +129,22 @@ The web and mobile apps both:
 | Strava integration | `integrations` table with refresh-aware token storage. `GET /api/integrations/strava/{connect,callback,recent}`. OAuth flow returns user to `/account?strava=connected` |
 | Coach mode | `coach_relationships` (athlete↔coach) and `coach_invites` (single-use 7-day tokens). Existing `FOR ALL` RLS policies split into `_self_write` + `_coach_read`, with `is_coach_of(target, viewer)` security-definer helper. `POST /api/coach/invite`, `POST /api/coach/accept`, `GET /api/coach/athletes`. Web: invite UI on `/account`, accept page at `/coach/[token]`, athlete list at `/athletes`, read-only program view at `/athletes/[id]` |
 
-## Phase 7 candidates (next)
+## Phase 7 — what shipped
 
-- Apple HealthKit sync (requires bare workflow + EAS dev build)
-- PR auto-fill: when logging, suggest target weight = previous PR + 2.5%
-- Coach annotations: leave comments on athlete workouts
-- Streak tracking: consecutive logged days
-- Calendar export (.ics) for the program
-- Program templates marketplace
+| Concern | Implementation |
+|---|---|
+| Coach annotations | `coach_notes` table with split RLS: coach manages own, athlete reads own. `POST/GET /api/workouts/[id]/notes`, `DELETE /api/notes/[id]`. UI in `WorkoutClient.tsx` — coach gets a textarea, athlete gets read-only thread |
+| Streak tracking | `my_streak()` SQL fn (security-definer) walks distinct log dates, returns `{ current, longest, last_logged_at }`. `GET /api/streak`. `<StreakBadge>` on web `/programs/new`, header on mobile programs tab |
+| Calendar export | `GET /api/programs/[id]/calendar` returns `text/calendar`. Auth via Bearer or `?token=` query param so subscribing in Apple/Google Calendar works. "Copy calendar URL" button on program detail |
+| PR auto-fill | `extractExercises()` parses `body_detailed` for movement names. `POST /api/prs/by-exercise` returns `{ exercise: max_weight }`. Log form pre-fills weight = `round((PR + 2.5) / 5) * 5` and shows "Last best: X" hint. New PRs return in `POST /api/workouts/[id]/log` response and render as a celebration card |
+| Templates marketplace | `programs.is_template` + `fork_count` + `forked_from`. `public_templates` view with anon SELECT. `POST/DELETE /api/programs/[id]/publish`, `GET /api/templates`, `POST /api/templates/[id]/fork` clones the program + skeleton workouts under the forking user (counts toward their program quota). Web `/templates` browse, "Publish as template" toggle on owner's program |
+| Apple HealthKit | `@kingstinct/react-native-healthkit` + iOS entitlements + usage descriptions. `lib/healthkit.ts` with platform-guarded dynamic require so Android bundles don't break. Requires a custom dev client (not Expo Go) — documented in build instructions |
+
+## Phase 8 candidates (when you want them)
+
+- HealthKit auto-import on log open (use `recentWorkouts()` to suggest exercises/duration)
+- Template author attribution + curation tools
+- Streak push notifications ("Don't break your 5-day streak!")
+- Coach video annotation (record a Loom-style note attached to a workout)
+- Affiliate / referral program with Stripe Coupons
+- Multi-language support (program description in EN, generation in user's locale)

@@ -16,8 +16,14 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "ai.halteres.app",
+      "entitlements": {
+        "com.apple.developer.healthkit": true,
+        "com.apple.developer.healthkit.access": []
+      },
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSHealthShareUsageDescription": "Halteres reads recent workouts to pre-fill your log so you don't have to type everything twice.",
+        "NSHealthUpdateUsageDescription": "Halteres can write your completed workouts to Apple Health if you opt in."
       }
     },
     "android": {
@@ -36,7 +42,8 @@
         {
           "color": "#f97316"
         }
-      ]
+      ],
+      "@kingstinct/react-native-healthkit"
     ],
     "experiments": { "typedRoutes": true },
     "extra": {

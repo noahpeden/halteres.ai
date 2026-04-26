@@ -67,7 +67,8 @@ See `ARCHITECTURE.md` for the cost model and design decisions.
 | 4.6 | Mobile fully ready (tabs, history, IAP, push, markdown) | ✅ |
 | 5 | Production-ready (marketing, legal, deletion, reminders, Sentry, PostHog, analytics, share) | ✅ |
 | 6 | Timezone reminders, PR tracking, batch API, Resend, Strava, coach mode | ✅ |
-| 7 | Apple HealthKit, calendar export, streaks, marketplace | TBD |
+| 7 | Coach annotations, streaks, calendar (.ics), PR auto-fill, templates marketplace, HealthKit | ✅ |
+| 8 | HealthKit auto-import, attribution, streak pushes, video annotations, referrals | TBD |
 
 ## Production launch checklist
 

@@ -16,6 +16,7 @@
   "dependencies": {
     "@halteres/core": "workspace:*",
     "@halteres/db": "workspace:*",
+    "@kingstinct/react-native-healthkit": "^9.0.0",
     "@react-native-async-storage/async-storage": "^2.0.0",
     "@sentry/react-native": "^6.4.0",
     "@supabase/supabase-js": "^2.45.0",

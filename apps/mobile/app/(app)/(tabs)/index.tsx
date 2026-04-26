@@ -2,20 +2,23 @@ import type { Program } from '@halteres/db/types';
 import { Link, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
+import { getJson } from '@/lib/api';
 import { supabase } from '@/lib/supabase';
 
 export default function ProgramsList() {
   const router = useRouter();
   const [programs, setPrograms] = useState<Program[]>([]);
+  const [streak, setStreak] = useState<{ current: number; longest: number } | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async () => {
-    const { data } = await supabase
-      .from('programs')
-      .select('*')
-      .order('created_at', { ascending: false });
-    setPrograms((data ?? []) as Program[]);
+    const [progRes, streakRes] = await Promise.all([
+      supabase.from('programs').select('*').order('created_at', { ascending: false }),
+      getJson<{ current: number; longest: number }>('/api/streak').catch(() => null),
+    ]);
+    setPrograms((progRes.data ?? []) as Program[]);
+    setStreak(streakRes);
     setLoading(false);
     setRefreshing(false);
   }, []);
@@ -26,6 +29,16 @@ export default function ProgramsList() {
 
   return (
     <View className="flex-1 bg-bg">
+      {streak && streak.current > 0 && (
+        <View className="px-4 pt-3">
+          <View className="self-start flex-row items-center bg-orange-950/30 border border-orange-900 rounded-full px-3 py-1">
+            <Text className="text-orange-400 text-sm">🔥 {streak.current}-day streak</Text>
+            {streak.longest > streak.current && (
+              <Text className="text-zinc-500 text-xs ml-2">best {streak.longest}</Text>
+            )}
+          </View>
+        </View>
+      )}
       <FlatList
         data={programs}
         keyExtractor={(p) => p.id}

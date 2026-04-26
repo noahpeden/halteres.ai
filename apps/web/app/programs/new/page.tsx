@@ -1,6 +1,8 @@
 'use client';
-import { useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+import { StreakBadge } from '@/components/StreakBadge';
 import { browserSupabase } from '@/lib/supabase/client';
 import { streamFromApi } from '@/lib/api';
 
@@ -57,6 +59,12 @@ export default function NewProgramPage() {
 
   return (
     <main className="mx-auto max-w-2xl px-6 py-10">
+      <div className="flex items-center justify-between mb-4">
+        <StreakBadge />
+        <Link href="/templates" className="text-sm text-zinc-500 hover:text-zinc-300">
+          Browse templates →
+        </Link>
+      </div>
       <h1 className="text-2xl font-semibold mb-2">Create a program</h1>
       <p className="text-zinc-400 mb-8">
         Describe what you want. Skeleton generates in seconds; full details on tap.
