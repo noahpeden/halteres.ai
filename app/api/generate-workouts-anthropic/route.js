@@ -122,7 +122,7 @@ Context: Including exercises requiring unlisted equipment makes workouts impract
 
     // Generate workouts using Anthropic
     const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-5-20250929',
+      model: 'claude-sonnet-4-6',
       max_tokens: 4000,
       temperature: 0.7,
       system: systemPrompt,

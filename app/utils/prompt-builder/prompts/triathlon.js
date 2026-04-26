@@ -3,7 +3,13 @@
  * @param {Object} context - The full context for prompt generation
  * @returns {string} The assembled prompt string
  */
-import { formatEquipmentRestrictions, formatSchedulingRequirements } from '../promptBuilder.js';
+import {
+  formatClientRequirements,
+  formatEquipmentRestrictions,
+  formatFinalPriorityCheck,
+  formatSchedulingRequirements,
+  formatStructurePriority,
+} from '../promptBuilder.js';
 
 export function triathlonPrompt(context) {
   // Extract all relevant parameters with fallbacks
@@ -96,15 +102,7 @@ ${focus_area ? `Focus Area: ${focus_area}` : ''}
 Periodization: ${programType}
 </program_parameters>
 
-${
-  description
-    ? `<client_requirements priority="high">
-${description}
-These requirements take precedence over general guidelines below.
-</client_requirements>
-`
-    : ''
-}
+${formatClientRequirements(description)}
 ${formatEquipmentRestrictions(equipment)}
 
 <workout_formats required="${formattedWorkoutFormats}">
@@ -201,7 +199,7 @@ Example: "Week 3, Day 1: Swim Technique + Strength"
 }
 </json_output_format>
 
-<workout_body_structure>
+${formatStructurePriority(!!description)}<workout_body_structure>
 ${
   hasCustomFormat
     ? customWorkoutFormat.sections
@@ -252,6 +250,7 @@ ${
     ? `Generate exactly ${context.workoutsThisWeek || daysPerWeek} workouts for Week ${context.weekNumber}.`
     : `Generate exactly ${totalWorkouts} workouts covering ${numberOfWeeks} week(s).`
 }
+${formatFinalPriorityCheck(!!description)}
 `;
 }
 

@@ -643,7 +643,7 @@ Users have EXPLICITLY selected their available equipment. Including exercises re
     }
 
     const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-5-20250929',
+      model: 'claude-sonnet-4-6',
       max_tokens: maxTokensForWeek,
       temperature: 0.7,
       system: systemMessages,

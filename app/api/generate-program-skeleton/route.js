@@ -362,10 +362,64 @@ async function generateWeekSkeleton(
           .join(', ')}`
       : '';
 
-  // Determine workout sections based on training methodology
-  const workoutSections = getWorkoutSections(trainingMethodology, workoutFormats);
+  // Determine if the user description is detailed enough to drive structure.
+  // When detailed, the AI designs sections from the description; otherwise we
+  // fall back to methodology-based defaults.
+  const hasDetailedDescription = isDescriptionStructural(description);
+  const workoutSections = hasDetailedDescription
+    ? null
+    : getWorkoutSections(trainingMethodology, workoutFormats);
+
+  // Detect explicit warm-up / cool-down opt-outs from the description.
+  const optOuts = detectOptOuts(description);
 
   // SKELETON PROMPT - Minimal, structure-only
+  const descriptionBlock = description
+    ? `
+<client_requirements priority="MAXIMUM" enforcement="strict">
+The user has described their preferred methodology and structure below. This is the SINGLE SOURCE OF TRUTH for the program. Build the section structure around what the user described — name sections to match their terminology (e.g., "Floor Block", "Treadmill Block", "Rower Block" instead of generic "Strength" / "Conditioning"). If the user named a methodology (Orange Theory, F45, Hyrox, etc.), follow that methodology's standard format.
+
+<user_description>
+${description.trim()}
+</user_description>
+
+<resolution_rules>
+- If the user described a multi-block circuit (e.g., 3 stations of 14 minutes each), produce that structure exactly — not a generic "Strength + Conditioning" split.
+- ${optOuts.noWarmup ? 'The user said NO warm-up. Do not include a warm-up section.' : 'Do not add a warm-up unless the user asked for one or the methodology requires it.'}
+- ${optOuts.noCooldown ? 'The user said NO cool-down. Do not include a cool-down section.' : 'Do not add a cool-down unless the user asked for one or the methodology requires it.'}
+- Use the section names and timings the user described.
+</resolution_rules>
+</client_requirements>
+`
+    : '';
+
+  const sectionGuidance = hasDetailedDescription
+    ? `
+<section_design>
+Design the section structure based on the user's description above. Use whatever section headers and ordering best match the methodology they described. Do not impose a generic "Strength + Conditioning" template if the user described something different.
+</section_design>
+`
+    : `
+<section_design>
+Use these default sections for this methodology: ${workoutSections.join(', ')}.
+</section_design>
+`;
+
+  const exampleBlock = hasDetailedDescription
+    ? ''
+    : `
+Example output format (default methodology only — ignore if the user described a different structure):
+## ${workoutSections[0] || 'Strength'}
+- Back Squat: [sets]x[reps] @ [%] 1RM
+- ${useImperial ? '♀ 135 lbs / ♂ 185 lbs' : '♀ 60 kg / ♂ 85 kg'}
+
+## ${workoutSections[1] || 'Conditioning'}
+- 21-15-9:
+  - Thrusters (${useImperial ? '95/65 lbs' : '43/30 kg'})
+  - Pull-ups
+- Time cap: 12 min
+`;
+
   const skeletonPrompt = `Generate MINIMAL workout structures for WEEK ${weekNumber} of a ${numberOfWeeks}-week program.
 ${
   includeDescription
@@ -374,8 +428,8 @@ Since this is Week 1, include a brief programDescription (2-3 sentences max) abo
 `
     : ''
 }
-
-Program Details:
+${descriptionBlock}
+<program_details>
 Goal: ${goal}
 Difficulty: ${difficulty}
 Methodology: ${trainingMethodology || 'General Fitness'}
@@ -385,45 +439,24 @@ Week: ${weekNumber} of ${numberOfWeeks}
 ${focusArea ? `Focus: ${focusArea}` : ''}
 ${workoutFormats?.length > 0 ? `Workout Types: ${workoutFormats.join(', ')}` : ''}
 ${equipment?.length > 0 ? `Equipment: ${equipment.join(', ')}` : ''}
+</program_details>
 ${clientMetricsContent ? `\n${clientMetricsContent}` : ''}${previousWeeksContext}
-${
-  description
-    ? `
-CRITICAL CLIENT REQUIREMENTS (these take precedence over all other guidelines):
-${description}
-`
-    : ''
-}
-SKELETON REQUIREMENTS - Include ONLY:
-${workoutSections.map((s) => `- ${s}`).join('\n')}
-
-DO NOT include:
-- Warm-up section
-- Cool-down section
-- Coaching cues
+${sectionGuidance}
+<skeleton_constraints>
+Output concise exercise prescriptions only. Skip the following — they are added later in the enhancement step:
+${optOuts.noWarmup ? '' : '- Warm-up section\n'}${optOuts.noCooldown ? '' : '- Cool-down section\n'}- Coaching cues
 - Scaling options
 - Detailed explanations
 - Stimulus and strategy
 
-FORMAT: Concise exercise prescriptions only.
 Choose sets/reps based on workout types selected:
 - Hypertrophy: 3-4 sets of 8-15 reps @ 65-75% 1RM
 - Strength: 4-6 sets of 3-6 reps @ 80-90% 1RM
 - Power: 3-5 sets of 1-3 reps @ 85-95% 1RM
 - Endurance: 2-3 sets of 15-20+ reps @ 50-65% 1RM
 - General Fitness: 3 sets of 8-12 reps @ 70-80% 1RM
-
-Example output format:
-## Strength
-- Back Squat: [sets]x[reps] @ [%] 1RM
-- ${useImperial ? '♀ 135 lbs / ♂ 185 lbs' : '♀ 60 kg / ♂ 85 kg'}
-
-## Conditioning
-- 21-15-9:
-  - Thrusters (${useImperial ? '95/65 lbs' : '43/30 kg'})
-  - Pull-ups
-- Time cap: 12 min
-
+</skeleton_constraints>
+${exampleBlock}
 Dates for week ${weekNumber}:
 ${weekDates.map((date, i) => `Day ${i + 1}: ${date}`).join('\n')}
 
@@ -437,17 +470,33 @@ Output JSON:
   "workouts": [
     {
       "title": "Week ${weekNumber}, Day 1: [Focus]",
-      "body": "[Skeleton workout with only ${workoutSections.join(' + ')} sections]",
+      "body": "[Skeleton workout following the structure described above]",
       "date": "${weekDates[0] || new Date().toISOString().split('T')[0]}"
     }
   ]
+}
+
+${
+  hasDetailedDescription
+    ? `<final_priority_check>
+Before outputting, verify each workout matches the user's described structure (same blocks, same section names, same timing). If your output uses generic "Strength + Conditioning" sections when the user described something different, revise it.
+</final_priority_check>`
+    : ''
 }`;
 
-  const systemPrompt = `You are a strength and conditioning coach creating MINIMAL workout skeletons.
+  const systemPrompt = hasDetailedDescription
+    ? `You are a strength and conditioning coach creating MINIMAL workout skeletons.
 Generate exactly ${daysPerWeek} workout structures for week ${weekNumber}.
-Output ONLY the core sections: ${workoutSections.join(', ')}.
-NO warm-up, NO cool-down, NO coaching cues, NO detailed explanations.
-Be extremely concise - just exercise names, sets/reps, and weights.
+The user's description in <client_requirements> defines the workout structure — design sections to match their methodology, not a generic template. Use their section names and block timings.
+${optOuts.noWarmup ? 'The user said no warm-up — omit it.\n' : ''}${optOuts.noCooldown ? 'The user said no cool-down — omit it.\n' : ''}Skip coaching cues, scaling options, and detailed explanations (added later).
+Be concise — just exercise names, sets/reps, and weights.
+Express weights in ${useImperial ? 'lbs' : 'kg'}.
+Output valid JSON only.`
+    : `You are a strength and conditioning coach creating MINIMAL workout skeletons.
+Generate exactly ${daysPerWeek} workout structures for week ${weekNumber}.
+Output the core sections: ${workoutSections.join(', ')}.
+Skip warm-up, cool-down, coaching cues, scaling, and detailed explanations (added later).
+Be concise — just exercise names, sets/reps, and weights.
 Express weights in ${useImperial ? 'lbs' : 'kg'}.
 Output valid JSON only.`;
 
@@ -474,7 +523,7 @@ Output valid JSON only.`;
     }
 
     const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-5-20250929',
+      model: 'claude-sonnet-4-6',
       max_tokens: 4000, // Reduced from 16000 for skeleton
       temperature: 0.5, // Less creativity needed for structure
       system: systemMessages,
@@ -589,6 +638,38 @@ function getWorkoutSections(methodology, workoutFormats) {
 
   const normalizedMethodology = (methodology || '').toLowerCase();
   return methodologySections[normalizedMethodology] || defaultSections;
+}
+
+// Returns true if the description appears to specify workout structure
+// (mentions blocks, stations, intervals, named methodologies, or is detailed
+// enough to imply a specific format). When true, the AI designs sections from
+// the description instead of using methodology defaults.
+function isDescriptionStructural(description) {
+  if (!description || typeof description !== 'string') return false;
+  const text = description.trim();
+  if (text.length < 40) return false;
+
+  const structuralKeywords =
+    /\b(orange\s*theory|otf|f45|hyrox|tabata|emom|amrap|crossfit|burn\s*boot|barry'?s|soulcycle|peloton|3g|2g|station|block|circuit|interval|round|treadmill|rower|floor|push\s*pace|base\s*pace|push\s*for|all\s*out)\b/i;
+
+  return structuralKeywords.test(text) || text.length >= 120;
+}
+
+// Detect explicit opt-outs in the description so we don't force-add sections.
+function detectOptOuts(description) {
+  if (!description || typeof description !== 'string') {
+    return { noWarmup: false, noCooldown: false };
+  }
+  const text = description.toLowerCase();
+  return {
+    noWarmup: /\bno\s+warm\s*-?\s*up\b|\bskip\s+warm\s*-?\s*up\b|\bwithout\s+(a\s+)?warm\s*-?\s*up\b/.test(
+      text
+    ),
+    noCooldown:
+      /\bno\s+cool\s*-?\s*down\b|\bskip\s+cool\s*-?\s*down\b|\bwithout\s+(a\s+)?cool\s*-?\s*down\b/.test(
+        text
+      ),
+  };
 }
 
 // Generate placeholder skeletons for failed weeks
