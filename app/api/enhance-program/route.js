@@ -93,7 +93,7 @@ Requirements:
 IMPORTANT: You must return exactly ${workouts.length} enhanced workouts, one for each original workout. Preserve the original workout IDs in your response.`;
 
     const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-5-20250929',
+      model: 'claude-sonnet-4-6',
       max_tokens: 16000,
       temperature: 1, // Required for extended thinking
       thinking: {

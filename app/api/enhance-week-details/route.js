@@ -170,6 +170,9 @@ async function enhanceWeekWorkouts(requestData, anthropic, supabase, controller,
     // Get the workout sections that were used in skeletons
     const workoutSections = detectWorkoutSections(skeletonWorkouts);
 
+    // Detect opt-outs from the user's description and week-specific input
+    const optOuts = detectEnhancementOptOuts(context, weekSpecificInput);
+
     // Build the enhancement prompt
     const enhancementPrompt = buildEnhancementPrompt(
       skeletonWorkouts,
@@ -178,10 +181,11 @@ async function enhanceWeekWorkouts(requestData, anthropic, supabase, controller,
       weekSpecificInput,
       workoutSections,
       clientMetricsContent,
-      useImperial
+      useImperial,
+      optOuts
     );
 
-    const systemPrompt = buildEnhancementSystemPrompt(workoutSections, useImperial);
+    const systemPrompt = buildEnhancementSystemPrompt(workoutSections, useImperial, optOuts);
 
     sendEvent(controller, encoder, 'status', {
       message: `Enhancing ${skeletonWorkouts.length} workouts with full details...`,
@@ -189,7 +193,7 @@ async function enhanceWeekWorkouts(requestData, anthropic, supabase, controller,
 
     // Call Anthropic with streaming
     const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-5-20250929',
+      model: 'claude-sonnet-4-6',
       max_tokens: 16000,
       temperature: 0.7,
       system: systemPrompt,
@@ -347,33 +351,52 @@ async function enhanceWeekWorkouts(requestData, anthropic, supabase, controller,
   }
 }
 
-// Detect which sections were used in skeleton workouts
+// Detect which sections were used in skeleton workouts. Parses actual Markdown
+// `## Header` lines from each skeleton body so any custom section names the
+// model invented (e.g., "Floor Block", "Treadmill Block") survive enhancement.
 function detectWorkoutSections(skeletonWorkouts) {
-  const allContent = skeletonWorkouts.map((w) => w.body_skeleton || '').join('\n');
+  const seen = new Set();
   const sections = [];
+  const headerPattern = /^##\s+(.+?)\s*$/gm;
 
-  // Common section headers to detect
-  const sectionPatterns = [
-    /## Strength/i,
-    /## Conditioning/i,
-    /## Main Lift/i,
-    /## Accessory/i,
-    /## Primary/i,
-    /## Skill Work/i,
-    /## Intervals/i,
-    /## Sport Conditioning/i,
-  ];
-
-  for (const pattern of sectionPatterns) {
-    if (pattern.test(allContent)) {
-      const match = pattern.toString().match(/## (.*?)\//i);
-      if (match) {
-        sections.push(match[1]);
+  for (const workout of skeletonWorkouts) {
+    const body = workout.body_skeleton || '';
+    let match;
+    while ((match = headerPattern.exec(body)) !== null) {
+      const name = match[1].trim();
+      const key = name.toLowerCase();
+      if (!seen.has(key)) {
+        seen.add(key);
+        sections.push(name);
       }
     }
   }
 
   return sections.length > 0 ? sections : ['Strength', 'Conditioning'];
+}
+
+// Detect explicit opt-outs from the program description and per-week input so
+// enhancement doesn't inject sections the user said they don't want.
+function detectEnhancementOptOuts(context, weekSpecificInput) {
+  const sources = [
+    context?.description || '',
+    context?.personalization || '',
+    weekSpecificInput || '',
+  ];
+  const text = sources.join(' ').toLowerCase();
+
+  return {
+    noWarmup:
+      /\bno\s+warm\s*-?\s*up\b|\bskip\s+warm\s*-?\s*up\b|\bwithout\s+(a\s+)?warm\s*-?\s*up\b/.test(
+        text
+      ),
+    noCooldown:
+      /\bno\s+cool\s*-?\s*down\b|\bskip\s+cool\s*-?\s*down\b|\bwithout\s+(a\s+)?cool\s*-?\s*down\b/.test(
+        text
+      ),
+    noScaling: /\bno\s+scaling\b|\bskip\s+scaling\b|\bwithout\s+scaling\b/.test(text),
+    noCoachingCues: /\bno\s+coaching\s+cues\b|\bskip\s+coaching\s+cues\b/.test(text),
+  };
 }
 
 // Build the enhancement prompt
@@ -384,7 +407,8 @@ function buildEnhancementPrompt(
   weekSpecificInput,
   workoutSections,
   clientMetricsContent,
-  useImperial
+  useImperial,
+  optOuts = { noWarmup: false, noCooldown: false, noScaling: false, noCoachingCues: false }
 ) {
   const skeletonContent = skeletonWorkouts
     .map((w, i) => `### Day ${i + 1}: ${w.title}\n${w.body_skeleton || ''}`)
@@ -395,6 +419,7 @@ function buildEnhancementPrompt(
   const difficulty = context?.difficulty || 'Intermediate';
   const goal = context?.goal || '';
   const trainingMethodology = context?.trainingMethodology || '';
+  const programDescription = context?.description || '';
 
   // Check if athlete appears experienced based on client metrics
   const hasExperiencedAthlete =
@@ -420,6 +445,18 @@ PROGRAM CONTEXT:
 ${goal ? `- Goal: ${goal}` : ''}
 ${trainingMethodology ? `- Training Style: ${trainingMethodology.replace(/_/g, ' ')}` : ''}
 `;
+
+  // Surface the original program description so the model knows the methodology
+  // intent (Orange Theory, F45, etc.) — not just the skeleton sections.
+  const originalDescriptionBlock = programDescription
+    ? `
+<original_program_description priority="MAXIMUM">
+The user originally described this program as follows. Honor the methodology, structure, and any explicit opt-outs (no warm-up / no cool-down) when enhancing each workout:
+
+${programDescription.trim()}
+</original_program_description>
+`
+    : '';
 
   // Build guidance for short programs
   const shortProgramGuidance = isShortProgram
@@ -455,7 +492,7 @@ ${skeletonContent}
 ---
 
 SKELETON CONTAINS: ${workoutSections.join(', ')} sections
-${programContextSection}
+${originalDescriptionBlock}${programContextSection}
 ${shortProgramGuidance}${experiencedAthleteGuidance}
 ENHANCEMENT INSTRUCTIONS:
 "${effectiveInput}"
@@ -475,7 +512,7 @@ ${clientMetricsContent}
     : ''
 }
 
-YOU MUST ADD THESE SECTIONS TO EACH WORKOUT:
+SECTIONS TO ADD TO EACH WORKOUT (skip any that the user opted out of):
 
 1. **Stimulus and Strategy** (at the TOP of each workout):
    - Primary Focus: 1-2 sentences on the main training goal
@@ -484,41 +521,59 @@ YOU MUST ADD THESE SECTIONS TO EACH WORKOUT:
        ? 'Brief note on how this session contributes to the program goal (do NOT use intro/orientation framing)'
        : 'How this fits into the weekly/program progression'
    }
-   - Bullet points explaining the intent behind each major component (strength, conditioning, etc.)
+   - Bullet points explaining the intent behind each major component
    - Rest periods and pacing guidance
 
-2. **Warm-up** (12 minutes total):
+${
+  optOuts.noWarmup
+    ? '2. **Warm-up**: SKIPPED — the user explicitly requested no warm-up. Do not include a warm-up section in the output.'
+    : `2. **Warm-up** (12 minutes total):
    - General Preparation (5 min): Light cardio, jumping jacks, high knees
    - Specific Mobility (4 min): Foam rolling, targeted stretches, joint circles
-   - Movement Preparation (3 min): Build-up sets, technique primers, activation drills
+   - Movement Preparation (3 min): Build-up sets, technique primers, activation drills`
+}
 
-3. **Coaching Cues** (2-3 per main exercise):
+${
+  optOuts.noCoachingCues
+    ? '3. **Coaching Cues**: SKIPPED — the user opted out.'
+    : `3. **Coaching Cues** (2-3 per main exercise):
    - Technical focus points for each major lift/movement
    - Common faults to avoid
-   - Breathing and bracing cues where relevant
+   - Breathing and bracing cues where relevant`
+}
 
 4. **Pacing Strategy** (for conditioning work):
    - Target effort percentage (e.g., "70-75% effort")
    - Expected rounds or time targets
    - When to push vs. maintain steady pace
 
-5. **Scaling Options**:
+${
+  optOuts.noScaling
+    ? '5. **Scaling Options**: SKIPPED — the user opted out.'
+    : `5. **Scaling Options**:
    - Weight modifications for different levels
    - Movement substitutions
-   - Rep/round adjustments
+   - Rep/round adjustments`
+}
 
-6. **Cool-down** (10 minutes):
+${
+  optOuts.noCooldown
+    ? '6. **Cool-down**: SKIPPED — the user explicitly requested no cool-down. Do not include a cool-down section in the output.'
+    : `6. **Cool-down** (10 minutes):
    - Light cardio (3-4 min)
    - Foam rolling major muscle groups
    - Static stretching for worked areas
-   - Breathing/recovery notes
+   - Breathing/recovery notes`
+}
 
 CRITICAL RULES:
-- DO NOT change exercises, sets, reps, weights, or percentages in the ${workoutSections.join('/')} sections
+- DO NOT change exercises, sets, reps, weights, or percentages in the existing skeleton sections (${workoutSections.join(', ')})
+- Preserve the skeleton's section names exactly — if the skeleton uses "Floor Block" or "Treadmill Block", keep those names
 - ADD the enhancement sections around the existing workout structure
 - Preserve the exact exercises and prescriptions from the skeleton
 - Express weights in ${useImperial ? 'lbs' : 'kg'}
 - Make each workout feel like it was written by an expert coach
+- Honor the opt-outs above: do not add warm-up/cool-down/scaling/coaching-cues sections that were marked SKIPPED
 
 OUTPUT FORMAT (JSON):
 {
@@ -534,27 +589,62 @@ OUTPUT FORMAT (JSON):
 }
 
 // Build the system prompt for enhancement
-function buildEnhancementSystemPrompt(workoutSections, useImperial) {
+function buildEnhancementSystemPrompt(
+  workoutSections,
+  useImperial,
+  optOuts = { noWarmup: false, noCooldown: false, noScaling: false, noCoachingCues: false }
+) {
+  const sections = [
+    {
+      include: true,
+      text: '**Stimulus and Strategy** - At the TOP of each workout. Explain the WHY behind the session: primary focus, how it fits the program, intent behind each component, rest/pacing guidance.',
+    },
+    {
+      include: !optOuts.noWarmup,
+      text: '**Warm-up** - 12 minutes with three phases (General Preparation, Specific Mobility, Movement Preparation).',
+    },
+    {
+      include: !optOuts.noCoachingCues,
+      text: '**Coaching Cues** - 2-3 specific cues per main exercise. Technical focus, common faults, breathing.',
+    },
+    {
+      include: true,
+      text: '**Pacing Strategy** - For conditioning: target effort %, expected rounds, when to push vs. maintain pace.',
+    },
+    {
+      include: !optOuts.noScaling,
+      text: '**Scaling Options** - Weight modifications, movement substitutions, rep adjustments.',
+    },
+    {
+      include: !optOuts.noCooldown,
+      text: '**Cool-down** - 10 minutes: light cardio, foam rolling, static stretching, recovery notes.',
+    },
+  ];
+
+  const sectionList = sections
+    .filter((s) => s.include)
+    .map((s, i) => `${i + 1}. ${s.text}`)
+    .join('\n\n');
+
+  const optOutNotice =
+    optOuts.noWarmup || optOuts.noCooldown || optOuts.noScaling || optOuts.noCoachingCues
+      ? `\nUser opt-outs (DO NOT add these): ${[
+          optOuts.noWarmup && 'warm-up',
+          optOuts.noCooldown && 'cool-down',
+          optOuts.noScaling && 'scaling',
+          optOuts.noCoachingCues && 'coaching cues',
+        ]
+          .filter(Boolean)
+          .join(', ')}.\n`
+      : '';
+
   return `You are an elite strength and conditioning coach transforming skeleton workouts into comprehensive, professional-grade training sessions.
 
 Your role is to ADD these sections to each workout while preserving the core exercises:
 
-1. **Stimulus and Strategy** - At the TOP of each workout. Explain the WHY behind the session: primary focus, how it fits the program, intent behind each component, rest/pacing guidance.
-
-2. **Warm-up** - 12 minutes total with three phases:
-   - General Preparation (5 min): Cardio, dynamic movements
-   - Specific Mobility (4 min): Foam rolling, targeted stretches
-   - Movement Preparation (3 min): Build-up sets, activation drills
-
-3. **Coaching Cues** - 2-3 specific cues per main exercise. Include technical focus points, common faults, breathing cues.
-
-4. **Pacing Strategy** - For conditioning: target effort %, expected rounds, when to push vs. maintain pace.
-
-5. **Scaling Options** - Weight modifications, movement substitutions, rep adjustments for different fitness levels.
-
-6. **Cool-down** - 10 minutes: light cardio, foam rolling, static stretching, recovery notes.
-
-CRITICAL: You must NOT modify the ${workoutSections.join(' or ')} sections from the skeleton. Preserve all exercises, sets, reps, weights, and percentages exactly. Only ADD the enhancement sections around them.
+${sectionList}
+${optOutNotice}
+CRITICAL: You must NOT modify or rename the existing skeleton sections (${workoutSections.join(', ')}). Preserve all exercises, sets, reps, weights, percentages, and section names exactly. Only ADD the enhancement sections around them.
 
 Express all weights in ${useImperial ? 'pounds (lbs)' : 'kilograms (kg)'}.
 
