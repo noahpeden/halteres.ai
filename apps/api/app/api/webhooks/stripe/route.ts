@@ -1,6 +1,7 @@
 import { createServiceClient } from '@halteres/db/server';
 import { NextResponse } from 'next/server';
 import type Stripe from 'stripe';
+import { emails } from '@/lib/email';
 import { stripe } from '@/lib/stripe';
 
 export const runtime = 'nodejs';
@@ -63,8 +64,18 @@ export async function POST(req: Request) {
         .eq('external_id', customerId);
       break;
     }
+    case 'invoice.paid': {
+      const inv = event.data.object as Stripe.Invoice;
+      const email = inv.customer_email;
+      if (email && inv.amount_paid > 0) {
+        const period = inv.lines.data[0]?.period?.end
+          ? new Date(inv.lines.data[0].period.end * 1000).toLocaleDateString()
+          : 'this period';
+        emails.receipt(email, inv.amount_paid / 100, period).catch(() => undefined);
+      }
+      break;
+    }
     default:
-      // Ignore other events.
       break;
   }
 

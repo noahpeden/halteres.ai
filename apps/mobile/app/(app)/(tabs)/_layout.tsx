@@ -32,6 +32,13 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="prs"
+        options={{
+          title: 'PRs',
+          tabBarIcon: ({ color }) => <Icon label="🏆" color={color} />,
+        }}
+      />
+      <Tabs.Screen
         name="settings"
         options={{
           title: 'Settings',

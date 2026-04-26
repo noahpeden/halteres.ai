@@ -5,14 +5,8 @@ import { sendPushBatch } from '@/lib/push';
 export const runtime = 'nodejs';
 export const maxDuration = 300;
 
-// GET /api/cron/reminders
-// Authorization: Bearer <CRON_SECRET>
-//
-// Scheduled daily at 13:00 UTC (~8am EST / ~5am PST). Sends a push to every
-// user whose `profiles.notifications_enabled = true` and who has a workout
-// scheduled for today and hasn't logged it yet.
-//
-// Schedule via vercel.json or pg_cron.
+// GET /api/cron/reminders — hourly. Sends a push to users whose local hour
+// matches their reminder_hour and who have an un-logged workout today.
 export async function GET(req: Request) {
   const auth = req.headers.get('authorization');
   if (!process.env.CRON_SECRET || auth !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -20,45 +14,47 @@ export async function GET(req: Request) {
   }
 
   const service = createServiceClient();
-  const today = new Date().toISOString().split('T')[0];
+  const { data: profiles, error: profErr } = await service.rpc('reminder_targets');
+  if (profErr) return NextResponse.json({ error: profErr.message }, { status: 500 });
 
-  // 1. Find today's workouts that don't have a log yet
-  const { data: rows, error } = await service
+  type Target = { user_id: string; local_date: string };
+  const targets = (profiles ?? []) as Target[];
+  if (targets.length === 0) return NextResponse.json({ sent: 0, candidates: 0 });
+
+  const userIds = targets.map((t) => t.user_id);
+  const dates = Array.from(new Set(targets.map((t) => t.local_date)));
+  const { data: workouts } = await service
     .from('workouts')
     .select(
-      `id, title, user_id,
-       workout_logs(id),
-       profiles!inner(notifications_enabled),
-       device_tokens:device_tokens!device_tokens_user_id_fkey(token, platform)`
+      'id, title, user_id, scheduled_date, workout_logs(id), device_tokens:device_tokens!device_tokens_user_id_fkey(token)'
     )
-    .eq('scheduled_date', today)
-    .eq('profiles.notifications_enabled', true);
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
+    .in('user_id', userIds)
+    .in('scheduled_date', dates);
 
   type Row = {
     id: string;
     title: string;
     user_id: string;
+    scheduled_date: string;
     workout_logs: { id: string }[] | null;
     device_tokens: { token: string }[];
   };
 
-  const messages = (rows as unknown as Row[])
-    .filter((r) => !r.workout_logs?.length)
-    .flatMap((r) =>
-      r.device_tokens.map((t) => ({
+  const dateByUser = new Map(targets.map((t) => [t.user_id, t.local_date]));
+  const messages = (workouts as unknown as Row[])
+    .filter((w) => !w.workout_logs?.length && dateByUser.get(w.user_id) === w.scheduled_date)
+    .flatMap((w) =>
+      w.device_tokens.map((t) => ({
         to: t.token,
         title: 'Workout today',
-        body: r.title,
-        data: { workout_id: r.id },
+        body: w.title,
+        data: { workout_id: w.id },
         sound: 'default' as const,
       }))
     );
 
   if (messages.length === 0) {
-    return NextResponse.json({ sent: 0, candidates: rows?.length ?? 0 });
+    return NextResponse.json({ sent: 0, candidates: targets.length });
   }
 
   const tickets = await sendPushBatch(messages);
@@ -70,5 +66,5 @@ export async function GET(req: Request) {
     await service.from('device_tokens').delete().in('token', dead);
   }
 
-  return NextResponse.json({ sent: messages.length, pruned: dead.length });
+  return NextResponse.json({ sent: messages.length, candidates: targets.length, pruned: dead.length });
 }

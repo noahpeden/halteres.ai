@@ -66,16 +66,20 @@ See `ARCHITECTURE.md` for the cost model and design decisions.
 | 4.5 | Day-of adapt feature | ✅ |
 | 4.6 | Mobile fully ready (tabs, history, IAP, push, markdown) | ✅ |
 | 5 | Production-ready (marketing, legal, deletion, reminders, Sentry, PostHog, analytics, share) | ✅ |
-| 6 | Timezone-aware reminders, PR tracking, integrations, batch API, email | TBD |
+| 6 | Timezone reminders, PR tracking, batch API, Resend, Strava, coach mode | ✅ |
+| 7 | Apple HealthKit, calendar export, streaks, marketplace | TBD |
 
 ## Production launch checklist
 
-- [ ] Set all production env keys (Anthropic, Voyage, Stripe live, RevenueCat, Sentry DSN, PostHog)
-- [ ] `pnpm db:push` against the production Supabase project
-- [ ] Configure Stripe products and `STRIPE_PRO_PRICE_ID`; webhook → `/api/webhooks/stripe`
+- [ ] Set all production env keys: Anthropic, Voyage, Stripe live, RevenueCat, Sentry DSN, PostHog, Resend, Strava
+- [ ] `pnpm db:push` against the production Supabase project (migrations 0001–0006)
+- [ ] Configure Stripe products and `STRIPE_PRO_PRICE_ID`; webhook → `/api/webhooks/stripe` (events: `checkout.session.completed`, `customer.subscription.*`, `invoice.paid`)
 - [ ] Configure RevenueCat products; webhook → `/api/webhooks/revenuecat` with Bearer secret
+- [ ] Configure Supabase Database Webhook on `auth.users` INSERT → `/api/webhooks/supabase` with header `x-webhook-secret`
+- [ ] Configure Strava OAuth app; redirect URI `https://api.halteres.ai/api/integrations/strava/callback`
+- [ ] Verify domain at Resend; set `RESEND_FROM`
 - [ ] Add `apps/mobile/assets/{icon,splash}.png`; run `eas init`; update `app.json` `projectId`
 - [ ] `pnpm build:prod` from `apps/mobile`; submit to TestFlight + Play Internal Testing
-- [ ] Verify `/api/cron/reminders` is firing on Vercel
+- [ ] Verify both Vercel crons are firing (`/api/cron/reminders` hourly, `/api/cron/process-batches` every 5 min)
 - [ ] Set `ADMIN_EMAILS` for `/admin` cost dashboard access
 - [ ] Have legal review the placeholder `/privacy` and `/terms` pages

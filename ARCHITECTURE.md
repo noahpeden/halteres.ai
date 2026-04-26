@@ -118,11 +118,22 @@ The web and mobile apps both:
 | Program analytics | `GET /api/programs/[id]/analytics` returns completion rate, RPE-by-week trend, thumbs split. Web page + mobile screen with bar chart |
 | Share programs | `programs.share_token` + `public_programs`/`public_workouts` views (anon SELECT). `POST/DELETE /api/programs/[id]/share`. Public ISR'd page at `/share/[token]`, no auth |
 
-## Phase 6 candidates (next)
+## Phase 6 — what shipped
 
-- Per-user timezone-aware reminders (`profiles.timezone`)
-- PR tracking from logged exercises
-- Apple Health / Strava sync
-- Anthropic Batch API for skeleton (50% discount)
-- Email transactionals via Resend
-- Coach mode: invite a coach with read access
+| Concern | Implementation |
+|---|---|
+| Timezone reminders | `profiles.reminder_hour` (0–23), `reminder_targets()` SQL fn computes who to notify in their local hour, cron switched to hourly (`5 * * * *`) |
+| PR tracking | `personal_records` view aggregates max weight per `(user_id, lower(exercise_name))` from `workout_logs.exercises`. `GET /api/prs`, `/prs` web page, mobile PRs tab. Log endpoint detects new PRs and emits `pr_set` PostHog event + returns `new_prs[]` to the client |
+| Anthropic Batch API | `programs.batch_id` + `batch_status`. `POST /api/programs/batch` submits one request per week with `custom_id = ${program_id}__w${n}`. `GET /api/cron/process-batches` polls every 5 min, parses results, populates workouts. 50% cost reduction tracked in `generation_runs` |
+| Email transactionals | Resend SDK (`apps/api/lib/email.ts`) with welcome / deletion / receipt / coach-invite templates. Welcome triggered by Supabase Database Webhook on `auth.users` insert. Deletion triggered from `DELETE /api/account`. Receipt triggered from `invoice.paid` Stripe event. All no-op without `RESEND_API_KEY` |
+| Strava integration | `integrations` table with refresh-aware token storage. `GET /api/integrations/strava/{connect,callback,recent}`. OAuth flow returns user to `/account?strava=connected` |
+| Coach mode | `coach_relationships` (athlete↔coach) and `coach_invites` (single-use 7-day tokens). Existing `FOR ALL` RLS policies split into `_self_write` + `_coach_read`, with `is_coach_of(target, viewer)` security-definer helper. `POST /api/coach/invite`, `POST /api/coach/accept`, `GET /api/coach/athletes`. Web: invite UI on `/account`, accept page at `/coach/[token]`, athlete list at `/athletes`, read-only program view at `/athletes/[id]` |
+
+## Phase 7 candidates (next)
+
+- Apple HealthKit sync (requires bare workflow + EAS dev build)
+- PR auto-fill: when logging, suggest target weight = previous PR + 2.5%
+- Coach annotations: leave comments on athlete workouts
+- Streak tracking: consecutive logged days
+- Calendar export (.ics) for the program
+- Program templates marketplace

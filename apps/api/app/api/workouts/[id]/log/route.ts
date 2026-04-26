@@ -48,6 +48,31 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     return NextResponse.json({ error: logErr?.message }, { status: 500 });
   }
 
+  // Detect new PRs by comparing each exercise's weight against historical max
+  // for that exercise (excluding the current log).
+  const newPRs: { exercise: string; weight: number; previous: number | null }[] = [];
+  for (const ex of parsed.data.exercises) {
+    if (!ex.name || !ex.weight || ex.weight <= 0) continue;
+    const exerciseKey = ex.name.trim().toLowerCase();
+    const { data: priorLogs } = await supabase
+      .from('workout_logs')
+      .select('exercises, workout_id')
+      .eq('user_id', userId)
+      .neq('workout_id', id);
+    const previousMax = (priorLogs ?? []).reduce((max, l) => {
+      const arr = (l.exercises as { name?: string; weight?: number }[] | null) ?? [];
+      for (const e of arr) {
+        if (e.name?.trim().toLowerCase() === exerciseKey && typeof e.weight === 'number') {
+          if (e.weight > max) max = e.weight;
+        }
+      }
+      return max;
+    }, 0);
+    if (ex.weight > previousMax) {
+      newPRs.push({ exercise: ex.name, weight: ex.weight, previous: previousMax || null });
+    }
+  }
+
   // Fire-and-forget the embedding so the client returns fast.
   embedAndStore(supabase, userId, id, log).catch((err) =>
     console.error('embed failed', err.message)
@@ -57,9 +82,13 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     workout_id: id,
     rpe: parsed.data.rpe,
     thumbs: parsed.data.thumbs,
+    new_prs: newPRs.length,
   });
+  if (newPRs.length) {
+    track(userId, 'pr_set', { count: newPRs.length, exercises: newPRs.map((p) => p.exercise) });
+  }
 
-  return NextResponse.json({ ok: true, log_id: log.id });
+  return NextResponse.json({ ok: true, log_id: log.id, new_prs: newPRs });
 }
 
 async function embedAndStore(

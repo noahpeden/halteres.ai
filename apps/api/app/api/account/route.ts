@@ -1,6 +1,7 @@
 import { createServiceClient } from '@halteres/db/server';
 import { NextResponse } from 'next/server';
 import { authedClient } from '@/lib/auth';
+import { emails } from '@/lib/email';
 
 export const runtime = 'nodejs';
 
@@ -8,12 +9,14 @@ export const runtime = 'nodejs';
 // profiles, programs, workouts, logs, embeddings, device_tokens, subscriptions
 // all have ON DELETE CASCADE.
 export async function DELETE(req: Request) {
-  let userId: string;
+  let userId: string, supabase;
   try {
-    ({ userId } = await authedClient(req));
+    ({ userId, supabase } = await authedClient(req));
   } catch (e) {
     return e instanceof Response ? e : NextResponse.json({ error: 'auth' }, { status: 401 });
   }
+  const { data: u } = await supabase.auth.getUser();
+  const email = u.user?.email;
 
   // If the user has an active Stripe subscription, cancel it first so we don't
   // keep billing a deleted account.
@@ -37,5 +40,6 @@ export async function DELETE(req: Request) {
   const { error } = await service.auth.admin.deleteUser(userId);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
+  if (email) emails.deletionConfirmed(email).catch(() => undefined);
   return NextResponse.json({ ok: true });
 }
