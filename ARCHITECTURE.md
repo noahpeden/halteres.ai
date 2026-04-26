@@ -100,12 +100,29 @@ The web and mobile apps both:
 - [x] **Phase 4** — Stripe + RevenueCat + paywall gating
 - [x] **Phase 4.5** — Adapt feature (day-of workout modification)
 - [x] **Phase 4.6** — Mobile fully ready: onboarding, creation, tabs, history, settings, paywall, IAP, push, markdown
+- [x] **Phase 5** — Production-ready: marketing, legal, account deletion, reminder cron, Sentry, PostHog, program analytics, share links
 
-## Phase 5 candidates (next)
+## Phase 5 details
 
-- Push notifications via Expo Notifications (workout reminders)
-- Workout history view on mobile (calendar)
-- Program completion analytics (consistency, RPE trend, PR tracking)
-- Social: share a program (read-only link)
-- Apple Health / Strava sync (auto-populate exercises array on log)
-- Anthropic Batch API for skeleton generation (50% discount, 5–10 min latency OK at signup)
+### Production-ready additions
+
+| Concern | Implementation |
+|---|---|
+| Marketing landing | `/` renders public landing for unauth, redirects to `/programs/new` (or `/onboarding`) when authed |
+| Legal pages | `/privacy`, `/terms` — App Store / Play Store reviewer prerequisites |
+| Account deletion | `DELETE /api/account` cancels active Stripe subs, calls `auth.admin.deleteUser`, FK cascades wipe everything. Web at `/account`, mobile in Settings |
+| Workout reminders | `GET /api/cron/reminders` (CRON_SECRET-gated) finds today's un-logged workouts, batches Expo pushes, prunes dead tokens. Vercel cron at 13:00 UTC daily |
+| Notification toggle | `profiles.notifications_enabled` gates the cron query; user-toggled in mobile Settings |
+| Error monitoring | Sentry (`@sentry/nextjs` + `@sentry/react-native`) — DSN-conditional init, no-op without keys |
+| Analytics | PostHog for web, mobile, and server. Events: `program_created`, `workout_enhanced`, `workout_logged`, `paywall_hit`, `program_shared`, `$pageview` |
+| Program analytics | `GET /api/programs/[id]/analytics` returns completion rate, RPE-by-week trend, thumbs split. Web page + mobile screen with bar chart |
+| Share programs | `programs.share_token` + `public_programs`/`public_workouts` views (anon SELECT). `POST/DELETE /api/programs/[id]/share`. Public ISR'd page at `/share/[token]`, no auth |
+
+## Phase 6 candidates (next)
+
+- Per-user timezone-aware reminders (`profiles.timezone`)
+- PR tracking from logged exercises
+- Apple Health / Strava sync
+- Anthropic Batch API for skeleton (50% discount)
+- Email transactionals via Resend
+- Coach mode: invite a coach with read access

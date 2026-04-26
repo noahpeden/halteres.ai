@@ -64,4 +64,18 @@ See `ARCHITECTURE.md` for the cost model and design decisions.
 | 3 | Mobile (Expo) with full feature parity | ✅ |
 | 4 | Stripe + RevenueCat + paywall | ✅ |
 | 4.5 | Day-of adapt feature | ✅ |
-| 5 | Push, history view, analytics, integrations | TBD |
+| 4.6 | Mobile fully ready (tabs, history, IAP, push, markdown) | ✅ |
+| 5 | Production-ready (marketing, legal, deletion, reminders, Sentry, PostHog, analytics, share) | ✅ |
+| 6 | Timezone-aware reminders, PR tracking, integrations, batch API, email | TBD |
+
+## Production launch checklist
+
+- [ ] Set all production env keys (Anthropic, Voyage, Stripe live, RevenueCat, Sentry DSN, PostHog)
+- [ ] `pnpm db:push` against the production Supabase project
+- [ ] Configure Stripe products and `STRIPE_PRO_PRICE_ID`; webhook → `/api/webhooks/stripe`
+- [ ] Configure RevenueCat products; webhook → `/api/webhooks/revenuecat` with Bearer secret
+- [ ] Add `apps/mobile/assets/{icon,splash}.png`; run `eas init`; update `app.json` `projectId`
+- [ ] `pnpm build:prod` from `apps/mobile`; submit to TestFlight + Play Internal Testing
+- [ ] Verify `/api/cron/reminders` is firing on Vercel
+- [ ] Set `ADMIN_EMAILS` for `/admin` cost dashboard access
+- [ ] Have legal review the placeholder `/privacy` and `/terms` pages
