@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { serverSupabase } from '@/lib/supabase/server';
+import ShareButton from './ShareButton';
 
 export default async function ProgramDetail({
   params,
@@ -40,6 +41,15 @@ export default async function ProgramDetail({
         )}
         <div className="text-xs text-zinc-500 mt-2">
           {program.duration_weeks} weeks · {program.days_per_week} days/week · {program.periodization}
+        </div>
+        <div className="flex gap-2 mt-4">
+          <Link
+            href={`/programs/${id}/analytics`}
+            className="btn-ghost border border-zinc-800 text-sm"
+          >
+            Analytics
+          </Link>
+          <ShareButton programId={id} initialToken={program.share_token} />
         </div>
       </div>
 

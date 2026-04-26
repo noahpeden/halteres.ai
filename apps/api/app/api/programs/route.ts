@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server';
 import { anthropic, estimateCost, HAIKU } from '@/lib/anthropic';
 import { authedClient } from '@/lib/auth';
 import { getEntitlement, paywallResponse } from '@/lib/entitlements';
+import { track } from '@/lib/posthog';
 
 export const runtime = 'nodejs';
 export const maxDuration = 300;
@@ -27,8 +28,14 @@ export async function POST(req: Request) {
 
   const entitlement = await getEntitlement(supabase, userId);
   if (!entitlement.can_create_program) {
+    track(userId, 'paywall_hit', { action: 'create_program', tier: entitlement.tier });
     return paywallResponse(entitlement, 'create_program');
   }
+  track(userId, 'program_created', {
+    duration_weeks: input.duration_weeks,
+    days_per_week: input.days_per_week,
+    methodology: input.methodology,
+  });
 
   const { data: profile, error: profileErr } = await supabase
     .from('profiles')

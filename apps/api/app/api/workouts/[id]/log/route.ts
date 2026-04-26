@@ -2,6 +2,7 @@ import { LogWorkout } from '@halteres/core';
 import { embed, summarizeLog } from '@halteres/rag';
 import { NextResponse } from 'next/server';
 import { authedClient } from '@/lib/auth';
+import { track } from '@/lib/posthog';
 
 export const runtime = 'nodejs';
 export const maxDuration = 30;
@@ -51,6 +52,12 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   embedAndStore(supabase, userId, id, log).catch((err) =>
     console.error('embed failed', err.message)
   );
+
+  track(userId, 'workout_logged', {
+    workout_id: id,
+    rpe: parsed.data.rpe,
+    thumbs: parsed.data.thumbs,
+  });
 
   return NextResponse.json({ ok: true, log_id: log.id });
 }

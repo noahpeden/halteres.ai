@@ -1,14 +1,20 @@
 import type { Program, Workout } from '@halteres/db/types';
-import { Link, Stack, useLocalSearchParams } from 'expo-router';
+import * as Clipboard from 'expo-clipboard';
+import { Link, Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from 'react-native';
+import { postJson } from '@/lib/api';
 import { supabase } from '@/lib/supabase';
 
+const WEB_URL = process.env.EXPO_PUBLIC_WEB_URL ?? 'http://localhost:3000';
+
 export default function ProgramDetail() {
+  const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [program, setProgram] = useState<Program | null>(null);
   const [workouts, setWorkouts] = useState<Workout[]>([]);
   const [loading, setLoading] = useState(true);
+  const [sharing, setSharing] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -26,6 +32,20 @@ export default function ProgramDetail() {
       setLoading(false);
     });
   }, [id]);
+
+  async function share() {
+    setSharing(true);
+    try {
+      const result = await postJson<{ share_token: string }>(`/api/programs/${id}/share`, {});
+      const url = `${WEB_URL}/share/${result.share_token}`;
+      await Clipboard.setStringAsync(url);
+      Alert.alert('Link copied', url);
+    } catch (e) {
+      Alert.alert('Share failed', (e as Error).message);
+    } finally {
+      setSharing(false);
+    }
+  }
 
   if (loading) {
     return (
@@ -45,6 +65,22 @@ export default function ProgramDetail() {
   return (
     <ScrollView className="flex-1 bg-bg" contentContainerClassName="p-4 gap-5">
       <Stack.Screen options={{ title: program?.title ?? 'Program' }} />
+
+      <View className="flex-row gap-2">
+        <Pressable
+          onPress={() => router.push(`/(app)/programs/${id}/analytics`)}
+          className="flex-1 border border-zinc-800 rounded-md py-2 items-center"
+        >
+          <Text className="text-fg">Analytics</Text>
+        </Pressable>
+        <Pressable
+          onPress={share}
+          disabled={sharing}
+          className="flex-1 border border-zinc-800 rounded-md py-2 items-center"
+        >
+          <Text className="text-fg">{sharing ? 'Sharing…' : 'Share'}</Text>
+        </Pressable>
+      </View>
 
       {[...weeks.entries()].map(([week, list]) => (
         <View key={week} className="gap-2">

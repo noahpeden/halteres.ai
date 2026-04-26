@@ -1,10 +1,20 @@
 import { router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  ScrollView,
+  Switch,
+  Text,
+  View,
+} from 'react-native';
 import { getJson } from '@/lib/api';
 import { logoutPurchases, restorePurchases } from '@/lib/purchases';
 import { supabase } from '@/lib/supabase';
+
+const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3001';
 
 interface Entitlement {
   tier: 'free' | 'pro';
@@ -15,17 +25,65 @@ interface Entitlement {
 
 export default function Settings() {
   const [email, setEmail] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
   const [ent, setEnt] = useState<Entitlement | null>(null);
+  const [notifs, setNotifs] = useState(true);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     Promise.all([
-      supabase.auth.getUser().then(({ data }) => setEmail(data.user?.email ?? null)),
+      supabase.auth.getUser().then(({ data }) => {
+        setEmail(data.user?.email ?? null);
+        setUserId(data.user?.id ?? null);
+        if (data.user) {
+          supabase
+            .from('profiles')
+            .select('notifications_enabled')
+            .eq('user_id', data.user.id)
+            .single()
+            .then(({ data: p }) => setNotifs((p?.notifications_enabled as boolean) ?? true));
+        }
+      }),
       getJson<Entitlement>('/api/entitlement')
         .then((e) => setEnt(e))
         .catch(() => undefined),
     ]).then(() => setLoading(false));
   }, []);
+
+  async function toggleNotifs(value: boolean) {
+    setNotifs(value);
+    if (!userId) return;
+    await supabase.from('profiles').update({ notifications_enabled: value }).eq('user_id', userId);
+  }
+
+  function deleteAccount() {
+    Alert.alert(
+      'Delete account?',
+      'This permanently removes your profile, programs, workouts, logs, and embeddings. Cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const { data } = await supabase.auth.getSession();
+              const res = await fetch(`${API_URL}/api/account`, {
+                method: 'DELETE',
+                headers: { Authorization: `Bearer ${data.session?.access_token}` },
+              });
+              if (!res.ok) throw new Error(await res.text());
+              await logoutPurchases();
+              await supabase.auth.signOut();
+              router.replace('/login');
+            } catch (e) {
+              Alert.alert('Delete failed', (e as Error).message);
+            }
+          },
+        },
+      ]
+    );
+  }
 
   async function signOut() {
     Alert.alert('Sign out', 'You can sign back in anytime.', [
@@ -90,6 +148,14 @@ export default function Settings() {
         )}
       </View>
 
+      <View className="bg-zinc-950 border border-zinc-800 rounded-lg p-4 flex-row items-center justify-between">
+        <View>
+          <Text className="text-fg">Workout reminders</Text>
+          <Text className="text-muted text-xs">Daily push when a workout is scheduled</Text>
+        </View>
+        <Switch value={notifs} onValueChange={toggleNotifs} />
+      </View>
+
       <View className="gap-2">
         <Pressable
           onPress={manage}
@@ -111,9 +177,15 @@ export default function Settings() {
         </Pressable>
         <Pressable
           onPress={signOut}
-          className="border border-red-900 rounded-md py-3 items-center mt-2"
+          className="border border-zinc-800 rounded-md py-3 items-center mt-2"
         >
-          <Text className="text-red-400">Sign out</Text>
+          <Text className="text-fg">Sign out</Text>
+        </Pressable>
+        <Pressable
+          onPress={deleteAccount}
+          className="border border-red-900 rounded-md py-3 items-center"
+        >
+          <Text className="text-red-400">Delete account</Text>
         </Pressable>
       </View>
     </ScrollView>

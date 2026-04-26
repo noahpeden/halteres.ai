@@ -6,6 +6,7 @@ import { NextResponse } from 'next/server';
 import { anthropic, estimateCost, SONNET } from '@/lib/anthropic';
 import { authedClient } from '@/lib/auth';
 import { getEntitlement, paywallResponse } from '@/lib/entitlements';
+import { track } from '@/lib/posthog';
 
 export const runtime = 'nodejs';
 export const maxDuration = 300;
@@ -30,8 +31,10 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
 
   const entitlement = await getEntitlement(supabase, userId);
   if (!entitlement.can_enhance) {
+    track(userId, 'paywall_hit', { action: 'enhance', tier: entitlement.tier });
     return paywallResponse(entitlement, 'enhance');
   }
+  track(userId, 'workout_enhanced', { workout_id: id });
 
   const [{ data: workout }, { data: profile }] = await Promise.all([
     supabase

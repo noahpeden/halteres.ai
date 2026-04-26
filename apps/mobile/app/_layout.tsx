@@ -2,12 +2,15 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as Linking from 'expo-linking';
 import { useEffect } from 'react';
+import { initAnalytics } from '@/lib/analytics';
 import { supabase } from '@/lib/supabase';
 import '../global.css';
 
 export default function RootLayout() {
-  // Magic-link callbacks open as halteres://auth?code=…
   useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => initAnalytics(data.user?.id));
+
+    // Magic-link callbacks open as halteres://auth?code=…
     const handle = async (url: string | null) => {
       if (!url) return;
       const parsed = Linking.parse(url);
