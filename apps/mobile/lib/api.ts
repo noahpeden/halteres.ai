@@ -4,6 +4,21 @@ const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3001';
 
 export type SSEEvent = { type: string; [k: string]: unknown };
 
+export class PaywallError extends Error {
+  constructor(public readonly action: 'create_program' | 'enhance', public readonly entitlement: unknown) {
+    super(`Paywall: ${action}`);
+  }
+}
+
+async function handleStatus(res: Response): Promise<void> {
+  if (res.ok) return;
+  if (res.status === 402) {
+    const json = (await res.json()) as { action: 'create_program' | 'enhance'; entitlement: unknown };
+    throw new PaywallError(json.action, json.entitlement);
+  }
+  throw new Error(`${res.status}: ${await res.text()}`);
+}
+
 export async function* stream(
   path: string,
   init: { method: string; body?: unknown }
@@ -17,7 +32,7 @@ export async function* stream(
     },
     body: init.body ? JSON.stringify(init.body) : undefined,
   });
-  if (!res.ok) throw new Error(`${res.status}: ${await res.text()}`);
+  await handleStatus(res);
   if (!res.body) return;
 
   const reader = res.body.getReader();
@@ -34,7 +49,7 @@ export async function* stream(
       try {
         yield JSON.parse(line.slice(6)) as SSEEvent;
       } catch {
-        // ignore malformed
+        // ignore
       }
     }
   }
@@ -50,7 +65,7 @@ export async function postJson<T>(path: string, body: unknown): Promise<T> {
     },
     body: JSON.stringify(body),
   });
-  if (!res.ok) throw new Error(`${res.status}: ${await res.text()}`);
+  await handleStatus(res);
   return res.json() as Promise<T>;
 }
 
@@ -59,6 +74,6 @@ export async function getJson<T>(path: string): Promise<T> {
   const res = await fetch(`${API_URL}${path}`, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
-  if (!res.ok) throw new Error(`${res.status}: ${await res.text()}`);
+  await handleStatus(res);
   return res.json() as Promise<T>;
 }

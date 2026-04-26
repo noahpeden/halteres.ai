@@ -21,5 +21,5 @@ export default function IndexRedirect() {
       </View>
     );
   }
-  return <Redirect href={authed ? '/(app)/programs' : '/login'} />;
+  return <Redirect href={authed ? '/(app)/(tabs)' : '/login'} />;
 }
