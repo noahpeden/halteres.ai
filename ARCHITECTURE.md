@@ -99,6 +99,7 @@ The web and mobile apps both:
 - [x] **Phase 3** — Mobile (Expo) with auth + programs + enhance + adapt + log
 - [x] **Phase 4** — Stripe + RevenueCat + paywall gating
 - [x] **Phase 4.5** — Adapt feature (day-of workout modification)
+- [x] **Phase 4.6** — Mobile fully ready: onboarding, creation, tabs, history, settings, paywall, IAP, push, markdown
 
 ## Phase 5 candidates (next)
 
