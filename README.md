@@ -68,7 +68,8 @@ See `ARCHITECTURE.md` for the cost model and design decisions.
 | 5 | Production-ready (marketing, legal, deletion, reminders, Sentry, PostHog, analytics, share) | ✅ |
 | 6 | Timezone reminders, PR tracking, batch API, Resend, Strava, coach mode | ✅ |
 | 7 | Coach annotations, streaks, calendar (.ics), PR auto-fill, templates marketplace, HealthKit | ✅ |
-| 8 | HealthKit auto-import, attribution, streak pushes, video annotations, referrals | TBD |
+| 8 | Mobile audit fixes + annual / coach plans + marketplace take-rate (Stripe Connect) | ✅ |
+| 9 | Author attribution, streak pushes, referrals, video annotations, multi-currency | TBD |
 
 ## Production launch checklist
 

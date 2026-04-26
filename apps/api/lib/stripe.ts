@@ -9,5 +9,3 @@ export function stripe(): Stripe {
   cached = new Stripe(key, { apiVersion: '2025-09-30.clover' });
   return cached;
 }
-
-export const PRO_PRICE_ID = process.env.STRIPE_PRO_PRICE_ID ?? '';

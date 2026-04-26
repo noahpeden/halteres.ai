@@ -140,11 +140,56 @@ The web and mobile apps both:
 | Templates marketplace | `programs.is_template` + `fork_count` + `forked_from`. `public_templates` view with anon SELECT. `POST/DELETE /api/programs/[id]/publish`, `GET /api/templates`, `POST /api/templates/[id]/fork` clones the program + skeleton workouts under the forking user (counts toward their program quota). Web `/templates` browse, "Publish as template" toggle on owner's program |
 | Apple HealthKit | `@kingstinct/react-native-healthkit` + iOS entitlements + usage descriptions. `lib/healthkit.ts` with platform-guarded dynamic require so Android bundles don't break. Requires a custom dev client (not Expo Go) — documented in build instructions |
 
-## Phase 8 candidates (when you want them)
+## Phase 8 — what shipped (revenue + reliability)
 
-- HealthKit auto-import on log open (use `recentWorkouts()` to suggest exercises/duration)
-- Template author attribution + curation tools
-- Streak push notifications ("Don't break your 5-day streak!")
-- Coach video annotation (record a Loom-style note attached to a workout)
-- Affiliate / referral program with Stripe Coupons
-- Multi-language support (program description in EN, generation in user's locale)
+### Mobile reliability (audit fixes)
+
+| Bug | Fix |
+|---|---|
+| `res.body.getReader()` doesn't stream on RN | Switched `lib/api.ts` to `expo/fetch` (SDK 52 streams natively) |
+| Duplicate NativeWind babel preset | Removed `'nativewind/babel'`; `babel-preset-expo` with `jsxImportSource: 'nativewind'` is the only correct setup in v4 |
+| Workspace `exports` field unresolved | `metro.config.js` now sets `unstable_enablePackageExports = true` |
+| Magic-link only handled PKCE | `_layout.tsx` now parses both `?code=` and `#access_token=&refresh_token=` |
+| Analytics never re-identified after sign-in | Hooked `initAnalytics(userId)` to `onAuthStateChange` |
+| AppState burning battery on background | Added `startAutoRefresh`/`stopAutoRefresh` per Supabase RN docs |
+| Hard 401 on token expiry | `authedFetch` does one refresh-and-retry on 401 |
+| "Manage subscription" sent App Store users to web | Settings now routes by `subscription.source` to App Store / Play Store / web portal |
+| Missing reanimated babel plugin | Added (must be last in plugins) |
+
+### Pricing (annual + coach + marketplace take-rate)
+
+Migration `0008_pricing.sql`:
+- `subscriptions.tier` extended to `(free | pro | coach)`, plus `cadence` (monthly/annual/one_time) and `seats`
+- `entitlement_status` view includes `coached_athletes` count
+- `programs.price_cents` + `currency` for paid templates
+- `connect_accounts` table for Stripe Connect Express accounts (author payouts)
+- `template_purchases` table with RLS (buyer reads own, author reads sales)
+- `template_earnings` view rolls up sales / gross / author cents / platform cents
+
+Plan catalogue (`apps/api/lib/pricing.ts`):
+
+| Plan | Price | Notes |
+|---|---|---|
+| Pro · monthly | $14.99/mo | Unlimited everything |
+| Pro · annual | $119/yr | 33% discount vs monthly |
+| Coach · monthly | $49/mo | 10 athlete seats + Pro features |
+| Coach · annual | $490/yr | 17% discount, 10 seats |
+
+Endpoints:
+- `POST /api/billing/checkout` accepts `{ plan: PlanKey }` → Stripe Checkout for the right price
+- `POST /api/billing/connect` → creates Stripe Express account + onboarding link for marketplace authors
+- `POST /api/templates/[id]/purchase` → Checkout in `payment` mode with `application_fee_amount` (20% take) + `transfer_data.destination` to author's Connect account
+- `POST /api/templates/[id]/fork` → returns `402` for paid templates without a successful purchase row
+- `POST /api/coach/invite` accepts `as_coach: true` → gates on `entitlement.can_invite_coach_athlete` (tier=coach AND coached_athletes < seats)
+- Stripe webhook now reads `priceId → planForPriceId()` to set tier/cadence/seats correctly, handles `account.updated` (Connect status), and processes `template_purchase` checkouts
+
+Web `/billing` page now shows a 4-card plan grid (Pro/Coach × monthly/annual) with cadence badges, coach seats display, and unified "Manage subscription" portal link.
+
+## Phase 9 candidates (next)
+
+- Template author attribution + featured-creator badges
+- Streak push notifications ("Don't break your 5-day streak")
+- Affiliate / referral program (Stripe Coupons + `referrals` table)
+- Coach annotations: video / audio attachments
+- Multi-currency display via Stripe price localization
+- Team/family plans

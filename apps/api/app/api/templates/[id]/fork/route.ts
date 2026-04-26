@@ -40,6 +40,24 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     .single();
   if (!template) return NextResponse.json({ error: 'not found' }, { status: 404 });
 
+  // Paid templates require a successful purchase row.
+  if ((template.price_cents ?? 0) > 0 && template.user_id !== userId) {
+    const { data: purchase } = await service
+      .from('template_purchases')
+      .select('id')
+      .eq('template_id', id)
+      .eq('buyer_id', userId)
+      .eq('status', 'succeeded')
+      .limit(1)
+      .maybeSingle();
+    if (!purchase) {
+      return NextResponse.json(
+        { error: 'purchase required', price_cents: template.price_cents },
+        { status: 402 }
+      );
+    }
+  }
+
   const { data: srcWorkouts } = await service
     .from('workouts')
     .select('week_number, day_index, title, body_skeleton, body_detailed')

@@ -1,20 +1,25 @@
 import { router } from 'expo-router';
+import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Platform,
   Pressable,
   ScrollView,
   Switch,
   Text,
   View,
 } from 'react-native';
-import { getJson } from '@/lib/api';
+import { deleteRequest, getJson } from '@/lib/api';
 import { logoutPurchases, restorePurchases } from '@/lib/purchases';
 import { supabase } from '@/lib/supabase';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3001';
+const STORE_SUBSCRIPTION_URL =
+  Platform.OS === 'ios'
+    ? 'https://apps.apple.com/account/subscriptions'
+    : 'https://play.google.com/store/account/subscriptions';
 
 interface Entitlement {
   tier: 'free' | 'pro';
@@ -27,21 +32,30 @@ export default function Settings() {
   const [email, setEmail] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [ent, setEnt] = useState<Entitlement | null>(null);
+  const [subSource, setSubSource] = useState<'free' | 'stripe' | 'revenuecat'>('free');
   const [notifs, setNotifs] = useState(true);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     Promise.all([
-      supabase.auth.getUser().then(({ data }) => {
+      supabase.auth.getUser().then(async ({ data }) => {
         setEmail(data.user?.email ?? null);
         setUserId(data.user?.id ?? null);
         if (data.user) {
-          supabase
-            .from('profiles')
-            .select('notifications_enabled')
-            .eq('user_id', data.user.id)
-            .single()
-            .then(({ data: p }) => setNotifs((p?.notifications_enabled as boolean) ?? true));
+          const [{ data: p }, { data: s }] = await Promise.all([
+            supabase
+              .from('profiles')
+              .select('notifications_enabled')
+              .eq('user_id', data.user.id)
+              .single(),
+            supabase
+              .from('subscriptions')
+              .select('source')
+              .eq('user_id', data.user.id)
+              .single(),
+          ]);
+          setNotifs((p?.notifications_enabled as boolean) ?? true);
+          setSubSource((s?.source as 'free' | 'stripe' | 'revenuecat') ?? 'free');
         }
       }),
       getJson<Entitlement>('/api/entitlement')
@@ -67,12 +81,7 @@ export default function Settings() {
           style: 'destructive',
           onPress: async () => {
             try {
-              const { data } = await supabase.auth.getSession();
-              const res = await fetch(`${API_URL}/api/account`, {
-                method: 'DELETE',
-                headers: { Authorization: `Bearer ${data.session?.access_token}` },
-              });
-              if (!res.ok) throw new Error(await res.text());
+              await deleteRequest('/api/account');
               await logoutPurchases();
               await supabase.auth.signOut();
               router.replace('/login');
@@ -100,7 +109,13 @@ export default function Settings() {
     ]);
   }
 
+  // App Store policy: in-app purchases must be managed in the platform store.
+  // Stripe-based web subscriptions go to the web Customer Portal.
   async function manage() {
+    if (subSource === 'revenuecat') {
+      await Linking.openURL(STORE_SUBSCRIPTION_URL);
+      return;
+    }
     const url = process.env.EXPO_PUBLIC_WEB_URL
       ? `${process.env.EXPO_PUBLIC_WEB_URL}/billing`
       : 'http://localhost:3000/billing';
