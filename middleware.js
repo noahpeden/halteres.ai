@@ -111,15 +111,9 @@ export async function middleware(req) {
           'subscription_status, trial_end_date, generations_remaining, generations_today, last_generation_date, role, onboarding_completed'
         )
         .eq('id', user.id)
-        .single();
+        .maybeSingle(); // Avoid 406 when no rows
 
-      if (!profile) {
-        // Profile not found - for athletes, redirect to login; for coaches, to pricing
-        const redirectUrl = new URL('/login', req.url);
-        redirectUrl.searchParams.set('error', 'profile_not_found');
-        return NextResponse.redirect(redirectUrl);
-      }
-
+      // Treat missing profile as athlete during B2C beta
       const {
         subscription_status,
         trial_end_date,
@@ -128,10 +122,11 @@ export async function middleware(req) {
         last_generation_date,
         role,
         onboarding_completed,
-      } = profile;
+      } = profile || {};
+
+      const isAthlete = (role || 'athlete') === 'athlete';
 
       // Role-based access control: Athletes cannot access coach-only routes
-      const isAthlete = role === 'athlete';
       if (isAthlete && isCoachOnlyRoute) {
         // Redirect athletes to their dashboard
         const redirectUrl = new URL('/athlete', req.url);
@@ -149,6 +144,11 @@ export async function middleware(req) {
 
       // Athletes don't need subscription checks - allow access to athlete routes
       if (isAthlete && isAthleteRoute) {
+        return res;
+      }
+
+      // B2C beta: allow athletes to access program writer routes and generation routes without paid plan
+      if (isAthlete && (isProtectedRoute || isGenerationRoute)) {
         return res;
       }
 

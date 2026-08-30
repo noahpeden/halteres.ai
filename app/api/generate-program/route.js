@@ -36,9 +36,9 @@ async function updateProfileAfterGeneration(supabase, userId, isPaidSubscriber) 
       .from('profiles')
       .select('generations_remaining, free_generations_used')
       .eq('id', userId)
-      .single();
+      .maybeSingle();
 
-    if (fetchError) {
+    if (fetchError && fetchError.code !== 'PGRST116') {
       logWithTimestamp('[UpdateProfile] Error fetching current profile', {
         error: fetchError,
         userId,
@@ -160,9 +160,9 @@ export async function POST(request) {
         sendEvent('status', { message: 'Checking subscription status...' });
         const { data: profile, error: profileError } = await supabase
           .from('profiles')
-          .select('subscription_status, generations_remaining, subscription_plan, trial_end_date')
+          .select('subscription_status, generations_remaining, trial_end_date')
           .eq('id', userId)
-          .single();
+          .maybeSingle();
 
         if (profileError) {
           logWithTimestamp('Error fetching user profile', {
@@ -177,10 +177,7 @@ export async function POST(request) {
         }
 
         // Skip generation limit check for paid subscribers
-        const isPaidSubscriber =
-          profile.subscription_status === 'active' &&
-          profile.subscription_plan !== null &&
-          ['monthly', 'quarterly', 'annual', 'daily'].includes(profile.subscription_plan);
+        const isPaidSubscriber = profile?.subscription_status === 'active';
 
         // Check if trial has expired for trialing users
         if (profile.subscription_status === 'trialing') {
@@ -1662,21 +1659,17 @@ async function isPaidSubscriberCheck(supabase, userId) {
   try {
     const { data: profile, error } = await supabase
       .from('profiles')
-      .select('subscription_status, subscription_plan')
+      .select('subscription_status')
       .eq('id', userId)
-      .single();
+      .maybeSingle();
 
-    if (error) {
+    if (error && error.code !== 'PGRST116') {
       logWithTimestamp('Error checking subscription status', { error, userId });
       return false;
     }
 
     // Check if user has an active subscription with any paid plan (monthly, quarterly, annual, or daily)
-    return (
-      profile.subscription_status === 'active' &&
-      profile.subscription_plan !== null &&
-      ['monthly', 'quarterly', 'annual', 'daily'].includes(profile.subscription_plan)
-    );
+    return profile?.subscription_status === 'active';
   } catch (error) {
     logWithTimestamp('Exception checking subscription status', {
       error: error.message,

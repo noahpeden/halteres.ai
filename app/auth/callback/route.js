@@ -59,52 +59,40 @@ export async function GET(request) {
       hasGymCode: !!signupGymCode,
     });
 
-    // If we have a role from signup, ensure profile exists and update it
-    if (signupRole) {
-      // First check if profile exists (trigger may have failed)
+    // Ensure profile exists (trigger may have failed)
+    {
       const { data: existingProfile } = await supabase
         .from('profiles')
-        .select('id')
+        .select('id, role')
         .eq('id', user.id)
-        .single();
+        .maybeSingle();
 
       if (!existingProfile) {
         // Profile wasn't created by trigger - create it now
         console.log('Profile missing for user, creating fallback profile');
-        const profileData =
-          signupRole === 'athlete'
-            ? {
-                id: user.id,
-                role: 'athlete',
-                subscription_status: 'trialing',
-                trial_start_date: new Date().toISOString(),
-                trial_end_date: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
-                generations_remaining: 15,
-                generations_today: 0,
-                is_active: true,
-                onboarding_completed: false,
-              }
-            : {
-                id: user.id,
-                role: 'coach',
-                subscription_status: 'trialing',
-                trial_start_date: new Date().toISOString(),
-                trial_end_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-                generations_remaining: 15,
-                generations_today: 0,
-                is_active: true,
-                onboarding_completed: false,
-              };
+        const normalizedRole = (signupRole || 'athlete') === 'athlete' ? 'athlete' : 'coach';
+        const trialDays = normalizedRole === 'athlete' ? 14 : 7;
+        const profileData = {
+          id: user.id,
+          role: normalizedRole,
+          subscription_status: 'trialing',
+          trial_start_date: new Date().toISOString(),
+          trial_end_date: new Date(Date.now() + trialDays * 24 * 60 * 60 * 1000).toISOString(),
+          generations_remaining: 15,
+          generations_today: 0,
+          is_active: true,
+          onboarding_completed: false,
+        };
 
         const { error: insertError } = await supabase.from('profiles').insert([profileData]);
 
         if (insertError) {
           console.error('Error creating fallback profile:', insertError);
         } else {
-          console.log('Fallback profile created for role:', signupRole);
+          console.log('Fallback profile created for role:', normalizedRole);
         }
-      } else {
-        // Profile exists, just update the role
+      } else if (signupRole && existingProfile.role !== signupRole) {
+        // Profile exists, just update the role when provided
         const { error: updateError } = await supabase
           .from('profiles')
           .update({ role: signupRole })
@@ -126,7 +114,7 @@ export async function GET(request) {
             .select('id, name')
             .eq('invite_code', signupGymCode.toUpperCase())
             .is('deleted_at', null)
-            .single();
+            .maybeSingle();
 
           if (gym && !gymError) {
             // Check if already a member
@@ -135,7 +123,7 @@ export async function GET(request) {
               .select('id')
               .eq('gym_id', gym.id)
               .eq('user_id', user.id)
-              .single();
+              .maybeSingle();
 
             if (!existingMembership) {
               // Create membership - always active (no approval process)
@@ -167,7 +155,7 @@ export async function GET(request) {
       if (signupRole === 'athlete') {
         return NextResponse.redirect(new URL('/athlete', request.url));
       }
-  return NextResponse.redirect(new URL('/athlete', request.url));
+      return NextResponse.redirect(new URL('/athlete', request.url));
     }
 
     // Existing user - fetch profile to check role
@@ -175,7 +163,7 @@ export async function GET(request) {
       .from('profiles')
       .select('role')
       .eq('id', user.id)
-      .single();
+      .maybeSingle();
 
     // Redirect based on role
     if (profile?.role === 'athlete') {
