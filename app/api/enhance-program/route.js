@@ -1,6 +1,6 @@
-import Anthropic from '@anthropic-ai/sdk';
 import { NextResponse } from 'next/server';
 import { corsHeaders } from '@/utils/supabase/mobile';
+import { createChatCompletion } from '@/utils/ai/provider';
 
 export const maxDuration = 300; // 5 minutes for enhanced thinking
 
@@ -43,12 +43,10 @@ export async function POST(req) {
       );
     }
 
-    const anthropic = new Anthropic({
-      apiKey: process.env.ANTHROPIC_API_KEY,
-    });
+    // Using unified AI provider (DeepSeek by default; Anthropic via AI_PROVIDER)
 
     // Compose the enhancement prompt
-    const systemPrompt = `You are an expert fitness coach who specializes in creating and enhancing effective, personalized workout programs. Always consider evidence-based training principles, safety, and client context. You understand program periodization, progressive overload, and how to adapt programs to specific needs.
+    const systemPrompt = `You enhance entire programs for a self-coached athlete. Honor equipment as a hard constraint, recent history, influences, preferred formats, and session duration. Be concise and practical.
 
 <output_requirements>
 You must return your response as valid JSON with this exact structure:
@@ -95,7 +93,7 @@ ${w.body || w.description || 'No content'}
         ? recent_training_history
         : 'unspecified';
 
-    const userPrompt = `Enhance the following program according to these user instructions: "${instructions}".
+    const userPrompt = `Enhance the following program for a self-coached athlete according to these instructions: "${instructions}".
 
 Program Name: ${programName || 'Untitled Program'}
 Total Workouts: ${workouts.length}
@@ -136,31 +134,18 @@ Requirements:
 4. Ensure proper program progression and periodization
 5. Make the program cohesive - workouts should complement each other
 6. Consider the methodology, equipment, and any injuries throughout
-7. If the user asks for specific changes (e.g., "add more metcons"), prioritize that
+7. If the user asks for specific changes (e.g., "add more metcons"), prioritize that without violating equipment/time constraints
 8. Maintain safety and effectiveness
 
 IMPORTANT: You must return exactly ${workouts.length} enhanced workouts, one for each original workout. Preserve the original workout IDs in your response.`;
 
-    const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-5-20250929',
-      max_tokens: 16000,
-      temperature: 1, // Required for extended thinking
-      thinking: {
-        type: 'enabled',
-        budget_tokens: 5000,
-      },
-      system: systemPrompt,
-      messages: [
-        {
-          role: 'user',
-          content: [{ type: 'text', text: userPrompt }],
-        },
-      ],
+    const { content: responseContent } = await createChatCompletion({
+      tier: 'flash',
+      systemPrompt,
+      userPrompt,
+      temperature: 0.8,
+      maxTokens: 16000,
     });
-
-    // Extract text content from response (skip thinking blocks)
-    const textBlock = response.content.find((block) => block.type === 'text');
-    const responseContent = textBlock?.text || '';
 
     if (!responseContent) {
       throw new Error('No content received from AI response');

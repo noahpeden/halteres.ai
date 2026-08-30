@@ -173,6 +173,7 @@ export async function POST(req) {
           .insert({
             name: 'Self',
             type: 'CLIENT',
+            user_id: userId,
           })
           .select('id')
           .single();
