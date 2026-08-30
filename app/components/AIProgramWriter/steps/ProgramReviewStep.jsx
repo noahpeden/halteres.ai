@@ -44,10 +44,8 @@ export default function ProgramReviewStep({
       })
     : '-';
 
-  // Check if can generate
-  const canGenerate =
-    subscriptionStatus === 'active' ||
-    (subscriptionStatus === 'trialing' && generationsRemaining > 0);
+  // B2C beta: always allow generation for self-coached athletes (no hard gating)
+  const canGenerate = true;
 
   return (
     <div className="space-y-6 animate-fadeIn">
@@ -260,16 +258,14 @@ export default function ProgramReviewStep({
         </div>
       </div>
 
-      {/* Subscription warning */}
-      {!canGenerate && (
-        <div className="alert alert-warning">
+      {/* Beta notice (optional, non-blocking) */}
+      {subscriptionStatus !== 'active' && (
+        <div className="alert alert-info">
           <AlertCircle className="w-5 h-5" />
           <div>
-            <div className="font-semibold">Generation not available</div>
+            <div className="font-semibold">Beta access</div>
             <div className="text-sm">
-              {subscriptionStatus === 'trialing' && generationsRemaining <= 0
-                ? 'You have used all your free trial generations. Please upgrade to continue.'
-                : 'Please subscribe to generate programs.'}
+              Generation is available during beta even without a paid subscription.
             </div>
           </div>
         </div>
@@ -295,7 +291,7 @@ export default function ProgramReviewStep({
         <button
           className="btn btn-primary btn-lg gap-2"
           onClick={onGenerate}
-          disabled={isGenerating || !canGenerate}
+          disabled={isGenerating}
         >
           {isGenerating ? (
             <>

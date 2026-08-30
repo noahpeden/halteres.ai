@@ -269,26 +269,9 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
 
   // Event Handlers
   const handleGenerateClick = useCallback(() => {
-    // Check subscription status
-    if (subscriptionStatus === 'trialing') {
-      const trialEndDateObj = trialEndDate ? new Date(trialEndDate) : null;
-      const now = new Date();
-      if (trialEndDateObj && trialEndDateObj < now) {
-        showToast('Your free trial has expired. Please upgrade to continue.', 'error');
-        return;
-      }
-
-      if (generationsRemaining <= 0) {
-        showToast('You have used all your free generations. Please upgrade to continue.', 'error');
-        return;
-      }
-    } else if (subscriptionStatus !== 'active') {
-      showToast('Please subscribe to generate programs.', 'error');
-      setTimeout(() => {
-        window.location.href = '/pricing';
-      }, 1500);
-      return;
-    }
+    // B2C beta: allow generation for self-coached athletes without paid subscription.
+    // Do not block here based on subscription status or quota. Server-side routes
+    // already permit athlete access during beta and keep APIs working.
 
     const validation = validateProgramData();
     const isReGenerating = workouts && workouts.length > 0;
