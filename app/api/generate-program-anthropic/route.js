@@ -78,7 +78,7 @@ export async function POST(request) {
 
     // Use chunked generation for all programs (simplified approach)
     const numberOfWeeks = parseInt(
-      requestData.duration_weeks || requestData.numberOfWeeks || 4,
+      requestData.duration_weeks ?? requestData.numberOfWeeks ?? 8,
       10
     );
 
@@ -404,6 +404,7 @@ async function generateWeekWorkouts(
     useImperial,
     trainingMethodology,
     clientGender,
+    sessionDuration,
   } = sharedData;
 
   // Calculate dates for this week
@@ -458,6 +459,7 @@ Difficulty: ${difficulty}
 Training Methodology: ${trainingMethodology || 'General Fitness'}
 Periodization Type: ${programType || 'Linear'}
 Days Per Week: ${daysPerWeek} days
+Session Duration: ${sessionDuration || 60} minutes
 Selected Training Days: ${selectedDaysOfWeek
     .map(
       (day) => ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][day]
@@ -1033,25 +1035,37 @@ async function _saveWorkoutsToDatabase(programId, workouts, supabase, gymId = nu
 async function extractSharedData(requestData, supabase) {
   // Extract parameters with defaults
   const programId = requestData.programId;
-  const goal = requestData.goal || 'General fitness';
-  const difficulty = requestData.difficulty || 'Intermediate';
-  const focusArea = requestData.focus_area || '';
-  const additionalNotes = requestData.description || '';
+  // Intake fields (request-provided take precedence; DB values used as fallbacks later)
+  let goal = requestData.goal || 'General fitness';
+  let difficulty = requestData.experience || requestData.difficulty || 'Intermediate';
+  let focusArea = requestData.focus_area || '';
+  let additionalNotes = requestData.description || '';
   const personalization = requestData.personalization || '';
-  const referenceInput = requestData.referenceInput || '';
-  const workoutFormats = requestData.workout_format || [];
-  const trainingMethodology = requestData.trainingMethodology || '';
+  // Allow mobile to pass recent training history and program influences
+  const recentTrainingHistory =
+    requestData.recent_training_history || requestData.recentTrainingHistory || '';
+  const programInfluences =
+    requestData.program_influences || requestData.programInfluences || '';
+  let referenceInput = requestData.referenceInput || '';
+  let workoutFormats = requestData.workout_format?.formats || requestData.workout_format || [];
+  let trainingMethodology = requestData.trainingMethodology || '';
 
-  // Critical parameters - ensure they have fallback values
-  const numberOfWeeks = parseInt(requestData.duration_weeks || requestData.numberOfWeeks || 4, 10);
-  const daysPerWeek = parseInt(requestData.days_per_week || requestData.daysPerWeek || 3, 10);
-  const programType =
+  // Critical parameters (defaults adjusted using DB if present)
+  const providedDuration = requestData.duration_weeks ?? requestData.numberOfWeeks;
+  let numberOfWeeks = parseInt(providedDuration ?? 8, 10);
+  const providedDaysPerWeek = requestData.days_per_week ?? requestData.daysPerWeek;
+  let daysPerWeek = parseInt(providedDaysPerWeek ?? 3, 10);
+  let programType =
     requestData.periodization?.program_type || requestData.programType || 'linear';
 
   // Optional parameters
-  const equipment = requestData.gym_details?.equipment || requestData.equipment || [];
+  let equipment = requestData.gym_details?.equipment || requestData.equipment || [];
   const gymType = requestData.gym_details?.gym_type || requestData.gymType || '';
   const startDate = requestData.calendar_data?.start_date || requestData.startDate || '';
+  // Session duration (minutes) for context
+  const providedSessionDuration =
+    requestData.session_details?.duration_minutes || requestData.workout_duration;
+  let sessionDuration = parseInt(providedSessionDuration ?? 60, 10);
 
   logWithTimestamp('Parsed parameters', {
     numberOfWeeks,
@@ -1066,13 +1080,14 @@ async function extractSharedData(requestData, supabase) {
   logWithTimestamp('Calculated total workouts', { totalWorkouts });
 
   // Get selected days of the week from request data
-  const selectedDaysOfWeek = requestData.calendar_data?.days_of_week || [];
+  // Pull days_of_week from request first; may fallback to DB later
+  let selectedDaysOfWeek = requestData.calendar_data?.days_of_week || [];
   logWithTimestamp('Selected days of week from request', {
     selectedDaysOfWeek,
   });
 
   // Filter out null values and ensure we have valid day numbers
-  let validDaysOfWeek = selectedDaysOfWeek.filter(
+  let validDaysOfWeek = (selectedDaysOfWeek || []).filter(
     (day) => day !== null && day !== undefined && typeof day === 'number' && day >= 0 && day <= 6
   );
   logWithTimestamp('Valid days of week after filtering', { validDaysOfWeek });
@@ -1191,12 +1206,14 @@ async function extractSharedData(requestData, supabase) {
 
   if (programId) {
     try {
-      logWithTimestamp('Fetching client metrics', { programId });
+      logWithTimestamp('Fetching program metadata and client metrics', { programId });
 
-      // Get entity_id and gym_id from the program
+      // Get program row for fallbacks + entity/gym linkage
       const { data: programData, error: programError } = await supabase
         .from('programs')
-        .select('entity_id, gym_id')
+        .select(
+          'entity_id, gym_id, duration_weeks, periodization, gym_details, workout_format, calendar_data, training_methodology, description, reference_input, focus_area, difficulty, goal, session_details'
+        )
         .eq('id', programId)
         .single();
 
@@ -1205,6 +1222,47 @@ async function extractSharedData(requestData, supabase) {
           error: programError,
         });
       } else if (programData) {
+        // Apply DB fallbacks ONLY when request didn't specify
+        if (providedDuration == null && programData.duration_weeks) {
+          numberOfWeeks = parseInt(programData.duration_weeks, 10);
+        }
+        if ((!providedDaysPerWeek || isNaN(Number(providedDaysPerWeek))) && programData.calendar_data?.days_of_week?.length) {
+          daysPerWeek = programData.calendar_data.days_of_week.length;
+        }
+        if (validDaysOfWeek.length === 0 && programData.calendar_data?.days_of_week?.length) {
+          validDaysOfWeek = programData.calendar_data.days_of_week;
+        }
+        if ((!equipment || equipment.length === 0) && programData.gym_details?.equipment) {
+          equipment = programData.gym_details.equipment;
+        }
+        if ((!workoutFormats || workoutFormats.length === 0) && programData.workout_format?.formats) {
+          workoutFormats = programData.workout_format.formats;
+        }
+        if (!trainingMethodology && programData.training_methodology) {
+          trainingMethodology = programData.training_methodology;
+        }
+        if (!additionalNotes && programData.description) {
+          additionalNotes = programData.description;
+        }
+        if (!referenceInput && programData.reference_input) {
+          referenceInput = programData.reference_input;
+        }
+        if (!focusArea && programData.focus_area) {
+          focusArea = programData.focus_area;
+        }
+        if ((!difficulty || difficulty === 'Intermediate') && programData.difficulty) {
+          difficulty = programData.difficulty;
+        }
+        if (!goal && programData.goal) {
+          goal = programData.goal;
+        }
+        if (
+          (providedSessionDuration == null || isNaN(Number(providedSessionDuration))) &&
+          programData.session_details?.duration_minutes
+        ) {
+          sessionDuration = parseInt(programData.session_details.duration_minutes, 10);
+        }
+
         // Use gym_id from program if not provided in request, or update program if request has it
         if (!gymId && programData.gym_id) {
           gymId = programData.gym_id;
@@ -1273,19 +1331,52 @@ async function extractSharedData(requestData, supabase) {
   // Build reference content from both database workouts and user input
   let referenceWorkoutsContent = '';
 
-  // Add user-provided reference input if available
-  if (referenceInput && referenceInput.trim() !== '') {
-    logWithTimestamp('Found user-provided reference input', {
-      length: referenceInput.length,
-    });
+  // Merge program influences and recent training history into reference material
+  const influenceText =
+    Array.isArray(programInfluences) && programInfluences.length > 0
+      ? programInfluences.join(', ')
+      : typeof programInfluences === 'string'
+        ? programInfluences
+        : '';
+  const historyText =
+    typeof recentTrainingHistory === 'string' ? recentTrainingHistory : '';
 
-    referenceWorkoutsContent += `
+  // Build a combined referenceInput string with clear sections
+  let combinedReference = '';
+  if (referenceInput && referenceInput.trim() !== '') {
+    combinedReference += `
 User-Provided Reference Material:
 ---
 ${referenceInput.trim()}
----
+---`;
+  }
+  if (influenceText) {
+    combinedReference += `
 
-IMPORTANT: Consider the structure, style, and content of the above user-provided reference material when generating the program. Treat it as a key example of what the user is looking for.`;
+Program Influences / Styles:
+---
+${influenceText}
+---`;
+  }
+  if (historyText) {
+    combinedReference += `
+
+Recent Training History (last 2-3 months):
+---
+${historyText}
+---`;
+  }
+
+  // Add combined reference material to referenceWorkoutsContent seed
+  if (combinedReference.trim() !== '') {
+    logWithTimestamp('Found user-provided reference input', {
+      length: combinedReference.length,
+    });
+
+    referenceWorkoutsContent += `
+${combinedReference}
+
+IMPORTANT: Incorporate the above reference material (influences, styles, and recent history) into program design decisions. Treat it as authoritative context for structure, style, pacing, and progression.`;
   }
 
   // Fetch reference workouts from database if program ID exists
@@ -1390,5 +1481,6 @@ Draw inspiration from these reference workouts when designing this program. Use 
     useImperial,
     trainingMethodology,
     clientGender,
+    sessionDuration,
   };
 }

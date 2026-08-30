@@ -1,7 +1,16 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { NextResponse } from 'next/server';
+import { corsHeaders } from '@/utils/supabase/mobile';
 
 export const maxDuration = 300; // 5 minutes for enhanced thinking
+
+// Handle OPTIONS for CORS preflight
+export async function OPTIONS(_request) {
+  return new Response(null, {
+    status: 200,
+    headers: corsHeaders(),
+  });
+}
 
 export async function POST(req) {
   try {
@@ -15,6 +24,14 @@ export async function POST(req) {
       injuries, // array or string
       focusArea, // string
       workoutFormats, // array of workout formats
+      difficulty, // string (experience)
+      goal, // string
+      experience, // alias for difficulty
+      recent_training_history,
+      program_influences,
+      days_per_week,
+      days_of_week,
+      workout_duration,
     } = body;
 
     if (!workouts || !instructions || !methodology || !gymEquipment) {
@@ -22,7 +39,7 @@ export async function POST(req) {
         {
           error: 'Missing required fields: workouts, instructions, methodology, gymEquipment',
         },
-        { status: 400 }
+        { status: 400, headers: corsHeaders() }
       );
     }
 
@@ -57,6 +74,27 @@ ${w.body || w.description || 'No content'}
       )
       .join('\n---\n');
 
+    const effectiveDifficulty = difficulty || experience || 'unspecified';
+    const dayNames =
+      Array.isArray(days_of_week) && days_of_week.length > 0
+        ? days_of_week
+            .map(
+              (d) =>
+                ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][d]
+            )
+            .join(', ')
+        : 'unspecified';
+    const influencesText =
+      Array.isArray(program_influences) && program_influences.length > 0
+        ? program_influences.join(', ')
+        : typeof program_influences === 'string'
+          ? program_influences
+          : 'unspecified';
+    const recentHistoryText =
+      typeof recent_training_history === 'string' && recent_training_history.trim().length > 0
+        ? recent_training_history
+        : 'unspecified';
+
     const userPrompt = `Enhance the following program according to these user instructions: "${instructions}".
 
 Program Name: ${programName || 'Untitled Program'}
@@ -64,6 +102,8 @@ Total Workouts: ${workouts.length}
 
 Context:
 - Training methodology: ${methodology}
+- Goal: ${goal || 'unspecified'}
+- Difficulty/Experience: ${effectiveDifficulty}
 - Focus area: ${focusArea || 'General fitness'}
 - Equipment available: ${Array.isArray(gymEquipment) ? gymEquipment.join(', ') : gymEquipment}
 - Workout formats preferred: ${
@@ -76,6 +116,15 @@ Context:
           : injuries
         : 'None'
     }
+- Days per week: ${days_per_week ?? 'unspecified'}
+- Days of week: ${dayNames}
+- Typical workout duration (minutes): ${workout_duration ?? 'unspecified'}
+
+Recent Training History (2-3 months):
+${recentHistoryText}
+
+Program Influences / Styles:
+${influencesText}
 
 Current Program Workouts:
 ${workoutsText}
@@ -155,13 +204,13 @@ IMPORTANT: You must return exactly ${workouts.length} enhanced workouts, one for
       console.error('Response content:', responseContent.substring(0, 500));
       return NextResponse.json(
         { error: 'Failed to parse enhanced program from AI response: ' + err.message },
-        { status: 500 }
+        { status: 500, headers: corsHeaders() }
       );
     }
 
-    return NextResponse.json({ enhancedProgram }, { status: 200 });
+    return NextResponse.json({ enhancedProgram }, { status: 200, headers: corsHeaders() });
   } catch (error) {
     console.error('Error enhancing program:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: error.message }, { status: 500, headers: corsHeaders() });
   }
 }

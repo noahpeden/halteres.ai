@@ -633,19 +633,21 @@ async function saveSkeletonWorkouts(programId, workouts, weekNumber, sharedData,
 // Extract shared data (similar to main route but simplified)
 async function extractSharedData(requestData, supabase) {
   const programId = requestData.programId;
-  const goal = requestData.goal || 'General fitness';
-  const difficulty = requestData.difficulty || 'Intermediate';
-  const focusArea = requestData.focus_area || '';
-  const workoutFormats = requestData.workout_format || [];
-  const trainingMethodology = requestData.trainingMethodology || '';
-  const description = requestData.description || '';
+  let goal = requestData.goal || 'General fitness';
+  let difficulty = requestData.experience || requestData.difficulty || 'Intermediate';
+  let focusArea = requestData.focus_area || '';
+  let workoutFormats = requestData.workout_format?.formats || requestData.workout_format || [];
+  let trainingMethodology = requestData.trainingMethodology || '';
+  let description = requestData.description || '';
 
-  const numberOfWeeks = parseInt(requestData.duration_weeks || requestData.numberOfWeeks || 4, 10);
-  const daysPerWeek = parseInt(requestData.days_per_week || requestData.daysPerWeek || 3, 10);
-  const programType =
+  const providedDuration = requestData.duration_weeks ?? requestData.numberOfWeeks;
+  let numberOfWeeks = parseInt(providedDuration ?? 8, 10);
+  const providedDaysPerWeek = requestData.days_per_week ?? requestData.daysPerWeek;
+  let daysPerWeek = parseInt(providedDaysPerWeek ?? 3, 10);
+  let programType =
     requestData.periodization?.program_type || requestData.programType || 'linear';
 
-  const equipment = requestData.gym_details?.equipment || requestData.equipment || [];
+  let equipment = requestData.gym_details?.equipment || requestData.equipment || [];
   const startDate = requestData.calendar_data?.start_date || requestData.startDate || '';
   const useImperial = requestData.useImperial !== undefined ? requestData.useImperial : true;
 
@@ -659,6 +661,56 @@ async function extractSharedData(requestData, supabase) {
 
   if (selectedDaysOfWeek.length === 0) {
     selectedDaysOfWeek = [1, 3, 5]; // Default: Mon, Wed, Fri
+  }
+
+  // If programId present, fetch program for DB fallbacks when request omits fields
+  if (programId) {
+    try {
+      const { data: programData } = await supabase
+        .from('programs')
+        .select(
+          'duration_weeks, periodization, gym_details, workout_format, calendar_data, training_methodology, description, reference_input, focus_area, difficulty, goal'
+        )
+        .eq('id', programId)
+        .single();
+      if (programData) {
+        if (providedDuration == null && programData.duration_weeks) {
+          numberOfWeeks = parseInt(programData.duration_weeks, 10);
+        }
+        if ((!providedDaysPerWeek || isNaN(Number(providedDaysPerWeek))) && programData.calendar_data?.days_of_week?.length) {
+          daysPerWeek = programData.calendar_data.days_of_week.length;
+        }
+        if (selectedDaysOfWeek.length === 0 && programData.calendar_data?.days_of_week?.length) {
+          selectedDaysOfWeek = programData.calendar_data.days_of_week;
+        }
+        if ((!equipment || equipment.length === 0) && programData.gym_details?.equipment) {
+          equipment = programData.gym_details.equipment;
+        }
+        if ((!workoutFormats || workoutFormats.length === 0) && programData.workout_format?.formats) {
+          workoutFormats = programData.workout_format.formats;
+        }
+        if (!trainingMethodology && programData.training_methodology) {
+          trainingMethodology = programData.training_methodology;
+        }
+        if (!description && programData.description) {
+          description = programData.description;
+        }
+        if (!focusArea && programData.focus_area) {
+          focusArea = programData.focus_area;
+        }
+        if ((!difficulty || difficulty === 'Intermediate') && programData.difficulty) {
+          difficulty = programData.difficulty;
+        }
+        if (!goal && programData.goal) {
+          goal = programData.goal;
+        }
+        if (!programType && programData.periodization?.program_type) {
+          programType = programData.periodization.program_type;
+        }
+      }
+    } catch (e) {
+      // continue with request-provided values
+    }
   }
 
   // Generate suggested dates
