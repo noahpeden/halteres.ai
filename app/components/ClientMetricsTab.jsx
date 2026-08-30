@@ -417,7 +417,7 @@ export default function ClientMetricsTab({
               <h2 className="text-base font-semibold text-slate-800 truncate">
                 {clientData?.metrics?.name && viewMode === 'fullPage'
                   ? clientData.metrics.name
-                  : 'Client Metrics'}
+                  : 'Your Metrics'}
               </h2>
               {viewMode === 'sidebar' && (
                 <p className="text-xs text-slate-500">Track progress & stats</p>
@@ -489,7 +489,7 @@ export default function ClientMetricsTab({
             <div className="flex items-center gap-3 p-3 bg-blue-50 border border-blue-100 rounded-xl mb-4">
               <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0" />
               <p className="text-sm text-blue-700">
-                No client metrics found. Please add information below.
+                No metrics found. Please add information below.
               </p>
             </div>
           )}

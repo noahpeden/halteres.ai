@@ -184,6 +184,14 @@ export default function WorkoutDetailsPage(props) {
         methodology: safeMethodology,
         gymEquipment: safeGymEquipment,
         injuries: safeInjuries,
+        // New optional context (backward compatible)
+        programId,
+        workoutId,
+        sessionDuration: formData.session_details?.duration_minutes || undefined,
+        programName: formData.name || undefined,
+        programDescription: formData.description || undefined,
+        influences: formData.reference_input || undefined,
+        goals: formData.goal || formData.focus_area || undefined,
       };
 
       const res = await fetch('/api/enhance-workout', {
@@ -197,13 +205,14 @@ export default function WorkoutDetailsPage(props) {
         throw new Error(data.error || 'Failed to enhance workout');
       }
 
-      const { enhancedWorkout } = await res.json();
+      const { enhancedWorkout, fitFeedback } = await res.json();
 
       // Store the enhanced workout for preview
       setPendingEnhancement({
         title: enhancedWorkout.title,
         body: enhancedWorkout.description,
         notes: enhancedWorkout.notes,
+        fitFeedback: enhancedWorkout.fitFeedback || fitFeedback || null,
       });
 
       setShowSavePrompt(true);
@@ -276,7 +285,7 @@ export default function WorkoutDetailsPage(props) {
     try {
       const shareUrl = `${window.location.origin}/program/${programId}/workout/${workoutId}`;
       await navigator.clipboard.writeText(shareUrl);
-      alert('Workout link copied to clipboard! Share this with your clients.');
+      alert('Workout link copied to clipboard!');
     } catch (err) {
       console.error('Failed to copy link:', err);
       alert('Failed to copy link');
@@ -574,7 +583,7 @@ export default function WorkoutDetailsPage(props) {
                         <button
                           onClick={handleShareWorkout}
                           className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg font-medium transition-colors border border-blue-200"
-                          title="Share this workout with clients"
+                          title="Share this workout"
                         >
                           <Share2 className="w-4 h-4" />
                           Share
@@ -617,14 +626,49 @@ export default function WorkoutDetailsPage(props) {
             </div>
           ) : (
             <div className="p-8">
-              {/* Show AI Notes if pending enhancement */}
-              {pendingEnhancement?.notes && (
+              {/* AI Feedback block */}
+              {(pendingEnhancement?.fitFeedback ||
+                (pendingEnhancement?.notes && pendingEnhancement?.notes.trim().length > 0)) && (
                 <div className="mb-6 p-4 bg-purple-50 border border-purple-200 rounded-xl">
                   <div className="flex items-start gap-3">
                     <Sparkles className="w-5 h-5 mt-0.5 flex-shrink-0 text-purple-600" />
-                    <div>
-                      <div className="font-semibold text-purple-900 mb-1">AI Enhancement Notes</div>
-                      <div className="text-purple-700">{pendingEnhancement.notes}</div>
+                    <div className="w-full">
+                      <div className="font-semibold text-purple-900 mb-2">AI Feedback</div>
+                      {pendingEnhancement?.fitFeedback && (
+                        <div className="space-y-3">
+                          {Array.isArray(pendingEnhancement.fitFeedback.whatChanged) &&
+                            pendingEnhancement.fitFeedback.whatChanged.length > 0 && (
+                              <div>
+                                <div className="text-sm font-medium text-purple-900 mb-1">What changed</div>
+                                <ul className="list-disc pl-5 text-purple-800">
+                                  {pendingEnhancement.fitFeedback.whatChanged.map((item, idx) => (
+                                    <li key={idx}>{item}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                          {pendingEnhancement.fitFeedback.whyItFits && (
+                            <div>
+                              <div className="text-sm font-medium text-purple-900 mb-1">Why it fits your program</div>
+                              <div className="text-purple-800">{pendingEnhancement.fitFeedback.whyItFits}</div>
+                            </div>
+                          )}
+                          {Array.isArray(pendingEnhancement.fitFeedback.refusedOrAdapted) &&
+                            pendingEnhancement.fitFeedback.refusedOrAdapted.length > 0 && (
+                              <div>
+                                <div className="text-sm font-medium text-purple-900 mb-1">Refused or adapted</div>
+                                <ul className="list-disc pl-5 text-purple-800">
+                                  {pendingEnhancement.fitFeedback.refusedOrAdapted.map((item, idx) => (
+                                    <li key={idx}>{item}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                        </div>
+                      )}
+                      {pendingEnhancement?.notes && (
+                        <div className="mt-3 text-purple-700">{pendingEnhancement.notes}</div>
+                      )}
                     </div>
                   </div>
                 </div>

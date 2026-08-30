@@ -430,8 +430,8 @@ Since this is Week 1, include a programDescription field (500-700 words) that is
 
 FORMAT: Use markdown with **bold section headers** followed by detailed paragraphs. Structure like this:
 
-**Program Overview & Client Profile**
-[Reference their actual metrics - 1RMs, weight, height, age, experience level. Make it clear this was designed FOR THEM specifically.]
+**Program Overview & Your Profile**
+[Reference your actual metrics - 1RMs, weight, height, age, experience level. Make it clear this was designed FOR YOU specifically.]
 
 **Periodization Approach**
 [Explain the ${programType || 'linear'} approach with specific intensity ranges (e.g., "80-85% 1RM for strength days, 65-75% for hypertrophy"). Detail how training variables progress.]
@@ -448,7 +448,7 @@ FORMAT: Use markdown with **bold section headers** followed by detailed paragrap
 **Medical & Injury Considerations**
 [If injury history exists, explain how the program accounts for it. If post-surgical or special conditions, address directly.]
 
-Write in an engaging, expert coach tone. Each section should be a substantial paragraph, not bullet points.
+Write in an engaging, expert trainer tone speaking directly to the athlete. Each section should be a substantial paragraph, not bullet points.
 </program_description_requirement>`
       : ''
   }
@@ -527,13 +527,13 @@ Each workout should include:
 - Conditioning Work (clear format, exact weights, target time domains)
 - Detailed Stimulus and Strategy section with primary focus statement, progression context, and bulleted tactical guidance
 - Scaling options${hasInjuryHistory ? ', injury considerations' : ''}
-- Coaching cues (3-5 specific technical cues)
+- Technique tips (3-5 specific technical cues)
 - Cool-down (specific movements and durations)
 
 <weight_units>
 Express all weights in ${useImperial ? 'pounds (lbs)' : 'kilograms (kg)'} throughout all workouts.
 This applies to RX weights for men and women, scaling options, and all exercise prescriptions.
-Context: The client's unit preference is ${useImperial ? 'imperial (lbs)' : 'metric (kg)'}, so using incorrect units would make the program confusing.
+Context: Your unit preference is ${useImperial ? 'imperial (lbs)' : 'metric (kg)'}, so using incorrect units would make the program confusing.
 </weight_units>
 
 Format each workout body with this structure:
@@ -557,7 +557,7 @@ ${getGenderWeightInstructions(clientGender)}
 [Complete workout with movements, reps, weights]
 ${getGenderWeightInstructions(clientGender)}
 
-## Coaching Cues
+## Technique Tips
 [3-5 specific technical cues for key movements]
 
 ## Cool-down
@@ -573,7 +573,7 @@ ${getGenderWeightInstructions(clientGender)}
 
 <output_requirements>
 Generate exactly ${daysPerWeek} professional workouts for week ${weekNumber} in valid JSON format.
-Include detailed coaching cues, scaling options, and progression guidance.
+Include detailed technique tips, scaling options, and progression guidance.
 Follow sound exercise science principles with appropriate weekly progression.
 ${weekNumber === 1 ? `For Week 1, include a personalized programDescription field (400-600 words) that references the client's specific metrics, explains the periodization approach with intensity percentages, describes session structure, provides specific adaptation timelines, and includes tailored nutrition/recovery guidance.` : ''}
 </output_requirements>

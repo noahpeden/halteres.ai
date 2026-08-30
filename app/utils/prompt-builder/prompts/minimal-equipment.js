@@ -86,12 +86,12 @@ ${focus_area ? `Focus Area: ${focus_area}` : ''}
 Periodization: ${programType}
 </program_parameters>
 
-${
+${ 
   description
-    ? `<client_requirements priority="high">
+    ? `<your_requirements priority="high">
 ${description}
 These requirements take precedence over general guidelines below.
-</client_requirements>
+</your_requirements>
 `
     : ''
 }
@@ -139,7 +139,7 @@ Include in the program description:
 </description_requirements>
 
 <methodology_guidelines>
-Apply these minimal equipment principles where they don't conflict with client requirements:
+Apply these minimal equipment principles where they don't conflict with your requirements:
 - Focus on compound bodyweight movements (squats, lunges, push-ups, planks, rows)
 - Use resistance bands for added resistance or assistance
 - Include HIIT or circuit training to maximize metabolic effect
@@ -202,7 +202,7 @@ Time-based or rep-based challenge with minimal equipment
 Specific movements and durations for recovery
 No equipment needed
 
-## Coaching Cues
+## Technique Tips
 3-5 technical cues for key movements, form tips, common errors to avoid
 </workout_body_structure>
 

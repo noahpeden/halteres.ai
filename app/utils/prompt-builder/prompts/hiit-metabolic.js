@@ -70,12 +70,12 @@ ${focus_area ? `Focus Area: ${focus_area}` : ''}
 Periodization: ${programType}
 </program_parameters>
 
-${
+${ 
   description
-    ? `<client_requirements priority="high">
+    ? `<your_requirements priority="high">
 ${description}
 These requirements take precedence over general guidelines below.
-</client_requirements>
+</your_requirements>
 `
     : ''
 }
@@ -126,7 +126,7 @@ Include in the program description:
 </description_requirements>
 
 <methodology_guidelines>
-Apply these HIIT/Metabolic principles where they don't conflict with client requirements:
+Apply these HIIT/Metabolic principles where they don't conflict with your requirements:
 - High-intensity work intervals with brief recovery periods
 - Various HIIT formats (AMRAP, EMOM, Tabata, Intervals, For Time)
 - Exercises suitable for safe high-intensity execution with available equipment
@@ -143,7 +143,7 @@ Example: "Week 3, Day 1: [HIIT Format] - [Creative Title]"
 <json_output_format>
 {
   "title": "HIIT/Metabolic Conditioning Program for ${goal}",
-  "description": "Program description reflecting: goal, ${numberOfWeeks}-week duration, ${difficulty} difficulty, formats used (${formattedWorkoutFormats}), and client requirements",
+  "description": "Program description reflecting: goal, ${numberOfWeeks}-week duration, ${difficulty} difficulty, formats used (${formattedWorkoutFormats}), and your requirements",
   "overview": "Detailed methodology, periodization approach (${programType}), rationale for interval structures, expected metabolic outcomes, and supplementary recommendations",
   "workouts": [
     {
@@ -190,7 +190,7 @@ Cool-down protocol for recovery
 - Light cardio to gradually lower heart rate
 - Static stretching for major muscle groups worked
 
-## Coaching Cues
+## Technique Tips
 3-5 technical cues for key movements under fatigue
 - Form maintenance during high intensity
 - Pacing tips and breathing techniques

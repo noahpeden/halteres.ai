@@ -515,7 +515,7 @@ Instead, treat EVERY session as a full training session with appropriate intensi
   const experiencedAthleteGuidance = hasExperiencedAthlete
     ? `
 EXPERIENCED ATHLETE NOTICE:
-The client profile indicates significant training experience. DO NOT:
+Your profile indicates significant training experience. DO NOT:
 - Include basic technique explanations for standard movements
 - Use reduced "beginner" or "intro" weights
 - Over-explain fundamental concepts they already know
@@ -555,7 +555,7 @@ IMPORTANT: Incorporate these specific adjustments into your enhancements.`
 ${
   clientMetricsContent
     ? `
-CLIENT CONTEXT:
+YOUR CONTEXT:
 ${clientMetricsContent}
 `
     : ''
