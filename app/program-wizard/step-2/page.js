@@ -127,10 +127,10 @@ export default function Step2Page() {
   };
 
   const examplePrompts = [
-    'Client is a competitive basketball player looking to enhance explosive power and vertical jump. They have 2 years of strength training experience and need a program focused on plyometrics and Olympic lifts.',
-    'Client is an intermediate powerlifter seeking to improve their deadlift and squat numbers. They have 3 years of training experience and need a program emphasizing progressive overload and accessory work.',
-    'Client is a former runner transitioning to triathlon. They need a program that builds swim and bike endurance while maintaining running performance. They have excellent cardiovascular fitness but limited strength training experience.',
-    'Client is a busy professional looking to improve body composition and overall fitness. They have basic gym experience and need a program that efficiently combines strength training with metabolic conditioning.',
+    "I'm a competitive basketball player looking to enhance explosive power and vertical jump. I have 2 years of strength training experience and want a program focused on plyometrics and Olympic lifts.",
+    "I'm an intermediate powerlifter seeking to improve my deadlift and squat numbers. I have 3 years of training experience and want a program emphasizing progressive overload and accessory work.",
+    "I'm a former runner transitioning to triathlon. I need a program that builds swim and bike endurance while maintaining running performance. I have excellent cardiovascular fitness but limited strength training experience.",
+    "I'm a busy professional looking to improve body composition and overall fitness. I have basic gym experience and want a program that efficiently combines strength training with metabolic conditioning.",
   ];
 
   return (
@@ -157,9 +157,7 @@ export default function Step2Page() {
       <div className="bg-base-200 rounded-lg p-6">
         <div className="text-center mb-6">
           <h2 className="text-2xl font-bold text-primary mb-2">Program Description</h2>
-          <p className="text-base-content/70">
-            Describe your client's goals, needs, and training preferences
-          </p>
+          <p className="text-base-content/70">Describe your goals, needs, and training preferences</p>
         </div>
 
         <div className="space-y-6">
@@ -184,7 +182,7 @@ export default function Step2Page() {
 
           <div>
             <label className="label">
-              <span className="label-text text-lg font-medium">Client Program Description</span>
+              <span className="label-text text-lg font-medium">Your Program Description</span>
               <span className="label-text-alt">
                 Be specific about their goals, needs, and current status
               </span>
@@ -192,7 +190,7 @@ export default function Step2Page() {
             <textarea
               value={programDescription}
               onChange={(e) => setProgramDescription(e.target.value)}
-              placeholder="Describe your client's fitness goals, current fitness level, any limitations or injuries, training preferences, and what you want to help them achieve with this program..."
+              placeholder="Describe your fitness goals, current fitness level, any limitations or injuries, training preferences, and what you want to achieve with this program..."
               className={`textarea textarea-bordered w-full h-40 ${
                 errors.programDescription ? 'textarea-error' : ''
               }`}
@@ -234,9 +232,9 @@ export default function Step2Page() {
               ></path>
             </svg>
             <div>
-              <div className="font-semibold">Tips for effective client descriptions:</div>
+              <div className="font-semibold">Tips for effective descriptions:</div>
               <ul className="text-sm mt-1 list-disc list-inside">
-                <li>Include client's current fitness level and training experience</li>
+                <li>Include your current fitness level and training experience</li>
                 <li>Mention specific goals (strength, muscle, endurance, weight loss)</li>
                 <li>Note any injuries, limitations, or movements to avoid</li>
                 <li>Specify their time constraints and training preferences</li>
@@ -259,7 +257,7 @@ export default function Step2Page() {
             Back to Step 1
           </button>
 
-          <div className="text-sm text-base-content/60">Step 2 of 5 • Client Description</div>
+          <div className="text-sm text-base-content/60">Step 2 of 5 • Your Description</div>
 
           <button onClick={handleNext} className="btn btn-primary px-6" disabled={isSaving}>
             {isSaving ? (

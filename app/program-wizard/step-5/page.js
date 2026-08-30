@@ -365,7 +365,7 @@ export default function Step5Page() {
 
   const handleComplete = async () => {
     if (!selectedEntityId) {
-      alert('Please select a client or class before creating the program.');
+      alert('Please select a profile or class before creating the program.');
       return;
     }
 
@@ -463,18 +463,18 @@ export default function Step5Page() {
           <p className="text-base-content/70">
             {selectedEntityId
               ? `Review and update ${displayEntityName}'s metrics before creating the program`
-              : 'Select a client or class to create the program for'}
+              : 'Select a profile or class to create the program for'}
           </p>
         </div>
 
         {/* Entity Selection Section */}
         {!selectedEntityId || showEntitySelection ? (
           <div className="bg-base-100 rounded-lg p-4 mb-6">
-            <h3 className="text-lg font-semibold mb-4">Select Client or Class</h3>
+            <h3 className="text-lg font-semibold mb-4">Select Profile or Class</h3>
             {entities.length > 0 ? (
               <div className="w-full mb-4">
                 <label className="label">
-                  <span className="text-sm">Choose a Client or Class</span>
+                <span className="text-sm">Choose a Profile or Class</span>
                 </label>
                 <select
                   className="select select-bordered w-full"
@@ -482,9 +482,9 @@ export default function Step5Page() {
                   onChange={(e) => handleEntitySelect(e.target.value)}
                 >
                   <option value="" disabled>
-                    Select a client or class
+                    Select a profile or class
                   </option>
-                  <optgroup label="Clients">
+                  <optgroup label="Profiles">
                     {entities
                       .filter((entity) => entity.type === 'CLIENT')
                       .map((entity) => (
@@ -506,12 +506,12 @@ export default function Step5Page() {
               </div>
             ) : (
               <p className="text-center py-4 mb-4">
-                No clients or classes yet. Create your first one below.
+                No profiles or classes yet. Create your first one below.
               </p>
             )}
 
             <div className="flex justify-between items-center">
-              <span className="text-sm font-medium">Or create a new client/class:</span>
+              <span className="text-sm font-medium">Or create a new profile/class:</span>
               <button onClick={handleCreateNewEntity} className="btn btn-sm btn-outline">
                 Create New
               </button>
@@ -536,7 +536,7 @@ export default function Step5Page() {
                   Selected{' '}
                   {entities.find((e) => e.id === selectedEntityId)?.type === 'CLASS'
                     ? 'Class'
-                    : 'Client'}
+                    : 'Profile'}
                 </h3>
                 <p className="text-base-content/70">
                   {entities.find((e) => e.id === selectedEntityId)?.name}
@@ -690,7 +690,7 @@ export default function Step5Page() {
                 ></path>
               </svg>
               <div>
-                <div className="font-semibold">About {entityTypeText} metrics</div>
+                <div className="font-semibold">About {entityTypeText === 'class' ? 'class' : 'your'} metrics</div>
                 <div className="text-sm">
                   {entityType === 'CLASS'
                     ? 'Class metrics represent general information about the group. Individual variations may apply during training.'
@@ -702,7 +702,9 @@ export default function Step5Page() {
             <div className="mb-6">
               <div className="bg-base-100 rounded-lg p-6">
                 <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-xl font-semibold">{entityTypeTextCap} Metrics</h3>
+                  <h3 className="text-xl font-semibold">
+                    {entityType === 'CLASS' ? 'Class Metrics' : 'Your Metrics'}
+                  </h3>
                   <div className="flex items-center gap-4">
                     {/* Unit Toggle */}
                     <label className="flex items-center gap-2 text-sm">

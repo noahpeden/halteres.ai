@@ -149,7 +149,7 @@ export default function PublicProgramPage({ params }: { params: { programId: str
             <div>
               <h3 className="font-semibold">You're viewing a shared program</h3>
               <p className="text-sm mt-1">
-                This program has been shared with you by a fitness professional.
+                This program has been shared with you.
                 {!user && (
                   <>
                     {' '}
@@ -258,8 +258,7 @@ export default function PublicProgramPage({ params }: { params: { programId: str
             <div className="text-center">
               <h3 className="text-xl font-bold mb-2">Want to create programs like this?</h3>
               <p className="text-primary-content/90 mb-4">
-                Join HalteresAI and create personalized workout programs with AI assistance. Perfect
-                for personal trainers, coaches, and fitness professionals.
+                Join HalteresAI and create personalized workout programs with AI assistance. Perfect for self-coached athletes.
               </p>
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
                 <Link href="/auth/sign-up" className="btn btn-white text-primary font-semibold">
@@ -284,8 +283,7 @@ export default function PublicProgramPage({ params }: { params: { programId: str
                 Want to create your own programs?
               </h3>
               <p className="text-blue-700 mb-4">
-                You're viewing a shared program. To create and manage your own programs, access
-                client metrics, and use our AI program writer, visit your dashboard.
+                You're viewing a shared program. To create and manage your own programs, access your metrics, and use our AI program writer, visit your dashboard.
               </p>
               <Link href="/dashboard" className="btn btn-primary">
                 Go to Dashboard

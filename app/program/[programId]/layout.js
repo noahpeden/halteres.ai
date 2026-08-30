@@ -90,18 +90,18 @@ export default function ProgramLayout({ children, params }) {
     },
     {
       href: `/program/${programId}/metrics`,
-      label: entityType === 'CLASS' ? 'Class Metrics' : 'Client Metrics',
+      label: entityType === 'CLASS' ? 'Class Metrics' : 'Your Metrics',
       icon: BarChart3,
       description:
         entityType === 'CLASS'
           ? 'Track class progress and stats'
-          : 'Track client progress and stats',
+          : 'Track your progress and stats',
     },
     {
       href: '/dashboard',
       label: 'Dashboard',
       icon: LayoutDashboard,
-      description: 'Overview of all programs and clients',
+      description: 'Overview of all programs',
     },
   ];
 

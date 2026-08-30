@@ -276,7 +276,7 @@ export default function WorkoutDetailsPage(props) {
     try {
       const shareUrl = `${window.location.origin}/program/${programId}/workout/${workoutId}`;
       await navigator.clipboard.writeText(shareUrl);
-      alert('Workout link copied to clipboard! Share this with your clients.');
+      alert('Workout link copied to clipboard!');
     } catch (err) {
       console.error('Failed to copy link:', err);
       alert('Failed to copy link');
@@ -574,7 +574,7 @@ export default function WorkoutDetailsPage(props) {
                         <button
                           onClick={handleShareWorkout}
                           className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg font-medium transition-colors border border-blue-200"
-                          title="Share this workout with clients"
+                          title="Share this workout"
                         >
                           <Share2 className="w-4 h-4" />
                           Share
