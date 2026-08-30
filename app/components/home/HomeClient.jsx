@@ -568,6 +568,21 @@ export default function HomeClient() {
                     Contact
                   </Link>
                 </li>
+                <li>
+                  <Link href="/privacy-policy" className="hover:text-primary transition-colors">
+                    Privacy Policy
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/terms" className="hover:text-primary transition-colors">
+                    Terms of Use
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/account-deletion" className="hover:text-primary transition-colors">
+                    Account Deletion
+                  </Link>
+                </li>
               </ul>
             </div>
             <div>
