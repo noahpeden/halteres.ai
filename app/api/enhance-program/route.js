@@ -1,7 +1,16 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { NextResponse } from 'next/server';
+import { corsHeaders } from '@/utils/supabase/mobile';
 
 export const maxDuration = 300; // 5 minutes for enhanced thinking
+
+// Handle OPTIONS for CORS preflight
+export async function OPTIONS(_request) {
+  return new Response(null, {
+    status: 200,
+    headers: corsHeaders(),
+  });
+}
 
 export async function POST(req) {
   try {
@@ -22,7 +31,7 @@ export async function POST(req) {
         {
           error: 'Missing required fields: workouts, instructions, methodology, gymEquipment',
         },
-        { status: 400 }
+        { status: 400, headers: corsHeaders() }
       );
     }
 
@@ -155,13 +164,13 @@ IMPORTANT: You must return exactly ${workouts.length} enhanced workouts, one for
       console.error('Response content:', responseContent.substring(0, 500));
       return NextResponse.json(
         { error: 'Failed to parse enhanced program from AI response: ' + err.message },
-        { status: 500 }
+        { status: 500, headers: corsHeaders() }
       );
     }
 
-    return NextResponse.json({ enhancedProgram }, { status: 200 });
+    return NextResponse.json({ enhancedProgram }, { status: 200, headers: corsHeaders() });
   } catch (error) {
     console.error('Error enhancing program:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: error.message }, { status: 500, headers: corsHeaders() });
   }
 }

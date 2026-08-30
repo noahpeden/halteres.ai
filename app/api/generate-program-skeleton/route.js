@@ -640,7 +640,7 @@ async function extractSharedData(requestData, supabase) {
   const trainingMethodology = requestData.trainingMethodology || '';
   const description = requestData.description || '';
 
-  const numberOfWeeks = parseInt(requestData.duration_weeks || requestData.numberOfWeeks || 4, 10);
+  const numberOfWeeks = parseInt(requestData.duration_weeks || requestData.numberOfWeeks || 8, 10);
   const daysPerWeek = parseInt(requestData.days_per_week || requestData.daysPerWeek || 3, 10);
   const programType =
     requestData.periodization?.program_type || requestData.programType || 'linear';
