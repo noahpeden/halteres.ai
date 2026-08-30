@@ -60,7 +60,7 @@ export default function AccountDeletionPage() {
                 Request Permanent Deletion by Email
               </h2>
               <p className="text-gray-600 mb-4">
-                Email <a href="mailto:support@halteres.ai" className="text-blue-600">support@halteres.ai</a>{' '}
+                Email <a href="mailto:noah@halteres.ai" className="text-blue-600">noah@halteres.ai</a>{' '}
                 from the email associated with your account and include the subject line
                 &quot;Account Deletion Request&quot;. For security, we may ask you to verify your
                 request.
@@ -88,8 +88,8 @@ export default function AccountDeletionPage() {
               <h2 className="text-2xl font-bold text-gray-900 mb-4">Need Help?</h2>
               <p className="text-gray-600">
                 If you have any questions about deactivation or deletion, contact us at{' '}
-                <a href="mailto:support@halteres.ai" className="text-blue-600">
-                  support@halteres.ai
+                <a href="mailto:noah@halteres.ai" className="text-blue-600">
+                  noah@halteres.ai
                 </a>.
               </p>
             </section>

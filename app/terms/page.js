@@ -158,7 +158,7 @@ export default function TermsOfUsePage() {
               <h2 className="text-2xl font-bold text-gray-900 mb-4">12. Contact</h2>
               <div className="bg-gray-50 p-6 rounded-lg">
                 <p className="text-gray-900 font-semibold">Halteres</p>
-                <p className="text-gray-600">Email: support@halteres.ai</p>
+                <p className="text-gray-600">Email: noah@halteres.ai</p>
               </div>
             </section>
           </div>
