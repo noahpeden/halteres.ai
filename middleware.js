@@ -92,7 +92,8 @@ export async function middleware(req) {
   }
 
   // Define coach-only routes (athletes should not access these)
-  const coachOnlyRoutes = ['/dashboard', '/program', '/write-program'];
+  // B2C: allow athletes to access /program (self-coached writer)
+  const coachOnlyRoutes = ['/dashboard', '/write-program'];
   const isCoachOnlyRoute =
     coachOnlyRoutes.some((route) => pathname.startsWith(route)) && !isPublicRoute;
 
@@ -137,21 +138,10 @@ export async function middleware(req) {
         return NextResponse.redirect(redirectUrl);
       }
 
-      // Athlete setup check: if athlete needs setup, redirect to main athlete page
+      // Athlete setup check: if onboarding incomplete, redirect to main athlete page
       if (isAthlete && isAthleteRoute && !isAthleteSetupRoute) {
-        // Check if athlete has active gym membership
-        const { data: memberships } = await supabase
-          .from('gym_memberships')
-          .select('id, status')
-          .eq('user_id', user.id)
-          .eq('status', 'active')
-          .limit(1);
-
-        const hasActiveGym = memberships && memberships.length > 0;
-        const athleteNeedsSetup = !hasActiveGym || !onboarding_completed;
-
+        const athleteNeedsSetup = !onboarding_completed;
         if (athleteNeedsSetup) {
-          // Redirect to main athlete page for setup/onboarding
           const redirectUrl = new URL('/athlete', req.url);
           return NextResponse.redirect(redirectUrl);
         }
