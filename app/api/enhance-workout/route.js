@@ -57,7 +57,7 @@ export async function POST(req) {
 
     // Compose the enhancement prompt
     const systemPrompt = `
-You are an expert fitness coach who specializes in creating and enhancing effective, personalized workout programs. Always consider evidence-based training principles, safety, and client context.`;
+You are an expert fitness coach who specializes in creating and enhancing effective, personalized workout programs. Always consider evidence-based training principles, safety, and the user's context.`;
 
     const userPrompt = `
 Enhance the following workout according to these user instructions: "${instructions}".
@@ -65,7 +65,7 @@ Enhance the following workout according to these user instructions: "${instructi
 Context:
 - Training methodology: ${methodology}
 - Equipment available: ${Array.isArray(gymEquipment) ? gymEquipment.join(', ') : gymEquipment}
-- Client injuries or limitations: ${
+- Your injuries or limitations: ${
       injuries?.length ? (Array.isArray(injuries) ? injuries.join(', ') : injuries) : 'None'
     }
 

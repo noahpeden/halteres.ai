@@ -140,7 +140,7 @@ export async function POST(request) {
 
             // Format client metrics for the prompt
             clientMetricsContent = `
-Client Metrics:
+Your Metrics:
 ${entityData.gender ? `Gender: ${entityData.gender}` : ''}
 ${entityData.height_cm ? `Height: ${entityData.height_cm} cm` : ''}
 ${entityData.weight_kg ? `Weight: ${entityData.weight_kg} kg` : ''}
@@ -159,9 +159,9 @@ ${
     : ''
 }
 
-When calculating RX weights, scale them appropriately based on the client's strength metrics (bench, squat, deadlift) if available.
-For other movements, estimate appropriate weights based on the client's metrics, gender, and strength levels.
-If client metrics indicate specific limitations, provide appropriate scaling options.`;
+When calculating RX weights, scale them appropriately based on your strength metrics (bench, squat, deadlift) if available.
+For other movements, estimate appropriate weights based on your metrics, gender, and strength levels.
+If your metrics indicate specific limitations, provide appropriate scaling options.`;
           }
         }
       } catch (err) {
@@ -317,7 +317,7 @@ Format each workout with the following sections:
    - Explain the intended stimulus for both strength and conditioning portions
    - Provide pacing guidance for each section
    - Explain how to approach the workout (e.g., "Break the handstand push-ups into sets of 3 early")${scalingInstructions}
-${coachingCueNumber}. Coaching Cues:
+${coachingCueNumber}. Technique Tips:
    - 3-5 specific technical cues for the most complex movements in the workout
    - Form tips to maximize efficiency and safety
    - Common errors to avoid
@@ -360,7 +360,7 @@ For each workout's "body" field, use this structure:
 ## Stimulus and Strategy
 [Detailed explanation of workout stimulus and strategy approach]${scalingBodyStructure}
 
-## Coaching Cues
+## Technique Tips
 [3-5 specific technical cues for key movements]
 
 ## Cool-down
@@ -391,7 +391,7 @@ IMPORTANT: Each workout MUST be assigned to one of the above dates. These dates 
 
     // Updated system prompt
     const systemPrompt =
-      "You are an expert strength and conditioning coach who specializes in creating effective, periodized training programs. Create professional, CrossFit-style workouts with precise stimulus explanations, detailed scaling options, and specific coaching cues. Each workout should include clear RX weights (for men and women), proper warm-up and cool-down protocols, and actionable strategy recommendations. CRITICAL EQUIPMENT CONSTRAINT: You MUST ONLY include exercises that use the EXACT equipment specified in the prompt. Do NOT recommend or include ANY exercises that require equipment not explicitly listed as available. CRITICAL SCHEDULING CONSTRAINT: You MUST assign each workout EXACTLY to the dates provided in the suggestedDates list, which are aligned with the user's selected days of the week. Follow sound exercise science principles with appropriate progression, variation, and specificity. Provide responses EXACTLY in the JSON format specified in the prompt.";
+      "You are an expert strength and conditioning coach who specializes in creating effective, periodized training programs. Create professional, CrossFit-style workouts with precise stimulus explanations, detailed scaling options, and specific technique tips. Each workout should include clear RX weights (for men and women), proper warm-up and cool-down protocols, and actionable strategy recommendations. CRITICAL EQUIPMENT CONSTRAINT: You MUST ONLY include exercises that use the EXACT equipment specified in the prompt. Do NOT recommend or include ANY exercises that require equipment not explicitly listed as available. CRITICAL SCHEDULING CONSTRAINT: You MUST assign each workout EXACTLY to the dates provided in the suggestedDates list, which are aligned with the user's selected days of the week. Follow sound exercise science principles with appropriate progression, variation, and specificity. Provide responses EXACTLY in the JSON format specified in the prompt.";
 
     // Call the AI provider (defaults to DeepSeek; AI_PROVIDER=anthropic to switch)
     try {
