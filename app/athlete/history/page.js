@@ -217,7 +217,7 @@ export default function AthleteHistoryPage() {
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2">
                                 <h3 className="athlete-body text-white font-medium truncate">
-                                  {result.workout?.name || 'Workout'}
+                                  {result.workout?.title || 'Workout'}
                                 </h3>
                                 {result.is_pr && <StatusBadge variant="pr" />}
                               </div>

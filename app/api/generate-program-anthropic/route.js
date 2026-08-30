@@ -1044,8 +1044,7 @@ async function extractSharedData(requestData, supabase) {
   // Allow mobile to pass recent training history and program influences
   const recentTrainingHistory =
     requestData.recent_training_history || requestData.recentTrainingHistory || '';
-  const programInfluences =
-    requestData.program_influences || requestData.programInfluences || '';
+  const programInfluences = requestData.program_influences || requestData.programInfluences || '';
   let referenceInput = requestData.referenceInput || '';
   let workoutFormats = requestData.workout_format?.formats || requestData.workout_format || [];
   let trainingMethodology = requestData.trainingMethodology || '';
@@ -1055,7 +1054,7 @@ async function extractSharedData(requestData, supabase) {
   let numberOfWeeks = parseInt(providedDuration ?? 8, 10);
   const providedDaysPerWeek = requestData.days_per_week ?? requestData.daysPerWeek;
   let daysPerWeek = parseInt(providedDaysPerWeek ?? 3, 10);
-  let programType =
+  const programType =
     requestData.periodization?.program_type || requestData.programType || 'linear';
 
   // Optional parameters
@@ -1081,7 +1080,7 @@ async function extractSharedData(requestData, supabase) {
 
   // Get selected days of the week from request data
   // Pull days_of_week from request first; may fallback to DB later
-  let selectedDaysOfWeek = requestData.calendar_data?.days_of_week || [];
+  const selectedDaysOfWeek = requestData.calendar_data?.days_of_week || [];
   logWithTimestamp('Selected days of week from request', {
     selectedDaysOfWeek,
   });
@@ -1226,7 +1225,10 @@ async function extractSharedData(requestData, supabase) {
         if (providedDuration == null && programData.duration_weeks) {
           numberOfWeeks = parseInt(programData.duration_weeks, 10);
         }
-        if ((!providedDaysPerWeek || isNaN(Number(providedDaysPerWeek))) && programData.calendar_data?.days_of_week?.length) {
+        if (
+          (!providedDaysPerWeek || isNaN(Number(providedDaysPerWeek))) &&
+          programData.calendar_data?.days_of_week?.length
+        ) {
           daysPerWeek = programData.calendar_data.days_of_week.length;
         }
         if (validDaysOfWeek.length === 0 && programData.calendar_data?.days_of_week?.length) {
@@ -1235,7 +1237,10 @@ async function extractSharedData(requestData, supabase) {
         if ((!equipment || equipment.length === 0) && programData.gym_details?.equipment) {
           equipment = programData.gym_details.equipment;
         }
-        if ((!workoutFormats || workoutFormats.length === 0) && programData.workout_format?.formats) {
+        if (
+          (!workoutFormats || workoutFormats.length === 0) &&
+          programData.workout_format?.formats
+        ) {
           workoutFormats = programData.workout_format.formats;
         }
         if (!trainingMethodology && programData.training_methodology) {
@@ -1338,8 +1343,7 @@ async function extractSharedData(requestData, supabase) {
       : typeof programInfluences === 'string'
         ? programInfluences
         : '';
-  const historyText =
-    typeof recentTrainingHistory === 'string' ? recentTrainingHistory : '';
+  const historyText = typeof recentTrainingHistory === 'string' ? recentTrainingHistory : '';
 
   // Build a combined referenceInput string with clear sections
   let combinedReference = '';

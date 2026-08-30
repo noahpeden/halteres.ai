@@ -308,7 +308,7 @@ export default function AthleteDashboard() {
                     />
                     <div>
                       <p className="athlete-body text-[var(--athlete-text-primary)] font-medium">
-                        {result.workout?.name || 'Workout'}
+                        {result.workout?.title || 'Workout'}
                       </p>
                       <p className="text-xs text-[var(--athlete-text-muted)]">
                         {new Date(result.created_at).toLocaleDateString('en-US', {
@@ -345,7 +345,7 @@ export default function AthleteDashboard() {
               )}
             </div>
           </Link>
-          
+
           <Link href="/athlete/profile">
             <div className="athlete-card p-4 flex flex-col items-center gap-2 text-center">
               <div className="w-10 h-10 rounded-lg bg-[var(--athlete-accent-pr)]/10 flex items-center justify-center">

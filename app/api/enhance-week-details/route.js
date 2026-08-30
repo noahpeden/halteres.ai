@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
+import { streamChatCompletion } from '@/utils/ai/provider';
 import {
   formatClassMetrics,
   formatClientMetrics,
+  formatEquipmentRestrictions,
   isClassMetrics,
 } from '@/utils/prompt-builder/promptBuilder.js';
-import { formatEquipmentRestrictions } from '@/utils/prompt-builder/promptBuilder.js';
 import { corsHeaders, createMobileCompatibleClient } from '@/utils/supabase/mobile';
-import { streamChatCompletion } from '@/utils/ai/provider';
 
 export const maxDuration = 300; // 5 minutes should be enough for a single week
 export const dynamic = 'force-dynamic';
@@ -132,13 +132,18 @@ async function enhanceWeekWorkouts(requestData, supabase, controller, encoder) {
     logWithTimestamp(`Found ${skeletonWorkouts.length} skeleton workouts to enhance`);
 
     // Mark workouts as 'enhancing'
-    await supabase
-      .from('program_workouts')
-      .update({ generation_status: 'enhancing' })
-      .in(
-        'id',
-        skeletonWorkouts.map((w) => w.id)
-      );
+    {
+      const { error: enhancingError } = await supabase
+        .from('program_workouts')
+        .update({ generation_status: 'enhancing', updated_at: new Date().toISOString() })
+        .in(
+          'id',
+          skeletonWorkouts.map((w) => w.id)
+        );
+      if (enhancingError) {
+        throw new Error('Failed to mark workouts as enhancing: ' + enhancingError.message);
+      }
+    }
 
     // Fetch client/entity metrics for context
     let clientMetricsContent = '';
@@ -180,9 +185,7 @@ async function enhanceWeekWorkouts(requestData, supabase, controller, encoder) {
     }
 
     const effectiveNumberOfWeeks =
-      (context?.numberOfWeeks ?? null) ??
-      (programMeta?.duration_weeks ?? null) ??
-      null;
+      context?.numberOfWeeks ?? null ?? programMeta?.duration_weeks ?? null ?? null;
     const equipment =
       (Array.isArray(context?.equipment) && context.equipment) ||
       programMeta?.gym_details?.equipment ||
@@ -194,11 +197,12 @@ async function enhanceWeekWorkouts(requestData, supabase, controller, encoder) {
       [];
     const focusArea = context?.focus || context?.focusArea || programMeta?.focus_area || '';
     const sessionMinutes =
-      (context?.sessionMinutes ??
-        context?.session_details?.duration_minutes ??
-        context?.workout_duration ??
-        null) ??
-      (programMeta?.session_details?.duration_minutes ?? null);
+      context?.sessionMinutes ??
+      context?.session_details?.duration_minutes ??
+      context?.workout_duration ??
+      null ??
+      programMeta?.session_details?.duration_minutes ??
+      null;
     // Build reference material: context.referenceInput/influences/history + DB reference_input
     let referenceMaterial = '';
     const ctxRef = context?.referenceInput || context?.reference_input || '';
@@ -242,7 +246,7 @@ async function enhanceWeekWorkouts(requestData, supabase, controller, encoder) {
     const enhancementPrompt = buildEnhancementPrompt(
       skeletonWorkouts,
       weekNumber,
-    augmentedContext,
+      augmentedContext,
       weekSpecificInput,
       workoutSections,
       clientMetricsContent,
@@ -341,13 +345,17 @@ async function enhanceWeekWorkouts(requestData, supabase, controller, encoder) {
       }
 
       // Update the workout with enhanced content
+      const updatePayload = {
+        body: enhanced.body,
+        // Prefer AI-provided title when available; otherwise keep existing
+        title: (enhanced.title && String(enhanced.title).trim()) || skeleton.title,
+        generation_status: 'detailed',
+        updated_at: new Date().toISOString(),
+      };
+
       const { error: updateError } = await supabase
         .from('program_workouts')
-        .update({
-          body: enhanced.body,
-          generation_status: 'detailed',
-          updated_at: new Date().toISOString(),
-        })
+        .update(updatePayload)
         .eq('id', skeleton.id);
 
       if (updateError) {
@@ -361,8 +369,8 @@ async function enhanceWeekWorkouts(requestData, supabase, controller, encoder) {
         sendEvent(controller, encoder, 'enhanced_workout', {
           workout: {
             id: skeleton.id,
-            title: skeleton.title,
-            body: enhanced.body,
+            title: updatePayload.title,
+            body: updatePayload.body,
             generation_status: 'detailed',
           },
           progress: {
@@ -457,8 +465,7 @@ function buildEnhancementPrompt(
     context?.session_details?.duration_minutes ??
     context?.workout_duration ??
     60;
-  const workoutFormats =
-    context?.workoutFormats || context?.workout_format?.formats || [];
+  const workoutFormats = context?.workoutFormats || context?.workout_format?.formats || [];
   const focusArea = context?.focusArea || context?.focus || '';
   const referenceMaterial = context?.referenceMaterial || '';
   const equipmentRestrictions = formatEquipmentRestrictions(equipment);

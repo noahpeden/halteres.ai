@@ -1,6 +1,7 @@
 /* eslint-disable react/no-unescaped-entities */
-import Link from 'next/link';
+
 import Image from 'next/image';
+import Link from 'next/link';
 import logo from '@/assets/logo.png';
 import { metadata as simple } from './simple-metadata';
 
@@ -60,9 +61,7 @@ export default function HomePage() {
 
       <section className="bg-base-200">
         <div className="max-w-5xl mx-auto px-4 py-16 sm:py-20">
-          <h2 className="text-2xl sm:text-3xl font-bold text-base-content mb-6">
-            How it works
-          </h2>
+          <h2 className="text-2xl sm:text-3xl font-bold text-base-content mb-6">How it works</h2>
           <ol className="space-y-4">
             {[
               'Tell us your goals, influences, and schedule.',

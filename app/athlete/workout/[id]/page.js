@@ -257,8 +257,6 @@ export default function WorkoutDetailPage() {
                 Log Your Result
               </button>
             )}
-
-            
           </div>
         )}
 
@@ -277,8 +275,6 @@ export default function WorkoutDetailPage() {
             />
           </div>
         )}
-
-        
       </div>
     </div>
   );

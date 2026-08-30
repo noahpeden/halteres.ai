@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { corsHeaders } from '@/utils/supabase/mobile';
 import { createChatCompletion } from '@/utils/ai/provider';
+import { corsHeaders } from '@/utils/supabase/mobile';
 
 export const maxDuration = 300; // 5 minutes for enhanced thinking
 

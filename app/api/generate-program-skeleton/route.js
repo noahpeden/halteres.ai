@@ -3,9 +3,9 @@ import { streamChatCompletion } from '@/utils/ai/provider';
 import {
   formatClassMetrics,
   formatClientMetrics,
-  isClassMetrics,
   formatEquipmentRestrictions,
   formatPeriodizationSection,
+  isClassMetrics,
 } from '@/utils/prompt-builder/promptBuilder.js';
 import { corsHeaders, createMobileCompatibleClient } from '@/utils/supabase/mobile';
 
@@ -666,8 +666,7 @@ async function extractSharedData(requestData, supabase) {
   let numberOfWeeks = parseInt(providedDuration ?? 8, 10);
   const providedDaysPerWeek = requestData.days_per_week ?? requestData.daysPerWeek;
   let daysPerWeek = parseInt(providedDaysPerWeek ?? 3, 10);
-  let programType =
-    requestData.periodization?.program_type || requestData.programType || 'linear';
+  let programType = requestData.periodization?.program_type || requestData.programType || 'linear';
 
   let equipment = requestData.gym_details?.equipment || requestData.equipment || [];
   const startDate = requestData.calendar_data?.start_date || requestData.startDate || '';
@@ -697,7 +696,10 @@ async function extractSharedData(requestData, supabase) {
         if (providedDuration == null && programData.duration_weeks) {
           numberOfWeeks = parseInt(programData.duration_weeks, 10);
         }
-        if ((!providedDaysPerWeek || isNaN(Number(providedDaysPerWeek))) && programData.calendar_data?.days_of_week?.length) {
+        if (
+          (!providedDaysPerWeek || isNaN(Number(providedDaysPerWeek))) &&
+          programData.calendar_data?.days_of_week?.length
+        ) {
           daysPerWeek = programData.calendar_data.days_of_week.length;
         }
         if (selectedDaysOfWeek.length === 0 && programData.calendar_data?.days_of_week?.length) {
@@ -706,7 +708,10 @@ async function extractSharedData(requestData, supabase) {
         if ((!equipment || equipment.length === 0) && programData.gym_details?.equipment) {
           equipment = programData.gym_details.equipment;
         }
-        if ((!workoutFormats || workoutFormats.length === 0) && programData.workout_format?.formats) {
+        if (
+          (!workoutFormats || workoutFormats.length === 0) &&
+          programData.workout_format?.formats
+        ) {
           workoutFormats = programData.workout_format.formats;
         }
         if (!trainingMethodology && programData.training_methodology) {

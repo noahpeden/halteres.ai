@@ -160,7 +160,7 @@ export function AuthProvider({ children, initialSession }) {
   // Check if athlete needs to complete setup (B2C: ignore gym membership requirement)
   const hasActiveGymMembership =
     gymMemberships.length > 0 && gymMemberships.some((m) => m.status === 'active');
-  const athleteNeedsSetup = isAthlete && (!profile?.onboarding_completed);
+  const athleteNeedsSetup = isAthlete && !profile?.onboarding_completed;
   const onboardingCompleted = profile?.onboarding_completed ?? false;
 
   const contextValue = useMemo(
