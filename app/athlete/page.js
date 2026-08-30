@@ -20,6 +20,7 @@ export default function AthleteDashboard() {
   const [activeProgram, setActiveProgram] = useState(null);
   const [programCount, setProgramCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [hasAnyPrograms, setHasAnyPrograms] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [stats, setStats] = useState({
     workoutsThisWeek: 0,
@@ -60,10 +61,6 @@ export default function AthleteDashboard() {
       router.push('/login');
       return;
     }
-    if (!currentGym && gymMemberships?.length === 0) {
-      setLoading(false);
-      return;
-    }
     fetchDashboardData();
   }, [user, currentGym]);
 
@@ -92,11 +89,19 @@ export default function AthleteDashboard() {
       const programsUrl = currentGym?.id
         ? `/api/athlete/programs?gymId=${currentGym.id}`
         : `/api/athlete/programs`;
+      // Source of truth for "any programs" should NOT require a gymId
+      const globalProgramsUrl = `/api/athlete/programs`;
 
-      const [workoutsRes, programsRes] = await Promise.all([fetch(todayUrl), fetch(programsUrl)]);
+      const [workoutsRes, programsRes, globalProgramsRes] = await Promise.all([
+        fetch(todayUrl),
+        fetch(programsUrl),
+        // This intentionally ignores gymId to determine if the athlete has any programs at all
+        fetch(globalProgramsUrl),
+      ]);
 
       const workoutsData = await workoutsRes.json();
       const programsData = await programsRes.json();
+      const globalProgramsData = await globalProgramsRes.json();
 
       if (workoutsData.success) {
         setTodaysWorkouts(workoutsData.workouts || []);
@@ -107,6 +112,9 @@ export default function AthleteDashboard() {
       if (programsData.success) {
         setActiveProgram(programsData.activeProgram);
         setProgramCount(programsData.programs?.length || 0);
+      }
+      if (globalProgramsData.success) {
+        setHasAnyPrograms((globalProgramsData.programs?.length || 0) > 0);
       }
     } catch (err) {
       console.error('Error fetching dashboard data:', err);
@@ -125,7 +133,7 @@ export default function AthleteDashboard() {
   const firstName = (profile?.display_name || profile?.full_name || 'Athlete').split(' ')[0];
 
   // Self-coached: show start prompt ONLY if no programs and no workouts
-  if (!currentGym && !loading && programCount === 0 && todaysWorkouts.length === 0) {
+  if (!loading && !hasAnyPrograms && todaysWorkouts.length === 0) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
         <div className="athlete-card-static max-w-md w-full p-8 text-center">
