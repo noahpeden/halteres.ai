@@ -44,14 +44,19 @@ export default function AccountDeletionPage() {
               <h2 className="text-2xl font-bold text-gray-900 mb-4">Delete Your Account In‑App</h2>
               <ol className="list-decimal pl-6 text-gray-600 space-y-2">
                 <li>Open the app and go to your Profile.</li>
-                <li>Scroll to Account settings and select <strong>Delete Account</strong>.</li>
-                <li>Type <strong>DELETE</strong> to confirm.</li>
-                <li>Tap <strong>Deactivate My Account</strong>.</li>
+                <li>
+                  Scroll to Account settings and select <strong>Delete Account</strong>.
+                </li>
+                <li>
+                  Type <strong>DELETE</strong> to confirm.
+                </li>
+                <li>
+                  Tap <strong>Deactivate My Account</strong>.
+                </li>
               </ol>
               <p className="text-gray-600 mt-4">
-                Deactivation is immediate. While deactivated, you cannot sign in or use the app.
-                To permanently remove your data, please also follow the email deletion process
-                below.
+                Deactivation is immediate. While deactivated, you cannot sign in or use the app. To
+                permanently remove your data, please also follow the email deletion process below.
               </p>
             </section>
 
@@ -60,7 +65,10 @@ export default function AccountDeletionPage() {
                 Request Permanent Deletion by Email
               </h2>
               <p className="text-gray-600 mb-4">
-                Email <a href="mailto:support@halteres.ai" className="text-blue-600">support@halteres.ai</a>{' '}
+                Email{' '}
+                <a href="mailto:noah@halteres.ai" className="text-blue-600">
+                  noah@halteres.ai
+                </a>{' '}
                 from the email associated with your account and include the subject line
                 &quot;Account Deletion Request&quot;. For security, we may ask you to verify your
                 request.
@@ -88,9 +96,10 @@ export default function AccountDeletionPage() {
               <h2 className="text-2xl font-bold text-gray-900 mb-4">Need Help?</h2>
               <p className="text-gray-600">
                 If you have any questions about deactivation or deletion, contact us at{' '}
-                <a href="mailto:support@halteres.ai" className="text-blue-600">
-                  support@halteres.ai
-                </a>.
+                <a href="mailto:noah@halteres.ai" className="text-blue-600">
+                  noah@halteres.ai
+                </a>
+                .
               </p>
             </section>
 
@@ -121,4 +130,3 @@ export default function AccountDeletionPage() {
     </div>
   );
 }
-

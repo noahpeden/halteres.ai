@@ -5,8 +5,7 @@ export const generateMetadata = () => {
   return {
     ...metadata,
     title: 'Terms of Use | HalteresAI',
-    description:
-      'HalteresAI Terms of Use for athletes using the app to generate and log training.',
+    description: 'HalteresAI Terms of Use for athletes using the app to generate and log training.',
   };
 };
 
@@ -53,9 +52,9 @@ export default function TermsOfUsePage() {
             <section className="mb-10">
               <h2 className="text-2xl font-bold text-gray-900 mb-4">3. Description of Service</h2>
               <p className="text-gray-600 mb-4">
-                HalteresAI provides AI-assisted tools to help athletes generate self-guided
-                training programs and log results. The Service is for informational and educational
-                purposes only and is not a substitute for professional medical advice, diagnosis, or
+                HalteresAI provides AI-assisted tools to help athletes generate self-guided training
+                programs and log results. The Service is for informational and educational purposes
+                only and is not a substitute for professional medical advice, diagnosis, or
                 treatment.
               </p>
               <p className="text-gray-600">
@@ -69,9 +68,7 @@ export default function TermsOfUsePage() {
               <h2 className="text-2xl font-bold text-gray-900 mb-4">4. Accounts & Security</h2>
               <ul className="list-disc pl-6 text-gray-600 space-y-2">
                 <li>You are responsible for maintaining the confidentiality of your account.</li>
-                <li>
-                  You agree that the information you provide is accurate and kept up to date.
-                </li>
+                <li>You agree that the information you provide is accurate and kept up to date.</li>
                 <li>
                   You are responsible for all activities that occur under your account and agree to
                   notify us of any unauthorized use.
@@ -139,9 +136,9 @@ export default function TermsOfUsePage() {
             <section className="mb-10">
               <h2 className="text-2xl font-bold text-gray-900 mb-4">10. Limitation of Liability</h2>
               <p className="text-gray-600">
-                To the maximum extent permitted by law, HalteresAI and its owners will not be
-                liable for any indirect, incidental, special, consequential, or punitive damages, or
-                any loss of profits or data, arising from or related to your use of the Service.
+                To the maximum extent permitted by law, HalteresAI and its owners will not be liable
+                for any indirect, incidental, special, consequential, or punitive damages, or any
+                loss of profits or data, arising from or related to your use of the Service.
               </p>
             </section>
 
@@ -158,7 +155,7 @@ export default function TermsOfUsePage() {
               <h2 className="text-2xl font-bold text-gray-900 mb-4">12. Contact</h2>
               <div className="bg-gray-50 p-6 rounded-lg">
                 <p className="text-gray-900 font-semibold">Halteres</p>
-                <p className="text-gray-600">Email: support@halteres.ai</p>
+                <p className="text-gray-600">Email: noah@halteres.ai</p>
               </div>
             </section>
           </div>
@@ -173,4 +170,3 @@ export default function TermsOfUsePage() {
     </div>
   );
 }
-

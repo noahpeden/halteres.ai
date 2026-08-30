@@ -164,7 +164,7 @@ export default function PrivacyPolicyPage() {
                 </li>
                 <li>
                   <strong>Delete Account:</strong> You may request deletion of your account by
-                  contacting us at support@halteres.ai or by following the steps at{' '}
+                  contacting us at noah@halteres.ai or by following the steps at{' '}
                   <Link href="/account-deletion" className="text-blue-600 hover:text-blue-500">
                     /account-deletion
                   </Link>
@@ -231,7 +231,7 @@ export default function PrivacyPolicyPage() {
               </p>
               <div className="bg-gray-50 p-6 rounded-lg">
                 <p className="text-gray-900 font-semibold">HalteresAI</p>
-                <p className="text-gray-600">Email: support@halteres.ai</p>
+                <p className="text-gray-600">Email: noah@halteres.ai</p>
               </div>
             </section>
           </div>
