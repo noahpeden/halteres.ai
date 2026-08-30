@@ -4,6 +4,8 @@ import {
   formatClassMetrics,
   formatClientMetrics,
   isClassMetrics,
+  formatEquipmentRestrictions,
+  formatPeriodizationSection,
 } from '@/utils/prompt-builder/promptBuilder.js';
 import { corsHeaders, createMobileCompatibleClient } from '@/utils/supabase/mobile';
 
@@ -333,6 +335,8 @@ async function generateWeekSkeleton(
     daysPerWeek,
     programType,
     equipment,
+    sessionDuration,
+    referenceMaterial,
     selectedDaysOfWeek,
     clientMetricsContent,
     suggestedDates,
@@ -374,11 +378,27 @@ Difficulty: ${difficulty}
 Methodology: ${trainingMethodology || 'General Fitness'}
 Periodization: ${programType || 'Linear'}
 Days/Week: ${daysPerWeek}
+Session Duration: ${sessionDuration || 60} minutes
 Week: ${weekNumber} of ${numberOfWeeks}
 ${focusArea ? `Focus: ${focusArea}` : ''}
 ${workoutFormats?.length > 0 ? `Workout Types: ${workoutFormats.join(', ')}` : ''}
-${equipment?.length > 0 ? `Equipment: ${equipment.join(', ')}` : ''}
+${equipment?.length > 0 ? `Equipment: ${equipment.join(', ')}` : 'Equipment: Bodyweight only'}
 ${clientMetricsContent ? `\n${clientMetricsContent}` : ''}${previousWeeksContext}
+${
+  equipment
+    ? `
+${formatEquipmentRestrictions(equipment)}
+`
+    : formatEquipmentRestrictions([])
+}
+${
+  referenceMaterial
+    ? `
+REFERENCE MATERIAL:
+${referenceMaterial}
+`
+    : ''
+}
 ${
   description
     ? `
@@ -436,12 +456,14 @@ Output JSON:
   ]
 }`;
 
-  const systemPrompt = `You are a strength and conditioning coach creating MINIMAL workout skeletons.
+  const systemPrompt = `You generate MINIMAL workout skeletons for a self-coached athlete. Write directly for the athlete (not a class).
 Generate exactly ${daysPerWeek} workout structures for week ${weekNumber}.
 Output ONLY the core sections: ${workoutSections.join(', ')}.
 NO warm-up, NO cool-down, NO coaching cues, NO detailed explanations.
 Be extremely concise - just exercise names, sets/reps, and weights.
 Express weights in ${useImperial ? 'lbs' : 'kg'}.
+Respect equipment restrictions strictly (applies to all content).
+${formatPeriodizationSection(programType)}
 Output valid JSON only.`;
 
   try {
@@ -650,8 +672,10 @@ async function extractSharedData(requestData, supabase) {
   let equipment = requestData.gym_details?.equipment || requestData.equipment || [];
   const startDate = requestData.calendar_data?.start_date || requestData.startDate || '';
   const useImperial = requestData.useImperial !== undefined ? requestData.useImperial : true;
-
-  const totalWorkouts = numberOfWeeks * daysPerWeek;
+  // Session duration minutes from request (may fallback to DB later)
+  const providedSessionDuration =
+    requestData.session_details?.duration_minutes || requestData.workout_duration;
+  let sessionDuration = parseInt(providedSessionDuration ?? 60, 10);
 
   // Get selected days of the week
   let selectedDaysOfWeek = requestData.calendar_data?.days_of_week || [];
@@ -659,17 +683,13 @@ async function extractSharedData(requestData, supabase) {
     (day) => day !== null && day !== undefined && typeof day === 'number' && day >= 0 && day <= 6
   );
 
-  if (selectedDaysOfWeek.length === 0) {
-    selectedDaysOfWeek = [1, 3, 5]; // Default: Mon, Wed, Fri
-  }
-
   // If programId present, fetch program for DB fallbacks when request omits fields
   if (programId) {
     try {
       const { data: programData } = await supabase
         .from('programs')
         .select(
-          'duration_weeks, periodization, gym_details, workout_format, calendar_data, training_methodology, description, reference_input, focus_area, difficulty, goal'
+          'duration_weeks, periodization, gym_details, workout_format, calendar_data, training_methodology, description, reference_input, focus_area, difficulty, goal, session_details'
         )
         .eq('id', programId)
         .single();
@@ -707,9 +727,66 @@ async function extractSharedData(requestData, supabase) {
         if (!programType && programData.periodization?.program_type) {
           programType = programData.periodization.program_type;
         }
+        if (
+          (providedSessionDuration == null || isNaN(Number(providedSessionDuration))) &&
+          programData.session_details?.duration_minutes
+        ) {
+          sessionDuration = parseInt(programData.session_details.duration_minutes, 10);
+        }
       }
     } catch (e) {
       // continue with request-provided values
+    }
+  }
+
+  // After applying DB fallbacks:
+  // - If days_of_week still empty, default to Mon/Wed/Fri
+  if (selectedDaysOfWeek.length === 0) {
+    selectedDaysOfWeek = [1, 3, 5];
+  }
+  // - If days_per_week wasn't explicitly provided, infer from selectedDaysOfWeek
+  if (!providedDaysPerWeek || isNaN(Number(providedDaysPerWeek))) {
+    daysPerWeek = selectedDaysOfWeek.length || daysPerWeek;
+  }
+
+  // Calculate total workouts AFTER final numberOfWeeks/daysPerWeek are resolved
+  const totalWorkouts = parseInt(numberOfWeeks, 10) * parseInt(daysPerWeek, 10);
+
+  // Merge reference material: request referenceInput + influences + history + DB reference_input
+  const influenceText =
+    Array.isArray(requestData.program_influences) && requestData.program_influences.length > 0
+      ? requestData.program_influences.join(', ')
+      : typeof requestData.program_influences === 'string'
+        ? requestData.program_influences
+        : '';
+  const historyText =
+    typeof requestData.recent_training_history === 'string'
+      ? requestData.recent_training_history
+      : '';
+  let referenceMaterial = '';
+  const requestReference = requestData.referenceInput || requestData.reference_input || '';
+  if (requestReference && requestReference.trim() !== '') {
+    referenceMaterial += `User-Provided Reference Material:\n---\n${requestReference.trim()}\n---`;
+  }
+  if (influenceText) {
+    referenceMaterial += `${referenceMaterial ? '\n\n' : ''}Program Influences / Styles:\n---\n${influenceText}\n---`;
+  }
+  if (historyText) {
+    referenceMaterial += `${referenceMaterial ? '\n\n' : ''}Recent Training History (last 2-3 months):\n---\n${historyText}\n---`;
+  }
+  // If still empty, try DB reference_input
+  if (!referenceMaterial && programId) {
+    try {
+      const { data: refRow } = await supabase
+        .from('programs')
+        .select('reference_input')
+        .eq('id', programId)
+        .single();
+      if (refRow?.reference_input) {
+        referenceMaterial = refRow.reference_input;
+      }
+    } catch (_e) {
+      // ignore
     }
   }
 
@@ -828,5 +905,7 @@ async function extractSharedData(requestData, supabase) {
     trainingMethodology,
     clientGender,
     description,
+    sessionDuration,
+    referenceMaterial,
   };
 }

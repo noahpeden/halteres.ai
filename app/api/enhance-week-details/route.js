@@ -1,11 +1,12 @@
-import Anthropic from '@anthropic-ai/sdk';
 import { NextResponse } from 'next/server';
 import {
   formatClassMetrics,
   formatClientMetrics,
   isClassMetrics,
 } from '@/utils/prompt-builder/promptBuilder.js';
+import { formatEquipmentRestrictions } from '@/utils/prompt-builder/promptBuilder.js';
 import { corsHeaders, createMobileCompatibleClient } from '@/utils/supabase/mobile';
+import { streamChatCompletion } from '@/utils/ai/provider';
 
 export const maxDuration = 300; // 5 minutes should be enough for a single week
 export const dynamic = 'force-dynamic';
@@ -41,10 +42,6 @@ export async function POST(request) {
   logWithTimestamp('Enhancement API route started');
 
   try {
-    const anthropic = new Anthropic({
-      apiKey: process.env.ANTHROPIC_API_KEY,
-    });
-
     const supabase = await createMobileCompatibleClient(request);
     const requestData = await request.json();
 
@@ -55,7 +52,7 @@ export async function POST(request) {
       hasWeekInput: !!requestData.weekSpecificInput,
     });
 
-    return await handleWeekEnhancement(requestData, anthropic, supabase);
+    return await handleWeekEnhancement(requestData, supabase);
   } catch (error) {
     logWithTimestamp('Unhandled error in enhancement route', {
       error: error.message,
@@ -69,11 +66,11 @@ export async function POST(request) {
 }
 
 // Handle week enhancement
-async function handleWeekEnhancement(requestData, anthropic, supabase) {
+async function handleWeekEnhancement(requestData, supabase) {
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     start(controller) {
-      enhanceWeekWorkouts(requestData, anthropic, supabase, controller, encoder).catch((error) => {
+      enhanceWeekWorkouts(requestData, supabase, controller, encoder).catch((error) => {
         logWithTimestamp('Enhancement error', { error: error.message });
         try {
           sendEvent(controller, encoder, 'error', { error: error.message });
@@ -98,7 +95,7 @@ async function handleWeekEnhancement(requestData, anthropic, supabase) {
 }
 
 // Main enhancement logic
-async function enhanceWeekWorkouts(requestData, anthropic, supabase, controller, encoder) {
+async function enhanceWeekWorkouts(requestData, supabase, controller, encoder) {
   const { programId, weekNumber, workoutIds, context, weekSpecificInput } = requestData;
 
   try {
@@ -167,6 +164,77 @@ async function enhanceWeekWorkouts(requestData, anthropic, supabase, controller,
       }
     }
 
+    // Fetch program metadata to fill missing context (weeks, equipment, formats, session minutes, etc.)
+    let programMeta = null;
+    try {
+      const { data: programRow } = await supabase
+        .from('programs')
+        .select(
+          'duration_weeks, gym_details, workout_format, session_details, focus_area, description, training_methodology, reference_input'
+        )
+        .eq('id', programId)
+        .single();
+      programMeta = programRow || null;
+    } catch (_e) {
+      programMeta = null;
+    }
+
+    const effectiveNumberOfWeeks =
+      (context?.numberOfWeeks ?? null) ??
+      (programMeta?.duration_weeks ?? null) ??
+      null;
+    const equipment =
+      (Array.isArray(context?.equipment) && context.equipment) ||
+      programMeta?.gym_details?.equipment ||
+      [];
+    const workoutFormats =
+      context?.workoutFormats ||
+      context?.workout_format?.formats ||
+      programMeta?.workout_format?.formats ||
+      [];
+    const focusArea = context?.focus || context?.focusArea || programMeta?.focus_area || '';
+    const sessionMinutes =
+      (context?.sessionMinutes ??
+        context?.session_details?.duration_minutes ??
+        context?.workout_duration ??
+        null) ??
+      (programMeta?.session_details?.duration_minutes ?? null);
+    // Build reference material: context.referenceInput/influences/history + DB reference_input
+    let referenceMaterial = '';
+    const ctxRef = context?.referenceInput || context?.reference_input || '';
+    const ctxInfluences =
+      Array.isArray(context?.program_influences) && context.program_influences.length > 0
+        ? context.program_influences.join(', ')
+        : typeof context?.program_influences === 'string'
+          ? context.program_influences
+          : '';
+    const ctxHistory =
+      typeof context?.recent_training_history === 'string' ? context.recent_training_history : '';
+    if (ctxRef && ctxRef.trim() !== '') {
+      referenceMaterial += `User-Provided Reference Material:\n---\n${ctxRef.trim()}\n---`;
+    }
+    if (ctxInfluences) {
+      referenceMaterial += `${referenceMaterial ? '\n\n' : ''}Program Influences / Styles:\n---\n${ctxInfluences}\n---`;
+    }
+    if (ctxHistory) {
+      referenceMaterial += `${referenceMaterial ? '\n\n' : ''}Recent Training History (last 2-3 months):\n---\n${ctxHistory}\n---`;
+    }
+    if (!referenceMaterial && programMeta?.reference_input) {
+      referenceMaterial = programMeta.reference_input;
+    }
+
+    // Augment context passed to prompt builder
+    const augmentedContext = {
+      ...context,
+      numberOfWeeks: effectiveNumberOfWeeks ?? context?.numberOfWeeks, // prefer program duration when missing
+      equipment,
+      workoutFormats,
+      focusArea,
+      sessionMinutes,
+      referenceMaterial,
+      useImperial,
+    };
+
     // Get the workout sections that were used in skeletons
     const workoutSections = detectWorkoutSections(skeletonWorkouts);
 
@@ -174,7 +242,7 @@ async function enhanceWeekWorkouts(requestData, anthropic, supabase, controller,
     const enhancementPrompt = buildEnhancementPrompt(
       skeletonWorkouts,
       weekNumber,
-      context,
+    augmentedContext,
       weekSpecificInput,
       workoutSections,
       clientMetricsContent,
@@ -187,21 +255,6 @@ async function enhanceWeekWorkouts(requestData, anthropic, supabase, controller,
       message: `Enhancing ${skeletonWorkouts.length} workouts with full details...`,
     });
 
-    // Call Anthropic with streaming
-    const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-5-20250929',
-      max_tokens: 16000,
-      temperature: 0.7,
-      system: systemPrompt,
-      messages: [
-        {
-          role: 'user',
-          content: enhancementPrompt,
-        },
-      ],
-      stream: true,
-    });
-
     let responseContent = '';
 
     sendEvent(controller, encoder, 'stream_start', {
@@ -209,18 +262,21 @@ async function enhanceWeekWorkouts(requestData, anthropic, supabase, controller,
       message: `Streaming enhanced details for Week ${weekNumber}...`,
     });
 
-    for await (const chunk of response) {
-      if (chunk.type === 'content_block_delta') {
-        const text = chunk.delta?.text || '';
-        responseContent += text;
-
-        if (text.length > 0) {
-          sendEvent(controller, encoder, 'stream_chunk', {
-            week: weekNumber,
-            chunk: text,
-            totalLength: responseContent.length,
-          });
-        }
+    const textStream = streamChatCompletion({
+      tier: 'flash',
+      systemPrompt,
+      userPrompt: enhancementPrompt,
+      temperature: 0.7,
+      maxTokens: 16000,
+    });
+    for await (const text of textStream) {
+      responseContent += text;
+      if (text.length > 0) {
+        sendEvent(controller, encoder, 'stream_chunk', {
+          week: weekNumber,
+          chunk: text,
+          totalLength: responseContent.length,
+        });
       }
     }
 
@@ -391,10 +447,21 @@ function buildEnhancementPrompt(
     .join('\n\n---\n\n');
 
   // Extract context values
-  const numberOfWeeks = context?.numberOfWeeks || 4;
+  const numberOfWeeks = context?.numberOfWeeks ?? 4;
   const difficulty = context?.difficulty || 'Intermediate';
   const goal = context?.goal || '';
   const trainingMethodology = context?.trainingMethodology || '';
+  const equipment = Array.isArray(context?.equipment) ? context.equipment : [];
+  const sessionMinutes =
+    context?.sessionMinutes ??
+    context?.session_details?.duration_minutes ??
+    context?.workout_duration ??
+    60;
+  const workoutFormats =
+    context?.workoutFormats || context?.workout_format?.formats || [];
+  const focusArea = context?.focusArea || context?.focus || '';
+  const referenceMaterial = context?.referenceMaterial || '';
+  const equipmentRestrictions = formatEquipmentRestrictions(equipment);
 
   // Check if athlete appears experienced based on client metrics
   const hasExperiencedAthlete =
@@ -417,8 +484,11 @@ PROGRAM CONTEXT:
 - Total Program Length: ${numberOfWeeks} week(s)
 - Week Number: ${weekNumber} of ${numberOfWeeks}
 - Difficulty Level: ${difficulty}
+- Session Duration: ${sessionMinutes} minutes
 ${goal ? `- Goal: ${goal}` : ''}
+${focusArea ? `- Focus Area: ${focusArea}` : ''}
 ${trainingMethodology ? `- Training Style: ${trainingMethodology.replace(/_/g, ' ')}` : ''}
+${workoutFormats && workoutFormats.length > 0 ? `- Workout Formats: ${workoutFormats.join(', ')}` : ''}
 `;
 
   // Build guidance for short programs
@@ -456,6 +526,15 @@ ${skeletonContent}
 
 SKELETON CONTAINS: ${workoutSections.join(', ')} sections
 ${programContextSection}
+${equipmentRestrictions}
+${
+  referenceMaterial
+    ? `
+REFERENCE MATERIAL:
+${referenceMaterial}
+`
+    : ''
+}
 ${shortProgramGuidance}${experiencedAthleteGuidance}
 ENHANCEMENT INSTRUCTIONS:
 "${effectiveInput}"
@@ -487,10 +566,10 @@ YOU MUST ADD THESE SECTIONS TO EACH WORKOUT:
    - Bullet points explaining the intent behind each major component (strength, conditioning, etc.)
    - Rest periods and pacing guidance
 
-2. **Warm-up** (12 minutes total):
-   - General Preparation (5 min): Light cardio, jumping jacks, high knees
-   - Specific Mobility (4 min): Foam rolling, targeted stretches, joint circles
-   - Movement Preparation (3 min): Build-up sets, technique primers, activation drills
+2. **Warm-up** (12 minutes total, equipment-legal):
+   - General Preparation (5 min): Light bodyweight movement (e.g., brisk walk, marching in place)
+   - Specific Mobility (4 min): Targeted joint prep and dynamic stretches that require no unlisted tools
+   - Movement Preparation (3 min): Build-up sets and activation drills using only available equipment
 
 3. **Coaching Cues** (2-3 per main exercise):
    - Technical focus points for each major lift/movement
@@ -507,9 +586,8 @@ YOU MUST ADD THESE SECTIONS TO EACH WORKOUT:
    - Movement substitutions
    - Rep/round adjustments
 
-6. **Cool-down** (10 minutes):
-   - Light cardio (3-4 min)
-   - Foam rolling major muscle groups
+6. **Cool-down** (10 minutes, equipment-legal):
+   - Easy movement (3-4 min)
    - Static stretching for worked areas
    - Breathing/recovery notes
 
@@ -535,16 +613,16 @@ OUTPUT FORMAT (JSON):
 
 // Build the system prompt for enhancement
 function buildEnhancementSystemPrompt(workoutSections, useImperial) {
-  return `You are an elite strength and conditioning coach transforming skeleton workouts into comprehensive, professional-grade training sessions.
+  return `You write comprehensive training sessions for a self-coached athlete. Speak directly to the athlete. Preserve the core structure from the skeleton and add the missing context and guidance to make each session actionable.
 
-Your role is to ADD these sections to each workout while preserving the core exercises:
+Your role is to ADD these sections to each workout while preserving the core exercises (do not change the ${workoutSections.join(' or ')} sections):
 
 1. **Stimulus and Strategy** - At the TOP of each workout. Explain the WHY behind the session: primary focus, how it fits the program, intent behind each component, rest/pacing guidance.
 
-2. **Warm-up** - 12 minutes total with three phases:
-   - General Preparation (5 min): Cardio, dynamic movements
-   - Specific Mobility (4 min): Foam rolling, targeted stretches
-   - Movement Preparation (3 min): Build-up sets, activation drills
+2. **Warm-up** - 12 minutes total, equipment-legal:
+   - General Preparation (5 min): Simple bodyweight movement to raise heart rate
+   - Specific Mobility (4 min): Targeted joint prep and dynamic stretches with only available equipment
+   - Movement Preparation (3 min): Build-up sets and activation drills using the same implements as the session (or bodyweight)
 
 3. **Coaching Cues** - 2-3 specific cues per main exercise. Include technical focus points, common faults, breathing cues.
 
@@ -552,13 +630,13 @@ Your role is to ADD these sections to each workout while preserving the core exe
 
 5. **Scaling Options** - Weight modifications, movement substitutions, rep adjustments for different fitness levels.
 
-6. **Cool-down** - 10 minutes: light cardio, foam rolling, static stretching, recovery notes.
+6. **Cool-down** - 10 minutes: easy movement, static stretching, recovery notes (no unlisted tools).
 
-CRITICAL: You must NOT modify the ${workoutSections.join(' or ')} sections from the skeleton. Preserve all exercises, sets, reps, weights, and percentages exactly. Only ADD the enhancement sections around them.
+CRITICAL: You must NOT modify the ${workoutSections.join(' or ')} sections from the skeleton. Preserve all exercises, sets, reps, weights, and percentages exactly. Only ADD the enhancement sections around them. All additions must obey the available-equipment constraint.
 
 Express all weights in ${useImperial ? 'pounds (lbs)' : 'kilograms (kg)'}.
 
-Write like an expert coach who genuinely cares about the athlete's success. Make each workout feel complete and thoughtfully programmed.
+Write like an expert coach speaking to a committed individual athlete. Make each workout feel complete and thoughtfully programmed for solo training.
 
 Output valid JSON with enhanced workouts.`;
 }

@@ -1,11 +1,8 @@
 import { NextResponse } from 'next/server';
-import OpenAI from 'openai';
+import { createChatCompletion } from '@/utils/ai/provider';
 import { createClient } from '@/utils/supabase/server';
 
 export async function POST(request) {
-  const openAiClient = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-  });
   const supabaseClient = await createClient();
   const requestBody = await request.json();
   const {
@@ -68,28 +65,20 @@ Format the workout with:
 Return only one workout structured with these sections. Format your response as JSON with 'title', 'description', and 'suggestedDate' fields. Use '${formattedChosenDate}' as the suggested date.`;
 
   try {
-    // Generate the workout
-    const workoutResponse = await openAiClient.chat.completions.create({
-      model: 'gpt-4.1',
-      messages: [
-        {
-          role: 'system',
-          content:
-            'You are an expert fitness coach who specializes in creating effective, personalized workout programs. Create workouts that are detailed, practical, and follow established exercise science principles.',
-        },
-        {
-          role: 'user',
-          content: workoutPrompt,
-        },
-      ],
+    const { content } = await createChatCompletion({
+      tier: 'flash',
+      systemPrompt:
+        'You create clear, effective workouts for a self-coached athlete. Honor available equipment and session duration. Respond as compact, valid JSON.',
+      userPrompt: workoutPrompt,
       temperature: 0.7,
-      response_format: { type: 'json_object' },
+      maxTokens: 2000,
+      jsonMode: true,
     });
 
     // Parse and validate the response
     let generatedWorkout;
     try {
-      generatedWorkout = JSON.parse(workoutResponse.choices[0].message.content);
+      generatedWorkout = JSON.parse(content);
       if (!generatedWorkout.title || !generatedWorkout.description) {
         throw new Error('Invalid workout format');
       }
