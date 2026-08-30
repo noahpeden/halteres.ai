@@ -185,7 +185,7 @@ export default function AthleteProgramsPage() {
             message={
               filter !== 'all'
                 ? `No ${filter} programs yet. Check back later.`
-                : "Your coach hasn't assigned any programs yet."
+                : 'You have no programs yet.'
             }
           />
         ) : (

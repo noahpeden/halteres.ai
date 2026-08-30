@@ -253,7 +253,7 @@ const CreateEditEntityModal = ({
 
   if (!isOpen) return null;
 
-  const modalTitle = entityToEdit ? 'Edit Client/Class' : 'Create New Client/Class';
+  const modalTitle = entityToEdit ? 'Edit Profile/Class' : 'Create New Profile/Class';
   const submitButtonText = entityToEdit ? 'Update' : 'Create';
 
   return (
@@ -307,7 +307,7 @@ const CreateEditEntityModal = ({
                 onChange={(e) => setType(e.target.value)}
                 disabled={isSubmitting || !!entityToEdit /* Disable type change when editing */}
               >
-                <option value="CLIENT">Client (Individual)</option>
+                <option value="CLIENT">Profile (Individual)</option>
                 <option value="CLASS">Class (Group)</option>
               </select>
             </div>
@@ -317,7 +317,7 @@ const CreateEditEntityModal = ({
           {isClientType && (
             <div className="mt-6 border-t pt-4">
               <div className="flex justify-between items-center mb-4">
-                <h4 className="text-md font-semibold">Client Metrics</h4>
+                <h4 className="text-md font-semibold">Your Metrics</h4>
                 <div className="w-full">
                   <label className="label cursor-pointer">
                     <span className="text-sm mr-2">{useImperial ? 'Imperial' : 'Metric'}</span>

@@ -10,7 +10,7 @@ export default function ProgramCard({ program, entityDisplayName, onDelete }) {
     try {
       const shareUrl = `${window.location.origin}/program/${program.id}/share`;
       await navigator.clipboard.writeText(shareUrl);
-      alert('Program link copied to clipboard! Share this with your clients.');
+      alert('Program link copied to clipboard!');
     } catch (err) {
       console.error('Failed to copy link:', err);
       alert('Failed to copy link');

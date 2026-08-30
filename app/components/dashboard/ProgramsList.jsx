@@ -41,7 +41,7 @@ export default function ProgramsList({
         </div>
         <h3 className="text-lg font-semibold text-slate-900 mb-2">No Programs Yet</h3>
         <p className="text-slate-600 mb-6 max-w-sm mx-auto">
-          Create your first training program to get started with managing your clients' workouts
+          Create your first training program to get started with managing your workouts
         </p>
         <button
           onClick={onCreateProgram}
@@ -120,7 +120,7 @@ export default function ProgramsList({
           const entity = entities.find((e) => e.id === program.entity_id);
           const entityDisplayName = entity
             ? `${entity.name} (${entity.type})`
-            : 'Unknown Client/Class';
+            : 'Unknown Profile/Class';
 
           return (
             <ProgramCard

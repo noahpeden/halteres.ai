@@ -330,17 +330,17 @@ export function formatClientMetrics(clientMetricsData, useImperial = false) {
     .join('\n');
 
   return `
-<client_metrics unit_preference="${weightUnit}">
+<athlete_metrics unit_preference="${weightUnit}">
 ${metrics}
-</client_metrics>
+</athlete_metrics>
 
 <weight_programming_guidance>
 Express all weights in ${weightUnit} (${useImperial ? 'pounds' : 'kilograms'}) throughout the program.
-Scale RX weights based on the client's strength metrics (bench, squat, deadlift) when available.
+Scale RX weights based on your strength metrics (bench, squat, deadlift) when available.
 Consider training experience (${clientMetricsData.years_of_experience || 'unspecified'} years) when programming intensity.
 ${clientMetricsData.injury_history ? 'Provide modifications that accommodate the noted injury history.' : ''}
 
-Context: Using the client's preferred units and appropriate loading based on their metrics ensures the program is immediately actionable without conversions.
+Context: Using your preferred units and appropriate loading based on your metrics ensures the program is immediately actionable without conversions.
 </weight_programming_guidance>`;
 }
 

@@ -68,12 +68,12 @@ ${focus_area ? `Focus Area: ${focus_area}` : ''}
 Periodization: ${programType}
 </program_parameters>
 
-${
+${ 
   description
-    ? `<client_requirements priority="high">
+    ? `<your_requirements priority="high">
 ${description}
 These requirements take precedence over general guidelines below.
-</client_requirements>
+</your_requirements>
 `
     : ''
 }
@@ -107,7 +107,7 @@ ${
 Periodization Guidelines:
 ${periodization.approach}
 
-Why it's appropriate for the client requirements:
+Why it's appropriate for your requirements:
 ${periodization.why_appropriate}
 `
     : '')
@@ -134,7 +134,7 @@ Include in the program description:
 </description_requirements>
 
 <methodology_guidelines>
-Apply these general gym training principles where they don't conflict with client requirements:
+Apply these general gym training principles where they don't conflict with your requirements:
 - Mix compound movements (squats, presses, rows) with isolation exercises (machines, cables)
 - Balance free weights and machine work for comprehensive development
 - Include cardiovascular training using cardio equipment or circuits
@@ -204,7 +204,7 @@ Example: 20 min steady-state at RPE 6, or 10 × 30s work/30s rest
 5 minutes light cardio cool-down
 Static stretching for major muscle groups (20-30 seconds each)
 
-## Coaching Cues
+## Technique Tips
 3-5 technical cues for key exercises
 Form tips for common gym movements
 Machine safety and effectiveness

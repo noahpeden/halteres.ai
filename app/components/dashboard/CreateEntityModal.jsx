@@ -21,7 +21,7 @@ export default function CreateEntityModal({
       />
       <div className="modal">
         <div className="modal-box">
-          <h3 className="font-bold text-lg mb-4">Create New Client/Class</h3>
+          <h3 className="font-bold text-lg mb-4">Create New Profile/Class</h3>
           {errorMessage && (
             <div className="alert alert-error mb-4">
               <svg
@@ -64,7 +64,7 @@ export default function CreateEntityModal({
                 value={entityType}
                 onChange={(e) => onEntityTypeChange(e.target.value)}
               >
-                <option value="CLIENT">Client (Individual)</option>
+                <option value="CLIENT">Profile (Individual)</option>
                 <option value="CLASS">Class (Group)</option>
               </select>
             </div>

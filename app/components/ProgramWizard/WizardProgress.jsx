@@ -6,7 +6,7 @@ export default function WizardProgress({ currentStep }) {
     { number: 2, title: 'Program Description' },
     { number: 3, title: 'Previous Workouts' },
     { number: 4, title: 'Gym Setup' },
-    { number: 5, title: 'Client Metrics' },
+    { number: 5, title: 'Your Metrics' },
   ];
 
   return (

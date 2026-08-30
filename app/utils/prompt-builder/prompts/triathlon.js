@@ -73,7 +73,7 @@ IMPORTANT: Please structure your workout to precisely follow this format with th
 Periodization Guidelines:
 ${periodization.approach}
 
-Why it's appropriate for the client requirements:
+Why it's appropriate for your requirements:
 ${periodization.why_appropriate}
 `
       : '';
@@ -96,12 +96,12 @@ ${focus_area ? `Focus Area: ${focus_area}` : ''}
 Periodization: ${programType}
 </program_parameters>
 
-${
+${ 
   description
-    ? `<client_requirements priority="high">
+    ? `<your_requirements priority="high">
 ${description}
 These requirements take precedence over general guidelines below.
-</client_requirements>
+</your_requirements>
 `
     : ''
 }
@@ -171,7 +171,7 @@ Include in the program description:
 </description_requirements>
 
 <methodology_guidelines context="triathlon-specific">
-Apply these principles where they don't conflict with client requirements:
+Apply these principles where they don't conflict with your requirements:
 - Concurrent training model balancing three disciplines
 - Progressive volume increases following periodization approach
 - Sport-specific skill development and technique refinement

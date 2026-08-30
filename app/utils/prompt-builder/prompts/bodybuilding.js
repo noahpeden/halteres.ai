@@ -71,12 +71,12 @@ ${focus_area ? `Focus Area: ${focus_area}` : ''}
 Periodization: ${programType}
 </program_parameters>
 
-${
+${ 
   description
-    ? `<client_requirements priority="high">
+    ? `<your_requirements priority="high">
 ${description}
 These requirements take precedence over general guidelines below.
-</client_requirements>
+</your_requirements>
 `
     : ''
 }
@@ -127,7 +127,7 @@ Include in the program description:
 </description_requirements>
 
 <methodology_guidelines>
-Apply these bodybuilding principles where they don't conflict with client requirements:
+Apply these bodybuilding principles where they don't conflict with your requirements:
 - Structure around the specified training split (${formattedWorkoutFormats})
 - Prioritize compound movements first, then isolation exercises for each muscle group
 - Use moderate to high volume within the hypertrophy rep range (typically 6-15 reps)
@@ -143,7 +143,7 @@ Use actual week/day numbers: "Week 3, Day 1: [Muscle Group Focus] Bodybuilding"
 <json_output_format>
 {
   "title": "Bodybuilding Program for ${goal}",
-  "description": "Program description: client requirements, ${numberOfWeeks}-week duration, ${difficulty} difficulty, ${formattedWorkoutFormats} split, focus area (${focus_area || 'balanced'}), using available equipment",
+  "description": "Program description: your requirements, ${numberOfWeeks}-week duration, ${difficulty} difficulty, ${formattedWorkoutFormats} split, focus area (${focus_area || 'balanced'}), using available equipment",
   "overview": "Methodology, periodization (${programType}) for hypertrophy, training split rationale, expected outcomes, supplementary recommendations",
   "workouts": [
     {
@@ -191,7 +191,7 @@ Complete exercise list for target muscle group(s)
 Brief cool-down protocol
 - Light stretching for worked muscle groups
 
-## Coaching Cues
+## Technique Tips
 3-5 specific technical cues for key exercises
 - Proper form and maximizing muscle tension
 - Mind-muscle connection cues
