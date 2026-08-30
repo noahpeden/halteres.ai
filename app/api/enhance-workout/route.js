@@ -54,8 +54,7 @@ export async function POST(req) {
     if (!workout || !instructions) {
       return NextResponse.json(
         {
-          error:
-            'Missing required fields: workout, instructions',
+          error: 'Missing required fields: workout, instructions',
         },
         {
           status: 400,
@@ -72,10 +71,15 @@ export async function POST(req) {
       description: workout?.description || '',
     };
     let resolvedMethodology = methodology || '';
-    let resolvedEquipment =
-      Array.isArray(gymEquipment) ? gymEquipment : typeof gymEquipment === 'string' ? [gymEquipment] : [];
+    let resolvedEquipment = Array.isArray(gymEquipment)
+      ? gymEquipment
+      : typeof gymEquipment === 'string'
+        ? [gymEquipment]
+        : [];
     let resolvedSessionDuration =
-      typeof sessionDuration === 'number' && !Number.isNaN(sessionDuration) ? sessionDuration : undefined;
+      typeof sessionDuration === 'number' && !Number.isNaN(sessionDuration)
+        ? sessionDuration
+        : undefined;
     let resolvedProgramName = programNameFromClient || '';
     let resolvedProgramDescription = programDescriptionFromClient || '';
     let resolvedGoals = goalsFromClient || '';
@@ -112,7 +116,10 @@ export async function POST(req) {
       resolvedProgramDescription = programDescriptionFromClient || programRow.description || '';
       resolvedMethodology = resolvedMethodology || programRow.training_methodology || '';
       // Equipment is a HARD constraint - prefer DB list
-      if ((!resolvedEquipment || resolvedEquipment.length === 0) && programRow.gym_details?.equipment) {
+      if (
+        (!resolvedEquipment || resolvedEquipment.length === 0) &&
+        programRow.gym_details?.equipment
+      ) {
         resolvedEquipment = programRow.gym_details.equipment || [];
       }
       if (resolvedSessionDuration == null && programRow.session_details?.duration_minutes) {
@@ -319,13 +326,10 @@ Output JSON schema (strict):
       fitFeedback: safeFitFeedback,
     };
 
-    return NextResponse.json(
-      responsePayload,
-      {
-        status: 200,
-        headers: corsHeaders(),
-      }
-    );
+    return NextResponse.json(responsePayload, {
+      status: 200,
+      headers: corsHeaders(),
+    });
   } catch (error) {
     console.error('Error enhancing workout:', error);
     return NextResponse.json(

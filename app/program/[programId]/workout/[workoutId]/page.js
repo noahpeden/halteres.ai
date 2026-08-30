@@ -6,7 +6,6 @@ import {
   Edit2,
   MessageSquare,
   Save,
-  Share2,
   Sparkles,
   Target,
   Trash2,
@@ -281,16 +280,7 @@ export default function WorkoutDetailsPage(props) {
     return new Date(dateString).toLocaleDateString();
   };
 
-  const handleShareWorkout = async () => {
-    try {
-      const shareUrl = `${window.location.origin}/program/${programId}/workout/${workoutId}`;
-      await navigator.clipboard.writeText(shareUrl);
-      alert('Workout link copied to clipboard!');
-    } catch (err) {
-      console.error('Failed to copy link:', err);
-      alert('Failed to copy link');
-    }
-  };
+  // Share functionality removed in B2C UX
 
   // Generate coaching content (stimulus/strategy and coaching cues)
   const handleGenerateCoachingContent = async () => {
@@ -580,14 +570,7 @@ export default function WorkoutDetailsPage(props) {
                           Edit
                         </button>
 
-                        <button
-                          onClick={handleShareWorkout}
-                          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg font-medium transition-colors border border-blue-200"
-                          title="Share this workout"
-                        >
-                          <Share2 className="w-4 h-4" />
-                          Share
-                        </button>
+                        {/* Share button removed for B2C */}
 
                         <button
                           onClick={handleDelete}
@@ -639,7 +622,9 @@ export default function WorkoutDetailsPage(props) {
                           {Array.isArray(pendingEnhancement.fitFeedback.whatChanged) &&
                             pendingEnhancement.fitFeedback.whatChanged.length > 0 && (
                               <div>
-                                <div className="text-sm font-medium text-purple-900 mb-1">What changed</div>
+                                <div className="text-sm font-medium text-purple-900 mb-1">
+                                  What changed
+                                </div>
                                 <ul className="list-disc pl-5 text-purple-800">
                                   {pendingEnhancement.fitFeedback.whatChanged.map((item, idx) => (
                                     <li key={idx}>{item}</li>
@@ -649,18 +634,26 @@ export default function WorkoutDetailsPage(props) {
                             )}
                           {pendingEnhancement.fitFeedback.whyItFits && (
                             <div>
-                              <div className="text-sm font-medium text-purple-900 mb-1">Why it fits your program</div>
-                              <div className="text-purple-800">{pendingEnhancement.fitFeedback.whyItFits}</div>
+                              <div className="text-sm font-medium text-purple-900 mb-1">
+                                Why it fits your program
+                              </div>
+                              <div className="text-purple-800">
+                                {pendingEnhancement.fitFeedback.whyItFits}
+                              </div>
                             </div>
                           )}
                           {Array.isArray(pendingEnhancement.fitFeedback.refusedOrAdapted) &&
                             pendingEnhancement.fitFeedback.refusedOrAdapted.length > 0 && (
                               <div>
-                                <div className="text-sm font-medium text-purple-900 mb-1">Refused or adapted</div>
+                                <div className="text-sm font-medium text-purple-900 mb-1">
+                                  Refused or adapted
+                                </div>
                                 <ul className="list-disc pl-5 text-purple-800">
-                                  {pendingEnhancement.fitFeedback.refusedOrAdapted.map((item, idx) => (
-                                    <li key={idx}>{item}</li>
-                                  ))}
+                                  {pendingEnhancement.fitFeedback.refusedOrAdapted.map(
+                                    (item, idx) => (
+                                      <li key={idx}>{item}</li>
+                                    )
+                                  )}
                                 </ul>
                               </div>
                             )}

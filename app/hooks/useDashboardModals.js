@@ -131,7 +131,7 @@ export function useDashboardModals() {
     }
   };
 
-  const createProgram = async (event, entities, method = 'wizard') => {
+  const createProgram = async (event, entities, method = 'direct') => {
     event.preventDefault();
     if (!programName.trim() || daysOfWeek.length === 0 || !selectedEntityId) return;
 
@@ -195,14 +195,8 @@ export function useDashboardModals() {
       // Close the modal
       closeCreateProgramModal();
 
-      // Navigate based on method
-      if (method === 'wizard') {
-        // Navigate to step 1 of the programming wizard with program ID
-        router.push(`/program-wizard/step-1?programId=${program.id}`);
-      } else {
-        // Navigate directly to the program writer
-        router.push(`/program/${program.id}/writer`);
-      }
+      // Navigate to the program writer (wizard entry archived for B2C)
+      router.push(`/program/${program.id}/writer`);
     } catch (error) {
       console.error('Error:', error);
       alert('Error creating program: ' + error.message);

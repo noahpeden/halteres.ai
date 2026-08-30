@@ -69,7 +69,7 @@ ${focus_area ? `Focus Area: ${focus_area}` : ''}
 Periodization: ${programType}
 </program_parameters>
 
-${ 
+${
   description
     ? `<your_requirements priority="high">
 ${description}

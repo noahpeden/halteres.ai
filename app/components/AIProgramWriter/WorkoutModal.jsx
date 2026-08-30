@@ -55,7 +55,8 @@ export default function WorkoutModal({
         description: workout?.body || workout?.description || 'No description provided.',
       };
       const safeInstructions = enhancement || 'No specific instructions.';
-      const safeMethodology = formData?.training_methodology || formData?.trainingMethodology || 'General fitness';
+      const safeMethodology =
+        formData?.training_methodology || formData?.trainingMethodology || 'General fitness';
       const safeGymEquipment = Array.isArray(formData?.gym_details?.equipment)
         ? formData.gym_details.equipment.length > 0
           ? formData.gym_details.equipment
@@ -350,7 +351,7 @@ export default function WorkoutModal({
             </div>
           )}
           {/* Show AI notes if present */}
-          {(showSavePrompt && (displayWorkout.fitFeedback || displayWorkout.notes)) && (
+          {showSavePrompt && (displayWorkout.fitFeedback || displayWorkout.notes) && (
             <div className="mt-4 p-3 rounded-lg border bg-purple-50 border-purple-200">
               <div className="font-semibold text-purple-900 mb-1">AI Feedback</div>
               {displayWorkout.fitFeedback && (
