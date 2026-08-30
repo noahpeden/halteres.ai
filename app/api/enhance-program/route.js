@@ -24,6 +24,14 @@ export async function POST(req) {
       injuries, // array or string
       focusArea, // string
       workoutFormats, // array of workout formats
+      difficulty, // string (experience)
+      goal, // string
+      experience, // alias for difficulty
+      recent_training_history,
+      program_influences,
+      days_per_week,
+      days_of_week,
+      workout_duration,
     } = body;
 
     if (!workouts || !instructions || !methodology || !gymEquipment) {
@@ -66,6 +74,27 @@ ${w.body || w.description || 'No content'}
       )
       .join('\n---\n');
 
+    const effectiveDifficulty = difficulty || experience || 'unspecified';
+    const dayNames =
+      Array.isArray(days_of_week) && days_of_week.length > 0
+        ? days_of_week
+            .map(
+              (d) =>
+                ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][d]
+            )
+            .join(', ')
+        : 'unspecified';
+    const influencesText =
+      Array.isArray(program_influences) && program_influences.length > 0
+        ? program_influences.join(', ')
+        : typeof program_influences === 'string'
+          ? program_influences
+          : 'unspecified';
+    const recentHistoryText =
+      typeof recent_training_history === 'string' && recent_training_history.trim().length > 0
+        ? recent_training_history
+        : 'unspecified';
+
     const userPrompt = `Enhance the following program according to these user instructions: "${instructions}".
 
 Program Name: ${programName || 'Untitled Program'}
@@ -73,6 +102,8 @@ Total Workouts: ${workouts.length}
 
 Context:
 - Training methodology: ${methodology}
+- Goal: ${goal || 'unspecified'}
+- Difficulty/Experience: ${effectiveDifficulty}
 - Focus area: ${focusArea || 'General fitness'}
 - Equipment available: ${Array.isArray(gymEquipment) ? gymEquipment.join(', ') : gymEquipment}
 - Workout formats preferred: ${
@@ -85,6 +116,15 @@ Context:
           : injuries
         : 'None'
     }
+- Days per week: ${days_per_week ?? 'unspecified'}
+- Days of week: ${dayNames}
+- Typical workout duration (minutes): ${workout_duration ?? 'unspecified'}
+
+Recent Training History (2-3 months):
+${recentHistoryText}
+
+Program Influences / Styles:
+${influencesText}
 
 Current Program Workouts:
 ${workoutsText}

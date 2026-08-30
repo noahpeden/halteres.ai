@@ -21,6 +21,8 @@ export async function POST(req) {
       days_of_week,
       entity_id,
       description,
+      goal,
+      experience,
       training_methodology,
       difficulty,
       focus_area,
@@ -28,6 +30,8 @@ export async function POST(req) {
       equipment,
       workout_formats,
       reference_input,
+      recent_training_history,
+      program_influences,
       program_type,
       workout_duration,
       gym_id: providedGymId,
@@ -119,7 +123,8 @@ export async function POST(req) {
       return last;
     }
 
-    const totalWorkouts = durationWeeks * (Array.isArray(normalizedDaysOfWeek) ? normalizedDaysOfWeek.length : 3);
+    const totalWorkouts =
+      durationWeeks * (Array.isArray(normalizedDaysOfWeek) ? normalizedDaysOfWeek.length : 3);
     const endDate = end_date || computeEndDate(startDate, normalizedDaysOfWeek, totalWorkouts);
 
     // Check for recent duplicate programs to prevent double creation
@@ -213,6 +218,23 @@ export async function POST(req) {
       gymId = gymMembership?.gym_id || null;
     }
 
+    // Build merged reference input: base + influences + recent history
+    const influenceText =
+      Array.isArray(program_influences) && program_influences.length > 0
+        ? program_influences.join(', ')
+        : typeof program_influences === 'string'
+          ? program_influences
+          : '';
+    const historyText =
+      typeof recent_training_history === 'string' ? recent_training_history : '';
+    let mergedReferenceInput = reference_input || '';
+    if (influenceText) {
+      mergedReferenceInput += `${mergedReferenceInput ? '\n\n' : ''}Program Influences / Styles:\n---\n${influenceText}\n---`;
+    }
+    if (historyText) {
+      mergedReferenceInput += `${mergedReferenceInput ? '\n\n' : ''}Recent Training History (last 2-3 months):\n---\n${historyText}\n---`;
+    }
+
     // Create program using the provided entity_id and all wizard data
     const { data, error } = await supabase
       .from('programs')
@@ -223,15 +245,19 @@ export async function POST(req) {
         duration_weeks: durationWeeks,
         description: description || null,
         training_methodology: training_methodology || null,
-        difficulty: difficulty || 'intermediate',
+        difficulty: difficulty || experience || 'intermediate',
         focus_area: focus_area || null,
-        reference_input: reference_input || null,
+        reference_input: mergedReferenceInput || null,
+        goal: goal || null,
         generation_status: 'pending',
         // Save calendar data as JSON
         calendar_data: {
           start_date: startDate,
           end_date: endDate,
           days_of_week: normalizedDaysOfWeek,
+          days_per_week: Array.isArray(normalizedDaysOfWeek)
+            ? normalizedDaysOfWeek.length
+            : parseInt(days_per_week || 3, 10),
         },
         // Save periodization type
         periodization: {
