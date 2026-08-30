@@ -176,43 +176,8 @@ export async function POST(request) {
           return;
         }
 
-        // Skip generation limit check for paid subscribers
+        // Skip hard-blocks during B2C beta: allow generation for non-active users too.
         const isPaidSubscriber = profile?.subscription_status === 'active';
-
-        // Check if trial has expired for trialing users
-        if (profile.subscription_status === 'trialing') {
-          const trialEndDate = profile.trial_end_date ? new Date(profile.trial_end_date) : null;
-
-          if (trialEndDate && trialEndDate < new Date()) {
-            logWithTimestamp('Trial expired', {
-              userId,
-              trialEndDate: profile.trial_end_date,
-            });
-
-            sendEvent('error', {
-              error: 'Trial expired',
-              details: 'Your free trial has expired. Please upgrade to a paid plan to continue.',
-            });
-            controller.close();
-            return;
-          }
-        }
-
-        // If user is not a paid subscriber and has no generations left, block the request
-        if (!isPaidSubscriber && profile.generations_remaining <= 0) {
-          logWithTimestamp('Generation limit reached', {
-            userId,
-            generationsRemaining: profile.generations_remaining,
-          });
-
-          sendEvent('error', {
-            error: 'Generation limit reached',
-            details:
-              'You have used all your available generations. Please upgrade to a paid plan to continue.',
-          });
-          controller.close();
-          return;
-        }
 
         // Extract parameters with defaults
         sendEvent('status', { message: 'Processing program parameters...' });
