@@ -47,9 +47,9 @@ export default function Navbar() {
       try {
         const { data, error } = await supabase
           .from('profiles')
-          .select('subscription_status, subscription_plan')
+          .select('subscription_status')
           .eq('id', user.id)
-          .single();
+          .maybeSingle();
 
         if (error) {
           // Only log error if it's not a "No rows found" error (which is expected for new users)
@@ -65,7 +65,6 @@ export default function Navbar() {
           // Set default profile for new users or when profile doesn't exist
           setUserProfile({
             subscription_status: null,
-            subscription_plan: null,
           });
           return;
         }
@@ -80,7 +79,6 @@ export default function Navbar() {
         // Set default profile on error
         setUserProfile({
           subscription_status: null,
-          subscription_plan: null,
         });
       }
     };
@@ -88,8 +86,7 @@ export default function Navbar() {
     fetchUserProfile();
   }, [user, supabase]);
 
-  const isPremiumUser =
-    userProfile?.subscription_status === 'active' && userProfile?.subscription_plan !== null;
+  const isPremiumUser = userProfile?.subscription_status === 'active';
 
   const handleLogout = async () => {
     router.push('/');

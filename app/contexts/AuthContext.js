@@ -33,7 +33,7 @@ export function AuthProvider({ children, initialSession }) {
            gender, recovery_score, injury_history, onboarding_completed`
         )
         .eq('id', userId)
-        .single();
+        .maybeSingle();
 
       if (error) {
         if (error.code === 'PGRST116') {
