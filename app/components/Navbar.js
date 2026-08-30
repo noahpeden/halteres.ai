@@ -103,17 +103,7 @@ export default function Navbar() {
     </Link>
   );
 
-  const productItems = [
-    { label: 'Features', href: '/features', icon: Settings },
-    { label: 'Pricing', href: '/pricing', icon: Clock },
-    { label: 'Updates', href: '/updates', icon: Newspaper },
-  ];
-
-  const resourcesItems = [
-    { label: 'Tutorials', href: '/tutorials', icon: BookOpen },
-    { label: 'Help', href: '/help', icon: HelpCircle },
-    { label: 'Contact', href: '/contact', icon: Phone },
-  ];
+  // Marketing navigation removed for B2C landing
 
   return (
     <div className="fixed top-0 z-50 w-full bg-base-100 shadow-sm border-b border-gray-200">
@@ -121,7 +111,7 @@ export default function Navbar() {
       <div className="navbar max-w-7xl mx-auto px-4">
         <div className="navbar-start">
           <Link
-            href={session ? (isAthlete ? '/athlete' : '/dashboard') : '/'}
+            href={session ? '/athlete' : '/'}
             className="flex-shrink-0 flex items-center"
           >
             <Image
@@ -141,61 +131,6 @@ export default function Navbar() {
               <>
                 <li>
                   <NavLink href="/">Home</NavLink>
-                </li>
-
-                <li>
-                  <details>
-                    <summary>Product</summary>
-                    <ul className="p-2 bg-base-100 w-48 z-50">
-                      {productItems.map((item, index) => (
-                        <li key={index}>
-                          <NavLink href={item.href}>
-                            <div className="flex items-center">
-                              {item.icon && <item.icon className="mr-2 h-4 w-4" />}
-                              {item.label}
-                            </div>
-                          </NavLink>
-                        </li>
-                      ))}
-                    </ul>
-                  </details>
-                </li>
-
-                {/* <li>
-                  <details>
-                    <summary>Resources</summary>
-                    <ul className="p-2 bg-base-100 w-48 z-50">
-                      {resourcesItems.map((item, index) => (
-                        <li key={index}>
-                          <NavLink href={item.href}>
-                            <div className="flex items-center">
-                              {item.icon && (
-                                <item.icon className="mr-2 h-4 w-4" />
-                              )}
-                              {item.label}
-                            </div>
-                          </NavLink>
-                        </li>
-                      ))}
-                    </ul>
-                  </details>
-                </li> */}
-
-                <li>
-                  <NavLink href="/company">About</NavLink>
-                </li>
-              </>
-            )}
-            {session && isCoach && !loadingProfile && (
-              <>
-                <li>
-                  <NavLink href="/dashboard">Dashboard</NavLink>
-                </li>
-                <li>
-                  <NavLink href="/dashboard/gym">Gym</NavLink>
-                </li>
-                <li>
-                  <NavLink href="/tutorials">Tutorials</NavLink>
                 </li>
               </>
             )}
@@ -257,47 +192,6 @@ export default function Navbar() {
                       <span className="font-medium text-gray-900">Home</span>
                     </NavLink>
 
-                    {/* Product Section */}
-                    <div className="pt-2">
-                      <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                        Product
-                      </div>
-                      {productItems.map((item, index) => (
-                        <NavLink
-                          key={index}
-                          href={item.href}
-                          className="flex items-center p-3 rounded-xl hover:bg-gray-50 transition-all duration-200"
-                        >
-                          <item.icon className="w-5 h-5 mr-3 text-gray-600" />
-                          <span className="font-medium text-gray-900">{item.label}</span>
-                        </NavLink>
-                      ))}
-                    </div>
-
-                    {/* Resources Section */}
-                    <div className="pt-2">
-                      <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                        Resources
-                      </div>
-                      {resourcesItems.map((item, index) => (
-                        <NavLink
-                          key={index}
-                          href={item.href}
-                          className="flex items-center p-3 rounded-xl hover:bg-gray-50 transition-all duration-200"
-                        >
-                          <item.icon className="w-5 h-5 mr-3 text-gray-600" />
-                          <span className="font-medium text-gray-900">{item.label}</span>
-                        </NavLink>
-                      ))}
-                    </div>
-
-                    <NavLink
-                      href="/company"
-                      className="flex items-center p-3 rounded-xl hover:bg-gray-50 transition-all duration-200"
-                    >
-                      <Building className="w-5 h-5 mr-3 text-gray-600" />
-                      <span className="font-medium text-gray-900">About</span>
-                    </NavLink>
                   </div>
 
                   {/* Login Button */}
@@ -330,65 +224,7 @@ export default function Navbar() {
                     {currentGym && <p className="text-xs text-primary mt-1">{currentGym.name}</p>}
                   </div>
 
-                  {/* Coach Navigation Items */}
-                  {isCoach && (
-                    <div className="space-y-2">
-                      <Link
-                        href="/dashboard"
-                        className="flex items-center p-3 rounded-xl hover:bg-gray-50 transition-all duration-200"
-                      >
-                        <LayoutDashboard className="w-5 h-5 mr-3 text-gray-600" />
-                        <div>
-                          <div className="font-medium text-gray-900">Dashboard</div>
-                          <div className="text-sm text-gray-500">Overview of programs</div>
-                        </div>
-                      </Link>
-
-                      <Link
-                        href="/dashboard/gym"
-                        className="flex items-center p-3 rounded-xl hover:bg-gray-50 transition-all duration-200"
-                      >
-                        <Building className="w-5 h-5 mr-3 text-gray-600" />
-                        <div>
-                          <div className="font-medium text-gray-900">Gym Management</div>
-                          <div className="text-sm text-gray-500">Athletes & invites</div>
-                        </div>
-                      </Link>
-
-                      <Link
-                        href="/dashboard/manage/entities"
-                        className="flex items-center p-3 rounded-xl hover:bg-gray-50 transition-all duration-200"
-                      >
-                        <Users className="w-5 h-5 mr-3 text-gray-600" />
-                        <div>
-                          <div className="font-medium text-gray-900">Manage Clients</div>
-                          <div className="text-sm text-gray-500">Add and organize clients</div>
-                        </div>
-                      </Link>
-
-                      <Link
-                        href="/tutorials"
-                        className="flex items-center p-3 rounded-xl hover:bg-gray-50 transition-all duration-200"
-                      >
-                        <BookOpen className="w-5 h-5 mr-3 text-gray-600" />
-                        <div>
-                          <div className="font-medium text-gray-900">Tutorials</div>
-                          <div className="text-sm text-gray-500">Learn how to use features</div>
-                        </div>
-                      </Link>
-
-                      <Link
-                        href="/profile"
-                        className="flex items-center p-3 rounded-xl hover:bg-gray-50 transition-all duration-200"
-                      >
-                        <User className="w-5 h-5 mr-3 text-gray-600" />
-                        <div>
-                          <div className="font-medium text-gray-900">Profile</div>
-                          <div className="text-sm text-gray-500">Account settings</div>
-                        </div>
-                      </Link>
-                    </div>
-                  )}
+                  {/* Coach Navigation Items removed for B2C */}
 
                   {/* Athlete Navigation Items - only show if setup is complete */}
                   {isAthlete && !athleteNeedsSetup && (
@@ -411,7 +247,7 @@ export default function Navbar() {
                         <Trophy className="w-5 h-5 mr-3 text-gray-600" />
                         <div>
                           <div className="font-medium text-gray-900">Leaderboard</div>
-                          <div className="text-sm text-gray-500">Gym rankings</div>
+                          <div className="text-sm text-gray-500">Community rankings</div>
                         </div>
                       </Link>
 
