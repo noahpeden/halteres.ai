@@ -43,7 +43,7 @@ export default function ContactPage() {
             <div>
               <h3 className="border-l border-blue-600 pl-6 font-semibold text-gray-900">Support</h3>
               <address className="pt-2 pl-6 not-italic">
-                <p>support@halteres.ai</p>
+                <p>noah@halteres.ai</p>
                 <p className="mt-2">Our support team is available Monday-Friday, 9am-5pm EST</p>
               </address>
             </div>
