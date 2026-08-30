@@ -69,12 +69,12 @@ ${focus_area ? `Focus Area: ${focus_area}` : ''}
 Periodization: ${programType}
 </program_parameters>
 
-${
+${ 
   description
-    ? `<client_requirements priority="high">
+    ? `<your_requirements priority="high">
 ${description}
 These requirements take precedence over general guidelines below.
-</client_requirements>
+</your_requirements>
 `
     : ''
 }
@@ -126,7 +126,7 @@ Include in the program description:
 </description_requirements>
 
 <methodology_guidelines>
-Apply these sport-specific principles where they don't conflict with client requirements:
+Apply these sport-specific principles where they don't conflict with your requirements:
 - Exercise selection that transfers to sport movements and demands
 - Development of relevant physical qualities (strength, power, speed, agility, endurance, mobility)
 - Plyometrics, change-of-direction drills, and speed work as applicable
@@ -204,7 +204,7 @@ Muscle balance and injury prevention:
 Recovery protocol:
 - Static stretching or mobility for key muscle groups
 
-## Coaching Cues
+## Technique Tips
 3-5 technical cues for key movements:
 - Focus on transfer to sport performance
 - Posture, force production, movement efficiency

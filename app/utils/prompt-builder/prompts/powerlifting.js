@@ -70,12 +70,12 @@ ${focus_area ? `Focus Area: ${focus_area}` : ''}
 Periodization: ${programType}
 </program_parameters>
 
-${
+${ 
   description
-    ? `<client_requirements priority="high">
+    ? `<your_requirements priority="high">
 ${description}
 These requirements take precedence over general guidelines below.
-</client_requirements>
+</your_requirements>
 `
     : ''
 }
@@ -123,7 +123,7 @@ Include in the program description:
 </description_requirements>
 
 <methodology_guidelines>
-Apply these powerlifting principles where they don't conflict with client requirements:
+Apply these powerlifting principles where they don't conflict with your requirements:
 - Prioritize main lifts (Squat, Bench, Deadlift) with appropriate frequency and volume
 - Use percentages of 1RM or RPE for load prescription
 - Select accessories addressing weaknesses in main lifts
@@ -177,7 +177,7 @@ Sets, reps, load/RPE guidance, rationale for each exercise
 ## Cool-down
 Light stretching or mobility work for targeted areas
 
-## Coaching Cues
+## Technique Tips
 3-5 technical cues for main lifts, form tips, common errors to avoid
 </workout_body_structure>
 

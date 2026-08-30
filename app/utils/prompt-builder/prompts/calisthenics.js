@@ -70,12 +70,12 @@ ${focus_area ? `Focus Area/Skills: ${focus_area}` : ''}
 Periodization: ${programType}
 </program_parameters>
 
-${
+${ 
   description
-    ? `<client_requirements priority="high">
+    ? `<your_requirements priority="high">
 ${description}
 These requirements take precedence over general guidelines below.
-</client_requirements>
+</your_requirements>
 `
     : ''
 }
@@ -122,7 +122,7 @@ Include in the program description:
 </description_requirements>
 
 <methodology_guidelines>
-Apply these calisthenics principles where they don't conflict with client requirements:
+Apply these calisthenics principles where they don't conflict with your requirements:
 - Master fundamental bodyweight movements (push-ups, pull-ups, squats, lunges, planks)
 - Use progressions and regressions to adjust difficulty appropriately
 - Incorporate skill practice for target movements (handstands, levers, muscle-ups) where relevant
@@ -198,7 +198,7 @@ Targeted core stability and strength exercises
 Static stretching for major muscle groups
 - Focus on shoulders, hips, wrists
 
-## Coaching Cues
+## Technique Tips
 3-5 technical cues for key movements: body alignment, muscle engagement, common errors to avoid
 </workout_body_structure>
 

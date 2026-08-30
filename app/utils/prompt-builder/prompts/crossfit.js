@@ -71,7 +71,7 @@ IMPORTANT: Please structure your workout to precisely follow this format with th
 Periodization Guidelines:
 ${periodization.approach}
 
-Why it's appropriate for the client requirements:
+Why it's appropriate for your requirements:
 ${periodization.why_appropriate}
 `
       : '';
@@ -96,10 +96,10 @@ Periodization: ${programType}
 
 ${
   description
-    ? `<client_requirements priority="high">
+    ? `<your_requirements priority="high">
 ${description}
 These requirements take precedence over general guidelines below.
-</client_requirements>
+</your_requirements>
 `
     : ''
 }
@@ -150,7 +150,7 @@ Include in the program description:
 </description_requirements>
 
 <crossfit_guidelines>
-Apply these CrossFit principles where they don't conflict with client requirements:
+Apply these CrossFit principles where they don't conflict with your requirements:
 - Varied functional movements at appropriate intensity
 - Mix of gymnastics, weightlifting, and metabolic conditioning
 - Benchmark and Hero WODs where appropriate
@@ -219,7 +219,7 @@ Target time domain or goal times
 ## Cool-down
 Specific movements and durations for recovery
 
-## Coaching Cues
+## Technique Tips
 3-5 technical cues for key movements, form tips, common errors to avoid`
 }
 </workout_body_structure>
