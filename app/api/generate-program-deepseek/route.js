@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
-import OpenAI from 'openai';
+import { createChatCompletion } from '@/utils/ai/provider';
 import { createClient } from '@/utils/supabase/server';
+
+// NOTE: superseded by the shared provider abstraction in generate-program-anthropic
+// (which now defaults to DeepSeek); kept for backward compatibility with any
+// direct callers of this specific endpoint.
 
 export const maxDuration = 300;
 export const dynamic = 'force-dynamic';
@@ -16,12 +20,6 @@ export async function POST(request) {
   logWithTimestamp('API route started (Deepseek)');
 
   try {
-    const deepseek = new OpenAI({
-      baseURL: 'https://api.deepseek.com',
-      apiKey: process.env.DEEPSEEK_API_KEY,
-    });
-    logWithTimestamp('Deepseek client initialized');
-
     const supabase = await createClient();
     logWithTimestamp('Supabase client initialized');
 
@@ -38,8 +36,11 @@ export async function POST(request) {
     const workoutFormats = requestData.workout_format || [];
 
     // Critical parameters - ensure they have fallback values
-    const numberOfWeeks = parseInt(requestData.duration_weeks || requestData.numberOfWeeks || 4);
-    const daysPerWeek = parseInt(requestData.days_per_week || requestData.daysPerWeek || 3);
+    const numberOfWeeks = parseInt(
+      requestData.duration_weeks || requestData.numberOfWeeks || 4,
+      10
+    );
+    const daysPerWeek = parseInt(requestData.days_per_week || requestData.daysPerWeek || 3, 10);
     const programType =
       requestData.periodization?.program_type || requestData.programType || 'linear';
 
@@ -57,7 +58,7 @@ export async function POST(request) {
     });
 
     // Calculate total number of workouts
-    const totalWorkouts = parseInt(numberOfWeeks) * parseInt(daysPerWeek);
+    const totalWorkouts = parseInt(numberOfWeeks, 10) * parseInt(daysPerWeek, 10);
 
     // Get selected days of the week from request data
     const selectedDaysOfWeek = requestData.calendar_data?.days_of_week || [];
@@ -121,7 +122,7 @@ export async function POST(request) {
           logWithTimestamp('Error fetching program entity_id', {
             error: programError,
           });
-        } else if (programData && programData.entity_id) {
+        } else if (programData?.entity_id) {
           // Fetch metrics from entities table
           const { data: entityResult, error: entityError } = await supabase
             .from('entities')
@@ -377,9 +378,9 @@ ${suggestedDates
       ': ' +
       date +
       ' (Week ' +
-      (Math.floor(index / parseInt(daysPerWeek)) + 1) +
+      (Math.floor(index / parseInt(daysPerWeek, 10)) + 1) +
       ', Day ' +
-      ((index % parseInt(daysPerWeek)) + 1) +
+      ((index % parseInt(daysPerWeek, 10)) + 1) +
       ')'
   )
   .join('\\n')}\
@@ -392,36 +393,25 @@ IMPORTANT: Each workout MUST be assigned to one of the above dates. These dates 
     const systemPrompt =
       "You are an expert strength and conditioning coach who specializes in creating effective, periodized training programs. Create professional, CrossFit-style workouts with precise stimulus explanations, detailed scaling options, and specific coaching cues. Each workout should include clear RX weights (for men and women), proper warm-up and cool-down protocols, and actionable strategy recommendations. CRITICAL EQUIPMENT CONSTRAINT: You MUST ONLY include exercises that use the EXACT equipment specified in the prompt. Do NOT recommend or include ANY exercises that require equipment not explicitly listed as available. CRITICAL SCHEDULING CONSTRAINT: You MUST assign each workout EXACTLY to the dates provided in the suggestedDates list, which are aligned with the user's selected days of the week. Follow sound exercise science principles with appropriate progression, variation, and specificity. Provide responses EXACTLY in the JSON format specified in the prompt.";
 
-    // Call Deepseek with required response format
+    // Call the AI provider (defaults to DeepSeek; AI_PROVIDER=anthropic to switch)
     try {
-      const response = await deepseek.chat.completions.create({
-        model: 'deepseek-chat',
-        messages: [
-          {
-            role: 'system',
-            content: systemPrompt,
-          },
-          {
-            role: 'user',
-            content: prompt,
-          },
-        ],
+      const { content: responseContent, provider } = await createChatCompletion({
+        tier: 'pro',
+        systemPrompt,
+        userPrompt: prompt,
         temperature: 0.7,
-        max_tokens: 4000,
+        maxTokens: 4000,
       });
 
-      logWithTimestamp('Received response from Deepseek');
+      logWithTimestamp(`Received response from ${provider}`);
 
-      if (!response.choices || !response.choices[0] || !response.choices[0].message) {
-        logWithTimestamp('Invalid response format from Deepseek', response);
+      if (!responseContent) {
+        logWithTimestamp('Invalid response format from AI provider');
         return NextResponse.json(
           { error: 'Failed to generate a valid program: Invalid API response' },
           { status: 500 }
         );
       }
-
-      // Parse the response
-      const responseContent = response.choices[0].message.content;
       logWithTimestamp('Response content length', {
         length: responseContent.length,
       });
@@ -433,7 +423,7 @@ IMPORTANT: Each workout MUST be assigned to one of the above dates. These dates 
       } catch (parseError) {
         logWithTimestamp('Failed to parse JSON response', {
           error: parseError.message,
-          preview: responseContent.substring(0, 200) + '...',
+          preview: `${responseContent.substring(0, 200)}...`,
         });
         return NextResponse.json(
           {
@@ -505,22 +495,22 @@ IMPORTANT: Each workout MUST be assigned to one of the above dates. These dates 
       // Return the generated program data with consistent format
       return NextResponse.json(
         {
-          message: 'Program generated successfully with Deepseek',
+          message: 'Program generated successfully',
           title: programTitle,
           description: programDescription,
           overview: parsedContent.overview || 'No overview provided',
           suggestions: workouts,
-          model: 'deepseek',
+          model: provider,
         },
         { status: 200 }
       );
-    } catch (deepseekError) {
-      logWithTimestamp('Deepseek API error', {
-        error: deepseekError.message,
-        stack: deepseekError.stack,
+    } catch (providerError) {
+      logWithTimestamp('AI provider error', {
+        error: providerError.message,
+        stack: providerError.stack,
       });
       return NextResponse.json(
-        { error: 'Deepseek API error: ' + deepseekError.message },
+        { error: `AI provider error: ${providerError.message}` },
         { status: 500 }
       );
     }
@@ -530,7 +520,7 @@ IMPORTANT: Each workout MUST be assigned to one of the above dates. These dates 
       stack: error.stack,
     });
     return NextResponse.json(
-      { error: 'Failed to generate program: ' + error.message },
+      { error: `Failed to generate program: ${error.message}` },
       { status: 500 }
     );
   }

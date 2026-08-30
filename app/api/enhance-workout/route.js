@@ -1,9 +1,12 @@
 import { NextResponse } from 'next/server';
-import OpenAI from 'openai';
+import { createChatCompletion } from '@/utils/ai/provider';
 import { corsHeaders, createMobileCompatibleClient } from '@/utils/supabase/mobile';
 
+// NOTE: Single-workout enhancement is a lightweight call, so it uses the 'flash'
+// tier of the shared AI provider abstraction (DeepSeek V4-Flash by default).
+
 // Handle OPTIONS for CORS preflight
-export async function OPTIONS(request) {
+export async function OPTIONS(_request) {
   return new Response(null, {
     status: 200,
     headers: corsHeaders(),
@@ -52,8 +55,6 @@ export async function POST(req) {
       );
     }
 
-    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
     // Compose the enhancement prompt
     const systemPrompt = `
 You are an expert fitness coach who specializes in creating and enhancing effective, personalized workout programs. Always consider evidence-based training principles, safety, and client context.`;
@@ -65,11 +66,7 @@ Context:
 - Training methodology: ${methodology}
 - Equipment available: ${Array.isArray(gymEquipment) ? gymEquipment.join(', ') : gymEquipment}
 - Client injuries or limitations: ${
-      injuries && injuries.length
-        ? Array.isArray(injuries)
-          ? injuries.join(', ')
-          : injuries
-        : 'None'
+      injuries?.length ? (Array.isArray(injuries) ? injuries.join(', ') : injuries) : 'None'
     }
 
 Original Workout:
@@ -88,22 +85,19 @@ Requirements:
   - notes: (string, optional, explain any key changes or rationale)
 `;
 
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4.1',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt },
-      ],
+    const { content: rawContent } = await createChatCompletion({
+      tier: 'flash',
+      systemPrompt,
+      userPrompt,
       temperature: 0.7,
-      response_format: { type: 'json_object' },
-      max_tokens: 2500,
+      maxTokens: 2500,
+      jsonMode: true,
     });
 
     let enhancedWorkout;
-    const rawContent = response.choices[0]?.message?.content;
     try {
       if (!rawContent) {
-        console.error('No content in AI response:', JSON.stringify(response.choices[0]));
+        console.error('No content in AI response');
         throw new Error('No content in AI response');
       }
       enhancedWorkout = JSON.parse(rawContent);

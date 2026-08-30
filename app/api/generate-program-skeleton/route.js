@@ -1,18 +1,20 @@
-import Anthropic from '@anthropic-ai/sdk';
 import { NextResponse } from 'next/server';
+import { streamChatCompletion } from '@/utils/ai/provider';
 import {
   formatClassMetrics,
   formatClientMetrics,
   isClassMetrics,
 } from '@/utils/prompt-builder/promptBuilder.js';
 import { corsHeaders, createMobileCompatibleClient } from '@/utils/supabase/mobile';
-import { createClient } from '@/utils/supabase/server';
+
+// NOTE: Calls through the shared AI provider abstraction (app/utils/ai/provider.js),
+// which defaults to DeepSeek and falls back to Anthropic/Claude when AI_PROVIDER=anthropic.
 
 export const maxDuration = 800; // Maximum for Vercel Pro plan (800 seconds)
 export const dynamic = 'force-dynamic';
 
 // Handle OPTIONS for CORS preflight
-export async function OPTIONS(request) {
+export async function OPTIONS(_request) {
   return new Response(null, {
     status: 200,
     headers: corsHeaders(),
@@ -47,11 +49,6 @@ export async function POST(request) {
   logWithTimestamp('Skeleton generation API route started');
 
   try {
-    const anthropic = new Anthropic({
-      apiKey: process.env.ANTHROPIC_API_KEY,
-    });
-    logWithTimestamp('Anthropic client initialized');
-
     // Use mobile-compatible client that supports bearer tokens
     const supabase = await createMobileCompatibleClient(request);
     logWithTimestamp('Supabase client initialized');
@@ -59,7 +56,7 @@ export async function POST(request) {
     const requestData = await request.json();
     logWithTimestamp('Request data received', requestData);
 
-    return await handleSkeletonGeneration(requestData, anthropic, supabase);
+    return await handleSkeletonGeneration(requestData, supabase);
   } catch (error) {
     logWithTimestamp('Unhandled error in skeleton API route', {
       error: error.message,
@@ -67,7 +64,7 @@ export async function POST(request) {
       stack: error.stack,
     });
     return NextResponse.json(
-      { error: 'Failed to generate skeleton program: ' + error.message },
+      { error: `Failed to generate skeleton program: ${error.message}` },
       {
         status: 500,
         headers: corsHeaders(),
@@ -77,27 +74,25 @@ export async function POST(request) {
 }
 
 // Handle skeleton generation
-async function handleSkeletonGeneration(requestData, anthropic, supabase) {
+async function handleSkeletonGeneration(requestData, supabase) {
   logWithTimestamp('Starting skeleton generation');
 
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     start(controller) {
-      generateSkeletonProgram(requestData, anthropic, supabase, controller, encoder).catch(
-        (error) => {
-          logWithTimestamp('Skeleton generation error', { error: error.message });
-          try {
-            sendEvent(controller, encoder, 'error', { error: error.message });
-            if (controller && controller.desiredSize !== null) {
-              controller.close();
-            }
-          } catch (closeError) {
-            logWithTimestamp('Controller already closed during error handling', {
-              error: closeError.message,
-            });
+      generateSkeletonProgram(requestData, supabase, controller, encoder).catch((error) => {
+        logWithTimestamp('Skeleton generation error', { error: error.message });
+        try {
+          sendEvent(controller, encoder, 'error', { error: error.message });
+          if (controller && controller.desiredSize !== null) {
+            controller.close();
           }
+        } catch (closeError) {
+          logWithTimestamp('Controller already closed during error handling', {
+            error: closeError.message,
+          });
         }
-      );
+      });
     },
   });
 
@@ -112,7 +107,7 @@ async function handleSkeletonGeneration(requestData, anthropic, supabase) {
 }
 
 // Main skeleton generation logic
-async function generateSkeletonProgram(requestData, anthropic, supabase, controller, encoder) {
+async function generateSkeletonProgram(requestData, supabase, controller, encoder) {
   try {
     // Extract shared data
     const sharedData = await extractSharedData(requestData, supabase);
@@ -160,7 +155,6 @@ async function generateSkeletonProgram(requestData, anthropic, supabase, control
           currentWeek,
           sharedData,
           allWorkouts,
-          anthropic,
           currentWeek === 1, // Request program description for first week only
           controller,
           encoder
@@ -324,7 +318,6 @@ async function generateWeekSkeleton(
   weekNumber,
   sharedData,
   existingWorkouts,
-  anthropic,
   includeDescription = false,
   controller = null,
   encoder = null
@@ -452,12 +445,13 @@ Express weights in ${useImperial ? 'lbs' : 'kg'}.
 Output valid JSON only.`;
 
   try {
-    logWithTimestamp(`Calling Anthropic API for skeleton week ${weekNumber}`, {
+    logWithTimestamp(`Calling AI provider for skeleton week ${weekNumber}`, {
       promptLength: skeletonPrompt.length,
     });
 
-    // Use prompt caching for system prompt and client metrics
-    const systemMessages = [
+    // Use prompt caching for system prompt and client metrics (Anthropic only;
+    // flattened for OpenAI-compatible providers - see streamChatCompletion).
+    const systemBlocks = [
       {
         type: 'text',
         text: systemPrompt,
@@ -466,26 +460,12 @@ Output valid JSON only.`;
 
     // Add client metrics with caching if available
     if (clientMetricsContent) {
-      systemMessages.push({
+      systemBlocks.push({
         type: 'text',
         text: clientMetricsContent,
         cache_control: { type: 'ephemeral' },
       });
     }
-
-    const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-5-20250929',
-      max_tokens: 4000, // Reduced from 16000 for skeleton
-      temperature: 0.5, // Less creativity needed for structure
-      system: systemMessages,
-      messages: [
-        {
-          role: 'user',
-          content: skeletonPrompt,
-        },
-      ],
-      stream: true,
-    });
 
     // Handle streaming response
     let responseContent = '';
@@ -497,18 +477,24 @@ Output valid JSON only.`;
       });
     }
 
-    for await (const chunk of response) {
-      if (chunk.type === 'content_block_delta') {
-        const text = chunk.delta?.text || '';
-        responseContent += text;
+    const textStream = streamChatCompletion({
+      tier: 'pro',
+      systemPrompt,
+      systemBlocks,
+      userPrompt: skeletonPrompt,
+      temperature: 0.5, // Less creativity needed for structure
+      maxTokens: 4000, // Reduced from 16000 for skeleton
+    });
 
-        if (controller && encoder && text.length > 0) {
-          sendEvent(controller, encoder, 'stream_chunk', {
-            week: weekNumber,
-            chunk: text,
-            totalLength: responseContent.length,
-          });
-        }
+    for await (const text of textStream) {
+      responseContent += text;
+
+      if (controller && encoder && text.length > 0) {
+        sendEvent(controller, encoder, 'stream_chunk', {
+          week: weekNumber,
+          chunk: text,
+          totalLength: responseContent.length,
+        });
       }
     }
 
@@ -524,7 +510,7 @@ Output valid JSON only.`;
       // Strip markdown code blocks if present
       if (jsonContent.includes('```')) {
         const jsonBlockMatch = jsonContent.match(/```(?:json)?\s*\n?([\s\S]*?)(?:\n```|$)/);
-        if (jsonBlockMatch && jsonBlockMatch[1]) {
+        if (jsonBlockMatch?.[1]) {
           jsonContent = jsonBlockMatch[1].trim();
         }
       }
@@ -574,7 +560,7 @@ Output valid JSON only.`;
 }
 
 // Get workout sections based on training methodology
-function getWorkoutSections(methodology, workoutFormats) {
+function getWorkoutSections(methodology, _workoutFormats) {
   const defaultSections = ['Strength', 'Conditioning'];
 
   const methodologySections = {
@@ -626,7 +612,7 @@ async function saveSkeletonWorkouts(programId, workouts, weekNumber, sharedData,
       is_reference: false,
       tags: {
         suggestedDate: workout.date,
-        generatedBy: 'anthropic-skeleton',
+        generatedBy: 'ai-provider-skeleton',
         weekNumber: weekNumber,
       },
     }));
@@ -654,8 +640,8 @@ async function extractSharedData(requestData, supabase) {
   const trainingMethodology = requestData.trainingMethodology || '';
   const description = requestData.description || '';
 
-  const numberOfWeeks = parseInt(requestData.duration_weeks || requestData.numberOfWeeks || 4);
-  const daysPerWeek = parseInt(requestData.days_per_week || requestData.daysPerWeek || 3);
+  const numberOfWeeks = parseInt(requestData.duration_weeks || requestData.numberOfWeeks || 4, 10);
+  const daysPerWeek = parseInt(requestData.days_per_week || requestData.daysPerWeek || 3, 10);
   const programType =
     requestData.periodization?.program_type || requestData.programType || 'linear';
 

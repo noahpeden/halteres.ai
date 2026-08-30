@@ -1,15 +1,19 @@
-import Anthropic from '@anthropic-ai/sdk';
 import { NextResponse } from 'next/server';
+import { getAIProvider, streamChatCompletion } from '@/utils/ai/provider';
 import { getFeedbackContextForGeneration } from '@/utils/feedback/feedbackUtils.js';
 import { formatClientMetrics } from '@/utils/prompt-builder/promptBuilder.js';
 import { corsHeaders, createMobileCompatibleClient } from '@/utils/supabase/mobile';
-import { createClient } from '@/utils/supabase/server';
+
+// NOTE: This route is the primary program-generation endpoint (despite the
+// "-anthropic" name, kept for backward compatibility). It now calls through the
+// shared AI provider abstraction (app/utils/ai/provider.js), which defaults to
+// DeepSeek and falls back to Anthropic/Claude when AI_PROVIDER=anthropic.
 
 export const maxDuration = 800; // Maximum for Vercel Pro plan (800 seconds)
 export const dynamic = 'force-dynamic';
 
 // Handle OPTIONS for CORS preflight
-export async function OPTIONS(request) {
+export async function OPTIONS(_request) {
   return new Response(null, {
     status: 200,
     headers: corsHeaders(),
@@ -62,14 +66,9 @@ function sendEvent(controller, encoder, type, data) {
 }
 
 export async function POST(request) {
-  logWithTimestamp('API route started (Anthropic)');
+  logWithTimestamp('API route started');
 
   try {
-    const anthropic = new Anthropic({
-      apiKey: process.env.ANTHROPIC_API_KEY,
-    });
-    logWithTimestamp('Anthropic client initialized');
-
     // Use mobile-compatible client that supports bearer tokens
     const supabase = await createMobileCompatibleClient(request);
     logWithTimestamp('Supabase client initialized');
@@ -78,11 +77,14 @@ export async function POST(request) {
     logWithTimestamp('Request data received', requestData);
 
     // Use chunked generation for all programs (simplified approach)
-    const numberOfWeeks = parseInt(requestData.duration_weeks || requestData.numberOfWeeks || 4);
+    const numberOfWeeks = parseInt(
+      requestData.duration_weeks || requestData.numberOfWeeks || 4,
+      10
+    );
 
     logWithTimestamp('Using unified chunked generation', { numberOfWeeks });
 
-    return await handleChunkedGeneration(requestData, anthropic, supabase);
+    return await handleChunkedGeneration(requestData, supabase);
   } catch (error) {
     logWithTimestamp('Unhandled error in API route', {
       error: error.message,
@@ -90,7 +92,7 @@ export async function POST(request) {
       stack: error.stack,
     });
     return NextResponse.json(
-      { error: 'Failed to generate program: ' + error.message },
+      { error: `Failed to generate program: ${error.message}` },
       {
         status: 500,
         headers: corsHeaders(),
@@ -117,7 +119,7 @@ async function saveWorkoutsBatch(programId, workouts, weekNumber, sharedData, su
       is_reference: false,
       tags: {
         suggestedDate: workout.date,
-        generatedBy: 'anthropic-incremental',
+        generatedBy: 'ai-provider-incremental',
         weekNumber: weekNumber,
       },
     }));
@@ -135,28 +137,26 @@ async function saveWorkoutsBatch(programId, workouts, weekNumber, sharedData, su
 }
 
 // Handle chunked generation for large programs
-async function handleChunkedGeneration(requestData, anthropic, supabase) {
+async function handleChunkedGeneration(requestData, supabase) {
   logWithTimestamp('Starting chunked generation');
 
   // Set up streaming response with CORS headers
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     start(controller) {
-      generateProgramChunked(requestData, anthropic, supabase, controller, encoder).catch(
-        (error) => {
-          logWithTimestamp('Chunked generation error', { error: error.message });
-          try {
-            sendEvent(controller, encoder, 'error', { error: error.message });
-            if (controller && controller.desiredSize !== null) {
-              controller.close();
-            }
-          } catch (closeError) {
-            logWithTimestamp('Controller already closed during stream error handling', {
-              error: closeError.message,
-            });
+      generateProgramChunked(requestData, supabase, controller, encoder).catch((error) => {
+        logWithTimestamp('Chunked generation error', { error: error.message });
+        try {
+          sendEvent(controller, encoder, 'error', { error: error.message });
+          if (controller && controller.desiredSize !== null) {
+            controller.close();
           }
+        } catch (closeError) {
+          logWithTimestamp('Controller already closed during stream error handling', {
+            error: closeError.message,
+          });
         }
-      );
+      });
     },
   });
 
@@ -171,7 +171,7 @@ async function handleChunkedGeneration(requestData, anthropic, supabase) {
 }
 
 // Main chunked generation logic
-async function generateProgramChunked(requestData, anthropic, supabase, controller, encoder) {
+async function generateProgramChunked(requestData, supabase, controller, encoder) {
   try {
     // Extract shared data
     const sharedData = await extractSharedData(requestData, supabase);
@@ -210,7 +210,6 @@ async function generateProgramChunked(requestData, anthropic, supabase, controll
           currentWeek,
           sharedData,
           allWorkouts,
-          anthropic,
           currentWeek === 1, // Request program description for first week only
           controller,
           encoder
@@ -332,7 +331,7 @@ async function generateProgramChunked(requestData, anthropic, supabase, controll
 
     // Send completion
     sendEvent(controller, encoder, 'complete', {
-      message: 'Program generated successfully with Anthropic (chunked)',
+      message: 'Program generated successfully (chunked)',
       title: `Training Program for ${sharedData.goal}`,
       description:
         programDescription || `${numberOfWeeks}-week program, ${daysPerWeek} days per week`,
@@ -342,7 +341,7 @@ async function generateProgramChunked(requestData, anthropic, supabase, controll
           sharedData.difficulty
         } training program focused on ${sharedData.focusArea || sharedData.goal}`,
       suggestions: allWorkouts,
-      model: 'anthropic-chunked',
+      model: getAIProvider('pro').provider,
       totalWorkouts: allWorkouts.length,
     });
 
@@ -377,7 +376,6 @@ async function generateWeekWorkouts(
   weekNumber,
   sharedData,
   existingWorkouts,
-  anthropic,
   includeDescription = false,
   controller = null,
   encoder = null
@@ -514,7 +512,7 @@ Your response MUST be in this exact JSON format:
       "body": "Detailed workout description including all required sections",
       "date": "${weekDates[0] || new Date().toISOString().split('T')[0]}"
     }
-    ${daysPerWeek > 1 ? '... more workouts for remaining days of week ' + weekNumber : ''}
+    ${daysPerWeek > 1 ? `... more workouts for remaining days of week ${weekNumber}` : ''}
   ]
 }
 
@@ -608,7 +606,7 @@ Users have EXPLICITLY selected their available equipment. Including exercises re
 </context>`;
 
   try {
-    logWithTimestamp(`About to call Anthropic API for week ${weekNumber}`, {
+    logWithTimestamp(`About to call AI provider for week ${weekNumber}`, {
       promptLength: weekPrompt.length,
       systemPromptLength: systemPrompt.length,
     });
@@ -616,17 +614,19 @@ Users have EXPLICITLY selected their available equipment. Including exercises re
     // Optimize max_tokens based on week (Week 1 needs more for program description)
     const maxTokensForWeek = weekNumber === 1 ? 16000 : 8000;
 
-    // Build system messages with prompt caching for client metrics
-    const systemMessages = [
+    // Build system blocks with prompt caching for client metrics (Anthropic only;
+    // flattened into a single system string for OpenAI-compatible providers, which
+    // rely on automatic prefix caching instead - see streamChatCompletion).
+    const systemBlocks = [
       {
         type: 'text',
         text: systemPrompt,
       },
     ];
 
-    // Add client metrics with caching if available (reduces latency 30-50%)
+    // Add client metrics with caching if available (reduces latency 30-50% on Anthropic)
     if (clientMetricsContent) {
-      systemMessages.push({
+      systemBlocks.push({
         type: 'text',
         text: clientMetricsContent,
         cache_control: { type: 'ephemeral' },
@@ -635,26 +635,12 @@ Users have EXPLICITLY selected their available equipment. Including exercises re
 
     // Add reference workouts with caching if available
     if (referenceWorkoutsContent) {
-      systemMessages.push({
+      systemBlocks.push({
         type: 'text',
         text: referenceWorkoutsContent,
         cache_control: { type: 'ephemeral' },
       });
     }
-
-    const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-5-20250929',
-      max_tokens: maxTokensForWeek,
-      temperature: 0.7,
-      system: systemMessages,
-      messages: [
-        {
-          role: 'user',
-          content: weekPrompt,
-        },
-      ],
-      stream: true,
-    });
 
     // Handle streaming response
     let responseContent = '';
@@ -670,27 +656,31 @@ Users have EXPLICITLY selected their available equipment. Including exercises re
     }
 
     try {
-      for await (const chunk of response) {
-        if (chunk.type === 'content_block_start') {
-          logWithTimestamp(`Stream started for week ${weekNumber}`);
-        } else if (chunk.type === 'content_block_delta') {
-          const text = chunk.delta?.text || '';
-          responseContent += text;
+      const textStream = streamChatCompletion({
+        tier: 'pro',
+        systemPrompt,
+        systemBlocks,
+        userPrompt: weekPrompt,
+        temperature: 0.7,
+        maxTokens: maxTokensForWeek,
+      });
 
-          // Send incremental content updates
-          if (controller && encoder && text.length > 0) {
-            sendEvent(controller, encoder, 'stream_chunk', {
-              week: weekNumber,
-              chunk: text,
-              totalLength: responseContent.length,
-            });
-          }
-        } else if (chunk.type === 'content_block_stop') {
-          logWithTimestamp(`Stream completed for week ${weekNumber}`, {
+      for await (const text of textStream) {
+        responseContent += text;
+
+        // Send incremental content updates
+        if (controller && encoder && text.length > 0) {
+          sendEvent(controller, encoder, 'stream_chunk', {
+            week: weekNumber,
+            chunk: text,
             totalLength: responseContent.length,
           });
         }
       }
+
+      logWithTimestamp(`Stream completed for week ${weekNumber}`, {
+        totalLength: responseContent.length,
+      });
     } catch (streamError) {
       logWithTimestamp(`Error streaming response for week ${weekNumber}`, {
         error: streamError.message,
@@ -717,7 +707,7 @@ Users have EXPLICITLY selected their available equipment. Including exercises re
 
         // Strategy 1: Extract content between ```json and ``` markers
         const jsonBlockMatch = responseContent.match(/```(?:json)?\s*\n?([\s\S]*?)(?:\n```|$)/);
-        if (jsonBlockMatch && jsonBlockMatch[1]) {
+        if (jsonBlockMatch?.[1]) {
           jsonContent = jsonBlockMatch[1].trim();
           logWithTimestamp(`Week ${weekNumber} extracted JSON from markdown block`);
         } else {
@@ -758,7 +748,7 @@ Users have EXPLICITLY selected their available equipment. Including exercises re
     } catch (parseError) {
       logWithTimestamp(`Week ${weekNumber} JSON parse failed`, {
         error: parseError.message,
-        preview: responseContent.substring(0, 200) + '...',
+        preview: `${responseContent.substring(0, 200)}...`,
       });
 
       // Try to extract partial JSON if possible
@@ -770,7 +760,7 @@ Users have EXPLICITLY selected their available equipment. Including exercises re
         // Remove any remaining markdown if it still exists
         if (fixedContent.includes('```')) {
           const jsonBlockMatch = fixedContent.match(/```(?:json)?\s*\n?([\s\S]*?)(?:\n```|$)/);
-          if (jsonBlockMatch && jsonBlockMatch[1]) {
+          if (jsonBlockMatch?.[1]) {
             fixedContent = jsonBlockMatch[1].trim();
           } else {
             fixedContent = fixedContent
@@ -820,7 +810,7 @@ Users have EXPLICITLY selected their available equipment. Including exercises re
         const workoutMatches = [...attempt2.matchAll(/\{\s*"title"[^}]*?"body"[^}]*?\}/g)];
         if (workoutMatches.length > 0) {
           const lastCompleteWorkout = workoutMatches[workoutMatches.length - 1];
-          const cutoffPosition = lastCompleteWorkout.index + lastCompleteWorkout[0].length;
+          const _cutoffPosition = lastCompleteWorkout.index + lastCompleteWorkout[0].length;
 
           // Reconstruct JSON with complete workouts only
           const completeWorkouts = workoutMatches.map((match) => match[0]).join(',\n    ');
@@ -891,7 +881,7 @@ Users have EXPLICITLY selected their available equipment. Including exercises re
                   return JSON.parse(match);
                 } catch (parseErr) {
                   logWithTimestamp(`Failed to parse individual workout: ${parseErr.message}`, {
-                    workout: match.substring(0, 100) + '...',
+                    workout: `${match.substring(0, 100)}...`,
                   });
                   return null;
                 }
@@ -1002,7 +992,7 @@ function generatePlaceholderWeek(weekNumber, sharedData) {
 }
 
 // Save workouts to database
-async function saveWorkoutsToDatabase(programId, workouts, supabase, gymId = null) {
+async function _saveWorkoutsToDatabase(programId, workouts, supabase, gymId = null) {
   if (!programId || !workouts || workouts.length === 0) {
     return;
   }
@@ -1053,8 +1043,8 @@ async function extractSharedData(requestData, supabase) {
   const trainingMethodology = requestData.trainingMethodology || '';
 
   // Critical parameters - ensure they have fallback values
-  const numberOfWeeks = parseInt(requestData.duration_weeks || requestData.numberOfWeeks || 4);
-  const daysPerWeek = parseInt(requestData.days_per_week || requestData.daysPerWeek || 3);
+  const numberOfWeeks = parseInt(requestData.duration_weeks || requestData.numberOfWeeks || 4, 10);
+  const daysPerWeek = parseInt(requestData.days_per_week || requestData.daysPerWeek || 3, 10);
   const programType =
     requestData.periodization?.program_type || requestData.programType || 'linear';
 
@@ -1072,7 +1062,7 @@ async function extractSharedData(requestData, supabase) {
   });
 
   // Calculate total number of workouts
-  const totalWorkouts = parseInt(numberOfWeeks) * parseInt(daysPerWeek);
+  const totalWorkouts = parseInt(numberOfWeeks, 10) * parseInt(daysPerWeek, 10);
   logWithTimestamp('Calculated total workouts', { totalWorkouts });
 
   // Get selected days of the week from request data
@@ -1161,7 +1151,7 @@ async function extractSharedData(requestData, supabase) {
   logWithTimestamp('Authentication successful', { userId: user.id });
 
   // Create a session-like object for compatibility with existing code
-  const session = { user };
+  const _session = { user };
 
   // Check if this is a regeneration (existing program with workouts)
   const forceRegenerate = requestData.forceRegenerate || false;
@@ -1233,7 +1223,7 @@ async function extractSharedData(requestData, supabase) {
         logWithTimestamp('Found gym_id', { gymId });
       }
 
-      if (programData && programData.entity_id) {
+      if (programData?.entity_id) {
         // Fetch metrics from entities table
         const { data: entityResult, error: entityError } = await supabase
           .from('entities')

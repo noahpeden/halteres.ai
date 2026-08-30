@@ -1,14 +1,13 @@
-import Anthropic from '@anthropic-ai/sdk';
 import { createClient } from '@supabase/supabase-js';
+import { createChatCompletion } from '@/utils/ai/provider';
+
+// NOTE: Feedback parsing is a lightweight call, so it uses the 'flash' tier of the
+// shared AI provider abstraction (DeepSeek V4-Flash by default).
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
-
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
 
 export async function POST(request) {
   try {
@@ -64,20 +63,14 @@ export async function POST(request) {
     // Build the prompt for AI analysis
     const prompt = buildFeedbackPrompt(result, profile, recentResults, prs);
 
-    // Call Anthropic API - using Haiku for fast, cost-effective feedback
-    const message = await anthropic.messages.create({
-      model: 'claude-haiku-4-5-20250514',
-      max_tokens: 1024,
-      messages: [
-        {
-          role: 'user',
-          content: prompt,
-        },
-      ],
+    // Call the AI provider - flash tier for fast, cost-effective feedback
+    const { content: aiResponse, model: modelUsed } = await createChatCompletion({
+      tier: 'flash',
+      systemPrompt: 'You are a knowledgeable, encouraging CrossFit coach.',
+      userPrompt: prompt,
+      maxTokens: 1024,
     });
 
-    // Parse the AI response
-    const aiResponse = message.content?.[0]?.text;
     if (!aiResponse) {
       throw new Error('Invalid response format from AI service');
     }
@@ -95,7 +88,7 @@ export async function POST(request) {
           areas_for_improvement: feedback.areasForImprovement,
           recovery_suggestions: feedback.recoverySuggestions,
           next_workout_recommendations: feedback.nextWorkoutRecommendations,
-          model_used: 'claude-haiku-4-5-20250514',
+          model_used: modelUsed,
         },
       ])
       .select()
@@ -166,7 +159,7 @@ function buildFeedbackPrompt(result, profile, recentResults, prs) {
   let prContext = '';
   if (prs && prs.length > 0) {
     const recentPRs = prs.slice(0, 3).map((pr) => {
-      return `- ${pr.category}: ${pr.weight_kg ? pr.weight_kg + 'kg' : pr.time_seconds ? formatTime(pr.time_seconds) : pr.reps + ' reps'}`;
+      return `- ${pr.category}: ${pr.weight_kg ? `${pr.weight_kg}kg` : pr.time_seconds ? formatTime(pr.time_seconds) : `${pr.reps} reps`}`;
     });
     prContext = `\nRecent PRs:\n${recentPRs.join('\n')}`;
   }
