@@ -107,7 +107,9 @@ export default function LoginPage() {
         },
       });
       if (error) throw error;
-      setSuccessMessage('Registration successful! Please check your email to confirm your account.');
+      setSuccessMessage(
+        'Registration successful! Please check your email to confirm your account.'
+      );
       setActiveTab('login');
     } catch (error) {
       setErrorMessage(error.message || 'Failed to sign up');
@@ -385,83 +387,83 @@ export default function LoginPage() {
                   <>
                     {/* Self-coached athlete signup (no role/gym code) */}
                     <form onSubmit={handleSignup} className="space-y-4">
-                        <div className="form-control w-full">
-                          <label className="label">
-                            <span className="label-text font-medium">Email</span>
-                          </label>
+                      <div className="form-control w-full">
+                        <label className="label">
+                          <span className="label-text font-medium">Email</span>
+                        </label>
+                        <input
+                          type="email"
+                          placeholder="you@example.com"
+                          className="input input-bordered w-full focus:input-primary"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          required
+                        />
+                      </div>
+
+                      <div className="form-control w-full">
+                        <label className="label">
+                          <span className="label-text font-medium">Password</span>
+                        </label>
+                        <div className="relative">
                           <input
-                            type="email"
-                            placeholder="you@example.com"
-                            className="input input-bordered w-full focus:input-primary"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
+                            type={showPassword ? 'text' : 'password'}
+                            placeholder="Create a password"
+                            className="input input-bordered w-full pr-12 focus:input-primary"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
                             required
                           />
+                          <button
+                            type="button"
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral hover:text-base-content"
+                            onClick={() => setShowPassword(!showPassword)}
+                          >
+                            {showPassword ? (
+                              <EyeOff className="w-5 h-5" />
+                            ) : (
+                              <Eye className="w-5 h-5" />
+                            )}
+                          </button>
                         </div>
+                      </div>
 
-                        <div className="form-control w-full">
-                          <label className="label">
-                            <span className="label-text font-medium">Password</span>
-                          </label>
-                          <div className="relative">
-                            <input
-                              type={showPassword ? 'text' : 'password'}
-                              placeholder="Create a password"
-                              className="input input-bordered w-full pr-12 focus:input-primary"
-                              value={password}
-                              onChange={(e) => setPassword(e.target.value)}
-                              required
-                            />
-                            <button
-                              type="button"
-                              className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral hover:text-base-content"
-                              onClick={() => setShowPassword(!showPassword)}
-                            >
-                              {showPassword ? (
-                                <EyeOff className="w-5 h-5" />
-                              ) : (
-                                <Eye className="w-5 h-5" />
-                              )}
-                            </button>
-                          </div>
+                      <div className="form-control w-full">
+                        <label className="label">
+                          <span className="label-text font-medium">Confirm Password</span>
+                        </label>
+                        <div className="relative">
+                          <input
+                            type={showPasswordConfirm ? 'text' : 'password'}
+                            placeholder="Confirm your password"
+                            className="input input-bordered w-full pr-12 focus:input-primary"
+                            value={passwordConfirm}
+                            onChange={(e) => setPasswordConfirm(e.target.value)}
+                            required
+                          />
+                          <button
+                            type="button"
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral hover:text-base-content"
+                            onClick={() => setShowPasswordConfirm(!showPasswordConfirm)}
+                          >
+                            {showPasswordConfirm ? (
+                              <EyeOff className="w-5 h-5" />
+                            ) : (
+                              <Eye className="w-5 h-5" />
+                            )}
+                          </button>
                         </div>
+                      </div>
 
-                        <div className="form-control w-full">
-                          <label className="label">
-                            <span className="label-text font-medium">Confirm Password</span>
-                          </label>
-                          <div className="relative">
-                            <input
-                              type={showPasswordConfirm ? 'text' : 'password'}
-                              placeholder="Confirm your password"
-                              className="input input-bordered w-full pr-12 focus:input-primary"
-                              value={passwordConfirm}
-                              onChange={(e) => setPasswordConfirm(e.target.value)}
-                              required
-                            />
-                            <button
-                              type="button"
-                              className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral hover:text-base-content"
-                              onClick={() => setShowPasswordConfirm(!showPasswordConfirm)}
-                            >
-                              {showPasswordConfirm ? (
-                                <EyeOff className="w-5 h-5" />
-                              ) : (
-                                <Eye className="w-5 h-5" />
-                              )}
-                            </button>
-                          </div>
-                        </div>
-
-                        <button
-                          type="submit"
-                          className="btn btn-primary w-full shadow-lg shadow-primary/25"
-                          disabled={loading}
-                        >
-                          {loading && <span className="loading loading-spinner loading-sm"></span>}
-                          Create Account
-                        </button>
-                      </form>
+                      <button
+                        type="submit"
+                        className="btn btn-primary w-full shadow-lg shadow-primary/25"
+                        disabled={loading}
+                      >
+                        {loading && <span className="loading loading-spinner loading-sm"></span>}
+                        Create Account
+                      </button>
+                    </form>
                   </>
                 )}
 

@@ -36,19 +36,62 @@ export async function GET(request) {
     const startOfDay = `${date}T00:00:00.000Z`;
     const endOfDay = `${date}T23:59:59.999Z`;
 
-    const { data: workouts, error: workoutsError } = await supabase
-      .from('program_workouts')
-      .select(`
+    let workouts = [];
+    let workoutsError = null;
+
+    if (gymId) {
+      // Gym-based programs
+      const res = await supabase
+        .from('program_workouts')
+        .select(
+          `
         id,
         title,
         workout_type,
         body,
         scheduled_date,
         program:programs (id, name)
-      `)
-      .eq('gym_id', gymId)
-      .gte('scheduled_date', startOfDay)
-      .lte('scheduled_date', endOfDay);
+      `
+        )
+        .eq('gym_id', gymId)
+        .gte('scheduled_date', startOfDay)
+        .lte('scheduled_date', endOfDay);
+      workouts = res.data || [];
+      workoutsError = res.error || null;
+    } else {
+      // Self-coached: fetch workouts for user's entities (no gym required)
+      const { data: entities, error: entitiesError } = await supabase
+        .from('entities')
+        .select('id')
+        .eq('user_id', user.id);
+      if (entitiesError) {
+        return Response.json({ error: 'Failed to fetch entities' }, { status: 500 });
+      }
+      const entityIds = (entities || []).map((e) => e.id);
+
+      if (entityIds.length > 0) {
+        const res = await supabase
+          .from('program_workouts')
+          .select(
+            `
+          id,
+          title,
+          workout_type,
+          body,
+          scheduled_date,
+          program:programs (id, name)
+        `
+          )
+          .in('entity_id', entityIds)
+          .gte('scheduled_date', startOfDay)
+          .lte('scheduled_date', endOfDay);
+        workouts = res.data || [];
+        workoutsError = res.error || null;
+      } else {
+        workouts = [];
+        workoutsError = null;
+      }
+    }
 
     if (workoutsError) {
       console.error('Error fetching workouts:', workoutsError);

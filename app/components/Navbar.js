@@ -106,10 +106,7 @@ export default function Navbar() {
       {/* Desktop navbar */}
       <div className="navbar max-w-7xl mx-auto px-4">
         <div className="navbar-start">
-          <Link
-            href={session ? '/athlete' : '/'}
-            className="flex-shrink-0 flex items-center"
-          >
+          <Link href={session ? '/athlete' : '/'} className="flex-shrink-0 flex items-center">
             <Image
               src={img}
               alt="Halteres.ai Logo"
@@ -184,7 +181,6 @@ export default function Navbar() {
                       <Home className="w-5 h-5 mr-3 text-gray-600" />
                       <span className="font-medium text-gray-900">Home</span>
                     </NavLink>
-
                   </div>
 
                   {/* Login Button */}

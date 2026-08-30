@@ -32,6 +32,7 @@ export async function GET(request) {
       .select(`
         id,
         workout_id,
+        gym_id,
         result_type,
         time_seconds,
         rounds,
@@ -43,7 +44,7 @@ export async function GET(request) {
         notes,
         perceived_effort,
         created_at,
-        workout:program_workouts (id, name, workout_type)
+        workout:program_workouts (id, title, workout_type, scheduled_date)
       `)
       .eq('user_id', userId)
       .is('deleted_at', null)

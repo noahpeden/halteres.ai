@@ -66,10 +66,7 @@ export async function GET(request) {
       const entityIds = (entities || []).map((e) => e.id);
 
       if (entityIds.length === 0) {
-        return Response.json(
-          { success: true, programs: [], activeProgram: null },
-          { status: 200 }
-        );
+        return Response.json({ success: true, programs: [], activeProgram: null }, { status: 200 });
       }
 
       const result = await supabase

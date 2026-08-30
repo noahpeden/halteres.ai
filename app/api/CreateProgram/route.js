@@ -91,9 +91,7 @@ export async function POST(req) {
     }
 
     // Compute start_date (default today, YYYY-MM-DD)
-    const startDate =
-      start_date ||
-      new Date().toISOString().split('T')[0];
+    const startDate = start_date || new Date().toISOString().split('T')[0];
 
     // Compute duration (default 8 weeks)
     const durationWeeks = parseInt(duration_weeks || 8, 10);
@@ -226,8 +224,7 @@ export async function POST(req) {
         : typeof program_influences === 'string'
           ? program_influences
           : '';
-    const historyText =
-      typeof recent_training_history === 'string' ? recent_training_history : '';
+    const historyText = typeof recent_training_history === 'string' ? recent_training_history : '';
     let mergedReferenceInput = reference_input || '';
     if (influenceText) {
       mergedReferenceInput += `${mergedReferenceInput ? '\n\n' : ''}Program Influences / Styles:\n---\n${influenceText}\n---`;
