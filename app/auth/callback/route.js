@@ -167,7 +167,7 @@ export async function GET(request) {
       if (signupRole === 'athlete') {
         return NextResponse.redirect(new URL('/athlete', request.url));
       }
-      return NextResponse.redirect(new URL('/dashboard', request.url));
+  return NextResponse.redirect(new URL('/athlete', request.url));
     }
 
     // Existing user - fetch profile to check role
@@ -183,6 +183,6 @@ export async function GET(request) {
     }
   }
 
-  // Default: redirect to dashboard (coaches and users without profile)
-  return NextResponse.redirect(new URL('/dashboard', request.url));
+  // Default: redirect to athlete dashboard (B2C pivot)
+  return NextResponse.redirect(new URL('/athlete', request.url));
 }
