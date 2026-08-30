@@ -20,18 +20,19 @@ export async function GET(request) {
   const { searchParams } = new URL(request.url);
   const gymId = searchParams.get('gymId');
 
-  if (!gymId) {
-    return Response.json({ error: 'gymId is required' }, { status: 400 });
-  }
-
   try {
     const supabase = await getSupabaseClient();
     const today = new Date().toISOString().split('T')[0];
 
-    // Fetch all programs for the gym
-    const { data: programs, error: programsError } = await supabase
-      .from('programs')
-      .select(`
+    let programs = [];
+    let programsError = null;
+
+    if (gymId) {
+      // Fetch all programs for the specified gym
+      const result = await supabase
+        .from('programs')
+        .select(
+          `
         id,
         name,
         description,
@@ -40,9 +41,56 @@ export async function GET(request) {
         difficulty,
         calendar_data,
         created_at
-      `)
-      .eq('gym_id', gymId)
-      .order('created_at', { ascending: false });
+      `
+        )
+        .eq('gym_id', gymId)
+        .order('created_at', { ascending: false });
+      programs = result.data;
+      programsError = result.error;
+    } else {
+      // Self-coached: fetch programs for entities owned by current user
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        return Response.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+
+      const { data: entities, error: entitiesError } = await supabase
+        .from('entities')
+        .select('id')
+        .eq('user_id', user.id);
+      if (entitiesError) {
+        return Response.json({ error: 'Failed to fetch entities' }, { status: 500 });
+      }
+      const entityIds = (entities || []).map((e) => e.id);
+
+      if (entityIds.length === 0) {
+        return Response.json(
+          { success: true, programs: [], activeProgram: null },
+          { status: 200 }
+        );
+      }
+
+      const result = await supabase
+        .from('programs')
+        .select(
+          `
+        id,
+        name,
+        description,
+        duration_weeks,
+        focus_area,
+        difficulty,
+        calendar_data,
+        created_at
+      `
+        )
+        .in('entity_id', entityIds)
+        .order('created_at', { ascending: false });
+      programs = result.data;
+      programsError = result.error;
+    }
 
     if (programsError) {
       console.error('Programs fetch error:', programsError);

@@ -22,14 +22,17 @@ export default function AthleteProgramsPage() {
       router.push('/login');
       return;
     }
-    if (currentGym?.id) {
-      fetchPrograms();
-    }
-  }, [user, currentGym]);
+    // Fetch programs whether or not a gym is selected (self-coached support)
+    fetchPrograms();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, currentGym?.id]);
 
   const fetchPrograms = async () => {
     try {
-      const res = await fetch(`/api/athlete/programs?gymId=${currentGym.id}`);
+      const url = currentGym?.id
+        ? `/api/athlete/programs?gymId=${currentGym.id}`
+        : `/api/athlete/programs`;
+      const res = await fetch(url);
       const data = await res.json();
 
       if (data.success) {
@@ -95,7 +98,7 @@ export default function AthleteProgramsPage() {
           </button>
           <div>
             <h1 className="athlete-heading-lg">Programs</h1>
-            <p className="athlete-label">{currentGym?.name}</p>
+            <p className="athlete-label">{currentGym?.name || 'My Programs'}</p>
           </div>
         </div>
       </div>
