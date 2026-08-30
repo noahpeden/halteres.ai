@@ -66,7 +66,9 @@ export default function WorkoutDetailPage() {
   };
 
   const handleResultSuccess = async (result, isPR, prInfo) => {
-    setUserResult(result);
+    // Compute display value immediately to avoid brief blank state
+    const displayValue = formatResult(result);
+    setUserResult({ ...result, displayValue });
 
     // Clear form state after successful submission
     const defaultType = getDefaultResultType(workout?.workout_type);

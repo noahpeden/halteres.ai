@@ -54,18 +54,19 @@ export default function AthleteDashboard() {
   };
 
   const fetchDashboardData = async () => {
-    if (!currentGym?.id) {
-      setLoading(false);
-      return;
-    }
+    // Support both gym-based and self-coached flows
 
     try {
       const today = new Date().toISOString().split('T')[0];
 
-      const [workoutsRes, programsRes] = await Promise.all([
-        fetch(`/api/athlete/today?gymId=${currentGym.id}&date=${today}`),
-        fetch(`/api/athlete/programs?gymId=${currentGym.id}`),
-      ]);
+      const todayUrl = currentGym?.id
+        ? `/api/athlete/today?gymId=${currentGym.id}&date=${today}`
+        : `/api/athlete/today?date=${today}`;
+      const programsUrl = currentGym?.id
+        ? `/api/athlete/programs?gymId=${currentGym.id}`
+        : `/api/athlete/programs`;
+
+      const [workoutsRes, programsRes] = await Promise.all([fetch(todayUrl), fetch(programsUrl)]);
 
       const workoutsData = await workoutsRes.json();
       const programsData = await programsRes.json();
@@ -96,8 +97,8 @@ export default function AthleteDashboard() {
 
   const firstName = (profile?.display_name || profile?.full_name || 'Athlete').split(' ')[0];
 
-  // No gym membership - show self-coached start prompt
-  if (!currentGym && !loading) {
+  // Self-coached: show start prompt ONLY if no programs and no workouts
+  if (!currentGym && !loading && programCount === 0 && todaysWorkouts.length === 0) {
     const startSelfProgram = async () => {
       try {
         const resp = await fetch('/api/CreateProgram', {
