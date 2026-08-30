@@ -55,12 +55,14 @@ export default function WorkoutModal({
         description: workout?.body || workout?.description || 'No description provided.',
       };
       const safeInstructions = enhancement || 'No specific instructions.';
-      const safeMethodology = formData?.trainingMethodology || 'General fitness';
-      const safeGymEquipment = Array.isArray(formData?.equipment)
-        ? formData.equipment.length > 0
-          ? formData.equipment
+      const safeMethodology = formData?.training_methodology || formData?.trainingMethodology || 'General fitness';
+      const safeGymEquipment = Array.isArray(formData?.gym_details?.equipment)
+        ? formData.gym_details.equipment.length > 0
+          ? formData.gym_details.equipment
           : ['Bodyweight']
-        : formData?.equipment || ['Bodyweight'];
+        : Array.isArray(formData?.equipment)
+          ? formData.equipment
+          : formData?.equipment || ['Bodyweight'];
       const safeInjuries = formData?.injuries || '';
       const payload = {
         workout: safeWorkout,
@@ -68,6 +70,14 @@ export default function WorkoutModal({
         methodology: safeMethodology,
         gymEquipment: safeGymEquipment,
         injuries: safeInjuries,
+        // Optional identifiers to enable program-aware enhancement when available
+        programId: formData?.id || workout?.program_id || undefined,
+        workoutId: workout?.id || undefined,
+        sessionDuration: formData?.session_details?.duration_minutes || undefined,
+        programName: formData?.name || undefined,
+        programDescription: formData?.description || undefined,
+        influences: formData?.reference_input || undefined,
+        goals: formData?.goal || formData?.focus_area || undefined,
       };
 
       const res = await fetch('/api/enhance-workout', {
@@ -79,13 +89,14 @@ export default function WorkoutModal({
         const data = await res.json();
         throw new Error(data.error || 'Failed to enhance workout');
       }
-      const { enhancedWorkout } = await res.json();
+      const { enhancedWorkout, fitFeedback } = await res.json();
       setPendingWorkout({
         ...workout,
         title: enhancedWorkout.title,
         body: enhancedWorkout.description,
         description: enhancedWorkout.description,
         notes: enhancedWorkout.notes,
+        fitFeedback: enhancedWorkout.fitFeedback || fitFeedback || null,
       });
       setShowSavePrompt(true);
     } catch (err) {
@@ -339,9 +350,44 @@ export default function WorkoutModal({
             </div>
           )}
           {/* Show AI notes if present */}
-          {showSavePrompt && displayWorkout.notes && (
-            <div className="alert alert-info mt-4 text-sm">
-              <strong>AI Notes:</strong> {displayWorkout.notes}
+          {(showSavePrompt && (displayWorkout.fitFeedback || displayWorkout.notes)) && (
+            <div className="mt-4 p-3 rounded-lg border bg-purple-50 border-purple-200">
+              <div className="font-semibold text-purple-900 mb-1">AI Feedback</div>
+              {displayWorkout.fitFeedback && (
+                <div className="text-sm text-purple-800 space-y-2">
+                  {Array.isArray(displayWorkout.fitFeedback.whatChanged) &&
+                    displayWorkout.fitFeedback.whatChanged.length > 0 && (
+                      <div>
+                        <div className="font-medium">What changed</div>
+                        <ul className="list-disc pl-5">
+                          {displayWorkout.fitFeedback.whatChanged.map((it, i) => (
+                            <li key={i}>{it}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  {displayWorkout.fitFeedback.whyItFits && (
+                    <div>
+                      <div className="font-medium">Why it fits your program</div>
+                      <div>{displayWorkout.fitFeedback.whyItFits}</div>
+                    </div>
+                  )}
+                  {Array.isArray(displayWorkout.fitFeedback.refusedOrAdapted) &&
+                    displayWorkout.fitFeedback.refusedOrAdapted.length > 0 && (
+                      <div>
+                        <div className="font-medium">Refused or adapted</div>
+                        <ul className="list-disc pl-5">
+                          {displayWorkout.fitFeedback.refusedOrAdapted.map((it, i) => (
+                            <li key={i}>{it}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                </div>
+              )}
+              {displayWorkout.notes && (
+                <div className="text-sm text-purple-800 mt-2">{displayWorkout.notes}</div>
+              )}
             </div>
           )}
 
