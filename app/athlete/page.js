@@ -27,6 +27,33 @@ export default function AthleteDashboard() {
     currentStreak: 0,
   });
   // Self-coached flow: no gym code required
+  const createSelfCoachedProgram = async () => {
+    try {
+      const resp = await fetch('/api/CreateProgram', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: 'My Program',
+          duration_weeks: 4,
+          days_per_week: 3,
+        }),
+      });
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        throw new Error(err.error || 'Failed to create program');
+      }
+      const result = await resp.json();
+      const program = result?.data?.[0];
+      if (program?.id) {
+        router.push(`/program/${program.id}/writer`);
+      } else {
+        router.push('/athlete');
+      }
+    } catch (e) {
+      console.error('Create program failed:', e);
+      alert('Unable to create program. Please try again.');
+    }
+  };
 
   useEffect(() => {
     if (!user) {
@@ -99,33 +126,6 @@ export default function AthleteDashboard() {
 
   // Self-coached: show start prompt ONLY if no programs and no workouts
   if (!currentGym && !loading && programCount === 0 && todaysWorkouts.length === 0) {
-    const startSelfProgram = async () => {
-      try {
-        const resp = await fetch('/api/CreateProgram', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name: 'My Program',
-            duration_weeks: 4,
-            days_per_week: 3,
-          }),
-        });
-        if (!resp.ok) {
-          const err = await resp.json().catch(() => ({}));
-          throw new Error(err.error || 'Failed to create program');
-        }
-        const result = await resp.json();
-        const program = result?.data?.[0];
-        if (program?.id) {
-          router.push(`/program/${program.id}/writer`);
-        } else {
-          router.push('/athlete');
-        }
-      } catch (e) {
-        console.error('Create program failed:', e);
-        alert('Unable to create program. Please try again.');
-      }
-    };
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
         <div className="athlete-card-static max-w-md w-full p-8 text-center">
@@ -136,7 +136,7 @@ export default function AthleteDashboard() {
           <p className="athlete-body mb-6">
             No gym required. Create your first program and start training.
           </p>
-          <button className="athlete-btn-primary w-full" onClick={startSelfProgram}>
+          <button className="athlete-btn-primary w-full" onClick={createSelfCoachedProgram}>
             Create Program
           </button>
         </div>
@@ -165,15 +165,25 @@ export default function AthleteDashboard() {
       {/* Hero Header */}
       <div className="relative overflow-hidden bg-[var(--athlete-bg-card)] border-b border-[var(--athlete-border)]">
         <div className="px-4 pt-8 pb-6">
-          <p className="athlete-label mb-1">{currentGym?.name}</p>
-          <h1 className="athlete-heading-xl mb-1">
-            {getGreeting()}, {firstName}
-          </h1>
-          <p className="athlete-body">
-            {todaysWorkouts.length > 0
-              ? `You have ${todaysWorkouts.length} workout${todaysWorkouts.length > 1 ? 's' : ''} today`
-              : 'No workouts scheduled for today'}
-          </p>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="athlete-label mb-1">{currentGym?.name}</p>
+              <h1 className="athlete-heading-xl mb-1">
+                {getGreeting()}, {firstName}
+              </h1>
+              <p className="athlete-body">
+                {todaysWorkouts.length > 0
+                  ? `You have ${todaysWorkouts.length} workout${todaysWorkouts.length > 1 ? 's' : ''} today`
+                  : 'No workouts scheduled for today'}
+              </p>
+            </div>
+            <button
+              className="athlete-btn-primary whitespace-nowrap px-4 py-2 mt-1"
+              onClick={createSelfCoachedProgram}
+            >
+              Create program
+            </button>
+          </div>
         </div>
       </div>
 

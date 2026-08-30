@@ -12,6 +12,33 @@ import { useAuth } from '@/contexts/AuthContext';
 export default function AthleteProgramsPage() {
   const { user, currentGym } = useAuth();
   const router = useRouter();
+  const createSelfCoachedProgram = async () => {
+    try {
+      const resp = await fetch('/api/CreateProgram', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: 'My Program',
+          duration_weeks: 4,
+          days_per_week: 3,
+        }),
+      });
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        throw new Error(err.error || 'Failed to create program');
+      }
+      const result = await resp.json();
+      const program = result?.data?.[0];
+      if (program?.id) {
+        router.push(`/program/${program.id}/writer`);
+      } else {
+        router.push('/athlete');
+      }
+    } catch (e) {
+      console.error('Create program failed:', e);
+      alert('Unable to create program. Please try again.');
+    }
+  };
   const [programs, setPrograms] = useState([]);
   const [activeProgram, setActiveProgram] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -89,17 +116,25 @@ export default function AthleteProgramsPage() {
     <div className="min-h-screen">
       {/* Header */}
       <div className="sticky top-0 z-40 bg-[var(--athlete-bg-card)] border-b border-[var(--athlete-border)] px-4 py-4">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => router.push('/athlete')}
-            className="w-8 h-8 rounded-lg bg-[var(--athlete-bg-secondary)] flex items-center justify-center"
-          >
-            <ChevronLeft className="w-5 h-5 text-[var(--athlete-text-primary)]" />
-          </button>
-          <div>
-            <h1 className="athlete-heading-lg">Programs</h1>
-            <p className="athlete-label">{currentGym?.name || 'My Programs'}</p>
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => router.push('/athlete')}
+              className="w-8 h-8 rounded-lg bg-[var(--athlete-bg-secondary)] flex items-center justify-center"
+            >
+              <ChevronLeft className="w-5 h-5 text-[var(--athlete-text-primary)]" />
+            </button>
+            <div>
+              <h1 className="athlete-heading-lg">Programs</h1>
+              <p className="athlete-label">{currentGym?.name || 'My Programs'}</p>
+            </div>
           </div>
+          <button
+            className="athlete-btn-primary whitespace-nowrap px-4 py-2"
+            onClick={createSelfCoachedProgram}
+          >
+            Create program
+          </button>
         </div>
       </div>
 
