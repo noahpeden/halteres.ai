@@ -87,6 +87,34 @@ export async function GET(request) {
           .lte('scheduled_date', endOfDay);
         workouts = res.data || [];
         workoutsError = res.error || null;
+        // Fallback: some rows may be missing entity_id; include by program linkage for user's entities
+        if ((!workouts || workouts.length === 0) && !workoutsError) {
+          // Find programs for the user's entities
+          const { data: userPrograms } = await supabase
+            .from('programs')
+            .select('id')
+            .in('entity_id', entityIds);
+          const programIds = (userPrograms || []).map((p) => p.id);
+          if (programIds.length > 0) {
+            const resByProgram = await supabase
+              .from('program_workouts')
+              .select(
+                `
+              id,
+              title,
+              workout_type,
+              body,
+              scheduled_date,
+              program:programs (id, name)
+            `
+              )
+              .in('program_id', programIds)
+              .gte('scheduled_date', startOfDay)
+              .lte('scheduled_date', endOfDay);
+            workouts = resByProgram.data || [];
+            workoutsError = resByProgram.error || null;
+          }
+        }
       } else {
         workouts = [];
         workoutsError = null;

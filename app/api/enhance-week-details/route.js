@@ -99,6 +99,24 @@ async function enhanceWeekWorkouts(requestData, supabase, controller, encoder) {
   const { programId, weekNumber, workoutIds, context, weekSpecificInput } = requestData;
 
   try {
+    // Preload program linkage for robust backfills
+    let programLinkage = { entity_id: null, gym_id: null };
+    try {
+      const { data: linkage } = await supabase
+        .from('programs')
+        .select('entity_id, gym_id')
+        .eq('id', programId)
+        .single();
+      if (linkage) {
+        programLinkage = {
+          entity_id: linkage.entity_id || null,
+          gym_id: linkage.gym_id || null,
+        };
+      }
+    } catch (_e) {
+      // Non-fatal; continue with nulls
+    }
+
     // Verify authentication
     const {
       data: { user },
@@ -302,7 +320,9 @@ async function enhanceWeekWorkouts(requestData, supabase, controller, encoder) {
       }
 
       const parsed = JSON.parse(jsonContent);
-      enhancedWorkouts = parsed.workouts || parsed;
+      // Support multiple common shapes:
+      // { workouts: [...] } or { enhancedWorkouts: [...] } or direct array/object
+      enhancedWorkouts = parsed.workouts || parsed.enhancedWorkouts || parsed;
     } catch (parseError) {
       logWithTimestamp('Enhancement parse error', { error: parseError.message });
 
@@ -318,9 +338,21 @@ async function enhanceWeekWorkouts(requestData, supabase, controller, encoder) {
     let enhancedCount = 0;
     for (let i = 0; i < skeletonWorkouts.length; i++) {
       const skeleton = skeletonWorkouts[i];
-      const enhanced = enhancedWorkouts[i];
+      // Normalize enhanced object to { title, body }
+      const raw = enhancedWorkouts[i] || {};
+      const normalized = {
+        title:
+          (typeof raw.title === 'string' && raw.title.trim()) ||
+          (typeof raw.name === 'string' && raw.name.trim()) ||
+          skeleton.title,
+        body:
+          (typeof raw.body === 'string' && raw.body.trim()) ||
+          (typeof raw.description === 'string' && raw.description.trim()) ||
+          (typeof raw.content === 'string' && raw.content.trim()) ||
+          null,
+      };
 
-      if (!enhanced || !enhanced.body) {
+      if (!normalized || !normalized.body) {
         logWithTimestamp(`No enhanced content for workout ${i + 1}, keeping skeleton`);
         await supabase
           .from('program_workouts')
@@ -332,26 +364,33 @@ async function enhanceWeekWorkouts(requestData, supabase, controller, encoder) {
       // Validate structure is preserved (basic check)
       const isValid = validateStructurePreserved(
         skeleton.body_skeleton,
-        enhanced.body,
+        normalized.body,
         workoutSections
       );
 
       if (!isValid) {
         logWithTimestamp(`Structure validation failed for workout ${i + 1}`, {
           skeletonPreview: skeleton.body_skeleton?.substring(0, 100),
-          enhancedPreview: enhanced.body.substring(0, 100),
+          enhancedPreview: normalized.body.substring(0, 100),
         });
         // Still save but log the issue
       }
 
       // Update the workout with enhanced content
       const updatePayload = {
-        body: enhanced.body,
+        body: normalized.body,
         // Prefer AI-provided title when available; otherwise keep existing
-        title: (enhanced.title && String(enhanced.title).trim()) || skeleton.title,
+        title: normalized.title || skeleton.title,
         generation_status: 'detailed',
         updated_at: new Date().toISOString(),
       };
+      // Backfill linkage if missing to ensure Today queries work
+      if (!skeleton.entity_id && programLinkage.entity_id) {
+        updatePayload.entity_id = programLinkage.entity_id;
+      }
+      if (!skeleton.gym_id && programLinkage.gym_id) {
+        updatePayload.gym_id = programLinkage.gym_id;
+      }
 
       const { error: updateError } = await supabase
         .from('program_workouts')
