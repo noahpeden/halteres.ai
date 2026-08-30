@@ -51,8 +51,8 @@ export default function LoginPage() {
         // Redirect athletes to athlete dashboard
         router.push('/athlete');
       } else {
-        // Default to coach dashboard
-        router.push('/dashboard');
+        // B2C pivot: send everyone to athlete dashboard
+        router.push('/athlete');
       }
     }
   }, [session, loadingProfile, isAthlete, router, redirectParam]);
@@ -508,15 +508,7 @@ export default function LoginPage() {
                 <div className="flex flex-wrap justify-center gap-4 pt-2 text-xs text-neutral">
                   <div className="flex items-center gap-1.5">
                     <CheckCircle className="w-3.5 h-3.5 text-accent" />
-                    <span>14-day free trial</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <CheckCircle className="w-3.5 h-3.5 text-accent" />
-                    <span>No credit card</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <CheckCircle className="w-3.5 h-3.5 text-accent" />
-                    <span>Athletes free</span>
+                    <span>Free while in beta</span>
                   </div>
                 </div>
               </>
