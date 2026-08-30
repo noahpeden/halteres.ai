@@ -15,7 +15,6 @@ import {
   Newspaper,
   Phone,
   Settings,
-  Trophy,
   User,
   Users,
 } from 'lucide-react';
@@ -141,9 +140,6 @@ export default function Navbar() {
                   <NavLink href="/athlete">Today</NavLink>
                 </li>
                 <li>
-                  <NavLink href="/athlete/leaderboard">Leaderboard</NavLink>
-                </li>
-                <li>
                   <NavLink href="/athlete/history">History</NavLink>
                 </li>
               </>
@@ -237,17 +233,6 @@ export default function Navbar() {
                         <div>
                           <div className="font-medium text-gray-900">Today</div>
                           <div className="text-sm text-gray-500">Today's workouts</div>
-                        </div>
-                      </Link>
-
-                      <Link
-                        href="/athlete/leaderboard"
-                        className="flex items-center p-3 rounded-xl hover:bg-gray-50 transition-all duration-200"
-                      >
-                        <Trophy className="w-5 h-5 mr-3 text-gray-600" />
-                        <div>
-                          <div className="font-medium text-gray-900">Leaderboard</div>
-                          <div className="text-sm text-gray-500">Community rankings</div>
                         </div>
                       </Link>
 

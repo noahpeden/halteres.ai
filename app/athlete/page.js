@@ -26,7 +26,7 @@ export default function AthleteDashboard() {
     prsThisMonth: 0,
     currentStreak: 0,
   });
-  const [inviteCode, setInviteCode] = useState('');
+  // Self-coached flow: no gym code required
 
   useEffect(() => {
     if (!user) {
@@ -96,41 +96,48 @@ export default function AthleteDashboard() {
 
   const firstName = (profile?.display_name || profile?.full_name || 'Athlete').split(' ')[0];
 
-  // No gym membership - show join prompt
+  // No gym membership - show self-coached start prompt
   if (!currentGym && !loading) {
+    const startSelfProgram = async () => {
+      try {
+        const resp = await fetch('/api/CreateProgram', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: 'My Program',
+            duration_weeks: 4,
+            days_per_week: 3,
+          }),
+        });
+        if (!resp.ok) {
+          const err = await resp.json().catch(() => ({}));
+          throw new Error(err.error || 'Failed to create program');
+        }
+        const result = await resp.json();
+        const program = result?.data?.[0];
+        if (program?.id) {
+          router.push(`/program/${program.id}/writer`);
+        } else {
+          router.push('/athlete');
+        }
+      } catch (e) {
+        console.error('Create program failed:', e);
+        alert('Unable to create program. Please try again.');
+      }
+    };
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
         <div className="athlete-card-static max-w-md w-full p-8 text-center">
           <div className="w-16 h-16 rounded-full bg-[var(--athlete-bg-secondary)] flex items-center justify-center mx-auto mb-6">
             <Dumbbell className="w-8 h-8 text-[var(--athlete-accent-primary)]" />
           </div>
-          <h2 className="athlete-heading-lg mb-2">Join a Gym</h2>
+          <h2 className="athlete-heading-lg mb-2">Welcome to Halteres</h2>
           <p className="athlete-body mb-6">
-            Ask your coach for an invite code to start tracking your workouts and competing on the
-            leaderboard.
+            No gym required. Create your first program and start training.
           </p>
-          <div className="space-y-3">
-            <input
-              type="text"
-              placeholder="Enter invite code"
-              className="athlete-input w-full text-center"
-              value={inviteCode}
-              onChange={(e) => setInviteCode(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && inviteCode.trim()) {
-                  router.push(`/join/${inviteCode.trim()}`);
-                }
-              }}
-            />
-            <button
-              className="athlete-btn-primary w-full"
-              onClick={() => {
-                if (inviteCode.trim()) router.push(`/join/${inviteCode.trim()}`);
-              }}
-            >
-              Join Gym
-            </button>
-          </div>
+          <button className="athlete-btn-primary w-full" onClick={startSelfProgram}>
+            Create Program
+          </button>
         </div>
       </div>
     );
@@ -338,16 +345,7 @@ export default function AthleteDashboard() {
               )}
             </div>
           </Link>
-          <Link href="/athlete/leaderboard">
-            <div className="athlete-card p-4 flex flex-col items-center gap-2 text-center">
-              <div className="w-10 h-10 rounded-lg bg-[var(--athlete-accent-complete)]/10 flex items-center justify-center">
-                <Trophy className="w-5 h-5 text-[var(--athlete-accent-complete)]" />
-              </div>
-              <span className="athlete-body text-[var(--athlete-text-primary)] font-medium">
-                Leaderboard
-              </span>
-            </div>
-          </Link>
+          
           <Link href="/athlete/profile">
             <div className="athlete-card p-4 flex flex-col items-center gap-2 text-center">
               <div className="w-10 h-10 rounded-lg bg-[var(--athlete-accent-pr)]/10 flex items-center justify-center">

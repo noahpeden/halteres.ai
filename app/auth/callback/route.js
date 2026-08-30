@@ -76,7 +76,11 @@ export async function GET(request) {
             ? {
                 id: user.id,
                 role: 'athlete',
-                subscription_status: null,
+                subscription_status: 'trialing',
+                trial_start_date: new Date().toISOString(),
+                trial_end_date: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+                generations_remaining: 15,
+                generations_today: 0,
                 is_active: true,
                 onboarding_completed: false,
               }

@@ -1,5 +1,5 @@
 'use client';
-import { ArrowLeft, Building, CheckCircle, Dumbbell, Eye, EyeOff } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Eye, EyeOff } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -12,12 +12,9 @@ export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // Read URL parameters for tab, role, redirect, and gym code
+  // Read URL parameters for tab and redirect
   const tabParam = searchParams.get('tab');
-  const roleParam = searchParams.get('role');
   const redirectParam = searchParams.get('redirect');
-  // Extract gym code from redirect URL if present (e.g., /join/ABC123)
-  const gymCodeFromRedirect = redirectParam?.match(/\/join\/([A-Za-z0-9]+)/)?.[1] || '';
 
   const [activeTab, setActiveTab] = useState(tabParam === 'signup' ? 'signup' : 'login');
   const [email, setEmail] = useState('');
@@ -31,15 +28,7 @@ export default function LoginPage() {
   const [showResetForm, setShowResetForm] = useState(false);
   const [mounted, setMounted] = useState(false);
 
-  // New state for role selection and gym code
-  const [signupStep, setSignupStep] = useState(1); // 1 = credentials, 2 = role selection, 3 = gym code (athletes)
-  const [selectedRole, setSelectedRole] = useState(roleParam === 'athlete' ? 'athlete' : null); // 'coach' or 'athlete'
-  const [gymCode, setGymCode] = useState(gymCodeFromRedirect);
-  const [validatingGymCode, setValidatingGymCode] = useState(false);
-  const [gymInfo, setGymInfo] = useState(null);
-
-  // Check if coming from a join link (has gym code pre-filled)
-  const comingFromJoinLink = roleParam === 'athlete' && gymCodeFromRedirect;
+  // No role selection or gym code in B2C flow
 
   useEffect(() => {
     setMounted(true);
@@ -57,7 +46,6 @@ export default function LoginPage() {
     // Wait for both session and profile to be loaded before redirecting
     if (session && !loadingProfile) {
       if (redirectParam) {
-        // If there's a specific redirect (e.g., /join/ABC123), use it
         router.push(redirectParam);
       } else if (isAthlete) {
         // Redirect athletes to athlete dashboard
@@ -90,140 +78,42 @@ export default function LoginPage() {
     }
   };
 
-  // Validate gym code
-  const validateGymCode = async (code) => {
-    if (!code || code.length < 4) {
-      setGymInfo(null);
-      return false;
-    }
-
-    setValidatingGymCode(true);
-    setErrorMessage('');
-
-    try {
-      const response = await fetch(`/api/gym/by-invite-code?code=${code.toUpperCase()}`);
-      const result = await response.json();
-
-      if (result.success && result.data) {
-        setGymInfo(result.data);
-        return true;
-      } else {
-        setGymInfo(null);
-        setErrorMessage('Invalid gym code. Please check with your gym.');
-        return false;
-      }
-    } catch (error) {
-      setGymInfo(null);
-      setErrorMessage('Failed to validate gym code');
-      return false;
-    } finally {
-      setValidatingGymCode(false);
-    }
-  };
-
-  // Auto-validate gym code if pre-filled from join link
-  useEffect(() => {
-    if (gymCodeFromRedirect && activeTab === 'signup') {
-      validateGymCode(gymCodeFromRedirect);
-    }
-  }, [gymCodeFromRedirect, activeTab]);
-
-  // Handle step 1: validate credentials and move to role selection
-  const handleCredentialsSubmit = async (e) => {
+  // Self-coached athlete signup
+  const handleSignup = async (e) => {
     e.preventDefault();
+    setLoading(true);
     setErrorMessage('');
 
     if (password !== passwordConfirm) {
       setErrorMessage('Passwords do not match');
+      setLoading(false);
       return;
     }
 
     if (password.length < 6) {
       setErrorMessage('Password must be at least 6 characters');
+      setLoading(false);
       return;
     }
-
-    // If coming from a join link with athlete role and gym code, skip to step 3
-    if (comingFromJoinLink) {
-      setSignupStep(3);
-      return;
-    }
-
-    // Move to role selection step
-    setSignupStep(2);
-  };
-
-  // Handle role selection
-  const handleRoleSelect = (role) => {
-    setSelectedRole(role);
-    setErrorMessage('');
-
-    if (role === 'athlete') {
-      // Athletes need to enter gym code
-      setSignupStep(3);
-    } else {
-      // Coaches can proceed to signup
-      completeSignup(role, null);
-    }
-  };
-
-  // Handle gym code submission
-  const handleGymCodeSubmit = async (e) => {
-    e.preventDefault();
-    setErrorMessage('');
-
-    const isValid = await validateGymCode(gymCode);
-    if (isValid) {
-      completeSignup('athlete', gymCode.toUpperCase());
-    }
-  };
-
-  // Complete the signup process
-  const completeSignup = async (role, gymInviteCode) => {
-    setLoading(true);
-    setErrorMessage('');
 
     try {
-      // Determine redirect URL based on role
-      const redirectUrl =
-        role === 'athlete'
-          ? `${window.location.origin}/auth/callback?role=athlete${gymInviteCode ? `&gymCode=${gymInviteCode}` : ''}`
-          : `${window.location.origin}/auth/callback?role=coach`;
-
-      const { data, error } = await supabase.auth.signUp({
+      const redirectUrl = `${window.location.origin}/auth/callback?role=athlete`;
+      const { error } = await supabase.auth.signUp({
         email,
         password,
         options: {
           emailRedirectTo: redirectUrl,
-          data: {
-            role: role,
-            gym_invite_code: gymInviteCode,
-          },
+          data: { role: 'athlete' },
         },
       });
-
       if (error) throw error;
-
-      setSuccessMessage(
-        'Registration successful! Please check your email to confirm your account.'
-      );
-      // Reset signup state
-      setSignupStep(1);
-      setSelectedRole(null);
-      setGymCode('');
-      setGymInfo(null);
+      setSuccessMessage('Registration successful! Please check your email to confirm your account.');
       setActiveTab('login');
     } catch (error) {
       setErrorMessage(error.message || 'Failed to sign up');
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleSignup = async (e) => {
-    e.preventDefault();
-    // This is now handled by handleCredentialsSubmit for step 1
-    handleCredentialsSubmit(e);
   };
 
   const handlePasswordReset = async (e) => {
@@ -252,14 +142,8 @@ export default function LoginPage() {
     setErrorMessage('');
 
     try {
-      // Build redirect URL with signup context if we're in signup flow
-      let redirectUrl = `${window.location.origin}/auth/callback`;
-      if (activeTab === 'signup' && selectedRole) {
-        redirectUrl += `?role=${selectedRole}`;
-        if (selectedRole === 'athlete' && gymCode) {
-          redirectUrl += `&gymCode=${gymCode.toUpperCase()}`;
-        }
-      }
+      // Always treat as athlete flow
+      const redirectUrl = `${window.location.origin}/auth/callback?role=athlete`;
 
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -416,7 +300,6 @@ export default function LoginPage() {
                     }`}
                     onClick={() => {
                       setActiveTab('login');
-                      setSignupStep(1);
                       setErrorMessage('');
                     }}
                   >
@@ -500,9 +383,8 @@ export default function LoginPage() {
                   </form>
                 ) : (
                   <>
-                    {/* Step 1: Email and Password */}
-                    {signupStep === 1 && (
-                      <form onSubmit={handleCredentialsSubmit} className="space-y-4">
+                    {/* Self-coached athlete signup (no role/gym code) */}
+                    <form onSubmit={handleSignup} className="space-y-4">
                         <div className="form-control w-full">
                           <label className="label">
                             <span className="label-text font-medium">Email</span>
@@ -574,169 +456,12 @@ export default function LoginPage() {
                         <button
                           type="submit"
                           className="btn btn-primary w-full shadow-lg shadow-primary/25"
+                          disabled={loading}
                         >
-                          Continue
+                          {loading && <span className="loading loading-spinner loading-sm"></span>}
+                          Create Account
                         </button>
                       </form>
-                    )}
-
-                    {/* Step 2: Role Selection */}
-                    {signupStep === 2 && (
-                      <div className="space-y-4">
-                        <div className="text-center">
-                          <h3 className="text-xl font-bold text-base-content">I am a...</h3>
-                          <p className="text-sm text-neutral mt-1">Select your role to continue</p>
-                        </div>
-
-                        <div className="space-y-3">
-                          <button
-                            type="button"
-                            onClick={() => handleRoleSelect('coach')}
-                            className="w-full card bg-gradient-to-br from-primary/5 to-primary/10 border-2 border-primary/20 hover:border-primary hover:shadow-lg hover:shadow-primary/20 transition-all cursor-pointer p-5 text-left group"
-                            disabled={loading}
-                          >
-                            <div className="flex items-center gap-4">
-                              <div className="p-3 bg-primary/10 rounded-xl group-hover:bg-primary/20 transition-colors">
-                                <Building className="w-7 h-7 text-primary" />
-                              </div>
-                              <div>
-                                <h4 className="font-bold text-lg text-base-content">
-                                  Coach / Gym Owner
-                                </h4>
-                                <p className="text-sm text-neutral">
-                                  Generate AI programming, track athletes, and grow your gym
-                                </p>
-                              </div>
-                            </div>
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => handleRoleSelect('athlete')}
-                            className="w-full card bg-gradient-to-br from-accent/5 to-accent/10 border-2 border-accent/20 hover:border-accent hover:shadow-lg hover:shadow-accent/20 transition-all cursor-pointer p-5 text-left group"
-                            disabled={loading}
-                          >
-                            <div className="flex items-center gap-4">
-                              <div className="p-3 bg-accent/10 rounded-xl group-hover:bg-accent/20 transition-colors">
-                                <Dumbbell className="w-7 h-7 text-accent" />
-                              </div>
-                              <div>
-                                <h4 className="font-bold text-lg text-base-content">Athlete</h4>
-                                <p className="text-sm text-neutral">
-                                  Access workouts, compete on leaderboards, and get AI feedback
-                                </p>
-                              </div>
-                            </div>
-                          </button>
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={() => setSignupStep(1)}
-                          className="btn btn-ghost btn-sm w-full"
-                        >
-                          <ArrowLeft className="w-4 h-4" />
-                          Back
-                        </button>
-                      </div>
-                    )}
-
-                    {/* Step 3: Gym Code (Athletes only) */}
-                    {signupStep === 3 && (
-                      <form onSubmit={handleGymCodeSubmit} className="space-y-4">
-                        <div className="text-center">
-                          {comingFromJoinLink && gymInfo ? (
-                            <>
-                              <h3 className="text-xl font-bold text-base-content">
-                                Join {gymInfo.name}
-                              </h3>
-                              <p className="text-sm text-neutral mt-1">
-                                Complete your account to join this gym
-                              </p>
-                            </>
-                          ) : (
-                            <>
-                              <h3 className="text-xl font-bold text-base-content">
-                                Enter Your Gym Code
-                              </h3>
-                              <p className="text-sm text-neutral mt-1">
-                                Get this code from your coach or gym
-                              </p>
-                            </>
-                          )}
-                        </div>
-
-                        {/* Show gym info if valid */}
-                        {gymInfo && (
-                          <div className="alert alert-success shadow-md">
-                            <CheckCircle className="w-5 h-5" />
-                            <div>
-                              <p className="font-semibold">{gymInfo.name}</p>
-                              {gymInfo.description && (
-                                <p className="text-sm opacity-80">{gymInfo.description}</p>
-                              )}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Only show gym code input if not pre-filled or if user wants to change it */}
-                        {!comingFromJoinLink && (
-                          <div className="form-control w-full">
-                            <label className="label">
-                              <span className="label-text font-medium">Gym Invite Code</span>
-                            </label>
-                            <input
-                              type="text"
-                              placeholder="e.g. ABC123"
-                              className="input input-bordered w-full text-center text-2xl tracking-widest uppercase font-mono focus:input-primary"
-                              value={gymCode}
-                              onChange={(e) => {
-                                setGymCode(e.target.value.toUpperCase());
-                                setGymInfo(null);
-                                setErrorMessage('');
-                              }}
-                              maxLength={10}
-                              required
-                            />
-                          </div>
-                        )}
-
-                        <button
-                          type="submit"
-                          className="btn btn-primary w-full shadow-lg shadow-primary/25"
-                          disabled={loading || validatingGymCode || !gymCode}
-                        >
-                          {(loading || validatingGymCode) && (
-                            <span className="loading loading-spinner loading-sm"></span>
-                          )}
-                          {validatingGymCode
-                            ? 'Validating...'
-                            : comingFromJoinLink
-                              ? 'Create Account & Join'
-                              : 'Complete Sign Up'}
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (comingFromJoinLink) {
-                              // Go back to step 1 but keep gym code
-                              setSignupStep(1);
-                              setErrorMessage('');
-                            } else {
-                              setSignupStep(2);
-                              setGymCode('');
-                              setGymInfo(null);
-                              setErrorMessage('');
-                            }
-                          }}
-                          className="btn btn-ghost btn-sm w-full"
-                        >
-                          <ArrowLeft className="w-4 h-4" />
-                          Back
-                        </button>
-                      </form>
-                    )}
                   </>
                 )}
 

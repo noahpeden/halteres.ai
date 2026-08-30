@@ -1,10 +1,9 @@
 'use client';
 
-import { Check, ChevronLeft, Dumbbell, Edit3, ListOrdered, Trophy } from 'lucide-react';
+import { Check, ChevronLeft, Dumbbell, Edit3, ListOrdered } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import AIFeedbackCard from '@/components/athlete/AIFeedbackCard';
-import LeaderboardView from '@/components/athlete/LeaderboardView';
 import PRCelebration from '@/components/athlete/PRCelebration';
 import ResultEntryForm from '@/components/athlete/ResultEntryForm';
 import SegmentedControl from '@/components/athlete/SegmentedControl';
@@ -90,14 +89,13 @@ export default function WorkoutDetailPage() {
       console.error('Failed to generate AI feedback:', err);
     });
 
-    // Show leaderboard after logging
-    setActiveTab('leaderboard');
+    // Return to workout tab after logging
+    setActiveTab('workout');
   };
 
   const tabs = [
     { value: 'workout', label: 'Workout', icon: Dumbbell },
     { value: 'log', label: userResult ? 'Edit' : 'Log', icon: Edit3 },
-    { value: 'leaderboard', label: 'Board', icon: Trophy },
   ];
 
   if (loading) {
@@ -260,23 +258,7 @@ export default function WorkoutDetailPage() {
               </button>
             )}
 
-            {/* Leaderboard Preview */}
-            <div className="athlete-card p-4" onClick={() => setActiveTab('leaderboard')}>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-[var(--athlete-bg-secondary)] flex items-center justify-center">
-                    <Trophy className="w-5 h-5 text-[var(--athlete-accent-secondary)]" />
-                  </div>
-                  <div>
-                    <p className="athlete-body text-[var(--athlete-text-primary)] font-medium">
-                      View Leaderboard
-                    </p>
-                    <p className="text-xs text-[var(--athlete-text-muted)]">See how you compare</p>
-                  </div>
-                </div>
-                <ChevronLeft className="w-5 h-5 text-[var(--athlete-text-muted)] rotate-180" />
-              </div>
-            </div>
+            
           </div>
         )}
 
@@ -296,12 +278,7 @@ export default function WorkoutDetailPage() {
           </div>
         )}
 
-        {/* Leaderboard Tab */}
-        {activeTab === 'leaderboard' && (
-          <div className="animate-athlete-slide-up">
-            <LeaderboardView workoutId={id} gymId={currentGym?.id} workoutTitle={workout.name} />
-          </div>
-        )}
+        
       </div>
     </div>
   );

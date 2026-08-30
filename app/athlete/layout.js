@@ -1,6 +1,6 @@
 'use client';
 
-import { Calendar, Dumbbell, Home, Trophy, User } from 'lucide-react';
+import { Calendar, Dumbbell, Home, User } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
@@ -12,7 +12,6 @@ export default function AthleteLayout({ children }) {
   const navItems = [
     { href: '/athlete', label: 'Today', icon: Home },
     { href: '/athlete/programs', label: 'Programs', icon: Dumbbell },
-    { href: '/athlete/leaderboard', label: 'Board', icon: Trophy },
     { href: '/athlete/history', label: 'History', icon: Calendar },
     { href: '/athlete/profile', label: 'Profile', icon: User },
   ];
