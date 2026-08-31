@@ -561,8 +561,9 @@ async function persistEnhancedWorkout({ supabase, workout, title, body, entityId
 
 // Detect which sections were used in skeleton workouts
 function detectWorkoutSections(skeletonWorkouts) {
-  const allContent = skeletonWorkouts.map((w) => w.body_skeleton || '').join('\n');
+  const seen = new Set();
   const sections = [];
+  const headerPattern = /^##\s+(.+?)\s*$/gm;
 
   // Common section headers to detect
   const sectionPatterns = [

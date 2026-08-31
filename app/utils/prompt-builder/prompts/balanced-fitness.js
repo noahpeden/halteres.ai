@@ -4,7 +4,13 @@
  * @param {Object} context - The full context for prompt generation
  * @returns {string} The assembled prompt string
  */
-import { formatEquipmentRestrictions, formatSchedulingRequirements } from '../promptBuilder.js';
+import {
+  formatClientRequirements,
+  formatEquipmentRestrictions,
+  formatFinalPriorityCheck,
+  formatSchedulingRequirements,
+  formatStructurePriority,
+} from '../promptBuilder.js';
 
 export function balancedFitnessPrompt(context) {
   // Extract all relevant parameters with fallbacks
@@ -159,7 +165,7 @@ Use actual week/day numbers: "Week 3, Day 1: [Focus] - [Title]"
 }
 </json_output_format>
 
-<workout_body_structure>
+${formatStructurePriority(!!description)}<workout_body_structure>
 ## Workout Focus
 Purpose of this session, fitness components targeted, effort guidance
 
@@ -201,5 +207,6 @@ ${
     ? `Generate exactly ${context.workoutsThisWeek || daysPerWeek} workouts for Week ${context.weekNumber}.`
     : `Generate exactly ${totalWorkouts} workouts covering ${numberOfWeeks} week(s).`
 }
+${formatFinalPriorityCheck(!!description)}
 `;
 }

@@ -3,7 +3,13 @@
  * @param {Object} context - The full context for prompt generation
  * @returns {string} The assembled prompt string
  */
-import { formatEquipmentRestrictions, formatSchedulingRequirements } from '../promptBuilder.js';
+import {
+  formatClientRequirements,
+  formatEquipmentRestrictions,
+  formatFinalPriorityCheck,
+  formatSchedulingRequirements,
+  formatStructurePriority,
+} from '../promptBuilder.js';
 
 export function ironmanPrompt(context) {
   // Extract all relevant parameters with fallbacks
@@ -195,7 +201,7 @@ Example: "Week 8, Day 1: Long Swim + Technique" or "Week 12, Day 6: Long Bike wi
 }
 </json_output_format>
 
-<workout_body_structure>
+${formatStructurePriority(!!description)}<workout_body_structure>
 ${
   hasCustomFormat
     ? customWorkoutFormat.sections
@@ -245,6 +251,7 @@ ${
     ? `Generate exactly ${context.workoutsThisWeek || daysPerWeek} workouts for Week ${context.weekNumber}.`
     : `Generate exactly ${totalWorkouts} workouts covering ${numberOfWeeks} week(s).`
 }
+${formatFinalPriorityCheck(!!description)}
 `;
 }
 

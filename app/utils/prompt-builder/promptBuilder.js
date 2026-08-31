@@ -78,6 +78,79 @@ const COMMON_GYM_EQUIPMENT = [
 ];
 
 /**
+ * Builds the high-priority client_requirements block. When the user provides a
+ * description, it becomes the single source of truth for the program — it
+ * overrides default workout_body_structure, default sections (warm-up,
+ * cool-down, scaling), and methodology defaults.
+ *
+ * @param {string} description - The user's free-text program description
+ * @returns {string} Formatted block, or empty string if no description
+ */
+export function formatClientRequirements(description) {
+  if (!description || typeof description !== 'string' || !description.trim()) {
+    return '';
+  }
+
+  return `
+<client_requirements priority="MAXIMUM" enforcement="strict">
+The user has described their training preferences and methodology below. This description is the SINGLE SOURCE OF TRUTH for this program. It overrides every default, template, and guideline elsewhere in this prompt — including the default workout_body_structure, default sections (warm-up, cool-down, scaling), default block formats, default progression schemes, and default section names.
+
+<user_description>
+${description.trim()}
+</user_description>
+
+<resolution_rules>
+1. Workout structure: If the description specifies blocks, time domains, station rotations, intervals, or names a methodology (e.g., Orange Theory, F45, Hyrox, Tabata-style, CrossFit Hero WODs), build EXACTLY that structure. Use section headers that match the user's terminology (e.g., "Floor Block", "Treadmill Block", "Rower Block") instead of generic defaults.
+2. Warm-up / cool-down: If the description says "no warm up", "no cool down", "skip warmup", or omits them when describing the structure, do NOT include them. Only add warm-up/cool-down when the user explicitly asks or the named methodology traditionally includes them.
+3. Scaling options: Only include scaling levels when the user asks for them, when this is a class with mixed ability, or when the methodology defines its own scaling (e.g., CrossFit RX/Scaled).
+4. Section names and movements: Match the methodology described. Do not impose generic "Strength + Conditioning" framing on a methodology that does not use it.
+5. If the description is vague or short (one sentence with no methodology specified), fall back to the methodology defaults below.
+</resolution_rules>
+</client_requirements>`;
+}
+
+/**
+ * Returns a notice that the workout_body_structure block is a default template,
+ * superseded by client_requirements when present. Place this immediately above
+ * the <workout_body_structure> block in each prompt.
+ *
+ * @param {boolean} hasDescription - Whether the user provided a description
+ * @returns {string} Formatted notice, or empty string
+ */
+export function formatStructurePriority(hasDescription) {
+  if (!hasDescription) return '';
+
+  return `<structure_directive>
+The workout_body_structure below is a DEFAULT TEMPLATE. If <client_requirements> describes a different structure, ignore this template entirely and produce output that matches the user's described structure. Use this template only if the user's description is too vague to derive a structure from.
+</structure_directive>
+
+`;
+}
+
+/**
+ * Final priority check appended at the end of the prompt. Recency-biased
+ * reinforcement that prevents the model from drifting back to the rigid
+ * template after seeing it.
+ *
+ * @param {boolean} hasDescription - Whether the user provided a description
+ * @returns {string} Formatted check, or empty string
+ */
+export function formatFinalPriorityCheck(hasDescription) {
+  if (!hasDescription) return '';
+
+  return `
+<final_priority_check>
+Before finalizing the JSON output, verify each workout against <client_requirements>:
+1. Does the structure match what the user described (blocks, intervals, station work, methodology)?
+2. If the user said "no warm up" or "no cool down", are those sections absent?
+3. Do my section headers use the user's terminology rather than generic defaults?
+4. Do the movements and equipment match the methodology described?
+
+If any answer is "no", revise the workout. The user's description is the highest authority and overrides every template in this prompt.
+</final_priority_check>`;
+}
+
+/**
  * Creates equipment restriction notice using Claude 4.5 best practices
  * @param {Array} equipment - The list of available equipment
  * @returns {string} Formatted string with equipment restrictions

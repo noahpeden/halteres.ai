@@ -54,7 +54,7 @@ I need to find complete workout programs with specific exercises, sets, reps, we
 
     // Use Anthropic's built-in web search capability
     const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-6',
       max_tokens: 8000,
       temperature: 0.3,
       messages: [

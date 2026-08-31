@@ -3,7 +3,13 @@
  * @param {Object} context - The full context for prompt generation
  * @returns {string} The assembled prompt string
  */
-import { formatEquipmentRestrictions, formatSchedulingRequirements } from '../promptBuilder.js';
+import {
+  formatClientRequirements,
+  formatEquipmentRestrictions,
+  formatFinalPriorityCheck,
+  formatSchedulingRequirements,
+  formatStructurePriority,
+} from '../promptBuilder.js';
 
 export function sportSpecificPrompt(context) {
   // Extract all relevant parameters with fallbacks
@@ -155,7 +161,7 @@ Example: "Week 3, Day 1: [Athletic Quality Focus] for ${sport}"
 }
 </json_output_format>
 
-<workout_body_structure>
+${formatStructurePriority(!!description)}<workout_body_structure>
 ## Workout Focus
 Purpose of this session for ${sport} performance:
 - Athletic quality targeted (e.g., Lower Body Power, Acceleration)
@@ -215,5 +221,6 @@ ${
     ? `Generate exactly ${context.workoutsThisWeek || daysPerWeek} workouts for Week ${context.weekNumber}.`
     : `Generate exactly ${totalWorkouts} workouts covering ${numberOfWeeks} week(s).`
 }
+${formatFinalPriorityCheck(!!description)}
 `;
 }
