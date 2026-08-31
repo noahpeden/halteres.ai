@@ -32,9 +32,9 @@ export function roundToNearestPlate(lbs) {
 export function formatPercentLoadTable(maxLb) {
   const max = Number(maxLb);
   if (!Number.isFinite(max) || max <= 0) return '';
-  return LOAD_PERCENTS.map(
-    (pct) => `${pct}% = ${roundToNearestPlate((max * pct) / 100)} lb`
-  ).join(', ');
+  return LOAD_PERCENTS.map((pct) => `${pct}% = ${roundToNearestPlate((max * pct) / 100)} lb`).join(
+    ', '
+  );
 }
 
 function matchLift(text, names) {

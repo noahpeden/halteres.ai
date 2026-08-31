@@ -222,25 +222,31 @@ describe('placeholder and persist guardrails (QA A / B / C)', () => {
   });
 
   it('starts enhance on the first click and only blocks after it is in flight', () => {
-    assert.deepEqual(shouldStartWeekEnhance({ programId: 'p1', inFlightWeeks: new Set(), weekNumber: 1 }), {
-      start: true,
-      reason: null,
-      week: 1,
-    });
+    assert.deepEqual(
+      shouldStartWeekEnhance({ programId: 'p1', inFlightWeeks: new Set(), weekNumber: 1 }),
+      {
+        start: true,
+        reason: null,
+        week: 1,
+      }
+    );
     assert.equal(
       shouldStartWeekEnhance({ programId: '', inFlightWeeks: new Set(), weekNumber: 1 }).reason,
       'missing_program'
     );
     assert.equal(
-      shouldStartWeekEnhance({ programId: 'p1', inFlightWeeks: new Set([1]), weekNumber: 1 }).reason,
+      shouldStartWeekEnhance({ programId: 'p1', inFlightWeeks: new Set([1]), weekNumber: 1 })
+        .reason,
       'already_in_flight'
     );
     assert.equal(
-      shouldStartWeekEnhance({ programId: 'p1', inFlightWeeks: new Set(['1']), weekNumber: 1 }).reason,
+      shouldStartWeekEnhance({ programId: 'p1', inFlightWeeks: new Set(['1']), weekNumber: 1 })
+        .reason,
       'already_in_flight'
     );
     assert.equal(
-      shouldStartWeekEnhance({ programId: 'p1', inFlightWeeks: new Set([1]), weekNumber: '1' }).reason,
+      shouldStartWeekEnhance({ programId: 'p1', inFlightWeeks: new Set([1]), weekNumber: '1' })
+        .reason,
       'already_in_flight'
     );
 

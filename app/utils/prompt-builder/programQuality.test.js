@@ -356,7 +356,8 @@ describe('equipment, duration, density, voice, RAG', () => {
       skeletonWorkouts: [
         {
           title: 'Week 1, Day 1: Heavy deadlift + grinder',
-          body_skeleton: '## Strength\n- Deadlift 5x3 @ 80%\n## Metcon\n- For time: bike, lunges, pull-ups',
+          body_skeleton:
+            '## Strength\n- Deadlift 5x3 @ 80%\n## Metcon\n- For time: bike, lunges, pull-ups',
         },
       ],
       weekNumber: 1,

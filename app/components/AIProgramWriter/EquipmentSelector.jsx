@@ -11,7 +11,7 @@ export default function EquipmentSelector({ isVisible, onToggleVisibility }) {
 
   const handleEquipmentToggle = useCallback(
     async (equipmentValue) => {
-      const value = equipmentValue === '-1' ? -1 : parseInt(equipmentValue);
+      const value = equipmentValue === '-1' ? -1 : parseInt(equipmentValue, 10);
 
       let newEquipment;
       if (value === -1) {
