@@ -1771,7 +1771,27 @@ export async function generateSkeletonProgram({
       });
 
       if (!response.ok) {
-        throw new Error(`Server returned error: ${response.status}`);
+        let friendly = `Server returned error: ${response.status}`;
+        try {
+          const errBody = await response.json();
+          if (errBody && typeof errBody.error === 'string' && errBody.error.trim()) {
+            friendly = errBody.error.trim();
+          } else if (errBody && typeof errBody.message === 'string' && errBody.message.trim()) {
+            friendly = errBody.message.trim();
+          }
+        } catch {
+          // ignore body parse errors
+        }
+        if (response.status === 401) {
+          friendly =
+            friendly ||
+            'AI provider rejected the request (401 Unauthorized). The API key is invalid or missing.';
+        } else if (response.status === 429) {
+          friendly = friendly || 'AI provider rate-limited the request (429).';
+        } else if (response.status >= 500) {
+          friendly = friendly || 'AI provider is unavailable right now. Please try again later.';
+        }
+        throw new Error(friendly);
       }
 
       const reader = response.body.getReader();

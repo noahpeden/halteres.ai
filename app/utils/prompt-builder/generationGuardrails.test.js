@@ -227,5 +227,12 @@ describe('placeholder and persist guardrails (QA A / B / C)', () => {
     assert.match(errorEvent.error, /timed out/);
     assert.equal(isFatalSseParseError(new Error(errorEvent.error)), true);
     assert.equal(isFatalSseParseError(new SyntaxError('Unexpected token')), false);
+
+    const providerEvent = parseSseEventData(
+      'data: {"type":"error","error":"Week 1 of 8 failed: No content received from streaming response; model=deepseek-v4-pro; thinking=enabled; finish_reason=length. DeepSeek thinking consumed the output budget before any content tokens. Disable thinking or raise max_tokens. Generation stopped so placeholders are not saved as a successful program."}'
+    );
+    assert.equal(isFatalSseParseError(new Error(providerEvent.error)), true);
+    assert.match(providerEvent.error, /finish_reason=length/);
+    assert.match(providerEvent.error, /placeholders are not saved/);
   });
 });
