@@ -215,7 +215,8 @@ export default function HomeClient() {
               You're using two tools when you need one.
             </h2>
             <p className="text-lg text-neutral max-w-2xl mx-auto">
-              Athletes juggle programming tools that don't fit their equipment and separate apps for logging. We built the bridge.
+              Athletes juggle programming tools that don't fit their equipment and separate apps for
+              logging. We built the bridge.
             </p>
           </div>
 
@@ -391,8 +392,7 @@ export default function HomeClient() {
               {
                 icon: TrendingUp,
                 title: 'Adaptive Programming',
-                description:
-                  'Evolves with your feedback and results to keep you progressing.',
+                description: 'Evolves with your feedback and results to keep you progressing.',
                 color: 'warning',
                 tag: 'Progress',
               },
@@ -501,7 +501,10 @@ export default function HomeClient() {
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
-              <Link href="/login" className="btn btn-primary btn-lg gap-2 shadow-lg shadow-primary/25">
+              <Link
+                href="/login"
+                className="btn btn-primary btn-lg gap-2 shadow-lg shadow-primary/25"
+              >
                 <Dumbbell className="w-5 h-5" />
                 Get Started
               </Link>
@@ -529,18 +532,8 @@ export default function HomeClient() {
               <h4 className="font-semibold text-base-content mb-3">Product</h4>
               <ul className="space-y-2 text-sm text-neutral">
                 <li>
-                  <Link href="/features" className="hover:text-primary transition-colors">
-                    Features
-                  </Link>
-                </li>
-                <li>
                   <Link href="/pricing" className="hover:text-primary transition-colors">
                     Pricing
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/tutorials" className="hover:text-primary transition-colors">
-                    Tutorials
                   </Link>
                 </li>
               </ul>
@@ -548,11 +541,6 @@ export default function HomeClient() {
             <div>
               <h4 className="font-semibold text-base-content mb-3">Resources</h4>
               <ul className="space-y-2 text-sm text-neutral">
-                <li>
-                  <Link href="/help" className="hover:text-primary transition-colors">
-                    Help Center
-                  </Link>
-                </li>
                 <li>
                   <Link href="/contact" className="hover:text-primary transition-colors">
                     Contact
@@ -577,13 +565,7 @@ export default function HomeClient() {
             </div>
             <div>
               <h4 className="font-semibold text-base-content mb-3">Company</h4>
-              <ul className="space-y-2 text-sm text-neutral">
-                <li>
-                  <Link href="/company" className="hover:text-primary transition-colors">
-                    About
-                  </Link>
-                </li>
-              </ul>
+              <ul className="space-y-2 text-sm text-neutral"></ul>
             </div>
           </div>
           <div className="border-t border-base-300 pt-8 flex flex-col sm:flex-row justify-between items-center gap-4">

@@ -474,7 +474,7 @@ export default function Step5Page() {
             {entities.length > 0 ? (
               <div className="w-full mb-4">
                 <label className="label">
-                <span className="text-sm">Choose a Profile or Class</span>
+                  <span className="text-sm">Choose a Profile or Class</span>
                 </label>
                 <select
                   className="select select-bordered w-full"
@@ -690,7 +690,9 @@ export default function Step5Page() {
                 ></path>
               </svg>
               <div>
-                <div className="font-semibold">About {entityTypeText === 'class' ? 'class' : 'your'} metrics</div>
+                <div className="font-semibold">
+                  About {entityTypeText === 'class' ? 'class' : 'your'} metrics
+                </div>
                 <div className="text-sm">
                   {entityType === 'CLASS'
                     ? 'Class metrics represent general information about the group. Individual variations may apply during training.'

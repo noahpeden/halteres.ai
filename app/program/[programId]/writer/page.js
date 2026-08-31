@@ -1,10 +1,8 @@
 'use client';
-import { Check, ChevronRight, Edit2, GraduationCap, Share2, Sparkles, User, X } from 'lucide-react';
+import { Check, ChevronRight, Edit2, Sparkles, X } from 'lucide-react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import AIProgramWriter from '@/components/AIProgramWriter/AIProgramWriter';
-import ClassMetricsTab from '@/components/ClassMetricsTab';
-import ClientMetricsTab from '@/components/ClientMetricsTab';
 import { useAuth } from '@/contexts/AuthContext';
 import { ProgramProvider } from '@/contexts/ProgramContext';
 
@@ -123,16 +121,7 @@ export default function ProgramWriterPage() {
     setIsEditingName(false);
   };
 
-  const handleShareProgram = async () => {
-    try {
-      const shareUrl = `${window.location.origin}/program/${programId}/share`;
-      await navigator.clipboard.writeText(shareUrl);
-      alert('Program link copied to clipboard!');
-    } catch (err) {
-      console.error('Failed to copy link:', err);
-      alert('Failed to copy link');
-    }
-  };
+  // Share functionality removed in B2C UX
 
   return (
     <div className="w-full max-w-full relative animate-fadeIn">
@@ -182,32 +171,7 @@ export default function ProgramWriterPage() {
                 )}
               </div>
             </div>
-            <div className="flex items-center gap-3">
-              {clientName && (
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 rounded-lg">
-                  <div
-                    className={`w-6 h-6 rounded-lg flex items-center justify-center ${
-                      clientType === 'CLASS' ? 'bg-purple-100' : 'bg-emerald-100'
-                    }`}
-                  >
-                    {clientType === 'CLASS' ? (
-                      <GraduationCap className="w-3.5 h-3.5 text-purple-600" />
-                    ) : (
-                      <User className="w-3.5 h-3.5 text-emerald-600" />
-                    )}
-                  </div>
-                  <span className="text-sm font-medium text-slate-700">{clientName}</span>
-                </div>
-              )}
-              <button
-                onClick={handleShareProgram}
-                className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 hover:border-blue-300 hover:bg-blue-50 text-slate-700 hover:text-blue-700 rounded-xl text-sm font-medium shadow-sm transition-all"
-                title="Share this program"
-              >
-                <Share2 className="h-4 w-4" />
-                <span className="hidden sm:inline">Share</span>
-              </button>
-            </div>
+            {/* Client/class badge and share controls removed for B2C */}
           </div>
         )}
       </div>
@@ -236,30 +200,7 @@ export default function ProgramWriterPage() {
           </div>
         </div>
 
-        {/* Entity Metrics - Sidebar on desktop, below content on mobile */}
-        <div
-          className={`
-              w-full lg:w-80 lg:flex-shrink-0 lg:overflow-y-auto
-              transition-all duration-300 ease-in-out
-              ${isSidebarCollapsed ? 'lg:hidden' : 'lg:block'}
-            `}
-        >
-          {clientType === 'CLASS' ? (
-            <ClassMetricsTab
-              programId={programId}
-              viewMode={isMobile ? 'fullPage' : 'sidebar'}
-              isCollapsed={isSidebarCollapsed}
-              onToggleCollapse={toggleSidebarCollapse}
-            />
-          ) : (
-            <ClientMetricsTab
-              programId={programId}
-              viewMode={isMobile ? 'fullPage' : 'sidebar'}
-              isCollapsed={isSidebarCollapsed}
-              onToggleCollapse={toggleSidebarCollapse}
-            />
-          )}
-        </div>
+        {/* Metrics sidebar removed for B2C */}
       </div>
     </div>
   );

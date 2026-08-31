@@ -44,6 +44,26 @@ export async function middleware(req) {
   const user = session?.user;
   const { pathname } = req.nextUrl;
 
+  // Global B2C archiving redirects for legacy/coach/B2B routes
+  // Redirect program-specific archived pages to writer
+  const programMatch = pathname.match(/^\/program\/([^/]+)\/(workouts|metrics|share)(?:\/.*)?$/);
+  if (programMatch) {
+    const programId = programMatch[1];
+    const targetUrl = new URL(`/program/${programId}/writer`, req.url);
+    return NextResponse.redirect(targetUrl);
+  }
+  // Redirect wizard and marketing leftovers to athlete
+  if (
+    /^\/program-wizard(\/.*)?$/.test(pathname) ||
+    /^\/(help|tutorials|updates|_team)$/.test(pathname)
+  ) {
+    return NextResponse.redirect(new URL('/athlete', req.url));
+  }
+  // Redirect old root profile to athlete profile
+  if (pathname === '/profile') {
+    return NextResponse.redirect(new URL('/athlete/profile', req.url));
+  }
+
   // Define protected routes that require an active subscription or valid trial
   const protectedRoutes = ['/dashboard', '/program', '/write-program'];
 

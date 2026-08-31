@@ -35,7 +35,8 @@ export default function ContactPage() {
           <div className="mx-auto max-w-2xl lg:mx-0">
             <h2 className="text-3xl font-bold tracking-tight text-gray-900">Contact Us</h2>
             <p className="mt-6 text-lg leading-8 text-gray-600">
-              Have questions about how HalteresAI can help your training? Our team is ready to assist.
+              Have questions about how HalteresAI can help your training? Our team is ready to
+              assist.
             </p>
           </div>
           <div className="mx-auto mt-16 grid max-w-2xl grid-cols-1 gap-8 text-base leading-7 sm:grid-cols-2 sm:gap-y-16 lg:mx-0 lg:max-w-none lg:grid-cols-4">
