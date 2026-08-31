@@ -559,36 +559,22 @@ async function persistEnhancedWorkout({ supabase, workout, title, body, entityId
   return verified;
 }
 
-// Detect which sections were used in skeleton workouts
+// Detect which sections were used in skeleton workouts. Parse actual Markdown
+// headers so custom names (e.g. Floor Block) survive enhancement. Fall back to
+// generate-quality defaults when the skeleton has no ## headers.
 function detectWorkoutSections(skeletonWorkouts) {
   const seen = new Set();
   const sections = [];
-  const headerPattern = /^##\s+(.+?)\s*$/gm;
 
-  // Common section headers to detect
-  const sectionPatterns = [
-    /## Strength/i,
-    /## Conditioning/i,
-    /## Main Lift/i,
-    /## Accessory/i,
-    /## Primary/i,
-    /## Skill Work/i,
-    /## Intervals/i,
-    /## Sport Conditioning/i,
-    /## Engine/i,
-    /## Station Work/i,
-    /## Metcon/i,
-    /## Supplemental/i,
-    /## Assistance/i,
-    /## Accessory EMOM/i,
-  ];
-
-  for (const pattern of sectionPatterns) {
-    if (pattern.test(allContent)) {
-      const match = pattern.toString().match(/## (.*?)\//i);
-      if (match) {
-        sections.push(match[1]);
-      }
+  for (const workout of skeletonWorkouts) {
+    const body = workout.body_skeleton || '';
+    const headers = body.matchAll(/^##\s+(.+?)\s*$/gm);
+    for (const header of headers) {
+      const name = header[1].trim();
+      const key = name.toLowerCase();
+      if (!name || seen.has(key)) continue;
+      seen.add(key);
+      sections.push(name);
     }
   }
 
