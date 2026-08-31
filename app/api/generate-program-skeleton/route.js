@@ -2,6 +2,14 @@ import { NextResponse } from 'next/server';
 import { streamChatCompletion } from '@/utils/ai/provider';
 import { pickEquipmentLabels } from '@/utils/prompt-builder/equipmentLabels.js';
 import { assertUsableSkeletonWorkouts } from '@/utils/prompt-builder/generationGuardrails.js';
+import { extractIntakeInjury, extractIntakeLifts } from '@/utils/prompt-builder/intakeMetrics.js';
+import {
+  assertFullProgramLength,
+  assertUniqueDayNumbers,
+  canonicalizeDayTitle,
+  normalizeRequestedWeeks,
+  parseModelWorkouts,
+} from '@/utils/prompt-builder/modelOutput.js';
 import {
   assembleReferenceMaterial,
   buildProgrammingContract,
@@ -211,6 +219,24 @@ async function generateSkeletonProgram(requestData, supabase, controller, encode
           totalSoFar: allWorkouts.length,
         });
 
+        if (currentWeek === numberOfWeeks) {
+          assertFullProgramLength({
+            requestedWeeks: numberOfWeeks,
+            daysPerWeek,
+            savedCount: allWorkouts.length,
+          });
+          sendEvent(controller, encoder, 'skeleton_complete', {
+            message: 'Skeleton program generated successfully',
+            title: `Training Program for ${sharedData.goal}`,
+            description:
+              programDescription ||
+              `${numberOfWeeks}-week skeleton program, ${daysPerWeek} days per week`,
+            suggestions: allWorkouts,
+            totalWorkouts: allWorkouts.length,
+            generationType: 'skeleton',
+          });
+        }
+
         currentWeek++;
 
         // Small delay between weeks to prevent rate limiting
@@ -225,9 +251,11 @@ async function generateSkeletonProgram(requestData, supabase, controller, encode
       }
     }
 
-    if (allWorkouts.length === 0) {
-      throw new Error('Skeleton generation produced 0 workouts');
-    }
+    assertFullProgramLength({
+      requestedWeeks: numberOfWeeks,
+      daysPerWeek,
+      savedCount: allWorkouts.length,
+    });
 
     // Mark program as skeleton complete and save AI-generated description
     if (programId) {
@@ -240,6 +268,7 @@ async function generateSkeletonProgram(requestData, supabase, controller, encode
 
       const updateData = {
         generation_status: 'skeleton_complete',
+        duration_weeks: numberOfWeeks,
         generation_progress: {
           current_week: numberOfWeeks,
           total_weeks: numberOfWeeks,
@@ -262,18 +291,6 @@ async function generateSkeletonProgram(requestData, supabase, controller, encode
 
       await supabase.from('programs').update(updateData).eq('id', programId);
     }
-
-    // Send completion
-    sendEvent(controller, encoder, 'skeleton_complete', {
-      message: 'Skeleton program generated successfully',
-      title: `Training Program for ${sharedData.goal}`,
-      description:
-        programDescription ||
-        `${numberOfWeeks}-week skeleton program, ${daysPerWeek} days per week`,
-      suggestions: allWorkouts,
-      totalWorkouts: allWorkouts.length,
-      generationType: 'skeleton',
-    });
 
     try {
       if (controller && controller.desiredSize !== null) {
@@ -340,6 +357,8 @@ async function generateWeekSkeleton(
     programmingContract,
     ragContext,
     recentHistory,
+    intakeLifts,
+    intakeInjury,
   } = sharedData;
 
   // Calculate dates for this week
@@ -373,6 +392,8 @@ async function generateWeekSkeleton(
     programmingContract: weekContract,
     ragContext,
     recentHistory,
+    intakeLifts,
+    intakeInjury,
   });
 
   const systemPrompt = buildSkeletonSystemPrompt({
@@ -443,20 +464,9 @@ async function generateWeekSkeleton(
       throw new Error('No content received from streaming response');
     }
 
-    // Parse JSON response
-    let parsedContent;
+    let workouts;
     try {
-      let jsonContent = responseContent;
-
-      // Strip markdown code blocks if present
-      if (jsonContent.includes('```')) {
-        const jsonBlockMatch = jsonContent.match(/```(?:json)?\s*\n?([\s\S]*?)(?:\n```|$)/);
-        if (jsonBlockMatch?.[1]) {
-          jsonContent = jsonBlockMatch[1].trim();
-        }
-      }
-
-      parsedContent = JSON.parse(jsonContent);
+      workouts = parseModelWorkouts(responseContent, { expectedCount: daysPerWeek });
     } catch (parseError) {
       logWithTimestamp(`Skeleton parse error for week ${weekNumber}`, {
         error: parseError.message,
@@ -464,22 +474,16 @@ async function generateWeekSkeleton(
       throw new Error(`Failed to parse skeleton response: ${parseError.message}`);
     }
 
-    let workouts = parsedContent.workouts || [];
-    if (!Array.isArray(workouts)) {
-      workouts = [workouts];
-    }
-
-    if (workouts.length < daysPerWeek) {
-      throw new Error(
-        `Week ${weekNumber} returned ${workouts.length} workouts, expected ${daysPerWeek}`
-      );
-    }
-
     const formattedWorkouts = workouts.slice(0, daysPerWeek).map((workout, index) => ({
-      title: workout.title || `Week ${weekNumber}, Day ${index + 1}`,
+      title: canonicalizeDayTitle(
+        workout.title || `Week ${weekNumber}, Day ${index + 1}`,
+        weekNumber,
+        index + 1
+      ),
       body: workout.body || '',
       date: workout.date || weekDates[index] || new Date().toISOString().split('T')[0],
     }));
+    assertUniqueDayNumbers(formattedWorkouts, weekNumber);
 
     assertUsableSkeletonWorkouts(formattedWorkouts, {
       equipmentLabels: equipment,
@@ -488,8 +492,13 @@ async function generateWeekSkeleton(
 
     const result = { workouts: formattedWorkouts };
 
-    if (includeDescription && parsedContent.programDescription) {
-      result.programDescription = parsedContent.programDescription;
+    try {
+      const overview = JSON.parse(responseContent.match(/\{[\s\S]*\}/)?.[0] || '{}');
+      if (includeDescription && overview.programDescription) {
+        result.programDescription = overview.programDescription;
+      }
+    } catch (_e) {
+      // programDescription is optional
     }
 
     return result;
@@ -548,7 +557,7 @@ async function extractSharedData(requestData, supabase) {
   let description = requestData.description || '';
 
   const providedDuration = requestData.duration_weeks ?? requestData.numberOfWeeks;
-  let numberOfWeeks = parseInt(providedDuration ?? 8, 10);
+  let numberOfWeeks = normalizeRequestedWeeks(providedDuration, 8);
   const providedDaysPerWeek = requestData.days_per_week ?? requestData.daysPerWeek;
   let daysPerWeek = parseInt(providedDaysPerWeek ?? 3, 10);
   let programType = requestData.periodization?.program_type || requestData.programType || 'linear';
@@ -584,7 +593,7 @@ async function extractSharedData(requestData, supabase) {
       if (programData) {
         dbReference = programData.reference_input || '';
         if (providedDuration == null && programData.duration_weeks) {
-          numberOfWeeks = parseInt(programData.duration_weeks, 10);
+          numberOfWeeks = normalizeRequestedWeeks(programData.duration_weeks, numberOfWeeks);
         }
         if (
           (!providedDaysPerWeek || isNaN(Number(providedDaysPerWeek))) &&
@@ -596,7 +605,8 @@ async function extractSharedData(requestData, supabase) {
           selectedDaysOfWeek = programData.calendar_data.days_of_week;
         }
         equipment = pickEquipmentLabels({
-          requestEquipment: requestData.gym_details?.equipment || requestData.equipment || equipment,
+          requestEquipment:
+            requestData.gym_details?.equipment || requestData.equipment || equipment,
           dbEquipment: programData.gym_details?.equipment,
         });
         if (!programName && programData.name) {
@@ -666,11 +676,16 @@ async function extractSharedData(requestData, supabase) {
         : '';
   const requestReference = requestData.referenceInput || requestData.reference_input || '';
   const referenceMaterial = assembleReferenceMaterial({
-    requestReference,
+    requestReference: requestReference || description,
     influenceText,
     historyText,
     dbReference,
   });
+  const intakeSource = [description, referenceMaterial, influenceText, historyText]
+    .filter(Boolean)
+    .join('\n');
+  const intakeLifts = extractIntakeLifts(intakeSource);
+  const intakeInjury = extractIntakeInjury(intakeSource);
 
   // Generate suggested dates
   const suggestedDates = [];
@@ -832,5 +847,7 @@ async function extractSharedData(requestData, supabase) {
     recentHistory: historyText,
     programmingContract,
     ragContext,
+    intakeLifts,
+    intakeInjury,
   };
 }

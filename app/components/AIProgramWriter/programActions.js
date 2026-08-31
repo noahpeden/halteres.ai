@@ -6,6 +6,7 @@ import {
   isFatalSseParseError,
   parseSseEventData,
   shouldAcceptEnhancementComplete,
+  weekDisplayStatus,
 } from '@/utils/prompt-builder/generationGuardrails';
 import { calculateEndDate } from './dateHandlers';
 import { dayNameToNumber } from './utils';
@@ -1871,11 +1872,28 @@ export async function generateSkeletonProgram({
         }
 
         if (!completed) {
-          throw new Error(
-            streamedWorkoutCount === 0
-              ? 'Generation stopped before any workouts were saved. The model timed out or failed — no placeholder week was accepted as success.'
-              : 'Generation stopped before all weeks finished. Check the writer for partial weeks, then retry.'
-          );
+          const requestedWeeks = parseInt(formData.numberOfWeeks, 10);
+          const expectedWorkouts = requestedWeeks * daysOfWeekNumbers.length;
+          if (
+            requestedWeeks > 0 &&
+            streamedWorkoutCount >= expectedWorkouts &&
+            expectedWorkouts > 0
+          ) {
+            completed = true;
+            showToastMessage('Skeleton program complete!', 'success');
+            setGenerationStage('skeleton_complete');
+            setIsLoading(false);
+            if (clearStreamingWorkouts) clearStreamingWorkouts();
+            if (refetchWorkouts) setTimeout(() => refetchWorkouts(), 500);
+            clearInterval(timer);
+            resolve({ success: true, totalWorkouts: streamedWorkoutCount });
+          } else {
+            throw new Error(
+              streamedWorkoutCount === 0
+                ? 'Generation stopped before any workouts were saved. The model timed out or failed — no placeholder week was accepted as success.'
+                : 'Generation stopped before all weeks finished. Check the writer for partial weeks, then retry.'
+            );
+          }
         }
       } finally {
         clearInterval(stallTimer);
@@ -2074,7 +2092,8 @@ export function groupWorkoutsByWeek(workouts) {
   const grouped = {};
 
   workouts.forEach((workout) => {
-    const weekNumber = workout.week_number || 1;
+    const rawWeek = Number(workout.week_number);
+    const weekNumber = Number.isFinite(rawWeek) && rawWeek > 0 ? rawWeek : 1;
     if (!grouped[weekNumber]) {
       grouped[weekNumber] = {
         weekNumber,
@@ -2085,16 +2104,8 @@ export function groupWorkoutsByWeek(workouts) {
     grouped[weekNumber].workouts.push(workout);
   });
 
-  // Determine week status based on workout statuses
   Object.values(grouped).forEach((week) => {
-    const statuses = week.workouts.map((w) => w.generation_status);
-    if (statuses.every((s) => s === 'detailed')) {
-      week.status = 'detailed';
-    } else if (statuses.some((s) => s === 'enhancing')) {
-      week.status = 'enhancing';
-    } else {
-      week.status = 'skeleton';
-    }
+    week.status = weekDisplayStatus(week.workouts);
   });
 
   return Object.values(grouped).sort((a, b) => a.weekNumber - b.weekNumber);

@@ -14,6 +14,16 @@ import {
   verifiedPersistIsAcceptable,
 } from '@/utils/prompt-builder/generationGuardrails.js';
 import {
+  extractIntakeInjury,
+  extractIntakeLifts,
+  formatInjuryHistory,
+} from '@/utils/prompt-builder/intakeMetrics.js';
+import {
+  assertUniqueDayNumbers,
+  canonicalizeDayTitle,
+  parseModelWorkouts,
+} from '@/utils/prompt-builder/modelOutput.js';
+import {
   assembleReferenceMaterial,
   buildProgrammingContract,
 } from '@/utils/prompt-builder/programQuality.js';
@@ -180,20 +190,6 @@ async function enhanceWeekWorkouts(requestData, supabase, controller, encoder) {
     batchIds = skeletonWorkouts.map((workout) => workout.id);
     logWithTimestamp(`Found ${skeletonWorkouts.length} skeleton workouts to enhance`);
 
-    // Mark workouts as 'enhancing'
-    {
-      const { error: enhancingError } = await supabase
-        .from('program_workouts')
-        .update({ generation_status: 'enhancing', updated_at: new Date().toISOString() })
-        .in(
-          'id',
-          skeletonWorkouts.map((w) => w.id)
-        );
-      if (enhancingError) {
-        throw new Error(`Failed to mark workouts as enhancing: ${enhancingError.message}`);
-      }
-    }
-
     // Fetch client/entity metrics for context
     let clientMetricsContent = '';
     const useImperial = context?.useImperial !== undefined ? context.useImperial : true;
@@ -263,7 +259,7 @@ async function enhanceWeekWorkouts(requestData, supabase, controller, encoder) {
     const ctxHistory =
       typeof context?.recent_training_history === 'string' ? context.recent_training_history : '';
     const referenceMaterial = assembleReferenceMaterial({
-      requestReference: ctxRef,
+      requestReference: ctxRef || context?.description || programMeta?.description || '',
       influenceText: ctxInfluences,
       historyText: ctxHistory,
       dbReference: programMeta?.reference_input || '',
@@ -283,6 +279,20 @@ async function enhanceWeekWorkouts(requestData, supabase, controller, encoder) {
       goal: context?.goal || programMeta?.goal || '',
       description: context?.description || programMeta?.description || '',
     };
+    const intakeSource = [
+      augmentedContext.description,
+      referenceMaterial,
+      ctxInfluences,
+      ctxHistory,
+    ]
+      .filter(Boolean)
+      .join('\n');
+    const intakeLifts = extractIntakeLifts(intakeSource);
+    const intakeInjury =
+      extractIntakeInjury(intakeSource) ||
+      formatInjuryHistory(context?.injury_history || context?.injuryHistory || '');
+    augmentedContext.intakeLifts = intakeLifts;
+    augmentedContext.intakeInjury = intakeInjury;
 
     const programmingContract = buildProgrammingContract({
       programName: context?.programName || programMeta?.name || '',
@@ -386,31 +396,23 @@ async function enhanceWeekWorkouts(requestData, supabase, controller, encoder) {
       throw new Error('No content received from enhancement response');
     }
 
-    // Parse the enhanced workouts — never treat skeleton copy as a successful enhance
     let enhancedWorkouts;
     try {
-      let jsonContent = responseContent;
-
-      // Strip markdown code blocks if present
-      if (jsonContent.includes('```')) {
-        const jsonBlockMatch = jsonContent.match(/```(?:json)?\s*\n?([\s\S]*?)(?:\n```|$)/);
-        if (jsonBlockMatch?.[1]) {
-          jsonContent = jsonBlockMatch[1].trim();
-        }
-      }
-
-      const parsed = JSON.parse(jsonContent);
-      // Support multiple common shapes:
-      // { workouts: [...] } or { enhancedWorkouts: [...] } or direct array/object
-      enhancedWorkouts = parsed.workouts || parsed.enhancedWorkouts || parsed;
+      enhancedWorkouts = parseModelWorkouts(responseContent, {
+        expectedCount: skeletonWorkouts.length,
+      });
     } catch (parseError) {
       logWithTimestamp('Enhancement parse error', { error: parseError.message });
-      enhancedWorkouts = attemptWorkoutExtraction(responseContent, skeletonWorkouts);
+      throw new Error(
+        `Enhancement parse failed: ${parseError.message}. Success toast will not fire.`
+      );
     }
 
-    if (!Array.isArray(enhancedWorkouts)) {
-      enhancedWorkouts = [enhancedWorkouts];
-    }
+    enhancedWorkouts = enhancedWorkouts.map((workout, index) => ({
+      ...workout,
+      title: canonicalizeDayTitle(workout.title, weekNumber, index + 1),
+    }));
+    assertUniqueDayNumbers(enhancedWorkouts, weekNumber);
 
     const usableEnhanced = enhancedWorkouts.filter((raw, index) =>
       enhancementPayloadIsUsable(
@@ -616,24 +618,4 @@ function validateStructurePreserved(skeleton, enhanced, _sections) {
   }
 
   return true;
-}
-
-// Attempt to extract workouts when JSON parsing fails
-function attemptWorkoutExtraction(content, skeletonWorkouts) {
-  const extractedWorkouts = [];
-
-  // Try to find workout blocks by looking for Day patterns
-  const dayPatterns = content.split(/(?=### Day \d|## Day \d|Day \d:)/i);
-
-  for (let i = 0; i < skeletonWorkouts.length && i < dayPatterns.length - 1; i++) {
-    const dayContent = dayPatterns[i + 1]; // Skip first empty split
-    if (dayContent && dayContent.length > 50 && !isPlaceholderWorkoutBody(dayContent)) {
-      extractedWorkouts.push({
-        title: skeletonWorkouts[i].title,
-        body: dayContent.trim(),
-      });
-    }
-  }
-
-  return extractedWorkouts;
 }

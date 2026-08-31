@@ -122,6 +122,12 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
   const [showGenerationProgress, setShowGenerationProgress] = useState(false);
   const [skeletonProgress, setSkeletonProgress] = useState(null);
 
+  useEffect(() => {
+    if (generationStage === 'skeleton_complete') {
+      setShowGenerationProgress(false);
+    }
+  }, [generationStage]);
+
   // Combined workouts for display (database workouts + streaming workouts)
   const displayWorkouts = useMemo(() => {
     // During generation, show streaming workouts; after completion, show database workouts
@@ -1420,6 +1426,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
                 goal: formData?.goal,
                 difficulty: formData?.difficulty,
                 equipment: selectedEquipment,
+                numberOfWeeks: parseInt(formData?.numberOfWeeks, 10) || undefined,
               }}
               // Action props for detailed workouts
               onViewDetails={(workout) => {

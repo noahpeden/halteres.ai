@@ -13,6 +13,8 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import TemplateFeedbackButton from '@/components/feedback/TemplateFeedbackButton';
+import { weekDisplayStatus } from '@/utils/prompt-builder/generationGuardrails';
+import { extractDayNumber, sortWorkoutsForDisplay } from '@/utils/prompt-builder/modelOutput';
 
 // Simple markdown parser for workout content (same as WorkoutList)
 const parseMarkdownToHTML = (markdown) => {
@@ -96,7 +98,8 @@ export default function SkeletonPreview({
   const groupedWeeks = groupWorkoutsByWeek(workouts);
 
   // Calculate stats
-  const totalWeeks = groupedWeeks.length;
+  const requestedWeeks = Number(programContext?.numberOfWeeks) || groupedWeeks.length;
+  const totalWeeks = requestedWeeks;
   const detailedWeeks = groupedWeeks.filter((w) => w.status === 'detailed').length;
   const skeletonWeeks = groupedWeeks.filter((w) => w.status === 'skeleton').length;
 
@@ -147,7 +150,7 @@ export default function SkeletonPreview({
           {isFullyEnhanced ? 'Program Ready!' : 'Program Structure Ready!'}
         </h2>
         <p className="text-base-content/60 mt-2">
-          {workouts.length} workouts across {totalWeeks} weeks.{' '}
+          {workouts.length} workouts across {requestedWeeks} weeks.{' '}
           {isFullyEnhanced
             ? 'Click on any workout to view details or make changes.'
             : 'Review and add details below.'}
@@ -389,9 +392,11 @@ function WeekCard({
 
       {/* Workout Previews */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 mb-4">
-        {week.workouts.map((workout, i) => (
+        {sortWorkoutsForDisplay(week.workouts).map((workout, i) => (
           <div key={workout.id || i} className="p-3 bg-base-200/50 rounded-lg text-center">
-            <div className="text-xs text-base-content/60">Day {i + 1}</div>
+            <div className="text-xs text-base-content/60">
+              Day {extractDayNumber(workout.title, i)}
+            </div>
             <div className="font-medium text-sm truncate">{extractFocus(workout.title)}</div>
           </div>
         ))}
@@ -401,11 +406,11 @@ function WeekCard({
       {isExpanded && (
         <div className="border-t border-base-300 pt-4 mt-4">
           <div className="space-y-4">
-            {week.workouts.map((workout, i) => (
+            {sortWorkoutsForDisplay(week.workouts).map((workout, i) => (
               <DetailedWorkoutCard
                 key={workout.id || i}
                 workout={workout}
-                dayIndex={i}
+                dayIndex={extractDayNumber(workout.title, i) - 1}
                 weekStatus={week.status}
                 onViewDetails={onViewDetails}
                 onEditWorkout={onEditWorkout}
@@ -613,26 +618,27 @@ function DetailedWorkoutCard({
   );
 }
 
-// Helper function to extract focus from workout title
 function extractFocus(title) {
-  // Try to extract the focus area from titles like "Week 1, Day 1: Lower Body Strength"
-  const match = title?.match(/:\s*(.+)$/);
-  return match ? match[1] : 'Workout';
+  const cleaned = String(title || '')
+    .replace(/["']?\s*,\s*"body"[\s\S]*$/i, '')
+    .replace(/\\n/g, ' ')
+    .replace(/"+/g, '')
+    .trim();
+  const match = cleaned.match(/:\s*(.+)$/);
+  return match ? match[1].trim() : 'Workout';
 }
 
-// Helper function to group workouts by week
 function groupWorkoutsByWeek(workouts) {
   if (!workouts || workouts.length === 0) return [];
 
   const grouped = {};
 
   workouts.forEach((workout) => {
-    // Try to get week number from workout data or parse from title
-    let weekNumber = workout.week_number;
-
+    const rawWeek = Number(workout.week_number);
+    let weekNumber = Number.isFinite(rawWeek) && rawWeek > 0 ? rawWeek : 0;
     if (!weekNumber) {
       const match = workout.title?.match(/Week\s+(\d+)/i);
-      weekNumber = match ? parseInt(match[1]) : 1;
+      weekNumber = match ? parseInt(match[1], 10) : 1;
     }
 
     if (!grouped[weekNumber]) {
@@ -645,18 +651,8 @@ function groupWorkoutsByWeek(workouts) {
     grouped[weekNumber].workouts.push(workout);
   });
 
-  // Determine week status based on workout statuses
   Object.values(grouped).forEach((week) => {
-    const statuses = week.workouts.map((w) => w.generation_status || 'detailed');
-    if (statuses.every((s) => s === 'detailed')) {
-      week.status = 'detailed';
-    } else if (statuses.some((s) => s === 'enhancing')) {
-      week.status = 'enhancing';
-    } else if (statuses.some((s) => s === 'skeleton')) {
-      week.status = 'skeleton';
-    } else {
-      week.status = 'detailed'; // Default for legacy workouts
-    }
+    week.status = weekDisplayStatus(week.workouts);
   });
 
   return Object.values(grouped).sort((a, b) => a.weekNumber - b.weekNumber);
