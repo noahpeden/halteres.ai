@@ -144,6 +144,35 @@ export function isFatalSseParseError(error) {
   return !(error instanceof SyntaxError);
 }
 
+export function workoutsForWeek(workouts, weekNumber) {
+  const week = Number(weekNumber);
+  if (!Array.isArray(workouts) || !Number.isFinite(week) || week <= 0) return [];
+  return workouts.filter((workout) => {
+    const raw = Number(workout?.week_number);
+    if (Number.isFinite(raw) && raw > 0) return raw === week;
+    const match = String(workout?.title || '').match(/Week\s+(\d+)/i);
+    const fromTitle = match ? parseInt(match[1], 10) : 1;
+    return fromTitle === week;
+  });
+}
+
+function inFlightHasWeek(inFlightWeeks, week) {
+  if (!inFlightWeeks || typeof inFlightWeeks.has !== 'function') return false;
+  return inFlightWeeks.has(week) || inFlightWeeks.has(String(week));
+}
+
+export function shouldStartWeekEnhance({ programId, inFlightWeeks, weekNumber } = {}) {
+  const week = Number(weekNumber);
+  if (!programId) return { start: false, reason: 'missing_program', week: null };
+  if (!Number.isFinite(week) || week <= 0) {
+    return { start: false, reason: 'invalid_week', week: null };
+  }
+  if (inFlightHasWeek(inFlightWeeks, week)) {
+    return { start: false, reason: 'already_in_flight', week };
+  }
+  return { start: true, reason: null, week };
+}
+
 export function weekDisplayStatus(workouts = []) {
   if (!Array.isArray(workouts) || workouts.length === 0) return 'skeleton';
   if (workouts.some((workout) => workout.generation_status === 'enhancing')) return 'enhancing';
