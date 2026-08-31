@@ -1,34 +1,37 @@
 'use client';
 
-import { BarChart2, Calendar, ChevronRight, Clock, Dumbbell, Flame, Trophy } from 'lucide-react';
+import { ChevronRight, Flame, Trophy } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import AthleteOnboardingModal from '@/components/athlete/AthleteOnboardingModal';
 import CircularProgress from '@/components/athlete/CircularProgress';
 import EmptyState from '@/components/athlete/EmptyState';
-import StatCard from '@/components/athlete/StatCard';
 import StatusBadge from '@/components/athlete/StatusBadge';
 import WeeklyTrendsCard from '@/components/athlete/WeeklyTrendsCard';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function AthleteDashboard() {
-  const { user, profile, currentGym, isAthlete, gymMemberships, refetchProfile } = useAuth();
+  const { user, profile, currentGym, isAthlete, refetchProfile } = useAuth();
   const router = useRouter();
   const [todaysWorkouts, setTodaysWorkouts] = useState([]);
   const [recentResults, setRecentResults] = useState([]);
   const [activeProgram, setActiveProgram] = useState(null);
-  const [programCount, setProgramCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [hasAnyPrograms, setHasAnyPrograms] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState('');
   const [stats, setStats] = useState({
     workoutsThisWeek: 0,
     prsThisMonth: 0,
     currentStreak: 0,
   });
-  // Self-coached flow: no gym code required
+
   const createSelfCoachedProgram = async () => {
+    if (creating) return;
+    setCreating(true);
+    setCreateError('');
     try {
       const resp = await fetch('/api/CreateProgram', {
         method: 'POST',
@@ -52,7 +55,9 @@ export default function AthleteDashboard() {
       }
     } catch (e) {
       console.error('Create program failed:', e);
-      alert('Unable to create program. Please try again.');
+      setCreateError('Could not open Writer. Try again.');
+    } finally {
+      setCreating(false);
     }
   };
 
@@ -78,8 +83,6 @@ export default function AthleteDashboard() {
   };
 
   const fetchDashboardData = async () => {
-    // Support both gym-based and self-coached flows
-
     try {
       const today = new Date().toISOString().split('T')[0];
 
@@ -89,13 +92,11 @@ export default function AthleteDashboard() {
       const programsUrl = currentGym?.id
         ? `/api/athlete/programs?gymId=${currentGym.id}`
         : `/api/athlete/programs`;
-      // Source of truth for "any programs" should NOT require a gymId
       const globalProgramsUrl = `/api/athlete/programs`;
 
       const [workoutsRes, programsRes, globalProgramsRes] = await Promise.all([
         fetch(todayUrl),
         fetch(programsUrl),
-        // This intentionally ignores gymId to determine if the athlete has any programs at all
         fetch(globalProgramsUrl),
       ]);
 
@@ -111,7 +112,6 @@ export default function AthleteDashboard() {
 
       if (programsData.success) {
         setActiveProgram(programsData.activeProgram);
-        setProgramCount(programsData.programs?.length || 0);
       }
       if (globalProgramsData.success) {
         setHasAnyPrograms((globalProgramsData.programs?.length || 0) > 0);
@@ -125,37 +125,60 @@ export default function AthleteDashboard() {
 
   const getGreeting = () => {
     const hour = new Date().getHours();
-    if (hour < 12) return 'Good morning';
-    if (hour < 17) return 'Good afternoon';
-    return 'Good evening';
+    if (hour < 12) return 'Morning session';
+    if (hour < 17) return 'Afternoon session';
+    return 'Evening session';
   };
 
   const firstName = (profile?.display_name || profile?.full_name || 'Athlete').split(' ')[0];
-
-  // Self-coached: show start prompt ONLY if no programs and no workouts
-  if (!loading && !hasAnyPrograms && todaysWorkouts.length === 0) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <div className="athlete-card-static max-w-md w-full p-8 text-center">
-          <div className="w-16 h-16 rounded-full bg-[var(--athlete-bg-secondary)] flex items-center justify-center mx-auto mb-6">
-            <Dumbbell className="w-8 h-8 text-[var(--athlete-accent-primary)]" />
-          </div>
-          <h2 className="athlete-heading-lg mb-2">Welcome to Halteres</h2>
-          <p className="athlete-body mb-6">
-            No gym required. Create your first program and start training.
-          </p>
-          <button className="athlete-btn-primary w-full" onClick={createSelfCoachedProgram}>
-            Create Program
-          </button>
-        </div>
-      </div>
-    );
-  }
+  const todayStamp = new Date().toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'short',
+    day: 'numeric',
+  });
 
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="w-10 h-10 border-2 border-[var(--athlete-accent-primary)] border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!hasAnyPrograms && todaysWorkouts.length === 0) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="max-w-md w-full">
+          <p className="athlete-label mb-3">The book is blank</p>
+          <h2
+            className="mb-3 text-[var(--ink)]"
+            style={{
+              fontFamily: 'var(--halt-display)',
+              fontSize: 'clamp(2rem, 7vw, 2.8rem)',
+              lineHeight: 1,
+              fontWeight: 600,
+            }}
+          >
+            Write the first block.
+          </h2>
+          <p className="athlete-body mb-7">
+            No gym code. No coach. Open Writer, say what you want from the next few weeks, and
+            generate. You can edit every day.
+          </p>
+          {createError && (
+            <p className="mb-3 text-sm text-[var(--blood)]" role="alert">
+              {createError}
+            </p>
+          )}
+          <button
+            type="button"
+            className="athlete-btn-primary w-full"
+            onClick={createSelfCoachedProgram}
+            disabled={creating}
+          >
+            {creating ? 'Opening Writer…' : 'Create program'}
+          </button>
+        </div>
       </div>
     );
   }
@@ -170,75 +193,92 @@ export default function AthleteDashboard() {
         />
       )}
 
-      {/* Hero Header */}
-      <div className="relative overflow-hidden bg-[var(--athlete-bg-card)] border-b border-[var(--athlete-border)]">
-        <div className="px-4 pt-8 pb-6">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="athlete-label mb-1">{currentGym?.name}</p>
-              <h1 className="athlete-heading-xl mb-1">
-                {getGreeting()}, {firstName}
-              </h1>
-              <p className="athlete-body">
-                {todaysWorkouts.length > 0
-                  ? `You have ${todaysWorkouts.length} workout${todaysWorkouts.length > 1 ? 's' : ''} today`
-                  : 'No workouts scheduled for today'}
-              </p>
-            </div>
-            <button
-              className="athlete-btn-primary whitespace-nowrap px-4 py-2 mt-1"
-              onClick={createSelfCoachedProgram}
-            >
-              Create program
-            </button>
+      <header className="px-4 pt-7 pb-5 max-w-2xl mx-auto">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="athlete-label mb-1">{todayStamp}</p>
+            <h1 className="athlete-heading-xl mb-1">
+              {getGreeting()}, {firstName}
+            </h1>
+            <p className="athlete-body">
+              {todaysWorkouts.length > 0
+                ? `${todaysWorkouts.length} session${todaysWorkouts.length > 1 ? 's' : ''} on the slate.`
+                : 'Nothing scheduled. Rest still counts.'}
+            </p>
           </div>
+          <button
+            type="button"
+            className="athlete-btn-primary whitespace-nowrap px-4 py-2 mt-1"
+            onClick={createSelfCoachedProgram}
+            disabled={creating}
+          >
+            {creating ? 'Opening…' : 'Create program'}
+          </button>
         </div>
-      </div>
+        {createError && (
+          <p className="mt-3 text-sm text-[var(--blood)]" role="alert">
+            {createError}
+          </p>
+        )}
+      </header>
 
-      <div className="px-4 space-y-6 pb-8 pt-6">
-        {/* Today's Workout Hero Card */}
+      <div className="px-4 max-w-2xl mx-auto space-y-6 pb-8">
         {todaysWorkouts.length > 0 && (
-          <Link href={`/athlete/workout/${todaysWorkouts[0].id}`}>
-            <div className="athlete-card p-5 border-l-4 border-l-[var(--athlete-accent-primary)] animate-athlete-slide-up">
+          <Link href={`/athlete/workout/${todaysWorkouts[0].id}`} className="block">
+            <article className="athlete-card p-6 athlete-stripe-today animate-athlete-slide-up">
               <div className="flex items-start justify-between mb-3">
-                <StatusBadge variant="live" label="Live Now" />
+                <StatusBadge variant="live" label="Today" />
                 <ChevronRight className="w-5 h-5 text-[var(--athlete-text-muted)]" />
               </div>
-              <h2 className="athlete-heading-lg mb-2">{todaysWorkouts[0].title}</h2>
-              <p className="athlete-body line-clamp-2 mb-4">
-                {todaysWorkouts[0].body?.substring(0, 120)}...
+              <h2
+                className="mb-2 text-[var(--ink)]"
+                style={{
+                  fontFamily: 'var(--halt-display)',
+                  fontSize: 'clamp(1.6rem, 5vw, 2.1rem)',
+                  lineHeight: 1.1,
+                  fontWeight: 600,
+                }}
+              >
+                {todaysWorkouts[0].title}
+              </h2>
+              <p className="athlete-body line-clamp-3 mb-5">
+                {todaysWorkouts[0].body?.substring(0, 160)}
+                {todaysWorkouts[0].body?.length > 160 ? '…' : ''}
               </p>
               <div className="flex items-center gap-4">
                 {todaysWorkouts[0].hasLogged ? (
                   <StatusBadge variant="completed" />
                 ) : (
-                  <button className="athlete-btn-primary text-sm py-2 px-4">Log Result</button>
-                )}
-                {activeProgram && (
-                  <span className="athlete-body text-[var(--athlete-text-muted)]">
-                    from {activeProgram.name}
+                  <span className="athlete-btn-primary text-sm py-2 px-4 pointer-events-none">
+                    Log the set
                   </span>
                 )}
+                {activeProgram && <span className="athlete-label">{activeProgram.name}</span>}
               </div>
-            </div>
+            </article>
           </Link>
         )}
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-3 gap-3">
-          <StatCard label="This Week" value={stats.workoutsThisWeek} icon={Calendar} />
-          <StatCard
-            label="PRs"
-            value={stats.prsThisMonth}
-            icon={Trophy}
-            highlight={stats.prsThisMonth > 0}
-          />
-          <StatCard label="Streak" value={stats.currentStreak} icon={Flame} suffix="d" />
+        <div className="grid grid-cols-3 gap-px bg-[var(--paper-rule)] border border-[var(--paper-rule)]">
+          {[
+            { label: 'This week', value: stats.workoutsThisWeek },
+            { label: 'PRs', value: stats.prsThisMonth, icon: Trophy },
+            { label: 'Streak', value: `${stats.currentStreak}d`, icon: Flame },
+          ].map((stat) => (
+            <div key={stat.label} className="bg-[var(--chalk)] p-4 text-center">
+              <p className="athlete-label mb-1">{stat.label}</p>
+              <p
+                className="text-[var(--ink)]"
+                style={{ fontFamily: 'var(--halt-mono)', fontSize: '1.45rem', fontWeight: 600 }}
+              >
+                {stat.value}
+              </p>
+            </div>
+          ))}
         </div>
 
-        {/* Active Program Banner */}
         {activeProgram && (
-          <Link href={`/athlete/programs/${activeProgram.id}`}>
+          <Link href={`/athlete/programs/${activeProgram.id}`} className="block">
             <div className="athlete-card p-4 flex items-center gap-4 animate-athlete-stagger stagger-1">
               <CircularProgress
                 value={activeProgram.completedWorkouts || 0}
@@ -248,11 +288,11 @@ export default function AthleteDashboard() {
                 showLabel={false}
               />
               <div className="flex-1 min-w-0">
-                <p className="athlete-label mb-0.5">Active Program</p>
+                <p className="athlete-label mb-0.5">On the board</p>
                 <h3 className="athlete-heading-md truncate">{activeProgram.name}</h3>
-                <p className="athlete-body text-[var(--athlete-text-muted)]">
+                <p className="athlete-body">
                   {activeProgram.duration_weeks} weeks
-                  {activeProgram.focus_area && ` • ${activeProgram.focus_area}`}
+                  {activeProgram.focus_area && ` · ${activeProgram.focus_area}`}
                 </p>
               </div>
               <ChevronRight className="w-5 h-5 text-[var(--athlete-text-muted)] flex-shrink-0" />
@@ -260,26 +300,19 @@ export default function AthleteDashboard() {
           </Link>
         )}
 
-        {/* Weekly AI Trends */}
         <WeeklyTrendsCard />
 
-        {/* More Today's Workouts */}
         {todaysWorkouts.length > 1 && (
           <div className="space-y-3">
-            <h2 className="athlete-heading-md">More Today</h2>
+            <h2 className="athlete-heading-md">Also today</h2>
             {todaysWorkouts.slice(1).map((workout, index) => (
-              <Link key={workout.id} href={`/athlete/workout/${workout.id}`}>
+              <Link key={workout.id} href={`/athlete/workout/${workout.id}`} className="block">
                 <div
                   className={`athlete-card athlete-stripe-today p-4 flex items-center gap-4 animate-athlete-stagger stagger-${index + 2}`}
                 >
-                  <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-[var(--athlete-bg-secondary)] flex items-center justify-center">
-                    <Dumbbell className="w-5 h-5 text-[var(--athlete-text-muted)]" />
-                  </div>
                   <div className="flex-1 min-w-0">
                     <h3 className="athlete-heading-md truncate">{workout.title}</h3>
-                    <p className="athlete-body text-[var(--athlete-text-muted)]">
-                      {workout.workout_type || 'Workout'}
-                    </p>
+                    <p className="athlete-label mt-1">{workout.workout_type || 'Session'}</p>
                   </div>
                   {workout.hasLogged ? (
                     <StatusBadge variant="completed" showIcon={false} />
@@ -292,27 +325,22 @@ export default function AthleteDashboard() {
           </div>
         )}
 
-        {/* No workouts today */}
         {todaysWorkouts.length === 0 && (
           <EmptyState
-            icon={Calendar}
-            title="Rest Day"
-            message="No workouts scheduled for today. Check back tomorrow or view your program."
+            icon={null}
+            title="The yard is quiet"
+            message="Nothing on today's slate. Rest, or open a program and write the next session."
             action={() => router.push('/athlete/programs')}
-            actionLabel="View Programs"
+            actionLabel="View programs"
           />
         )}
 
-        {/* Recent Activity */}
         {recentResults.length > 0 && (
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <h2 className="athlete-heading-md">Recent Activity</h2>
-              <Link
-                href="/athlete/history"
-                className="athlete-body text-[var(--athlete-accent-primary)] font-medium"
-              >
-                View All
+              <h2 className="athlete-heading-md">Recent marks</h2>
+              <Link href="/athlete/history" className="athlete-label !text-[var(--clay-deep)]">
+                All history
               </Link>
             </div>
             <div className="athlete-card-static divide-y divide-[var(--athlete-border)]">
@@ -321,24 +349,19 @@ export default function AthleteDashboard() {
                   key={result.id}
                   className={`p-4 flex items-center justify-between animate-athlete-stagger stagger-${index + 1}`}
                 >
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={`w-2 h-2 rounded-full ${result.is_pr ? 'bg-[var(--athlete-accent-pr)]' : 'bg-[var(--athlete-accent-complete)]'}`}
-                    />
-                    <div>
-                      <p className="athlete-body text-[var(--athlete-text-primary)] font-medium">
-                        {result.workout?.title || 'Workout'}
-                      </p>
-                      <p className="text-xs text-[var(--athlete-text-muted)]">
-                        {new Date(result.created_at).toLocaleDateString('en-US', {
-                          month: 'short',
-                          day: 'numeric',
-                        })}
-                      </p>
-                    </div>
+                  <div>
+                    <p className="athlete-heading-md">{result.workout?.title || 'Workout'}</p>
+                    <p className="athlete-label mt-1">
+                      {new Date(result.created_at).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                      })}
+                    </p>
                   </div>
                   <div className="text-right flex items-center gap-2">
-                    <span className="athlete-heading-md">{result.displayValue}</span>
+                    <span style={{ fontFamily: 'var(--halt-mono)', fontWeight: 600 }}>
+                      {result.displayValue}
+                    </span>
                     {result.is_pr && <StatusBadge variant="pr" showIcon={false} />}
                   </div>
                 </div>
@@ -346,46 +369,6 @@ export default function AthleteDashboard() {
             </div>
           </div>
         )}
-
-        {/* Quick Actions */}
-        <div className="grid grid-cols-2 gap-3">
-          <Link href="/athlete/programs">
-            <div className="athlete-card p-4 flex flex-col items-center gap-2 text-center">
-              <div className="w-10 h-10 rounded-lg bg-[var(--athlete-accent-primary)]/10 flex items-center justify-center">
-                <Dumbbell className="w-5 h-5 text-[var(--athlete-accent-primary)]" />
-              </div>
-              <span className="athlete-body text-[var(--athlete-text-primary)] font-medium">
-                Programs
-              </span>
-              {programCount > 0 && (
-                <span className="text-xs text-[var(--athlete-accent-primary)]">
-                  {programCount} active
-                </span>
-              )}
-            </div>
-          </Link>
-
-          <Link href="/athlete/profile">
-            <div className="athlete-card p-4 flex flex-col items-center gap-2 text-center">
-              <div className="w-10 h-10 rounded-lg bg-[var(--athlete-accent-pr)]/10 flex items-center justify-center">
-                <BarChart2 className="w-5 h-5 text-[var(--athlete-accent-pr)]" />
-              </div>
-              <span className="athlete-body text-[var(--athlete-text-primary)] font-medium">
-                My PRs
-              </span>
-            </div>
-          </Link>
-          <Link href="/athlete/history">
-            <div className="athlete-card p-4 flex flex-col items-center gap-2 text-center">
-              <div className="w-10 h-10 rounded-lg bg-[var(--athlete-bg-secondary)] flex items-center justify-center">
-                <Clock className="w-5 h-5 text-[var(--athlete-text-muted)]" />
-              </div>
-              <span className="athlete-body text-[var(--athlete-text-primary)] font-medium">
-                History
-              </span>
-            </div>
-          </Link>
-        </div>
       </div>
     </div>
   );

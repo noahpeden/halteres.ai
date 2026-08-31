@@ -144,16 +144,20 @@ export default function SkeletonPreview({
   return (
     <div className="space-y-6">
       {/* Success Header */}
-      <div className="text-center py-8 bg-gradient-to-r from-primary/10 to-secondary/10 rounded-2xl">
-        <div className="text-5xl mb-4">{isFullyEnhanced ? '✅' : '🎉'}</div>
-        <h2 className="text-2xl font-bold text-base-content">
-          {isFullyEnhanced ? 'Program Ready!' : 'Program Structure Ready!'}
+      <div className="py-6 border-b border-[var(--paper-rule)]">
+        <p className="athlete-label mb-2">
+          {isFullyEnhanced ? 'Ready to train' : 'Skeleton in ink'}
+        </p>
+        <h2 className="athlete-heading-xl">
+          {isFullyEnhanced
+            ? 'The block is written.'
+            : 'Structure first. Details when you want them.'}
         </h2>
-        <p className="text-base-content/60 mt-2">
+        <p className="athlete-body mt-2">
           {workouts.length} workouts across {requestedWeeks} weeks.{' '}
           {isFullyEnhanced
-            ? 'Click on any workout to view details or make changes.'
-            : 'Review and add details below.'}
+            ? 'Open any day to edit, enhance, or log.'
+            : 'Enhance a week when you want full notes — or leave it lean.'}
         </p>
       </div>
 

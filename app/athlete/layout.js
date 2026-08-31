@@ -1,6 +1,6 @@
 'use client';
 
-import { Calendar, Dumbbell, Home, User } from 'lucide-react';
+import { BookOpen, CalendarDays, Sun, User } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
@@ -10,9 +10,9 @@ export default function AthleteLayout({ children }) {
   const { athleteNeedsSetup } = useAuth();
 
   const navItems = [
-    { href: '/athlete', label: 'Today', icon: Home },
-    { href: '/athlete/programs', label: 'Programs', icon: Dumbbell },
-    { href: '/athlete/history', label: 'History', icon: Calendar },
+    { href: '/athlete', label: 'Today', icon: Sun },
+    { href: '/athlete/programs', label: 'Programs', icon: BookOpen },
+    { href: '/athlete/history', label: 'History', icon: CalendarDays },
     { href: '/athlete/profile', label: 'Profile', icon: User },
   ];
 
@@ -23,7 +23,7 @@ export default function AthleteLayout({ children }) {
       {children}
 
       {showNavigation && (
-        <nav className="athlete-bottom-nav">
+        <nav className="athlete-bottom-nav" aria-label="Athlete">
           <div className="flex justify-around items-center max-w-lg mx-auto">
             {navItems.map((item) => {
               const Icon = item.icon;
@@ -36,7 +36,7 @@ export default function AthleteLayout({ children }) {
                   href={item.href}
                   className={`athlete-nav-item relative ${isActive ? 'active' : ''}`}
                 >
-                  <Icon className="w-5 h-5" />
+                  <Icon className="w-5 h-5" strokeWidth={1.75} />
                   <span className="text-[10px] font-medium">{item.label}</span>
                 </Link>
               );

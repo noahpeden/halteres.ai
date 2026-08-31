@@ -982,8 +982,8 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
     return (
       <div className="flex justify-center items-center min-h-[400px]">
         <div className="flex flex-col items-center gap-3">
-          <span className="loading loading-spinner loading-lg text-blue-600"></span>
-          <p className="text-slate-500 text-sm">Loading program...</p>
+          <span className="loading loading-spinner loading-lg text-primary"></span>
+          <p className="athlete-body text-sm">Opening Writer…</p>
         </div>
       </div>
     );
@@ -1017,16 +1017,13 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
       {toast.show && <Toast message={toast.message} type={toast.type} onClose={() => {}} />}
 
       {/* Mobile Config Toggle Button */}
-      <div className="lg:hidden sticky top-0 z-20 bg-white border-b border-slate-200 p-3">
+      <div className="lg:hidden sticky top-0 z-20 bg-[var(--chalk)] border-b border-[var(--paper-rule)] p-3">
         <button
           onClick={() => setShowMobileConfig(!showMobileConfig)}
-          className="w-full flex items-center justify-between px-4 py-3 bg-slate-50 hover:bg-slate-100 rounded-xl transition-colors"
+          className="w-full flex items-center justify-between px-4 py-3 bg-[var(--paper-deep)] rounded-sm"
         >
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 bg-blue-100 rounded-lg flex items-center justify-center">
-              <Sparkles className="w-3.5 h-3.5 text-blue-600" />
-            </div>
-            <span className="text-sm font-semibold text-slate-700">Program Config</span>
+            <span className="athlete-label">Program notes</span>
           </div>
           <ChevronDown
             className={`w-5 h-5 text-slate-400 transition-transform ${showMobileConfig ? 'rotate-180' : ''}`}
@@ -1037,22 +1034,19 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
       {/* LEFT: Compact Config Panel */}
       <div
         className={`
-        w-full lg:w-72 xl:w-80 flex-shrink-0 border-b lg:border-b-0 lg:border-r border-slate-200 bg-slate-50/50
+        w-full lg:w-72 xl:w-80 flex-shrink-0 border-b lg:border-b-0 lg:border-r border-[var(--paper-rule)] bg-[var(--paper)]
         flex flex-col
         ${showMobileConfig ? 'flex' : 'hidden lg:flex'}
       `}
       >
         {/* Config Header - Hidden on mobile since we have the toggle */}
-        <div className="hidden lg:flex items-center justify-between p-4 border-b border-slate-200 sticky top-0 bg-slate-50/95 backdrop-blur-sm z-10">
+        <div className="hidden lg:flex items-center justify-between p-4 border-b border-[var(--paper-rule)] sticky top-0 bg-[var(--paper)] z-10">
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 bg-blue-100 rounded-lg flex items-center justify-center">
-              <Sparkles className="w-3.5 h-3.5 text-blue-600" />
-            </div>
-            <span className="text-sm font-semibold text-slate-700">Program Config</span>
+            <span className="athlete-label">Program notes</span>
           </div>
           {programId && (
             <button
-              className="px-3 py-1.5 text-xs font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
+              className="px-3 py-1.5 text-xs font-medium text-[var(--clay-deep)] hover:underline"
               onClick={handleSaveProgram}
               disabled={loading}
             >
@@ -1127,10 +1121,10 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
                     return (
                       <button
                         key={day}
-                        className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                        className={`px-2.5 py-1.5 rounded-sm text-xs font-medium transition-all ${
                           isSelected
-                            ? 'bg-blue-600 text-white shadow-sm'
-                            : 'bg-white border border-slate-200 text-slate-600 hover:border-blue-300 hover:text-blue-600'
+                            ? 'bg-[var(--clay-deep)] text-[var(--chalk)]'
+                            : 'bg-[var(--chalk)] border border-[var(--paper-rule)] text-[var(--ink-soft)] hover:border-[var(--clay-deep)]'
                         }`}
                         onClick={() => handleDayOfWeekChange(fullDay)}
                       >
@@ -1142,18 +1136,17 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-medium text-slate-500 mb-1.5 block">Weeks</label>
-                  <select
-                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
-                    value={formData?.numberOfWeeks || '4'}
+                  <label className="text-xs font-medium text-slate-500 mb-1.5 block">
+                    Weeks (1–52)
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={52}
+                    className="w-full px-3 py-2 bg-[var(--chalk)] border border-[var(--paper-rule)] rounded-sm text-sm focus:outline-none focus:ring-2 focus:ring-[var(--clay-deep)]/20 focus:border-[var(--clay-deep)]"
+                    value={formData?.numberOfWeeks || ''}
                     onChange={(e) => handleFieldChange('numberOfWeeks', e.target.value)}
-                  >
-                    {[1, 2, 3, 4, 5, 6, 7, 8, 10, 12].map((w) => (
-                      <option key={w} value={w}>
-                        {w} week{w > 1 ? 's' : ''}
-                      </option>
-                    ))}
-                  </select>
+                  />
                 </div>
                 <div>
                   <label className="text-xs font-medium text-slate-500 mb-1.5 block">
@@ -1198,7 +1191,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
           {/* Gym & Equipment Section */}
           <details className="group">
             <summary className="flex items-center justify-between cursor-pointer py-2.5 px-3 hover:bg-slate-100 rounded-xl text-sm font-medium text-slate-700 transition-colors">
-              <span>Gym & Equipment</span>
+              <span>Your equipment</span>
               <ChevronDown className="w-4 h-4 text-slate-400 transition-transform group-open:rotate-180" />
             </summary>
             <div className="px-3 pb-3 pt-1 space-y-3">
@@ -1286,10 +1279,10 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
                   ].map((type) => (
                     <button
                       key={type.id}
-                      className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                      className={`px-2.5 py-1.5 rounded-sm text-xs font-medium transition-all ${
                         formData?.workoutFormats?.includes(type.id)
-                          ? 'bg-purple-600 text-white shadow-sm'
-                          : 'bg-white border border-slate-200 text-slate-600 hover:border-purple-300 hover:text-purple-600'
+                          ? 'bg-[var(--sea)] text-[var(--chalk)]'
+                          : 'bg-[var(--chalk)] border border-[var(--paper-rule)] text-[var(--ink-soft)] hover:border-[var(--sea)]'
                       }`}
                       onClick={() => handleWorkoutFormatChange(type.id)}
                     >
@@ -1343,34 +1336,33 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
         </div>
 
         {/* Generate Button - Fixed at bottom */}
-        <div className="p-4 border-t border-slate-200 bg-slate-50/95 flex-shrink-0">
-          {/* Mobile Save Button */}
+        <div className="p-4 border-t border-[var(--paper-rule)] bg-[var(--paper)] flex-shrink-0">
           {programId && (
             <button
-              className="lg:hidden w-full mb-2 px-4 py-2 bg-white border border-slate-200 hover:border-blue-300 hover:bg-blue-50 text-slate-700 hover:text-blue-700 rounded-xl text-sm font-medium transition-all"
+              className="lg:hidden w-full mb-2 athlete-btn-secondary py-2 text-sm"
               onClick={handleSaveProgram}
               disabled={loading}
             >
-              {loading ? 'Saving...' : 'Save Config'}
+              {loading ? 'Saving…' : 'Save notes'}
             </button>
           )}
           <button
-            className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white py-2.5 rounded-xl font-medium shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 transition-all duration-200 flex items-center justify-center gap-2"
+            className="athlete-btn-primary w-full flex items-center justify-center gap-2"
             onClick={() => {
               handleGenerateClick();
-              setShowMobileConfig(false); // Collapse config on mobile after clicking generate
+              setShowMobileConfig(false);
             }}
             disabled={isGenerating}
           >
             {isGenerating ? (
               <>
                 <span className="loading loading-spinner loading-sm"></span>
-                <span>Generating...</span>
+                <span>Writing…</span>
               </>
             ) : (
               <>
                 <Sparkles className="w-4 h-4" />
-                <span>{displayWorkouts.length > 0 ? 'Re-Generate' : 'Generate Program'}</span>
+                <span>{displayWorkouts.length > 0 ? 'Rewrite program' : 'Generate program'}</span>
               </>
             )}
           </button>
@@ -1382,17 +1374,15 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
         {/* Workouts Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 lg:mb-6 pb-4 border-b border-slate-200 gap-3">
           <div>
-            <h2 className="text-base lg:text-lg font-semibold text-slate-800">
-              Generated Workouts
-            </h2>
+            <h2 className="athlete-heading-lg">The block</h2>
             <div className="flex flex-wrap items-center gap-2 mt-1">
-              <span className="inline-flex items-center px-2 py-0.5 lg:px-2.5 lg:py-1 bg-blue-50 text-blue-700 rounded-lg text-xs font-medium">
+              <span className="athlete-badge athlete-badge-today">
                 {displayWorkouts.length} workouts
               </span>
-              <span className="inline-flex items-center px-2 py-0.5 lg:px-2.5 lg:py-1 bg-slate-100 text-slate-600 rounded-lg text-xs font-medium">
+              <span className="athlete-badge athlete-badge-upcoming">
                 {formData?.numberOfWeeks || 0} weeks
               </span>
-              <span className="inline-flex items-center px-2 py-0.5 lg:px-2.5 lg:py-1 bg-slate-100 text-slate-600 rounded-lg text-xs font-medium">
+              <span className="athlete-badge athlete-badge-upcoming">
                 {formData?.daysOfWeek?.length || 0} days/week
               </span>
             </div>
@@ -1455,14 +1445,12 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
 
         {/* Empty State */}
         {displayWorkouts.length === 0 && !isGenerating && (
-          <div className="flex flex-col items-center justify-center h-96 text-center bg-slate-50/50 rounded-2xl border-2 border-dashed border-slate-200">
-            <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mb-4">
-              <Sparkles className="w-8 h-8 text-slate-400" />
-            </div>
-            <h3 className="text-lg font-semibold text-slate-700 mb-2">No workouts yet</h3>
-            <p className="text-sm text-slate-500 max-w-sm px-4">
-              Configure your program settings in the left panel, then click "Generate Program" to
-              create your personalized workout plan.
+          <div className="flex flex-col items-center justify-center min-h-80 text-center border border-dashed border-[var(--paper-rule)] bg-[var(--paper)] px-6 py-12">
+            <p className="athlete-label mb-3">Blank page</p>
+            <h3 className="athlete-heading-xl mb-3">The ledger is waiting.</h3>
+            <p className="athlete-body max-w-sm">
+              Write the notes on the left — equipment, days, how long this block should last — then
+              generate. Every day stays editable.
             </p>
           </div>
         )}

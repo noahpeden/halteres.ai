@@ -17,13 +17,18 @@ export default function PrivacyPolicyPage() {
     <div className="min-h-screen bg-white">
       <main>
         {/* Header */}
-        <div className="bg-blue-600 py-24 sm:py-32">
+        <div className="bg-[var(--sea)] py-20 sm:py-24">
           <div className="mx-auto max-w-7xl px-6 lg:px-8">
             <div className="mx-auto max-w-2xl text-center">
-              <h1 className="text-4xl font-bold tracking-tight text-white sm:text-6xl">
+              <h1
+                className="text-4xl tracking-tight text-[var(--chalk)] sm:text-6xl"
+                style={{ fontFamily: 'var(--halt-display)', fontWeight: 600 }}
+              >
                 Privacy Policy
               </h1>
-              <p className="mt-6 text-lg leading-8 text-blue-100">Last updated: {lastUpdated}</p>
+              <p className="mt-6 text-lg leading-8 text-[color-mix(in_srgb,var(--chalk)_75%,transparent)]">
+                Last updated: {lastUpdated}
+              </p>
             </div>
           </div>
         </div>

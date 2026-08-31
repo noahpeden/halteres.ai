@@ -66,9 +66,9 @@ export default function AIFeedbackCard({ workoutResultId, userId, autoGenerate =
             <Bot className="w-6 h-6 text-[var(--athlete-accent-primary)]" />
           </div>
           <div className="flex-1">
-            <h3 className="athlete-heading-md text-white mb-1">AI Coach Feedback</h3>
+            <h3 className="athlete-heading-md mb-1">Session notes</h3>
             <p className="athlete-body text-[var(--athlete-text-secondary)] mb-4">
-              Get personalized insights on your workout performance
+              A short read on how the work went — yours to keep or ignore.
             </p>
             <button
               onClick={generateFeedback}
@@ -128,7 +128,7 @@ export default function AIFeedbackCard({ workoutResultId, userId, autoGenerate =
           <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[var(--athlete-accent-primary)]/20 to-[var(--athlete-accent-secondary)]/20 flex items-center justify-center">
             <Bot className="w-5 h-5 text-[var(--athlete-accent-primary)]" />
           </div>
-          <h3 className="athlete-heading-md text-white">AI Coach Feedback</h3>
+          <h3 className="athlete-heading-md">Session notes</h3>
         </div>
         <ChevronDown
           className={`w-5 h-5 text-[var(--athlete-text-muted)] transition-transform ${expanded ? 'rotate-180' : ''}`}
@@ -195,8 +195,7 @@ export default function AIFeedbackCard({ workoutResultId, userId, autoGenerate =
           {feedback.recovery_suggestions && feedback.recovery_suggestions.length > 0 && (
             <div>
               <h4 className="flex items-center gap-2 mb-2">
-                <span className="text-purple-400">🧘</span>
-                <span className="athlete-body text-purple-400 font-medium">Recovery Tips</span>
+                <span className="athlete-body text-[var(--sea)] font-medium">Recovery</span>
               </h4>
               <ul className="space-y-1.5">
                 {feedback.recovery_suggestions.map((suggestion, i) => (
@@ -204,7 +203,7 @@ export default function AIFeedbackCard({ workoutResultId, userId, autoGenerate =
                     key={i}
                     className="flex items-start gap-2 text-sm text-[var(--athlete-text-secondary)]"
                   >
-                    <span className="text-purple-400 mt-1">•</span>
+                    <span className="text-[var(--sea)] mt-1">•</span>
                     {suggestion}
                   </li>
                 ))}

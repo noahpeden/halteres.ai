@@ -1,60 +1,58 @@
 import './globals.css';
-import { Inter, Nunito_Sans, Poppins } from 'next/font/google';
+import { Figtree, Fraunces, IBM_Plex_Mono } from 'next/font/google';
 import { AuthProvider } from '@/contexts/AuthContext';
-import Navbar from './components/Navbar';
+import AppChrome from './components/AppChrome';
 import TrialStatusBanner from './components/TrialStatusBanner';
 import { StripeProvider } from './contexts/StripeContext';
 import { metadata } from './simple-metadata';
 
-export const nunitoSans = Nunito_Sans({
-  weight: ['300', '400', '600', '700'],
+const fraunces = Fraunces({
   subsets: ['latin'],
   display: 'swap',
-  variable: '--font-nunito-sans',
+  variable: '--font-display',
+  weight: ['400', '500', '600', '700'],
 });
 
-export const poppins = Poppins({
-  weight: ['300', '400', '600', '700'],
+const figtree = Figtree({
   subsets: ['latin'],
   display: 'swap',
-  variable: '--font-poppins',
+  variable: '--font-ui',
+  weight: ['400', '500', '600', '700'],
 });
 
-const inter = Inter({ subsets: ['latin'] });
+const plexMono = IBM_Plex_Mono({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-mono',
+  weight: ['400', '500', '600'],
+});
 
-// Export the static metadata
 export { metadata };
 
 export default async function RootLayout({ children }) {
-  // Import createClient inside the function if not imported at module scope
-  // This ensures it uses the correct context when called.
   const { createClient } = await import('@/utils/supabase/server');
-  const supabase = await createClient(); // Await if createClient is async
-
-  // Fetch session data inside the component
+  const supabase = await createClient();
   const {
     data: { session },
   } = await supabase.auth.getSession();
 
   return (
     <html
-      className={`${nunitoSans.variable} ${poppins.variable} ${inter.className}`}
+      className={`${fraunces.variable} ${figtree.variable} ${plexMono.variable}`}
       lang="en"
-      data-theme="light"
+      data-theme="palaestra"
     >
       <head>
         <link rel="icon" href="/favicon.jpeg" type="image/jpeg" />
         <link rel="manifest" href="/site.webmanifest" />
       </head>
-      <body suppressHydrationWarning={true}>
+      <body className={`${figtree.className} palaestra-body`} suppressHydrationWarning={true}>
         <StripeProvider>
-          {/* Pass the fetched session to AuthProvider */}
           <AuthProvider initialSession={session}>
-            <div className="fixed top-0 left-0 right-0 z-50">
-              <Navbar />
+            <AppChrome>
               <TrialStatusBanner />
-            </div>
-            <main className="pt-24">{children}</main>
+              {children}
+            </AppChrome>
           </AuthProvider>
         </StripeProvider>
       </body>

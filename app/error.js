@@ -1,6 +1,6 @@
 'use client';
 
-import { AlertTriangle, ArrowLeft, Home, Mail, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Home, RefreshCw } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -11,10 +11,8 @@ export default function Error({ error, reset }) {
   const [errorDetails, setErrorDetails] = useState('');
 
   useEffect(() => {
-    // Log the error to an error reporting service
     console.error('Client-side error:', error);
 
-    // Extract useful information from the error for display
     if (error) {
       const errorMessage = error.message || 'Unknown error';
       const errorStack = error.stack ? error.stack.split('\n')[0] : '';
@@ -23,78 +21,42 @@ export default function Error({ error, reset }) {
   }, [error]);
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen px-4 bg-gray-50">
-      <div className="bg-white p-8 rounded-lg shadow-md max-w-md w-full text-center">
-        <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-          <AlertTriangle className="w-8 h-8 text-red-500" />
-        </div>
-        <h1 className="text-2xl font-bold text-gray-800 mb-2">Oops! Something Went Wrong</h1>
-        <p className="text-gray-600 mb-4">
-          We're sorry, but there was an error processing your request.
-        </p>
+    <div className="flex flex-col items-center justify-center min-h-[70vh] px-4">
+      <div className="athlete-card-static max-w-md w-full p-8 text-center">
+        <p className="athlete-label mb-2">Missed lift</p>
+        <h1 className="athlete-heading-xl mb-3">Something slipped.</h1>
+        <p className="athlete-body mb-4">The page did not load. Try again, or go back to Today.</p>
 
         {errorDetails && (
-          <div className="bg-gray-100 p-3 rounded-md mb-4 text-left">
-            <p className="text-xs text-gray-600 font-mono break-all overflow-hidden">
-              {errorDetails.length > 150 ? errorDetails.substring(0, 150) + '...' : errorDetails}
-            </p>
-          </div>
+          <p className="text-xs font-mono text-[var(--ink-mute)] bg-[var(--paper-deep)] p-3 mb-4 text-left break-all">
+            {errorDetails.length > 150 ? `${errorDetails.substring(0, 150)}...` : errorDetails}
+          </p>
         )}
 
-        <div className="flex flex-col space-y-2 mb-6">
-          <button
-            onClick={() => reset()}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
-          >
-            <RefreshCw className="w-4 h-4" /> Try Again
+        <div className="flex flex-col gap-2">
+          <button onClick={() => reset()} className="athlete-btn-primary w-full">
+            <RefreshCw className="w-4 h-4 inline mr-2" /> Try again
           </button>
-
-          {user ? (
-            <button
-              onClick={() => router.push('/dashboard')}
-              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors flex items-center justify-center gap-2"
-            >
-              <Home className="w-4 h-4" /> Go to Dashboard
-            </button>
-          ) : (
-            <button
-              onClick={() => router.push('/')}
-              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors flex items-center justify-center gap-2"
-            >
-              <Home className="w-4 h-4" /> Go to Homepage
-            </button>
-          )}
-
+          <button
+            onClick={() => router.push(user ? '/athlete' : '/')}
+            className="athlete-btn-secondary w-full"
+          >
+            <Home className="w-4 h-4 inline mr-2" /> {user ? 'Today' : 'Home'}
+          </button>
           <button
             onClick={() => router.back()}
-            className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-100 transition-colors flex items-center justify-center gap-2"
+            className="py-2 text-sm underline text-[var(--ink-soft)]"
           >
-            <ArrowLeft className="w-4 h-4" /> Go Back
+            <ArrowLeft className="w-4 h-4 inline mr-1" /> Go back
           </button>
         </div>
 
-        <div className="text-xs text-gray-500">
-          Need help?{' '}
-          <a href="/contact" className="text-blue-600 hover:underline">
-            Contact Support
+        <p className="mt-6 text-sm text-[var(--ink-mute)]">
+          Still stuck?{' '}
+          <a href="mailto:noah@halteres.ai" className="underline text-[var(--clay-deep)]">
+            noah@halteres.ai
           </a>
-        </div>
-
-        <div className="mt-6 pt-6 border-t border-gray-200">
-          <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
-            <Mail className="w-4 h-4 text-gray-500" />
-            <p>
-              Found a bug? Email{' '}
-              <a
-                href="mailto:noah@halteres.ai"
-                className="text-blue-600 font-medium hover:underline"
-              >
-                noah@halteres.ai
-              </a>{' '}
-              with a screenshot and description and we'll fix it ASAP!
-            </p>
-          </div>
-        </div>
+        </p>
       </div>
     </div>
   );

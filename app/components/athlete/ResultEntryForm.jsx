@@ -174,7 +174,7 @@ export default function ResultEntryForm({
       {workoutTitle && (
         <div className="text-center pb-4 border-b border-[var(--athlete-border)]">
           <h3 className="athlete-heading-lg text-[var(--athlete-text-primary)]">{workoutTitle}</h3>
-          <p className="athlete-label mt-1">Log your result</p>
+          <p className="athlete-label mt-1">Ink the result</p>
         </div>
       )}
 
@@ -191,7 +191,7 @@ export default function ResultEntryForm({
                 onClick={() => updateField('resultType', type.value)}
                 className={`flex items-center justify-center gap-2 py-3 px-3 rounded-lg text-sm font-medium transition-all ${
                   resultType === type.value
-                    ? 'bg-[var(--athlete-accent-primary)] text-black'
+                    ? 'bg-[var(--athlete-accent-primary)] text-[var(--athlete-on-accent)]'
                     : 'bg-[var(--athlete-bg-card)] text-[var(--athlete-text-secondary)] border border-[var(--athlete-border)]'
                 }`}
               >
@@ -313,7 +313,7 @@ export default function ResultEntryForm({
               onClick={() => updateField('scale', option.value)}
               className={`flex-1 py-3 rounded-lg text-sm font-medium transition-all ${
                 scale === option.value
-                  ? 'bg-[var(--athlete-accent-primary)] text-black'
+                  ? 'bg-[var(--athlete-accent-primary)] text-[var(--athlete-on-accent)]'
                   : 'bg-[var(--athlete-bg-card)] text-[var(--athlete-text-secondary)] border border-[var(--athlete-border)]'
               }`}
             >
@@ -347,7 +347,7 @@ export default function ResultEntryForm({
               onClick={() => updateField('perceivedEffort', num)}
               className={`w-9 h-9 rounded-full text-sm font-medium transition-all ${
                 perceivedEffort === num
-                  ? 'bg-[var(--athlete-accent-primary)] text-black'
+                  ? 'bg-[var(--athlete-accent-primary)] text-[var(--athlete-on-accent)]'
                   : 'bg-[var(--athlete-bg-card)] text-[var(--athlete-text-secondary)] border border-[var(--athlete-border)]'
               }`}
             >
@@ -376,7 +376,7 @@ export default function ResultEntryForm({
       {error && (
         <div className="athlete-card-static border-l-4 border-l-red-500 p-4 flex items-center gap-3">
           <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
-          <p className="athlete-body text-red-400">{error}</p>
+          <p className="athlete-body text-[var(--blood)]">{error}</p>
         </div>
       )}
 
@@ -395,8 +395,8 @@ export default function ResultEntryForm({
         <button type="submit" className="athlete-btn-primary flex-1 py-3" disabled={loading}>
           {loading ? (
             <div className="flex items-center justify-center gap-2">
-              <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
-              Logging...
+              <div className="w-4 h-4 border-2 border-[var(--chalk)] border-t-transparent rounded-full animate-spin" />
+              Logging…
             </div>
           ) : (
             'Log Result'

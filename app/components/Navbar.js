@@ -1,283 +1,169 @@
 'use client';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
-import {
-  BookOpen,
-  Building,
-  Calendar,
-  Clock,
-  Dumbbell,
-  HelpCircle,
-  Home,
-  Info,
-  LayoutDashboard,
-  LogOut,
-  Menu,
-  Newspaper,
-  Phone,
-  Settings,
-  User,
-  Users,
-} from 'lucide-react';
-import Image from 'next/image';
+import { Calendar, Clock, LogOut, Menu, User } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import img from '../assets/logo.png';
+import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import HalteresMark from './brand/HalteresMark';
+
 export default function Navbar() {
-  const {
-    session,
-    user,
-    isAthlete,
-    isCoach,
-    currentGym,
-    athleteNeedsSetup,
-    loadingProfile,
-    loadingGym,
-  } = useAuth();
+  const { session, user, isAthlete, athleteNeedsSetup, loadingProfile } = useAuth();
   const supabase = createClientComponentClient();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [userProfile, setUserProfile] = useState(null);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const router = useRouter();
-  useEffect(() => {
-    // Fetch user profile when user is available
-    const fetchUserProfile = async () => {
-      if (!user || !user.id) return;
-
-      try {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('subscription_status')
-          .eq('id', user.id)
-          .maybeSingle();
-
-        if (error) {
-          // Only log error if it's not a "No rows found" error (which is expected for new users)
-          if (error.code !== 'PGRST116') {
-            console.error('Error fetching user profile:', {
-              code: error.code,
-              message: error.message,
-              details: error.details,
-              hint: error.hint,
-              userId: user.id,
-            });
-          }
-          // Set default profile for new users or when profile doesn't exist
-          setUserProfile({
-            subscription_status: null,
-          });
-          return;
-        }
-
-        setUserProfile(data);
-      } catch (err) {
-        console.error('Failed to fetch user profile:', {
-          error: err.message || err,
-          userId: user?.id,
-          userEmail: user?.email,
-        });
-        // Set default profile on error
-        setUserProfile({
-          subscription_status: null,
-        });
-      }
-    };
-
-    fetchUserProfile();
-  }, [user, supabase]);
-
-  const isPremiumUser = userProfile?.subscription_status === 'active';
 
   const handleLogout = async () => {
     router.push('/');
     await supabase.auth.signOut();
   };
 
-  const NavLink = ({ href, children, className = '' }) => (
-    <Link href={href} className={className}>
-      {children}
-    </Link>
-  );
-
-  // Marketing navigation removed for B2C landing
-
   return (
-    <div className="fixed top-0 z-50 w-full bg-base-100 shadow-sm border-b border-gray-200">
-      {/* Desktop navbar */}
-      <div className="navbar max-w-7xl mx-auto px-4">
-        <div className="navbar-start">
-          <Link href={session ? '/athlete' : '/'} className="flex-shrink-0 flex items-center">
-            <Image
-              src={img}
-              alt="Halteres.ai Logo"
-              height={40}
-              width={40}
-              className="block h-10 w-auto"
-            />
-            <span className="text-xl font-bold text-[rgb(31,55,90)] ml-[-2]">alteres.ai</span>
-          </Link>
-        </div>
+    <header className="w-full border-b border-[var(--paper-rule)] bg-[color-mix(in_srgb,var(--chalk)_92%,transparent)] backdrop-blur-md">
+      <div className="meander-rule" />
+      <nav className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+        <Link href={session ? '/athlete' : '/'} className="flex items-center gap-2.5 min-h-11">
+          <HalteresMark className="w-9 h-9" />
+          <span
+            className="text-[1.35rem] tracking-tight text-[var(--ink)]"
+            style={{ fontFamily: 'var(--halt-display)' }}
+          >
+            Haltēres
+          </span>
+        </Link>
 
-        <div className="navbar-center hidden lg:flex">
-          <ul className="menu menu-horizontal px-1 space-x-2">
-            {!session && (
-              <>
-                <li>
-                  <NavLink href="/">Home</NavLink>
-                </li>
-              </>
-            )}
-            {/* Hide navigation for athletes who need to complete setup */}
-            {session && isAthlete && !athleteNeedsSetup && !loadingProfile && (
-              <>
-                <li>
-                  <NavLink href="/athlete">Today</NavLink>
-                </li>
-                <li>
-                  <NavLink href="/athlete/history">History</NavLink>
-                </li>
-              </>
-            )}
-          </ul>
-        </div>
-
-        <div className="navbar-end">
-          {/* Premium User Badge - Moved Here */}
-          {session && isPremiumUser && (
-            <div className="badge badge-primary badge-sm mr-2 hidden sm:flex">Premium</div>
-          )}
-
-          {/* Login Button for Desktop */}
+        <div className="hidden sm:flex items-center gap-6">
           {!session && (
-            <div className="hidden lg:flex mr-4">
-              <Link href="/login" className="btn btn-primary text-white">
-                Login
+            <>
+              <Link
+                href="/"
+                className="text-sm font-medium text-[var(--ink-soft)] hover:text-[var(--ink)]"
+              >
+                Home
               </Link>
-            </div>
+              <Link
+                href="/contact"
+                className="text-sm font-medium text-[var(--ink-soft)] hover:text-[var(--ink)]"
+              >
+                Contact
+              </Link>
+              <Link href="/login" className="athlete-btn-primary py-2 px-5 text-sm">
+                Start training
+              </Link>
+            </>
           )}
-
-          {/* Mobile menu button */}
-          <div className="dropdown dropdown-end ml-2">
-            <label tabIndex={0} className="btn btn-ghost btn-circle">
-              <Menu className="h-5 w-5" />
-            </label>
-            <div
-              tabIndex={0}
-              className="dropdown-content z-[1] mt-3 w-80 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden"
+          {session && isAthlete && !athleteNeedsSetup && !loadingProfile && (
+            <>
+              <Link
+                href="/athlete"
+                className="text-sm font-medium text-[var(--ink-soft)] hover:text-[var(--ink)]"
+              >
+                Today
+              </Link>
+              <Link
+                href="/athlete/programs"
+                className="text-sm font-medium text-[var(--ink-soft)] hover:text-[var(--ink)]"
+              >
+                Programs
+              </Link>
+              <Link
+                href="/athlete/history"
+                className="text-sm font-medium text-[var(--ink-soft)] hover:text-[var(--ink)]"
+              >
+                History
+              </Link>
+            </>
+          )}
+          {session && (
+            <button
+              onClick={handleLogout}
+              className="text-sm font-medium text-[var(--ink-soft)] hover:text-[var(--blood)]"
             >
-              {!session && (
-                <div className="p-4">
-                  {/* Header */}
-                  <div className="pb-4 mb-4 border-b border-gray-100">
-                    <h3 className="font-bold text-lg text-gray-900">Menu</h3>
-                  </div>
-
-                  {/* Navigation Items */}
-                  <div className="space-y-2">
-                    <NavLink
-                      href="/"
-                      className="flex items-center p-3 rounded-xl hover:bg-gray-50 transition-all duration-200"
-                    >
-                      <Home className="w-5 h-5 mr-3 text-gray-600" />
-                      <span className="font-medium text-gray-900">Home</span>
-                    </NavLink>
-                  </div>
-
-                  {/* Login Button */}
-                  <div className="pt-4 mt-4 border-t border-gray-100">
-                    <Link href="/login" className="block">
-                      <button className="btn btn-primary text-white w-full">Get Started</button>
-                    </Link>
-                  </div>
-                </div>
-              )}
-
-              {session && (
-                <div className="p-4">
-                  {/* Header with Premium Badge */}
-                  <div className="pb-4 mb-4 border-b border-gray-100">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-bold text-lg text-gray-900">Account</h3>
-                      <div className="flex gap-2">
-                        {isAthlete && (
-                          <span className="badge badge-secondary badge-sm">Athlete</span>
-                        )}
-                        {isCoach && isPremiumUser && (
-                          <span className="badge badge-primary badge-sm">Premium</span>
-                        )}
-                      </div>
-                    </div>
-                    {user?.email && (
-                      <p className="text-sm text-gray-600 mt-1 truncate">{user.email}</p>
-                    )}
-                    {currentGym && <p className="text-xs text-primary mt-1">{currentGym.name}</p>}
-                  </div>
-
-                  {/* Coach Navigation Items removed for B2C */}
-
-                  {/* Athlete Navigation Items - only show if setup is complete */}
-                  {isAthlete && !athleteNeedsSetup && (
-                    <div className="space-y-2">
-                      <Link
-                        href="/athlete"
-                        className="flex items-center p-3 rounded-xl hover:bg-gray-50 transition-all duration-200"
-                      >
-                        <Calendar className="w-5 h-5 mr-3 text-gray-600" />
-                        <div>
-                          <div className="font-medium text-gray-900">Today</div>
-                          <div className="text-sm text-gray-500">Today's workouts</div>
-                        </div>
-                      </Link>
-
-                      <Link
-                        href="/athlete/history"
-                        className="flex items-center p-3 rounded-xl hover:bg-gray-50 transition-all duration-200"
-                      >
-                        <Clock className="w-5 h-5 mr-3 text-gray-600" />
-                        <div>
-                          <div className="font-medium text-gray-900">History</div>
-                          <div className="text-sm text-gray-500">Past workouts & PRs</div>
-                        </div>
-                      </Link>
-
-                      <Link
-                        href="/athlete/profile"
-                        className="flex items-center p-3 rounded-xl hover:bg-gray-50 transition-all duration-200"
-                      >
-                        <User className="w-5 h-5 mr-3 text-gray-600" />
-                        <div>
-                          <div className="font-medium text-gray-900">Profile</div>
-                          <div className="text-sm text-gray-500">Your stats & PRs</div>
-                        </div>
-                      </Link>
-                    </div>
-                  )}
-
-                  {/* Show setup message for athletes who need to complete setup */}
-                  {isAthlete && athleteNeedsSetup && (
-                    <div className="p-4 bg-base-200 rounded-xl text-center">
-                      <p className="text-sm text-gray-600">
-                        Complete your setup to access all features
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Logout Button */}
-                  <div className="pt-4 mt-4 border-t border-gray-100">
-                    <button
-                      onClick={handleLogout}
-                      className="flex items-center p-3 rounded-xl hover:bg-red-50 transition-all duration-200 w-full text-red-600"
-                    >
-                      <LogOut className="w-5 h-5 mr-3" />
-                      <span className="font-medium">Log out</span>
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
+              Log out
+            </button>
+          )}
         </div>
-      </div>
-    </div>
+
+        <button
+          type="button"
+          className="sm:hidden w-11 h-11 flex items-center justify-center text-[var(--ink)]"
+          onClick={() => setMobileOpen((open) => !open)}
+          aria-expanded={mobileOpen}
+          aria-label="Open menu"
+        >
+          <Menu className="h-5 w-5" />
+        </button>
+      </nav>
+
+      {mobileOpen && (
+        <div className="sm:hidden border-t border-[var(--paper-rule)] bg-[var(--chalk)] px-4 py-4 space-y-2">
+          {!session && (
+            <>
+              <Link
+                href="/"
+                className="block py-3 font-medium"
+                onClick={() => setMobileOpen(false)}
+              >
+                Home
+              </Link>
+              <Link
+                href="/contact"
+                className="block py-3 font-medium"
+                onClick={() => setMobileOpen(false)}
+              >
+                Contact
+              </Link>
+              <Link
+                href="/login"
+                className="athlete-btn-primary w-full text-center block"
+                onClick={() => setMobileOpen(false)}
+              >
+                Start training
+              </Link>
+            </>
+          )}
+          {session && (
+            <>
+              {user?.email && (
+                <p className="athlete-label pb-2 border-b border-[var(--paper-rule)]">
+                  {user.email}
+                </p>
+              )}
+              {isAthlete && !athleteNeedsSetup && (
+                <>
+                  <Link
+                    href="/athlete"
+                    className="flex items-center gap-3 py-3"
+                    onClick={() => setMobileOpen(false)}
+                  >
+                    <Calendar className="w-4 h-4" /> Today
+                  </Link>
+                  <Link
+                    href="/athlete/history"
+                    className="flex items-center gap-3 py-3"
+                    onClick={() => setMobileOpen(false)}
+                  >
+                    <Clock className="w-4 h-4" /> History
+                  </Link>
+                  <Link
+                    href="/athlete/profile"
+                    className="flex items-center gap-3 py-3"
+                    onClick={() => setMobileOpen(false)}
+                  >
+                    <User className="w-4 h-4" /> Profile
+                  </Link>
+                </>
+              )}
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-3 py-3 text-[var(--blood)] w-full"
+              >
+                <LogOut className="w-4 h-4" /> Log out
+              </button>
+            </>
+          )}
+        </div>
+      )}
+    </header>
   );
 }
