@@ -1,5 +1,11 @@
 import { NextResponse } from 'next/server';
 import { createChatCompletion } from '@/utils/ai/provider';
+import { resolveEquipmentLabels } from '@/utils/prompt-builder/equipmentLabels.js';
+import {
+  assembleReferenceMaterial,
+  buildProgrammingContract,
+  formatProgrammingContract,
+} from '@/utils/prompt-builder/programQuality.js';
 import { corsHeaders } from '@/utils/supabase/mobile';
 
 export const maxDuration = 300; // 5 minutes for enhanced thinking
@@ -46,7 +52,7 @@ export async function POST(req) {
     // Using unified AI provider (DeepSeek by default; Anthropic via AI_PROVIDER)
 
     // Compose the enhancement prompt
-    const systemPrompt = `You enhance entire programs for a self-coached athlete. Honor equipment as a hard constraint, recent history, influences, preferred formats, and session duration. Be concise and practical.
+    const systemPrompt = `You enhance entire programs for a self-coached athlete. Honor equipment as a hard constraint, recent history, influences, preferred formats, and session duration. Speak to the athlete. Never say client, class, or gym owner. Be concise and practical.
 
 <output_requirements>
 You must return your response as valid JSON with this exact structure:
@@ -87,11 +93,29 @@ ${w.body || w.description || 'No content'}
         ? program_influences.join(', ')
         : typeof program_influences === 'string'
           ? program_influences
-          : 'unspecified';
+          : '';
     const recentHistoryText =
       typeof recent_training_history === 'string' && recent_training_history.trim().length > 0
         ? recent_training_history
-        : 'unspecified';
+        : '';
+    const equipmentList = resolveEquipmentLabels(
+      Array.isArray(gymEquipment) ? gymEquipment : [gymEquipment].filter(Boolean)
+    );
+    const programmingContract = buildProgrammingContract({
+      methodology,
+      goal,
+      focusArea,
+      influences: influencesText,
+      recentHistory: recentHistoryText,
+      workoutFormats,
+      sessionMinutes: workout_duration,
+      daysPerWeek: days_per_week,
+      equipment: equipmentList,
+    });
+    const referenceMaterial = assembleReferenceMaterial({
+      influenceText: influencesText,
+      historyText: recentHistoryText,
+    });
 
     const userPrompt = `Enhance the following program for a self-coached athlete according to these instructions: "${instructions}".
 
@@ -103,11 +127,11 @@ Context:
 - Goal: ${goal || 'unspecified'}
 - Difficulty/Experience: ${effectiveDifficulty}
 - Focus area: ${focusArea || 'General fitness'}
-- Equipment available: ${Array.isArray(gymEquipment) ? gymEquipment.join(', ') : gymEquipment}
+- Equipment available: ${equipmentList.join(', ')}
 - Workout formats preferred: ${
       Array.isArray(workoutFormats) ? workoutFormats.join(', ') : 'Standard'
     }
-- Client injuries or limitations: ${
+- Injuries or limitations: ${
       injuries && injuries.length
         ? Array.isArray(injuries)
           ? injuries.join(', ')
@@ -119,10 +143,12 @@ Context:
 - Typical workout duration (minutes): ${workout_duration ?? 'unspecified'}
 
 Recent Training History (2-3 months):
-${recentHistoryText}
+${recentHistoryText || 'unspecified'}
 
 Program Influences / Styles:
-${influencesText}
+${influencesText || 'unspecified'}
+${referenceMaterial}
+${formatProgrammingContract(programmingContract)}
 
 Current Program Workouts:
 ${workoutsText}

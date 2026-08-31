@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "biome check --write .",
     "lint:check": "biome check .",
-    "format": "biome format --write ."
+    "format": "biome format --write .",
+    "test:prompts": "node --experimental-default-type=module --test app/utils/prompt-builder/*.test.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.51.0",

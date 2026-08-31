@@ -66,7 +66,7 @@ const gymEquipmentPresets = {
     36, 37, 38, 39, 40, 41, 42, 44, 45, 46, 47, 49,
   ],
   'Commercial Gym': [1, 2, 3, 4, 5, 16, 24, 27, 39, 40, 41, 42, 44, 45, 46, 47],
-  'Home Gym': [4, 5, 6, 16, 24, 27],
+  'Home Gym': [1, 2, 3, 4, 5, 16],
   'Minimal Equipment': [4, 5, 6, 16, 27],
   'Outdoor Space': [6, 16, 18, 27],
   'Powerlifting Gym': [1, 2, 3, 5, 16, 21, 24, 27, 36, 37],

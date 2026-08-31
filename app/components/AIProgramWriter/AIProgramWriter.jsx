@@ -122,6 +122,12 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
   const [showGenerationProgress, setShowGenerationProgress] = useState(false);
   const [skeletonProgress, setSkeletonProgress] = useState(null);
 
+  useEffect(() => {
+    if (generationStage === 'skeleton_complete') {
+      setShowGenerationProgress(false);
+    }
+  }, [generationStage]);
+
   // Combined workouts for display (database workouts + streaming workouts)
   const displayWorkouts = useMemo(() => {
     // During generation, show streaming workouts; after completion, show database workouts
@@ -828,7 +834,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
       try {
         const weekWorkouts = workouts.filter((w) => w.week_number === weekNumber);
 
-        await approveAndEnhanceWeek({
+        const result = await approveAndEnhanceWeek({
           programId,
           weekNumber,
           workouts: weekWorkouts,
@@ -839,6 +845,16 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
             useImperial: true,
             numberOfWeeks: parseInt(formData?.numberOfWeeks, 10) || 1,
             trainingMethodology: formData?.trainingMethodology,
+            referenceInput: formData?.referenceInput || '',
+            sessionMinutes: formData?.sessionDetails?.duration_minutes,
+            focusArea: formData?.focusArea,
+            workoutFormats: formData?.workoutFormats,
+            description: formData?.description || '',
+            daysPerWeek: parseInt(formData?.daysPerWeek, 10) || undefined,
+            programName: formData?.name || '',
+            program_influences: formData?.program_influences || formData?.programInfluences || '',
+            recent_training_history:
+              formData?.recent_training_history || formData?.recentTrainingHistory || '',
           },
           weekSpecificInput: weekInput || weekInputs[weekNumber] || '',
           updateWorkoutStatus: (workoutId, updates) => {
@@ -848,7 +864,10 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
           supabase,
         });
 
-        // Clear the input after successful enhancement
+        if (!result?.success) {
+          return;
+        }
+
         setWeekInput(weekNumber, '');
       } catch (error) {
         showToast(`Failed to enhance Week ${weekNumber}: ${error.message}`, 'error');
@@ -1407,6 +1426,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
                 goal: formData?.goal,
                 difficulty: formData?.difficulty,
                 equipment: selectedEquipment,
+                numberOfWeeks: parseInt(formData?.numberOfWeeks, 10) || undefined,
               }}
               // Action props for detailed workouts
               onViewDetails={(workout) => {

@@ -1,7 +1,13 @@
 'use client';
 import { startTransition } from 'react';
 import { flushSync } from 'react-dom';
-import equipmentList from '@/utils/equipmentList';
+import { resolveEquipmentLabels } from '@/utils/prompt-builder/equipmentLabels';
+import {
+  isFatalSseParseError,
+  parseSseEventData,
+  shouldAcceptEnhancementComplete,
+  weekDisplayStatus,
+} from '@/utils/prompt-builder/generationGuardrails';
 import { calculateEndDate } from './dateHandlers';
 import { dayNameToNumber } from './utils';
 
@@ -100,13 +106,7 @@ export async function generateProgram({
           await delay(RETRY_DELAY);
         }
 
-        // Get the equipment names instead of IDs
-        const selectedEquipmentNames = formData.equipment
-          .map((id) => {
-            const equipment = equipmentList.find((item) => item.value === id);
-            return equipment ? equipment.label : '';
-          })
-          .filter(Boolean);
+        const selectedEquipmentNames = resolveEquipmentLabels(formData.equipment);
 
         // Convert day names to day numbers for API consistency
         const daysOfWeekNumbers = formData.daysOfWeek
@@ -931,12 +931,7 @@ export async function saveProgram({
     // Prepare gym_details with equipment and gym type
     const gymDetails = {
       ...programData.gymDetails,
-      equipment: programData.equipment
-        .map((id) => {
-          const equipment = equipmentList.find((item) => item.value === id);
-          return equipment ? equipment.label : '';
-        })
-        .filter(Boolean),
+      equipment: resolveEquipmentLabels(programData.equipment),
       gym_type: programData.gymType,
     };
 
@@ -1096,13 +1091,7 @@ export async function autoSaveProgramDetails({
     // Convert day names to day numbers for API consistency
     const daysOfWeekNumbers = formData.daysOfWeek.map((day) => dayNameToNumber[day]);
 
-    // Get equipment names
-    const selectedEquipmentNames = formData.equipment
-      .map((id) => {
-        const equipment = equipmentList.find((item) => item.value === id);
-        return equipment ? equipment.label : '';
-      })
-      .filter(Boolean);
+    const selectedEquipmentNames = resolveEquipmentLabels(formData.equipment);
 
     // Prepare gym_details - ensure gym_type is stored consistently
     const gymDetails = {
@@ -1723,13 +1712,7 @@ export async function generateSkeletonProgram({
     setLoadingTimer(timer);
 
     try {
-      // Get equipment names
-      const selectedEquipmentNames = formData.equipment
-        .map((id) => {
-          const equipment = equipmentList.find((item) => item.value === id);
-          return equipment ? equipment.label : '';
-        })
-        .filter(Boolean);
+      const selectedEquipmentNames = resolveEquipmentLabels(formData.equipment);
 
       // Convert day names to numbers
       const daysOfWeekNumbers = formData.daysOfWeek
@@ -1745,6 +1728,7 @@ export async function generateSkeletonProgram({
 
       const requestBody = {
         programId,
+        programName: formData.name || '',
         description: formData.description, // User requirements/instructions
         goal: formData.goal,
         difficulty: formData.difficulty,
@@ -1762,6 +1746,12 @@ export async function generateSkeletonProgram({
           days_of_week: daysOfWeekNumbers,
         },
         workout_format: formData.workoutFormats,
+        referenceInput: formData.referenceInput || formData.personalization || '',
+        personalization: formData.personalization || '',
+        session_details: formData.sessionDetails || formData.session_details || {},
+        program_influences: formData.program_influences || formData.programInfluences || '',
+        recent_training_history:
+          formData.recent_training_history || formData.recentTrainingHistory || '',
         forceRegenerate: true,
       };
 
@@ -1787,85 +1777,137 @@ export async function generateSkeletonProgram({
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let buffer = '';
+      let completed = false;
+      let streamedWorkoutCount = 0;
+      let lastEventAt = Date.now();
+      const STALL_MS = 180000;
+      const stallTimer = setInterval(() => {
+        if (Date.now() - lastEventAt > STALL_MS) {
+          controller.abort();
+        }
+      }, 10000);
 
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
+      try {
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
 
-        buffer += decoder.decode(value, { stream: true });
-        const messages = buffer.split('\n\n');
-        buffer = messages.pop() || '';
+          buffer += decoder.decode(value, { stream: true });
+          const messages = buffer.split('\n\n');
+          buffer = messages.pop() || '';
 
-        for (const message of messages) {
-          if (message.trim() && message.startsWith('data: ')) {
-            try {
-              const data = JSON.parse(message.substring(6));
-              setServerStatus(data);
+          for (const message of messages) {
+            if (message.trim() && message.startsWith('data: ')) {
+              try {
+                const data = parseSseEventData(message);
+                if (!data) continue;
+                lastEventAt = Date.now();
+                setServerStatus(data);
 
-              if (data.type === 'status') {
-                showToastMessage(data.message, 'info');
-              } else if (data.type === 'skeleton_chunk') {
-                setGenerationStage('skeleton_streaming');
-                const weekWorkouts = data.workouts;
+                if (data.type === 'status') {
+                  showToastMessage(data.message, 'info');
+                } else if (data.type === 'skeleton_chunk') {
+                  setGenerationStage('skeleton_streaming');
+                  const weekWorkouts = data.workouts || [];
+                  streamedWorkoutCount += weekWorkouts.length;
 
-                weekWorkouts.forEach((workout, index) => {
-                  const newWorkout = {
-                    title: workout.title,
-                    body: workout.body,
-                    body_skeleton: workout.body,
-                    generation_status: 'skeleton',
-                    week_number: data.week,
-                    scheduled_date: workout.date,
-                    isStreaming: true,
-                    is_reference: false,
-                  };
+                  weekWorkouts.forEach((workout) => {
+                    const newWorkout = {
+                      title: workout.title,
+                      body: workout.body,
+                      body_skeleton: workout.body,
+                      generation_status: 'skeleton',
+                      week_number: data.week,
+                      scheduled_date: workout.date,
+                      isStreaming: true,
+                      is_reference: false,
+                    };
 
-                  if (addStreamingWorkout) {
-                    addStreamingWorkout(newWorkout);
+                    if (addStreamingWorkout) {
+                      addStreamingWorkout(newWorkout);
+                    }
+                  });
+
+                  showToastMessage(`Week ${data.week} skeleton generated!`, 'success');
+                } else if (data.type === 'skeleton_complete') {
+                  if (!data.totalWorkouts || data.totalWorkouts === 0) {
+                    throw new Error('Skeleton completed with 0 workouts');
                   }
-                });
+                  completed = true;
+                  showToastMessage('Skeleton program complete!', 'success');
+                  setGenerationStage('skeleton_complete');
+                  setIsLoading(false);
 
-                showToastMessage(`Week ${data.week} skeleton generated!`, 'success');
-              } else if (data.type === 'skeleton_complete') {
-                showToastMessage('Skeleton program complete!', 'success');
-                setGenerationStage('skeleton_complete');
-                setIsLoading(false);
+                  if (data.description && setGeneratedDescription) {
+                    console.log('[Skeleton] Setting program description');
+                    setGeneratedDescription(data.description);
+                  }
 
-                // Set the AI-generated program description
-                if (data.description && setGeneratedDescription) {
-                  console.log('[Skeleton] Setting program description');
-                  setGeneratedDescription(data.description);
+                  if (clearStreamingWorkouts) {
+                    clearStreamingWorkouts();
+                  }
+
+                  if (refetchWorkouts) {
+                    setTimeout(() => refetchWorkouts(), 500);
+                  }
+
+                  clearInterval(timer);
+                  resolve({
+                    success: true,
+                    totalWorkouts: data.totalWorkouts,
+                    description: data.description,
+                  });
+                } else if (data.type === 'error') {
+                  throw new Error(data.error || 'Skeleton generation failed');
                 }
-
-                if (clearStreamingWorkouts) {
-                  clearStreamingWorkouts();
+              } catch (e) {
+                if (!isFatalSseParseError(e)) {
+                  console.error('Error parsing skeleton SSE message:', e);
+                  continue;
                 }
-
-                if (refetchWorkouts) {
-                  setTimeout(() => refetchWorkouts(), 500);
-                }
-
-                clearInterval(timer);
-                resolve({
-                  success: true,
-                  totalWorkouts: data.totalWorkouts,
-                  description: data.description,
-                });
-              } else if (data.type === 'error') {
-                throw new Error(data.error);
+                throw e;
               }
-            } catch (e) {
-              console.error('Error parsing skeleton SSE message:', e);
             }
           }
         }
+
+        if (!completed) {
+          const requestedWeeks = parseInt(formData.numberOfWeeks, 10);
+          const expectedWorkouts = requestedWeeks * daysOfWeekNumbers.length;
+          if (
+            requestedWeeks > 0 &&
+            streamedWorkoutCount >= expectedWorkouts &&
+            expectedWorkouts > 0
+          ) {
+            completed = true;
+            showToastMessage('Skeleton program complete!', 'success');
+            setGenerationStage('skeleton_complete');
+            setIsLoading(false);
+            if (clearStreamingWorkouts) clearStreamingWorkouts();
+            if (refetchWorkouts) setTimeout(() => refetchWorkouts(), 500);
+            clearInterval(timer);
+            resolve({ success: true, totalWorkouts: streamedWorkoutCount });
+          } else {
+            throw new Error(
+              streamedWorkoutCount === 0
+                ? 'Generation stopped before any workouts were saved. The model timed out or failed — no placeholder week was accepted as success.'
+                : 'Generation stopped before all weeks finished. Check the writer for partial weeks, then retry.'
+            );
+          }
+        }
+      } finally {
+        clearInterval(stallTimer);
       }
     } catch (error) {
       console.error('Skeleton generation error:', error);
       clearInterval(timer);
       setIsLoading(false);
       setGenerationStage('error');
-      showToastMessage(`Skeleton generation failed: ${error.message}`, 'error');
+      const message =
+        error.name === 'AbortError'
+          ? 'Generation stalled with no new workouts. Stopped so this does not hang silently.'
+          : error.message;
+      showToastMessage(`Skeleton generation failed: ${message}`, 'error');
       reject(error);
     }
   });
@@ -1972,6 +2014,8 @@ export async function approveAndEnhanceWeek({
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
     let buffer = '';
+    let completed = false;
+    let result = null;
 
     while (true) {
       const { value, done } = await reader.read();
@@ -1984,7 +2028,8 @@ export async function approveAndEnhanceWeek({
       for (const message of messages) {
         if (message.trim() && message.startsWith('data: ')) {
           try {
-            const data = JSON.parse(message.substring(6));
+            const data = parseSseEventData(message);
+            if (!data) continue;
 
             if (data.type === 'status') {
               showToast(data.message, 'info');
@@ -1993,22 +2038,48 @@ export async function approveAndEnhanceWeek({
                 updateWorkoutStatus(data.workout.id, {
                   body: data.workout.body,
                   generation_status: 'detailed',
+                  title: data.workout.title,
+                  entity_id: data.workout.entity_id,
                 });
               }
             } else if (data.type === 'enhancement_complete') {
+              if (
+                !shouldAcceptEnhancementComplete({
+                  enhancedCount: data.enhancedCount,
+                  totalCount: data.totalCount,
+                })
+              ) {
+                throw new Error(
+                  data.message ||
+                    `Week ${weekNumber} did not persist detailed workouts (${data.enhancedCount || 0} of ${data.totalCount || 0}).`
+                );
+              }
+              completed = true;
+              result = {
+                success: true,
+                enhancedCount: data.enhancedCount,
+                totalCount: data.totalCount,
+              };
               showToast(`Week ${weekNumber} enhanced successfully!`, 'success');
-              return { success: true, enhancedCount: data.enhancedCount };
+              return result;
             } else if (data.type === 'error') {
-              throw new Error(data.error);
+              throw new Error(data.error || `Week ${weekNumber} enhancement failed`);
             }
           } catch (e) {
-            console.error('Error parsing enhancement SSE:', e);
+            if (!isFatalSseParseError(e)) {
+              console.error('Error parsing enhancement SSE:', e);
+              continue;
+            }
+            throw e;
           }
         }
       }
     }
 
-    return { success: true };
+    if (!completed) {
+      throw new Error(`Week ${weekNumber} enhancement ended without a verified database write.`);
+    }
+    return result;
   } catch (error) {
     console.error('Enhancement error:', error);
     showToast(`Failed to enhance Week ${weekNumber}: ${error.message}`, 'error');
@@ -2021,7 +2092,8 @@ export function groupWorkoutsByWeek(workouts) {
   const grouped = {};
 
   workouts.forEach((workout) => {
-    const weekNumber = workout.week_number || 1;
+    const rawWeek = Number(workout.week_number);
+    const weekNumber = Number.isFinite(rawWeek) && rawWeek > 0 ? rawWeek : 1;
     if (!grouped[weekNumber]) {
       grouped[weekNumber] = {
         weekNumber,
@@ -2032,16 +2104,8 @@ export function groupWorkoutsByWeek(workouts) {
     grouped[weekNumber].workouts.push(workout);
   });
 
-  // Determine week status based on workout statuses
   Object.values(grouped).forEach((week) => {
-    const statuses = week.workouts.map((w) => w.generation_status);
-    if (statuses.every((s) => s === 'detailed')) {
-      week.status = 'detailed';
-    } else if (statuses.some((s) => s === 'enhancing')) {
-      week.status = 'enhancing';
-    } else {
-      week.status = 'skeleton';
-    }
+    week.status = weekDisplayStatus(week.workouts);
   });
 
   return Object.values(grouped).sort((a, b) => a.weekNumber - b.weekNumber);
