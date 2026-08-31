@@ -10,6 +10,7 @@ import {
   formatSubstitutionSuggestions,
   getSubstitutionSuggestions,
 } from './equipmentSubstitutions.js';
+import { formatInjuryHistory } from './intakeMetrics.js';
 import { formatPeriodizationGuidelines } from './periodizationUtils.js';
 import { buildGarageEquipmentRules } from './programQuality.js';
 import { balancedFitnessPrompt } from './prompts/balanced-fitness.js';
@@ -340,12 +341,8 @@ export function formatClientMetrics(clientMetricsData, useImperial = false) {
       `Deadlift 1RM: ${formatWeight(clientMetricsData.deadlift_1rm)}`,
     clientMetricsData.mile_time && `Mile Time: ${clientMetricsData.mile_time}`,
     clientMetricsData.recovery_score && `Recovery Score: ${clientMetricsData.recovery_score}/10`,
-    clientMetricsData.injury_history &&
-      `Injury History: ${
-        typeof clientMetricsData.injury_history === 'object'
-          ? JSON.stringify(clientMetricsData.injury_history)
-          : clientMetricsData.injury_history
-      }`,
+    formatInjuryHistory(clientMetricsData.injury_history) &&
+      `Injury History: ${formatInjuryHistory(clientMetricsData.injury_history)}`,
   ]
     .filter(Boolean)
     .join('\n');
@@ -359,7 +356,7 @@ ${metrics}
 Express all weights in ${weightUnit} (${useImperial ? 'pounds' : 'kilograms'}) throughout the program.
 Scale RX weights based on your strength metrics (bench, squat, deadlift) when available.
 Consider training experience (${clientMetricsData.years_of_experience || 'unspecified'} years) when programming intensity.
-${clientMetricsData.injury_history ? 'Provide modifications that accommodate the noted injury history.' : ''}
+${formatInjuryHistory(clientMetricsData.injury_history) ? 'Provide modifications that accommodate the noted injury history.' : ''}
 
 Context: Using your preferred units and appropriate loading based on your metrics ensures the program is immediately actionable without conversions.
 </weight_programming_guidance>`;

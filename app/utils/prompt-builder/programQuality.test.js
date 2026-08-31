@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { buildEnhancementPrompt } from './enhanceWeekPrompt.js';
 import { resolveEquipmentLabels } from './equipmentLabels.js';
+import { extractIntakeLifts } from './intakeMetrics.js';
 import {
   assembleReferenceMaterial,
   buildProgrammingContract,
@@ -309,6 +310,39 @@ describe('equipment, duration, density, voice, RAG', () => {
 
     assert.ok(!garagePrompt.includes(hyroxPrompt.slice(0, 180)));
     assert.ok(!mayhemPrompt.includes('Main Lift (5/3/1) + Supplemental + Assistance'));
+  });
+
+  it('enhance-week prompt injects description and intake 1RMs, not bodyweight-only', () => {
+    const description =
+      'Garage gym only: barbell, power rack. squat 315, bench 225, deadlift 405. Influences: Wendler 5/3/1.';
+    const enhance = buildEnhancementPrompt({
+      skeletonWorkouts: [
+        { title: 'Week 1, Day 1: Bench 5s', body_skeleton: '## Main Lift (5/3/1)\n- Bench 65%x5' },
+      ],
+      weekNumber: 1,
+      context: {
+        numberOfWeeks: 8,
+        difficulty: 'Intermediate',
+        goal: 'bench +20',
+        description,
+        equipment: resolveEquipmentLabels([1, 2, 3, 5]),
+        intakeLifts: extractIntakeLifts(description),
+      },
+      weekSpecificInput: '',
+      workoutSections: ['Main Lift (5/3/1)'],
+      clientMetricsContent: '',
+      useImperial: true,
+      programmingContract: buildProgrammingContract({
+        ...GARAGE_531,
+        description,
+        equipment: resolveEquipmentLabels([1, 2, 3, 5]),
+      }),
+    });
+    assert.match(enhance, /athlete_intake/);
+    assert.match(enhance, /Bench 1RM: 225 lb/);
+    assert.match(enhance, /5\/3\/1/);
+    assert.match(enhance, /Barbell/);
+    assert.doesNotMatch(enhance, /Bodyweight only/);
   });
 
   it('formats workout-library RAG so retrieved research is actually injected', () => {

@@ -1,3 +1,4 @@
+import { formatAthleteIntakeBlock } from './intakeMetrics.js';
 import { formatProgrammingContract, formatRecentTrainingRules } from './programQuality.js';
 import { formatEquipmentRestrictions } from './promptBuilder.js';
 
@@ -132,6 +133,11 @@ ${skeletonContent}
 SKELETON CONTAINS: ${sections.join(', ')} sections
 ${programContextSection}
 ${equipmentRestrictions}
+${formatAthleteIntakeBlock({
+  description: context?.description || '',
+  lifts: context?.intakeLifts || {},
+  injuryText: context?.intakeInjury || '',
+})}
 ${formatProgrammingContract(programmingContract, { weekNumber })}
 ${formatRecentTrainingRules(recentHistory)}
 ${

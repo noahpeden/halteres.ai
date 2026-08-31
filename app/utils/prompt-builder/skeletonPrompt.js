@@ -1,3 +1,4 @@
+import { formatAthleteIntakeBlock } from './intakeMetrics.js';
 import { formatProgrammingContract, formatRecentTrainingRules } from './programQuality.js';
 import { formatEquipmentRestrictions, formatPeriodizationSection } from './promptBuilder.js';
 
@@ -55,6 +56,8 @@ export function buildSkeletonWeekPrompt({
   programmingContract,
   ragContext = '',
   recentHistory = '',
+  intakeLifts = {},
+  intakeInjury = '',
 } = {}) {
   const sections = programmingContract?.sections || ['Primary Work', 'Secondary Work'];
   const sessionMinutes = programmingContract?.sessionDensity?.minutes || sessionDuration || 60;
@@ -82,6 +85,11 @@ ${workoutFormats?.length > 0 ? `Workout Types: ${Array.isArray(workoutFormats) ?
 ${equipment?.length > 0 ? `Equipment: ${equipment.join(', ')}` : 'Equipment: Bodyweight only'}
 ${clientMetricsContent ? `\n${clientMetricsContent}` : ''}${previousWeeksContext(existingWorkouts)}
 ${formatEquipmentRestrictions(equipment || [])}
+${formatAthleteIntakeBlock({
+  description,
+  lifts: intakeLifts,
+  injuryText: intakeInjury,
+})}
 ${formatProgrammingContract(programmingContract, { weekNumber })}
 ${formatRecentTrainingRules(recentHistory)}
 ${
