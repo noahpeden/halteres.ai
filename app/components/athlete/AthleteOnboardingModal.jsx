@@ -80,19 +80,19 @@ export default function AthleteOnboardingModal({ profile, gymName, onComplete })
             <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-[var(--athlete-accent-primary)] to-[var(--athlete-accent-secondary)] flex items-center justify-center mx-auto mb-6 shadow-lg shadow-[var(--athlete-accent-primary)]/30">
               <Dumbbell className="w-10 h-10 text-black" />
             </div>
-            <h2 className="athlete-heading-xl text-white mb-2">Welcome to {gymName}!</h2>
+            <h2 className="athlete-heading-xl mb-2">Welcome to the yard</h2>
             <p className="athlete-body text-[var(--athlete-text-secondary)] mb-8">
-              Let's get you set up to crush your goals.
+              A few marks in the book so programs can meet you where you are.
             </p>
 
             <div className="athlete-card-static p-5 text-left">
-              <h3 className="athlete-heading-md text-white mb-4">What you can do:</h3>
+              <h3 className="athlete-heading-md mb-4">What you can do</h3>
               <ul className="space-y-3">
                 {[
-                  { icon: Activity, text: "View today's workouts from your coach" },
-                  { icon: Trophy, text: 'Log your results and track PRs' },
-                  { icon: Sparkles, text: 'Get AI-powered feedback on performance' },
-                  { icon: Dumbbell, text: 'Compete on leaderboards with your gym' },
+                  { icon: Activity, text: "See today's session at a glance" },
+                  { icon: Trophy, text: 'Log results and keep PRs' },
+                  { icon: Sparkles, text: 'Generate and edit your own program' },
+                  { icon: Dumbbell, text: 'Write first — no forced wizard' },
                 ].map((item, i) => (
                   <li key={i} className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-lg bg-[var(--athlete-accent-complete)]/20 flex items-center justify-center flex-shrink-0">
@@ -116,7 +116,7 @@ export default function AthleteOnboardingModal({ profile, gymName, onComplete })
                 <User className="w-6 h-6 text-[var(--athlete-accent-primary)]" />
               </div>
               <div>
-                <h2 className="athlete-heading-lg text-white">Set Up Your Profile</h2>
+                <h2 className="athlete-heading-lg text-[var(--ink)]">Set Up Your Profile</h2>
                 <p className="athlete-body text-[var(--athlete-text-secondary)]">
                   How should we call you?
                 </p>
@@ -150,7 +150,7 @@ export default function AthleteOnboardingModal({ profile, gymName, onComplete })
                 <Activity className="w-6 h-6 text-[var(--athlete-accent-primary)]" />
               </div>
               <div>
-                <h2 className="athlete-heading-lg text-white">Your Baseline Metrics</h2>
+                <h2 className="athlete-heading-lg text-[var(--ink)]">Your Baseline Metrics</h2>
                 <p className="athlete-body text-[var(--athlete-text-secondary)]">
                   Optional - helps personalize your experience
                 </p>
@@ -160,7 +160,7 @@ export default function AthleteOnboardingModal({ profile, gymName, onComplete })
             <div className="space-y-4">
               {/* Strength Metrics */}
               <div className="athlete-card-static p-4">
-                <h3 className="athlete-body text-white font-medium mb-3">Strength</h3>
+                <h3 className="athlete-body text-[var(--ink)] font-medium mb-3">Strength</h3>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="athlete-label block mb-1">Back Squat 1RM</label>
@@ -226,7 +226,7 @@ export default function AthleteOnboardingModal({ profile, gymName, onComplete })
 
               {/* Body Metrics */}
               <div className="athlete-card-static p-4">
-                <h3 className="athlete-body text-white font-medium mb-3">Body</h3>
+                <h3 className="athlete-body text-[var(--ink)] font-medium mb-3">Body</h3>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="athlete-label block mb-1">Weight</label>
@@ -276,21 +276,21 @@ export default function AthleteOnboardingModal({ profile, gymName, onComplete })
             <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[var(--athlete-accent-complete)] to-[var(--athlete-accent-primary)] flex items-center justify-center mx-auto mb-6 shadow-lg shadow-[var(--athlete-accent-complete)]/30">
               <Check className="w-10 h-10 text-black" />
             </div>
-            <h2 className="athlete-heading-xl text-white mb-2">You're All Set!</h2>
+            <h2 className="athlete-heading-xl text-[var(--ink)] mb-2">The book is open.</h2>
             <p className="athlete-body text-[var(--athlete-text-secondary)] mb-8">
-              Time to start crushing workouts and setting PRs.
+              Today is the only page that matters right now.
             </p>
 
             <div className="athlete-card-static border-l-4 border-l-[var(--athlete-accent-primary)] p-5 text-left">
               <h3 className="athlete-heading-md text-[var(--athlete-accent-primary)] mb-3">
-                Quick Tips:
+                Keep it simple
               </h3>
               <ul className="space-y-2">
                 {[
-                  "Check your dashboard daily for today's workouts",
-                  'Log your results immediately after each workout',
-                  'Request AI feedback for personalized coaching tips',
-                  'Check the leaderboard to see how you stack up!',
+                  'Open Today when you walk in.',
+                  'Log while the chalk is still on your hands.',
+                  'Write the next block in Writer — no wizard required.',
+                  'Duration is yours. Do not lock it to eight weeks.',
                 ].map((tip, i) => (
                   <li
                     key={i}

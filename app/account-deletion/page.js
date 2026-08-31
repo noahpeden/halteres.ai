@@ -14,16 +14,21 @@ export default function AccountDeletionPage() {
   const lastUpdated = 'August 30, 2026';
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen">
       <main>
         {/* Header */}
-        <div className="bg-blue-600 py-24 sm:py-32">
+        <div className="bg-[var(--sea)] py-20 sm:py-24">
           <div className="mx-auto max-w-7xl px-6 lg:px-8">
             <div className="mx-auto max-w-2xl text-center">
-              <h1 className="text-4xl font-bold tracking-tight text-white sm:text-6xl">
+              <h1
+                className="text-4xl tracking-tight text-[var(--chalk)] sm:text-6xl"
+                style={{ fontFamily: 'var(--halt-display)', fontWeight: 600 }}
+              >
                 Account Deletion
               </h1>
-              <p className="mt-6 text-lg leading-8 text-blue-100">Last updated: {lastUpdated}</p>
+              <p className="mt-6 text-lg leading-8 text-[color-mix(in_srgb,var(--chalk)_75%,transparent)]">
+                Last updated: {lastUpdated}
+              </p>
             </div>
           </div>
         </div>
@@ -66,7 +71,7 @@ export default function AccountDeletionPage() {
               </h2>
               <p className="text-gray-600 mb-4">
                 Email{' '}
-                <a href="mailto:noah@halteres.ai" className="text-blue-600">
+                <a href="mailto:noah@halteres.ai" className="text-[var(--clay-deep)] underline underline-offset-4">
                   noah@halteres.ai
                 </a>{' '}
                 from the email associated with your account and include the subject line
@@ -96,7 +101,7 @@ export default function AccountDeletionPage() {
               <h2 className="text-2xl font-bold text-gray-900 mb-4">Need Help?</h2>
               <p className="text-gray-600">
                 If you have any questions about deactivation or deletion, contact us at{' '}
-                <a href="mailto:noah@halteres.ai" className="text-blue-600">
+                <a href="mailto:noah@halteres.ai" className="text-[var(--clay-deep)] underline underline-offset-4">
                   noah@halteres.ai
                 </a>
                 .
@@ -107,12 +112,12 @@ export default function AccountDeletionPage() {
               <h2 className="text-2xl font-bold text-gray-900 mb-4">Related Policies</h2>
               <ul className="list-disc pl-6 text-gray-600 space-y-2">
                 <li>
-                  <Link href="/privacy-policy" className="text-blue-600 hover:text-blue-500">
+                  <Link href="/privacy-policy" className="text-[var(--clay-deep)] underline underline-offset-4">
                     Privacy Policy
                   </Link>
                 </li>
                 <li>
-                  <Link href="/terms" className="text-blue-600 hover:text-blue-500">
+                  <Link href="/terms" className="text-[var(--clay-deep)] underline underline-offset-4">
                     Terms of Use
                   </Link>
                 </li>
@@ -120,8 +125,8 @@ export default function AccountDeletionPage() {
             </section>
           </div>
 
-          <div className="mt-16 pt-8 border-t border-gray-200">
-            <Link href="/" className="text-blue-600 hover:text-blue-500 font-semibold">
+          <div className="mt-16 pt-8 border-t border-[var(--paper-rule)]">
+            <Link href="/" className="text-[var(--clay-deep)] underline underline-offset-4 font-semibold">
               ← Back to Home
             </Link>
           </div>

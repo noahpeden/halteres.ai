@@ -13,16 +13,21 @@ export default function TermsOfUsePage() {
   const lastUpdated = 'August 30, 2026';
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen">
       <main>
         {/* Header */}
-        <div className="bg-blue-600 py-24 sm:py-32">
+        <div className="bg-[var(--sea)] py-20 sm:py-24">
           <div className="mx-auto max-w-7xl px-6 lg:px-8">
             <div className="mx-auto max-w-2xl text-center">
-              <h1 className="text-4xl font-bold tracking-tight text-white sm:text-6xl">
+              <h1
+                className="text-4xl tracking-tight text-[var(--chalk)] sm:text-6xl"
+                style={{ fontFamily: 'var(--halt-display)', fontWeight: 600 }}
+              >
                 Terms of Use
               </h1>
-              <p className="mt-6 text-lg leading-8 text-blue-100">Last updated: {lastUpdated}</p>
+              <p className="mt-6 text-lg leading-8 text-[color-mix(in_srgb,var(--chalk)_75%,transparent)]">
+                Last updated: {lastUpdated}
+              </p>
             </div>
           </div>
         </div>
@@ -116,7 +121,7 @@ export default function TermsOfUsePage() {
               <p className="text-gray-600">
                 To learn how to deactivate your account in-app and request permanent deletion,
                 please visit our{' '}
-                <Link href="/account-deletion" className="text-blue-600 hover:text-blue-500">
+                <Link href="/account-deletion" className="text-[var(--clay-deep)] underline underline-offset-4">
                   Account Deletion
                 </Link>{' '}
                 page.
@@ -160,8 +165,8 @@ export default function TermsOfUsePage() {
             </section>
           </div>
 
-          <div className="mt-16 pt-8 border-t border-gray-200">
-            <Link href="/" className="text-blue-600 hover:text-blue-500 font-semibold">
+          <div className="mt-16 pt-8 border-t border-[var(--paper-rule)]">
+            <Link href="/" className="text-[var(--clay-deep)] underline underline-offset-4 font-semibold">
               ← Back to Home
             </Link>
           </div>

@@ -73,14 +73,9 @@ export default function PRCelebration({ prData, onClose }) {
             </div>
 
             {/* PR Text */}
-            <h2 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[var(--athlete-accent-secondary)] to-[var(--athlete-accent-primary)] mb-2">
-              NEW PR!
-            </h2>
+            <h2 className="athlete-heading-xl mb-2">New mark.</h2>
 
-            {/* Result Value */}
-            <p className="athlete-heading-xl text-white mb-2">
-              {prData?.displayValue || 'Personal Record'}
-            </p>
+            <p className="athlete-heading-xl mb-2">{prData?.displayValue || 'Personal record'}</p>
 
             {/* Improvement */}
             {improvement && prData.previousValue && (
@@ -91,7 +86,7 @@ export default function PRCelebration({ prData, onClose }) {
 
             {/* Encouraging Message */}
             <p className="athlete-body text-[var(--athlete-text-secondary)] mb-6">
-              You're crushing it! Keep up the amazing work!
+              Ink it. Come back tomorrow.
             </p>
 
             {/* Close Button */}
@@ -100,7 +95,7 @@ export default function PRCelebration({ prData, onClose }) {
               className="athlete-btn-primary w-full py-3 flex items-center justify-center gap-2"
             >
               <Sparkles className="w-5 h-5" />
-              Celebrate!
+              Keep it
             </button>
           </div>
         </div>

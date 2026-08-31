@@ -209,14 +209,14 @@ export default function WorkoutModal({
 
   return (
     <div
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-start sm:items-start justify-center z-[9999] p-0 sm:p-4 sm:pt-20"
+      className="fixed inset-0 bg-[var(--ink)]/50 flex items-start sm:items-start justify-center z-[9999] p-0 sm:p-4 sm:pt-16"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
       aria-labelledby={titleId}
     >
       <div
-        className="bg-white/95 backdrop-blur-sm rounded-none sm:rounded-lg shadow-2xl max-w-3xl w-full h-screen sm:h-auto sm:max-h-[85vh] overflow-y-auto"
+        className="bg-[var(--chalk)] rounded-none sm:rounded-sm shadow-2xl max-w-3xl w-full h-screen sm:h-auto sm:max-h-[85vh] overflow-y-auto border border-[var(--paper-rule)]"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 pt-16 sm:pt-4 border-b relative">
@@ -228,7 +228,7 @@ export default function WorkoutModal({
             ✕
           </button>
 
-          <h3 id={titleId} className="text-xl font-bold mr-4 mb-3 sm:mb-0 pr-8">
+          <h3 id={titleId} className="athlete-heading-lg mr-4 mb-3 sm:mb-0 pr-8">
             {displayWorkout.title}
           </h3>
 

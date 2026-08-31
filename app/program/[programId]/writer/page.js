@@ -1,5 +1,5 @@
 'use client';
-import { Check, ChevronRight, Edit2, Sparkles, X } from 'lucide-react';
+import { Check, ChevronRight, Edit2, X } from 'lucide-react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import AIProgramWriter from '@/components/AIProgramWriter/AIProgramWriter';
@@ -14,10 +14,10 @@ export default function ProgramWriterPage() {
   const wizardComplete = searchParams.get('wizardComplete') === 'true';
 
   const [isEditingName, setIsEditingName] = useState(false);
-  const [programName, setProgramName] = useState('AI Program Writer');
+  const [programName, setProgramName] = useState('Untitled block');
   const [editedName, setEditedName] = useState('');
   const [programDescription, setProgramDescription] = useState(
-    'Generate workouts for your program'
+    'Write the next block. Generate when you are ready.'
   );
   const [clientName, setClientName] = useState('');
   const [clientType, setClientType] = useState('');
@@ -54,9 +54,11 @@ export default function ProgramWriterPage() {
 
         if (programData) {
           // Set program details first
-          setProgramName(programData.name || 'AI Program Writer');
+          setProgramName(programData.name || 'Untitled block');
           setEditedName(programData.name || '');
-          setProgramDescription(programData.description || 'Generate workouts for your program');
+          setProgramDescription(
+            programData.description || 'Write the next block. Generate when you are ready.'
+          );
 
           // 2. If entity_id exists, fetch entity name
           if (programData.entity_id) {
@@ -125,53 +127,48 @@ export default function ProgramWriterPage() {
 
   return (
     <div className="w-full max-w-full relative animate-fadeIn">
-      {/* Enhanced Header Section */}
-      <div className="mb-6 pb-4 border-b border-slate-200">
+      <div className="mb-5 pb-4 border-b border-[var(--paper-rule)]">
         {isEditingName ? (
           <div className="flex items-center gap-3">
             <input
               type="text"
-              className="flex-1 max-w-md px-4 py-2.5 text-xl font-bold bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+              className="athlete-input flex-1 max-w-md text-xl font-semibold"
+              style={{ fontFamily: 'var(--halt-display)' }}
               value={editedName}
               onChange={(e) => setEditedName(e.target.value)}
               autoFocus
             />
             <button
-              className="p-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 rounded-lg transition-colors"
+              className="p-2 bg-[var(--olive)] text-[var(--chalk)] rounded-sm"
               onClick={handleSaveName}
+              aria-label="Save name"
             >
               <Check className="h-5 w-5" />
             </button>
             <button
-              className="p-2 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg transition-colors"
+              className="p-2 bg-[var(--paper-deep)] text-[var(--ink)] rounded-sm"
               onClick={handleCancelEdit}
+              aria-label="Cancel"
             >
               <X className="h-5 w-5" />
             </button>
           </div>
         ) : (
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-11 h-11 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/25">
-                <Sparkles className="w-5 h-5 text-white" />
+            <div>
+              <p className="athlete-label mb-1">Writer</p>
+              <div className="flex items-center gap-2">
+                <h1 className="athlete-heading-xl">{programName}</h1>
+                <button
+                  onClick={() => setIsEditingName(true)}
+                  className="p-1.5 text-[var(--ink-mute)] hover:text-[var(--clay-deep)]"
+                  title="Edit program name"
+                >
+                  <Edit2 className="h-4 w-4" />
+                </button>
               </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h1 className="text-2xl font-bold text-slate-800">{programName}</h1>
-                  <button
-                    onClick={() => setIsEditingName(true)}
-                    className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                    title="Edit program name"
-                  >
-                    <Edit2 className="h-4 w-4" />
-                  </button>
-                </div>
-                {programDescription && (
-                  <p className="text-sm text-slate-500 mt-0.5">{programDescription}</p>
-                )}
-              </div>
+              {programDescription && <p className="athlete-body mt-1">{programDescription}</p>}
             </div>
-            {/* Client/class badge and share controls removed for B2C */}
           </div>
         )}
       </div>
@@ -180,7 +177,7 @@ export default function ProgramWriterPage() {
       {isSidebarCollapsed && !isMobile && (
         <button
           onClick={toggleSidebarCollapse}
-          className="fixed top-1/2 right-0 transform -translate-y-1/2 z-20 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white p-3 rounded-l-xl shadow-lg shadow-blue-500/25 transition-all duration-200"
+          className="fixed top-1/2 right-0 transform -translate-y-1/2 z-20 bg-[var(--clay-deep)] text-[var(--chalk)] p-3 rounded-l-sm"
           aria-label="Expand Sidebar"
         >
           <ChevronRight size={20} />
@@ -193,7 +190,7 @@ export default function ProgramWriterPage() {
         <div
           className={`w-full ${isSidebarCollapsed ? 'lg:flex-1' : 'lg:flex-1 lg:min-w-0'} transition-all duration-300 ease-in-out lg:h-full`}
         >
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 lg:h-full lg:flex lg:flex-col overflow-hidden">
+          <div className="writer-surface rounded-sm lg:h-full lg:flex lg:flex-col overflow-hidden">
             <ProgramProvider programId={programId}>
               <AIProgramWriter programId={programId} wizardComplete={wizardComplete} />
             </ProgramProvider>

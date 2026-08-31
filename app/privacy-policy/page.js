@@ -14,16 +14,21 @@ export default function PrivacyPolicyPage() {
   const lastUpdated = 'August 30, 2026';
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen">
       <main>
         {/* Header */}
-        <div className="bg-blue-600 py-24 sm:py-32">
+        <div className="bg-[var(--sea)] py-20 sm:py-24">
           <div className="mx-auto max-w-7xl px-6 lg:px-8">
             <div className="mx-auto max-w-2xl text-center">
-              <h1 className="text-4xl font-bold tracking-tight text-white sm:text-6xl">
+              <h1
+                className="text-4xl tracking-tight text-[var(--chalk)] sm:text-6xl"
+                style={{ fontFamily: 'var(--halt-display)', fontWeight: 600 }}
+              >
                 Privacy Policy
               </h1>
-              <p className="mt-6 text-lg leading-8 text-blue-100">Last updated: {lastUpdated}</p>
+              <p className="mt-6 text-lg leading-8 text-[color-mix(in_srgb,var(--chalk)_75%,transparent)]">
+                Last updated: {lastUpdated}
+              </p>
             </div>
           </div>
         </div>
@@ -165,7 +170,7 @@ export default function PrivacyPolicyPage() {
                 <li>
                   <strong>Delete Account:</strong> You may request deletion of your account by
                   contacting us at noah@halteres.ai or by following the steps at{' '}
-                  <Link href="/account-deletion" className="text-blue-600 hover:text-blue-500">
+                  <Link href="/account-deletion" className="text-[var(--clay-deep)] underline underline-offset-4">
                     /account-deletion
                   </Link>
                   .
@@ -236,8 +241,8 @@ export default function PrivacyPolicyPage() {
             </section>
           </div>
 
-          <div className="mt-16 pt-8 border-t border-gray-200">
-            <Link href="/contact" className="text-blue-600 hover:text-blue-500 font-semibold">
+          <div className="mt-16 pt-8 border-t border-[var(--paper-rule)]">
+            <Link href="/contact" className="text-[var(--clay-deep)] underline underline-offset-4 font-semibold">
               ← Back to Contact
             </Link>
           </div>

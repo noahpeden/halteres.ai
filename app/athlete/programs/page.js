@@ -1,6 +1,6 @@
 'use client';
 
-import { Calendar, ChevronLeft, ChevronRight, Clock, Dumbbell, Target } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Clock, Dumbbell, Target } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -12,7 +12,12 @@ import { useAuth } from '@/contexts/AuthContext';
 export default function AthleteProgramsPage() {
   const { user, currentGym } = useAuth();
   const router = useRouter();
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState('');
   const createSelfCoachedProgram = async () => {
+    if (creating) return;
+    setCreating(true);
+    setCreateError('');
     try {
       const resp = await fetch('/api/CreateProgram', {
         method: 'POST',
@@ -36,7 +41,9 @@ export default function AthleteProgramsPage() {
       }
     } catch (e) {
       console.error('Create program failed:', e);
-      alert('Unable to create program. Please try again.');
+      setCreateError('Could not open Writer. Try again.');
+    } finally {
+      setCreating(false);
     }
   };
   const [programs, setPrograms] = useState([]);
@@ -115,30 +122,38 @@ export default function AthleteProgramsPage() {
   return (
     <div className="min-h-screen">
       {/* Header */}
-      <div className="sticky top-0 z-40 bg-[var(--athlete-bg-card)] border-b border-[var(--athlete-border)] px-4 py-4">
-        <div className="flex items-center justify-between gap-3">
+      <div className="sticky top-0 z-40 athlete-glass px-4 py-4">
+        <div className="flex items-center justify-between gap-3 max-w-2xl mx-auto">
           <div className="flex items-center gap-3">
             <button
               onClick={() => router.push('/athlete')}
-              className="w-8 h-8 rounded-lg bg-[var(--athlete-bg-secondary)] flex items-center justify-center"
+              className="w-10 h-10 rounded-sm bg-[var(--athlete-bg-secondary)] flex items-center justify-center"
+              aria-label="Back to Today"
             >
               <ChevronLeft className="w-5 h-5 text-[var(--athlete-text-primary)]" />
             </button>
             <div>
               <h1 className="athlete-heading-lg">Programs</h1>
-              <p className="athlete-label">{currentGym?.name || 'My Programs'}</p>
+              <p className="athlete-label">Your blocks</p>
             </div>
           </div>
           <button
+            type="button"
             className="athlete-btn-primary whitespace-nowrap px-4 py-2"
             onClick={createSelfCoachedProgram}
+            disabled={creating}
           >
-            Create program
+            {creating ? 'Opening…' : 'Create program'}
           </button>
         </div>
+        {createError && (
+          <p className="max-w-2xl mx-auto mt-2 text-sm text-[var(--blood)]" role="alert">
+            {createError}
+          </p>
+        )}
       </div>
 
-      <div className="px-4 space-y-4 pb-8 pt-4">
+      <div className="px-4 space-y-4 pb-8 pt-4 max-w-2xl mx-auto">
         {/* Active Program Hero */}
         {activeProgram && (
           <Link href={`/athlete/programs/${activeProgram.id}`}>
@@ -199,7 +214,7 @@ export default function AthleteProgramsPage() {
                 onClick={() => setFilter(opt.value)}
                 className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all ${
                   filter === opt.value
-                    ? 'bg-[var(--athlete-accent-primary)] text-white'
+                    ? 'bg-[var(--athlete-accent-primary)] text-[var(--athlete-on-accent)]'
                     : 'bg-[var(--athlete-bg-card)] text-[var(--athlete-text-secondary)] border border-[var(--athlete-border)]'
                 }`}
               >
@@ -216,12 +231,14 @@ export default function AthleteProgramsPage() {
         {filteredPrograms.length === 0 ? (
           <EmptyState
             icon={Dumbbell}
-            title="No programs found"
+            title={filter !== 'all' ? `No ${filter} blocks` : 'The shelf is empty'}
             message={
               filter !== 'all'
-                ? `No ${filter} programs yet. Check back later.`
-                : 'You have no programs yet.'
+                ? `Nothing marked ${filter} yet.`
+                : 'Write a program — or let Haltēres draft one you can edit.'
             }
+            action={filter === 'all' ? createSelfCoachedProgram : () => setFilter('all')}
+            actionLabel={filter === 'all' ? 'Create program' : 'Show all'}
           />
         ) : (
           <div className="space-y-3">
@@ -233,7 +250,7 @@ export default function AthleteProgramsPage() {
                     className={`athlete-card ${getStatusStripe(program.status)} p-4 animate-athlete-stagger stagger-${Math.min(index + 1, 5)}`}
                   >
                     <div className="flex items-start gap-4">
-                      <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-[var(--athlete-bg-secondary)] flex items-center justify-center">
+                      <div className="flex-shrink-0 w-12 h-12 rounded-sm bg-[var(--athlete-bg-secondary)] flex items-center justify-center">
                         <CircularProgress
                           value={program.completedWorkouts || 0}
                           max={program.totalWorkouts || 1}
