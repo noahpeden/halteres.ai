@@ -5,6 +5,7 @@
  * Easily extensible for new training styles.
  */
 
+import { resolveEquipmentLabels } from './equipmentLabels.js';
 import {
   formatSubstitutionSuggestions,
   getSubstitutionSuggestions,
@@ -81,7 +82,7 @@ const COMMON_GYM_EQUIPMENT = [
  * @returns {string} Formatted string with equipment restrictions
  */
 export function formatEquipmentRestrictions(equipment) {
-  const availableEquipment = Array.isArray(equipment) && equipment.length > 0 ? equipment : [];
+  const availableEquipment = resolveEquipmentLabels(equipment);
   const equipmentListStr =
     availableEquipment.length > 0 ? availableEquipment.join(', ') : 'Bodyweight only';
 

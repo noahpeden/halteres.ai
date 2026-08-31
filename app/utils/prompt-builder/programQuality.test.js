@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { buildEnhancementPrompt } from './enhanceWeekPrompt.js';
+import { resolveEquipmentLabels } from './equipmentLabels.js';
 import {
   assembleReferenceMaterial,
   buildProgrammingContract,
@@ -221,6 +222,93 @@ describe('equipment, duration, density, voice, RAG', () => {
     assert.match(both, /Fran/);
     assert.match(both, /Mayhem/);
     assert.match(both, /5\/3\/1/);
+  });
+
+  it('live QA A/B/C intakes produce different week-1 identities and equipment rules', () => {
+    const liveGarage531 = {
+      programName: 'QA Garage 531',
+      methodology: 'Powerlifting',
+      goal: 'add 20 lb to bench press in 8 weeks',
+      description:
+        'Garage gym only: barbell, power rack, bench, plates, dumbbells, pull-up bar. NO machines, NO cables, NO smith machine, no leg press. 4 years lifting, intermediate: squat 315, bench 225, deadlift 405. Recent training: 5/3/1 BBB for 12 weeks, stalled on bench press, knees cranky with high-bar squat volume. Influences: Jim Wendler 5/3/1 main-lift percentages plus some GZCL tier structure. Goals: add 20 lb to bench press in 8 weeks while maintaining squat and deadlift. 60 minute sessions, 4 days per week, 8 weeks.',
+      equipment: resolveEquipmentLabels([1, 2, 3, 5]),
+      sessionMinutes: 60,
+      daysPerWeek: 4,
+      numberOfWeeks: 8,
+      weekNumber: 1,
+    };
+    const liveHyrox = {
+      programName: 'QA Hyrox Engine',
+      methodology: 'Hybrid',
+      goal: 'Hyrox race engine',
+      description:
+        'Commercial gym + rower, ski, assault, treadmill, kettlebell, sandbag. Build engine and stations for Hyrox. 45 minute sessions, Monday-Friday, 12 weeks.',
+      equipment: ['Rower', 'SkiErg', 'Air Bike', 'Treadmill', 'Kettlebell', 'Sandbags'],
+      sessionMinutes: 45,
+      daysPerWeek: 5,
+      numberOfWeeks: 12,
+      weekNumber: 1,
+    };
+    const liveMayhem = {
+      programName: 'QA Mayhem Pump',
+      methodology: 'crossfit',
+      goal: 'Stay competitive and look athletic',
+      description:
+        'CrossFit box, all box equipment available. Mayhem + classic CF + EMOM pump aesthetic. Intermediate athlete, keeping conditioning and gymnastics skills sharp.',
+      equipment: [
+        'Barbell',
+        'Bumper Plates',
+        'Power Rack',
+        'Dumbbell',
+        'Kettlebell',
+        'Rower',
+        'Air Bike',
+        'Wall Ball',
+      ],
+      sessionMinutes: 60,
+      daysPerWeek: 5,
+      numberOfWeeks: 8,
+      weekNumber: 1,
+    };
+
+    const garage = buildProgrammingContract(liveGarage531);
+    const hyrox = buildProgrammingContract(liveHyrox);
+    const mayhem = buildProgrammingContract(liveMayhem);
+
+    assert.ok(garage.signatureIds.includes('531'));
+    assert.ok(garage.signatureIds.includes('gzcl'));
+    assert.ok(garage.sections.includes('Main Lift (5/3/1)'));
+    assert.ok(isGarageLikeEquipment(liveGarage531.equipment));
+    const garagePrompt = skeletonFor(liveGarage531);
+    assert.match(garagePrompt, /65% x 5|65%x5/);
+    assert.match(garagePrompt, /Barbell/);
+    assert.match(garagePrompt, /garage/i);
+    assert.doesNotMatch(garagePrompt, /Bodyweight only/);
+
+    assert.ok(hyrox.signatureIds.includes('hyrox'));
+    assert.ok(!hyrox.signatureIds.includes('531'));
+    assert.ok(hyrox.sections.includes('Engine'));
+    assert.ok(hyrox.sections.includes('Station Work'));
+    assert.equal(isGarageLikeEquipment(liveHyrox.equipment), false);
+    const hyroxPrompt = skeletonFor(liveHyrox);
+    assert.match(hyroxPrompt, /engine \+ station/i);
+    assert.match(hyroxPrompt, /Rower|SkiErg|Sandbags/);
+    assert.match(hyroxPrompt, /exactly 12 weeks/);
+    assert.doesNotMatch(hyroxPrompt, /65%x5, 75%x5, 85%x5\+/);
+
+    assert.ok(mayhem.signatureIds.includes('mayhem'));
+    assert.ok(mayhem.signatureIds.includes('classic_cf'));
+    assert.ok(mayhem.signatureIds.includes('emom_pump'));
+    assert.ok(mayhem.sections.includes('Metcon'));
+    assert.ok(mayhem.sections.includes('Accessory EMOM'));
+    const mayhemPrompt = skeletonFor(liveMayhem);
+    assert.match(mayhemPrompt, /Mayhem/);
+    assert.match(mayhemPrompt, /Accessory EMOM/);
+    assert.match(mayhemPrompt, /Barbell/);
+    assert.doesNotMatch(mayhemPrompt, /Bodyweight only/);
+
+    assert.ok(!garagePrompt.includes(hyroxPrompt.slice(0, 180)));
+    assert.ok(!mayhemPrompt.includes('Main Lift (5/3/1) + Supplemental + Assistance'));
   });
 
   it('formats workout-library RAG so retrieved research is actually injected', () => {

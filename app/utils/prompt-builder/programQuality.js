@@ -6,6 +6,8 @@
  * (and the related generate-program-anthropic path).
  */
 
+import { resolveEquipmentLabels } from './equipmentLabels.js';
+
 const CLIENT_TRAINER_LANGUAGE = [
   'client',
   'your athletes',
@@ -62,6 +64,29 @@ export const INFLUENCE_SIGNATURES = [
 - Hanging Knee Raise 3x12`,
   },
   {
+    id: 'gzcl',
+    label: 'GZCL tier structure',
+    match: /gzcl|t1\s*\/\s*t2\s*\/\s*t3/i,
+    sections: ['Main Lift (5/3/1)', 'Supplemental', 'Assistance'],
+    week1Must: [
+      'Keep the main lift as T1 / percentage work (5/3/1 or a heavy 3–5)',
+      'T2 is volume on a related lift (BBB, paused work, or a close variation) — not a metcon',
+      'T3 is higher-rep assistance that supports the goal lift, not a bodybuilding PPL split',
+    ],
+    forbidden: [
+      'Dropping percentages for a random bodyweight circuit',
+      'Replacing T1/T2/T3 with a generic Strength + AMRAP template',
+    ],
+    example: `## Main Lift (5/3/1)
+- Bench Press: 65%x5, 75%x5, 85%x5+
+
+## Supplemental
+- Close-grip bench T2: 3x10 @ 65%
+
+## Assistance
+- DB row 3x12, face pull 3x15`,
+  },
+  {
     id: 'hyrox',
     label: 'Hyrox / hybrid race engine',
     match: /hyrox|hybrid rac|race engine|ski\s*erg.*sled|station work|roxzone/i,
@@ -108,7 +133,7 @@ export const INFLUENCE_SIGNATURES = [
     id: 'classic_cf',
     label: 'Classic CrossFit',
     match:
-      /classic crossfit|crossfit\.com|hero wod|girl wod|benchmark wod|fran|grace|murph|cindy|diane/i,
+      /classic crossfit|classic\s*cf\b|crossfit\.com|hero wod|girl wod|benchmark wod|fran|grace|murph|cindy|diane/i,
     sections: ['Strength', 'Metcon'],
     week1Must: [
       'Classic CF variety: one weightlifting or gymnastics focus, then a short-to-medium mixed-modal piece',
@@ -174,6 +199,7 @@ export const INFLUENCE_SIGNATURES = [
 ];
 
 export function collectProgrammingSignals({
+  programName = '',
   methodology = '',
   goal = '',
   description = '',
@@ -182,7 +208,16 @@ export function collectProgrammingSignals({
   influences = '',
   recentHistory = '',
 } = {}) {
-  return [methodology, goal, description, focusArea, referenceMaterial, influences, recentHistory]
+  return [
+    programName,
+    methodology,
+    goal,
+    description,
+    focusArea,
+    referenceMaterial,
+    influences,
+    recentHistory,
+  ]
     .filter((value) => typeof value === 'string' && value.trim() !== '')
     .join('\n');
 }
@@ -307,9 +342,7 @@ Sound like a real coach who watched this person train last month — specific, o
 }
 
 export function isGarageLikeEquipment(equipment = []) {
-  const available = new Set(
-    (Array.isArray(equipment) ? equipment : []).map((item) => String(item))
-  );
+  const available = new Set(resolveEquipmentLabels(equipment));
   const hasCommercial = COMMERCIAL_ONLY_EQUIPMENT.some((item) => available.has(item));
   const hasBarbellOrRack = available.has('Barbell') || available.has('Power Rack');
   const looksLikeRaceOrBoxKit =
@@ -357,6 +390,7 @@ export function assembleReferenceMaterial({
 }
 
 export function buildProgrammingContract({
+  programName = '',
   methodology = '',
   goal = '',
   description = '',
@@ -371,7 +405,9 @@ export function buildProgrammingContract({
   weekNumber = null,
   equipment = [],
 } = {}) {
+  const resolvedEquipment = resolveEquipmentLabels(equipment);
   const signalText = collectProgrammingSignals({
+    programName,
     methodology,
     goal,
     description,
@@ -404,7 +440,7 @@ export function buildProgrammingContract({
     sessionDensity,
     numberOfWeeks: numberOfWeeks == null ? null : Number(numberOfWeeks),
     weekNumber: weekNumber == null ? null : Number(weekNumber),
-    equipment,
+    equipment: resolvedEquipment,
     signalText,
   };
 }
