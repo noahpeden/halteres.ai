@@ -380,7 +380,7 @@ export default function LoginPage() {
               >
                 Continue with Google
               </button>
-              <p className="mt-4 text-center text-xs text-[var(--ink-mute)]">Free while in beta</p>
+              <p className="mt-4 text-center text-sm text-[var(--ink-soft)]">Free while in beta</p>
             </>
           )}
         </div>
