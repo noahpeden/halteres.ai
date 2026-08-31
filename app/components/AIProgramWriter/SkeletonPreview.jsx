@@ -196,7 +196,7 @@ export default function SkeletonPreview({
             <div className="collapse-title font-medium">Program Description</div>
             <div className="collapse-content">
               <div
-                className="p-2 bg-white rounded-md text-sm"
+                className="p-2 bg-[var(--chalk)] rounded-sm text-sm"
                 dangerouslySetInnerHTML={{
                   __html: parseMarkdownToHTML(generatedDescription),
                 }}
@@ -273,7 +273,7 @@ export default function SkeletonPreview({
       {/* Enhance All Confirmation Modal */}
       {showEnhanceAllConfirm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-base-100 rounded-xl p-6 max-w-md m-4 shadow-2xl">
+          <div className="athlete-card-static p-6 max-w-md m-4">
             <h3 className="font-bold text-lg mb-2">Enhance Remaining Weeks?</h3>
             <p className="text-base-content/70 mb-4">
               {detailedWeeks} week{detailedWeeks > 1 ? 's have' : ' has'} already been enhanced and
@@ -332,15 +332,15 @@ function WeekCard({
   gymId,
 }) {
   const statusColors = {
-    detailed: 'border-primary bg-primary/5',
-    enhancing: 'border-info bg-info/5',
-    skeleton: 'border-base-300 bg-base-100',
+    detailed: 'border-[var(--olive)] bg-[color-mix(in_srgb,var(--olive)_8%,var(--chalk))]',
+    enhancing: 'border-[var(--sea)] bg-[color-mix(in_srgb,var(--sea)_8%,var(--chalk))]',
+    skeleton: 'border-[var(--paper-rule)] bg-[var(--chalk)]',
   };
 
   const statusBadgeColors = {
-    detailed: 'bg-primary/20 text-primary',
-    enhancing: 'bg-info/20 text-info',
-    skeleton: 'bg-warning/20 text-warning-content',
+    detailed: 'bg-[var(--olive)] text-[var(--chalk)]',
+    enhancing: 'bg-[var(--sea)] text-[var(--chalk)]',
+    skeleton: 'bg-[var(--gold)] text-[var(--ink)]',
   };
 
   const statusLabels = {
@@ -352,7 +352,7 @@ function WeekCard({
   return (
     <div
       className={`
-        p-6 rounded-xl border-2 transition-all
+        p-6 rounded-sm border transition-all
         ${statusColors[week.status]}
         ${week.status === 'enhancing' ? 'animate-pulse' : ''}
       `}
@@ -364,7 +364,7 @@ function WeekCard({
             className={`
             w-8 h-8 rounded-full flex items-center justify-center font-bold
             ${
-              week.status === 'detailed' ? 'bg-primary text-white' : 'bg-base-200 text-base-content'
+              week.status === 'detailed' ? 'bg-[var(--olive)] text-[var(--chalk)]' : 'bg-[var(--paper-deep)] text-[var(--ink)]'
             }
           `}
           >
@@ -506,7 +506,9 @@ function DetailedWorkoutCard({
   return (
     <div
       className={`border rounded-md p-3 sm:p-4 flex flex-col w-full ${
-        workout.completed ? 'bg-green-50 border-green-200' : 'bg-white border-base-300'
+        workout.completed
+          ? 'bg-[color-mix(in_srgb,var(--olive)_10%,var(--chalk))] border-[var(--olive)]'
+          : 'bg-[var(--chalk)] border-[var(--paper-rule)]'
       }`}
     >
       <div className="flex justify-between items-center mb-1 w-full">

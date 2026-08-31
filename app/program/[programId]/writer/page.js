@@ -14,10 +14,10 @@ export default function ProgramWriterPage() {
   const wizardComplete = searchParams.get('wizardComplete') === 'true';
 
   const [isEditingName, setIsEditingName] = useState(false);
-  const [programName, setProgramName] = useState('AI Program Writer');
+  const [programName, setProgramName] = useState('Untitled block');
   const [editedName, setEditedName] = useState('');
   const [programDescription, setProgramDescription] = useState(
-    'Generate workouts for your program'
+    'Write the next block. Generate when you are ready.'
   );
   const [clientName, setClientName] = useState('');
   const [clientType, setClientType] = useState('');
@@ -54,9 +54,11 @@ export default function ProgramWriterPage() {
 
         if (programData) {
           // Set program details first
-          setProgramName(programData.name || 'AI Program Writer');
+          setProgramName(programData.name || 'Untitled block');
           setEditedName(programData.name || '');
-          setProgramDescription(programData.description || 'Generate workouts for your program');
+          setProgramDescription(
+            programData.description || 'Write the next block. Generate when you are ready.'
+          );
 
           // 2. If entity_id exists, fetch entity name
           if (programData.entity_id) {

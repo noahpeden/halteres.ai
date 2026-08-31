@@ -57,18 +57,18 @@ export default function NotFound() {
           </button>
         </div>
 
-        <div className="mt-6 pt-6 border-t border-gray-200">
-          <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
-            <Mail className="w-4 h-4 text-gray-500" />
+        <div className="mt-6 pt-6 border-t border-[var(--paper-rule)]">
+          <div className="flex items-center justify-center gap-2 text-sm text-[var(--ink-soft)]">
+            <Mail className="w-4 h-4" />
             <p>
               Found a bug? Email{' '}
               <a
                 href="mailto:noah@halteres.ai"
-                className="text-blue-600 font-medium hover:underline"
+                className="text-[var(--clay-deep)] font-medium underline underline-offset-4"
               >
                 noah@halteres.ai
               </a>{' '}
-              with a screenshot and description and we'll fix it ASAP!
+              with a screenshot.
             </p>
           </div>
         </div>

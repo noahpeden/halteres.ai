@@ -666,6 +666,54 @@
   letter-spacing: 0.04em;
 }
 
+.writer-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  padding: 0.65rem 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--ink);
+  border-radius: 0.2rem;
+  list-style: none;
+}
+
+.writer-summary::-webkit-details-marker {
+  display: none;
+}
+
+.writer-summary:hover {
+  background: var(--paper-deep);
+}
+
+.writer-field {
+  width: 100%;
+  background: var(--chalk);
+  border: 1.5px solid var(--paper-rule);
+  border-radius: 0.28rem;
+  color: var(--ink);
+  padding: 0.6rem 0.85rem;
+  min-height: 40px;
+  font-size: 0.875rem;
+}
+
+.writer-field:focus {
+  outline: none;
+  border-color: var(--clay-deep);
+  box-shadow: 0 0 0 3px rgba(158, 64, 32, 0.16);
+}
+
+.writer-field-label {
+  display: block;
+  font-family: var(--halt-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  margin-bottom: 0.4rem;
+}
+
 @keyframes tvFadeIn {
   from {
     opacity: 0;

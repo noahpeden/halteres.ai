@@ -250,7 +250,7 @@ export default function AthleteProgramsPage() {
                     className={`athlete-card ${getStatusStripe(program.status)} p-4 animate-athlete-stagger stagger-${Math.min(index + 1, 5)}`}
                   >
                     <div className="flex items-start gap-4">
-                      <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-[var(--athlete-bg-secondary)] flex items-center justify-center">
+                      <div className="flex-shrink-0 w-12 h-12 rounded-sm bg-[var(--athlete-bg-secondary)] flex items-center justify-center">
                         <CircularProgress
                           value={program.completedWorkouts || 0}
                           max={program.totalWorkouts || 1}
