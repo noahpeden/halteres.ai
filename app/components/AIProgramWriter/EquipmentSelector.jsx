@@ -79,17 +79,20 @@ export default function EquipmentSelector({ isVisible, onToggleVisibility }) {
               <span className="font-medium">Select All Equipment</span>
             </label>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-40 overflow-y-auto">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-1 max-h-64 overflow-y-auto pr-1">
             {equipmentList.map((item) => (
-              <label key={item.value} className="flex items-center gap-2">
+              <label
+                key={item.value}
+                className="flex items-center gap-3 min-h-10 px-1 py-1 rounded-sm cursor-pointer hover:bg-base-200"
+              >
                 <input
                   type="checkbox"
-                  className="checkbox checkbox-xs"
+                  className="checkbox checkbox-sm shrink-0"
                   value={item.value}
                   checked={selectedEquipment.includes(item.value)}
                   onChange={(e) => handleEquipmentToggle(e.target.value)}
                 />
-                <span className="text-sm">{item.label}</span>
+                <span className="text-sm leading-snug">{item.label}</span>
               </label>
             ))}
           </div>
