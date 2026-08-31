@@ -1,30 +1,83 @@
 'use client';
-import { useRouter } from 'next/navigation';
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { createClient } from '@/utils/supabase/client';
+import { useAuth as useClerkAuth, useUser as useClerkUser } from '@clerk/nextjs';
+import { createClient as createSupabaseClient } from '@supabase/supabase-js';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 
 const AuthContext = createContext();
-const supabase = createClient();
 
-export function AuthProvider({ children, initialSession }) {
-  const router = useRouter();
-  const [session, setSession] = useState(initialSession || null);
-  const [user, setUser] = useState(initialSession?.user || null);
+function decodeJwtSub(token) {
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const json = JSON.parse(atob(base64));
+    return { sub: json?.sub || null };
+  } catch {
+    return { sub: null };
+  }
+}
+
+function looksLikeUuid(id) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    id || ''
+  );
+}
+
+export function AuthProvider({ children }) {
+  const { isSignedIn, getToken } = useClerkAuth();
+  const { user: clerkUser } = useClerkUser();
+
+  const [session, setSession] = useState(null);
+  const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [gymMemberships, setGymMemberships] = useState([]);
   const [currentGym, setCurrentGym] = useState(null);
   const [loadingGym, setLoadingGym] = useState(true);
+  const supabaseRef = useRef(null);
+  const [supabaseUserId, setSupabaseUserId] = useState(null);
+  const [supabaseReady, setSupabaseReady] = useState(0);
+
+  useEffect(() => {
+    if (!isSignedIn) {
+      supabaseRef.current = null;
+      setSupabaseUserId(null);
+      setSupabaseReady(0);
+      return;
+    }
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    const client = createSupabaseClient(url, key, {
+      global: {
+        fetch: async (input, init = {}) => {
+          const token = (await getToken()) || (await getToken({ template: 'supabase' }));
+          const headers = new Headers(init.headers || {});
+          if (token) headers.set('Authorization', `Bearer ${token}`);
+          return fetch(input, { ...init, headers });
+        },
+      },
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+    supabaseRef.current = client;
+    setSupabaseReady((n) => n + 1);
+  }, [isSignedIn, getToken]);
 
   const fetchProfile = useCallback(async (userId) => {
-    if (!userId) {
+    if (!userId || !supabaseRef.current) {
       setProfile(null);
       setLoadingProfile(false);
       return;
     }
     setLoadingProfile(true);
     try {
-      const { data, error } = await supabase
+      const { data, error } = await supabaseRef.current
         .from('profiles')
         .select(
           `subscription_status, trial_end_date, generations_remaining, last_generation_date,
@@ -37,8 +90,6 @@ export function AuthProvider({ children, initialSession }) {
 
       if (error) {
         if (error.code === 'PGRST116') {
-          // No rows returned - user has no profile yet
-          console.log('No profile found for user, this is normal for new users');
           setProfile(null);
         } else {
           console.error('Error fetching profile:', {
@@ -46,7 +97,6 @@ export function AuthProvider({ children, initialSession }) {
             details: error.details,
             hint: error.hint,
             code: error.code,
-            full_error: error,
           });
           setProfile(null);
         }
@@ -61,83 +111,97 @@ export function AuthProvider({ children, initialSession }) {
     }
   }, []);
 
-  // Fetch gym memberships for the user
-  const fetchGymMemberships = useCallback(
-    async (userId) => {
-      if (!userId) {
-        setGymMemberships([]);
-        setCurrentGym(null);
-        setLoadingGym(false);
-        return;
-      }
-      setLoadingGym(true);
-      try {
-        const { data, error } = await supabase
-          .from('gym_memberships')
-          .select(`
+  const fetchGymMemberships = useCallback(async (userId) => {
+    if (!userId || !supabaseRef.current) {
+      setGymMemberships([]);
+      setCurrentGym(null);
+      setLoadingGym(false);
+      return;
+    }
+    setLoadingGym(true);
+    try {
+      const { data, error } = await supabaseRef.current
+        .from('gym_memberships')
+        .select(`
           id, role, status, joined_at, nickname, class_id,
           gym:gyms (
             id, name, description, logo_url, invite_code, owner_id
           )
         `)
-          .eq('user_id', userId)
-          .eq('status', 'active');
+        .eq('user_id', userId)
+        .eq('status', 'active');
 
-        if (error) {
-          console.error('Error fetching gym memberships:', error);
-          setGymMemberships([]);
-        } else {
-          setGymMemberships(data || []);
-          // Set current gym to first active membership if not already set
-          if (data && data.length > 0 && !currentGym) {
-            setCurrentGym(data[0].gym);
-          }
-        }
-      } catch (error) {
-        console.error('Unexpected error fetching gym memberships:', error);
+      if (error) {
+        console.error('Error fetching gym memberships:', error);
         setGymMemberships([]);
-      } finally {
-        setLoadingGym(false);
+      } else {
+        setGymMemberships(data || []);
+        if (data && data.length > 0) {
+          setCurrentGym((prev) => prev || data[0].gym);
+        }
       }
-    },
-    [currentGym]
-  );
+    } catch (error) {
+      console.error('Unexpected error fetching gym memberships:', error);
+      setGymMemberships([]);
+    } finally {
+      setLoadingGym(false);
+    }
+  }, []);
 
-  // Switch to a different gym
   const switchGym = useCallback((gym) => {
     setCurrentGym(gym);
-    // Store preference in localStorage
     if (typeof window !== 'undefined' && gym) {
       localStorage.setItem('currentGymId', gym.id);
     }
   }, []);
 
   useEffect(() => {
-    if (user?.id) {
-      fetchProfile(user.id);
-      fetchGymMemberships(user.id);
-    } else {
-      setProfile(null);
-      setLoadingProfile(false);
-      setGymMemberships([]);
-      setCurrentGym(null);
-      setLoadingGym(false);
-    }
+    let cancelled = false;
 
-    const { data: authListener } = supabase.auth.onAuthStateChange((event, currentSession) => {
-      const currentUser = currentSession?.user || null;
-      setSession(currentSession);
-      setUser(currentUser);
-
-      // Handle password recovery flow - redirect to reset-password page
-      if (event === 'PASSWORD_RECOVERY') {
-        router.push('/reset-password?auth=success');
+    async function mapExistingProfileByEmail() {
+      if (!isSignedIn || !supabaseRef.current || !clerkUser) {
+        setSession(null);
+        setUser(null);
+        setProfile(null);
+        setLoadingProfile(false);
+        setGymMemberships([]);
+        setCurrentGym(null);
+        setLoadingGym(false);
+        setSupabaseUserId(null);
         return;
       }
 
-      if (currentUser?.id) {
-        fetchProfile(currentUser.id);
-        fetchGymMemberships(currentUser.id);
+      const email = clerkUser.primaryEmailAddress?.emailAddress || null;
+      let profileId = null;
+
+      if (email) {
+        const { data } = await supabaseRef.current
+          .from('profiles')
+          .select('id')
+          .eq('email', email)
+          .maybeSingle();
+        if (data?.id && looksLikeUuid(data.id)) {
+          profileId = data.id;
+        }
+      }
+
+      if (!profileId) {
+        const token = (await getToken()) || (await getToken({ template: 'supabase' }));
+        const { sub } = decodeJwtSub(token || '');
+        if (looksLikeUuid(sub)) {
+          profileId = sub;
+        }
+      }
+
+      if (cancelled) return;
+
+      // Keep profiles.id as UUID. Never adopt Clerk user_ ids as PKs.
+      setSupabaseUserId(profileId);
+      setSession({ user: { id: profileId, email } });
+      setUser({ id: profileId, email });
+      if (profileId) {
+        fetchProfile(profileId);
+        fetchGymMemberships(profileId);
       } else {
         setProfile(null);
         setLoadingProfile(false);
@@ -145,19 +209,17 @@ export function AuthProvider({ children, initialSession }) {
         setCurrentGym(null);
         setLoadingGym(false);
       }
-    });
+    }
 
+    mapExistingProfileByEmail();
     return () => {
-      authListener?.subscription?.unsubscribe();
+      cancelled = true;
     };
-  }, [user?.id, fetchProfile, fetchGymMemberships, router]);
+  }, [isSignedIn, clerkUser, supabaseReady, getToken, fetchProfile, fetchGymMemberships]);
 
-  // Derived values
-  const isCoach = profile?.role === 'coach' || !profile?.role; // Default to coach for backward compatibility
+  const isCoach = profile?.role === 'coach' || !profile?.role;
   const isAthlete = profile?.role === 'athlete';
   const isGymOwner = gymMemberships.some((m) => m.role === 'owner');
-
-  // Check if athlete needs to complete setup (B2C: ignore gym membership requirement)
   const hasActiveGymMembership =
     gymMemberships.length > 0 && gymMemberships.some((m) => m.status === 'active');
   const athleteNeedsSetup = isAthlete && !profile?.onboarding_completed;
@@ -166,7 +228,7 @@ export function AuthProvider({ children, initialSession }) {
   const contextValue = useMemo(
     () => ({
       session,
-      supabase,
+      supabase: supabaseRef.current,
       user,
       profile,
       loadingProfile,
@@ -175,22 +237,18 @@ export function AuthProvider({ children, initialSession }) {
       generationsRemaining: profile?.generations_remaining,
       lastGenerationDate: profile?.last_generation_date,
       refetchProfile: () => (user?.id ? fetchProfile(user.id) : Promise.resolve()),
-      // Role-related
       role: profile?.role || 'coach',
       isCoach,
       isAthlete,
-      // Athlete setup status
       athleteNeedsSetup,
       onboardingCompleted,
       hasActiveGymMembership,
-      // Gym-related
       gymMemberships,
       currentGym,
       switchGym,
       isGymOwner,
       loadingGym,
       refetchGymMemberships: () => (user?.id ? fetchGymMemberships(user.id) : Promise.resolve()),
-      // Athlete metrics from profile
       athleteMetrics: isAthlete
         ? {
             bench_1rm: profile?.bench_1rm,
@@ -222,6 +280,7 @@ export function AuthProvider({ children, initialSession }) {
       isGymOwner,
       loadingGym,
       fetchGymMemberships,
+      supabaseReady,
     ]
   );
 

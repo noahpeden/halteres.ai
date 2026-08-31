@@ -2,15 +2,13 @@ import { createClient } from '@supabase/supabase-js';
 import OpenAI from 'openai';
 import { corsHeaders, createMobileCompatibleClient } from '@/utils/supabase/mobile';
 
-// Service role client for embedding operations
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+function getSupabaseAdmin() {
+  return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+}
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+function getOpenAI() {
+  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+}
 
 // Handle OPTIONS for CORS preflight
 export async function OPTIONS() {
@@ -40,6 +38,7 @@ async function generateFeedbackEmbedding(workoutBody, notes, context) {
       return null;
     }
 
+    const openai = getOpenAI();
     const response = await openai.embeddings.create({
       model: 'text-embedding-3-small',
       input: textToEmbed,
@@ -67,6 +66,7 @@ async function generateFeedbackEmbedding(workoutBody, notes, context) {
  */
 export async function POST(request) {
   try {
+    const supabaseAdmin = getSupabaseAdmin();
     const supabase = await createMobileCompatibleClient(request);
     const body = await request.json();
 
@@ -193,6 +193,7 @@ export async function POST(request) {
  */
 export async function GET(request) {
   try {
+    const supabaseAdmin = getSupabaseAdmin();
     const supabase = await createMobileCompatibleClient(request);
     const { searchParams } = new URL(request.url);
     const workoutId = searchParams.get('workoutId');

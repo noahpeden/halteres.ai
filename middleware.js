@@ -1,12 +1,16 @@
-import { createServerClient } from '@supabase/ssr';
+import { clerkMiddleware } from '@clerk/nextjs/server';
+import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
+import {
+  isValidClerkPublishableKey,
+  readClerkPublishableKey,
+  readClerkSecretKey,
+} from './app/utils/clerk/runtimeKeys';
 
-// Helper function to check if today is a new day compared to the last generation date
 function isNewDay(lastGenerationDateStr) {
-  if (!lastGenerationDateStr) return true; // No previous generation, so it's a "new" day
+  if (!lastGenerationDateStr) return true;
   const today = new Date();
   const lastDate = new Date(lastGenerationDateStr);
-  // Compare year, month, and day
   return (
     today.getFullYear() !== lastDate.getFullYear() ||
     today.getMonth() !== lastDate.getMonth() ||
@@ -14,60 +18,50 @@ function isNewDay(lastGenerationDateStr) {
   );
 }
 
-export async function middleware(req) {
-  const res = NextResponse.next();
-
-  // Create Supabase client
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-    {
-      cookies: {
-        get(name) {
-          return req.cookies.get(name)?.value;
-        },
-        set(name, value, options) {
-          res.cookies.set({ name, value, ...options });
-        },
-        remove(name, options) {
-          res.cookies.set({ name, value: '', ...options });
-        },
-      },
-    }
+function looksLikeUuid(id) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    id || ''
   );
+}
 
-  // Get user session
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
+function decodeJwtPayload(token) {
+  try {
+    const part = token.split('.')[1];
+    const json = atob(part.replace(/-/g, '+').replace(/_/g, '/'));
+    return JSON.parse(json);
+  } catch {
+    return {};
+  }
+}
 
-  const user = session?.user;
+function applyB2CArchiveRedirects(req) {
   const { pathname } = req.nextUrl;
-
-  // Global B2C archiving redirects for legacy/coach/B2B routes
-  // Redirect program-specific archived pages to writer
   const programMatch = pathname.match(/^\/program\/([^/]+)\/(workouts|metrics|share)(?:\/.*)?$/);
   if (programMatch) {
-    const programId = programMatch[1];
-    const targetUrl = new URL(`/program/${programId}/writer`, req.url);
-    return NextResponse.redirect(targetUrl);
+    return NextResponse.redirect(new URL(`/program/${programMatch[1]}/writer`, req.url));
   }
-  // Redirect wizard and marketing leftovers to athlete
   if (
     /^\/program-wizard(\/.*)?$/.test(pathname) ||
     /^\/(help|tutorials|updates|_team)$/.test(pathname)
   ) {
     return NextResponse.redirect(new URL('/athlete', req.url));
   }
-  // Redirect old root profile to athlete profile
   if (pathname === '/profile') {
     return NextResponse.redirect(new URL('/athlete/profile', req.url));
   }
+  return null;
+}
 
-  // Define protected routes that require an active subscription or valid trial
+async function clerkHandler(auth, req) {
+  const archived = applyB2CArchiveRedirects(req);
+  if (archived) return archived;
+
+  const res = NextResponse.next();
+  const { userId, getToken } = await auth();
+  const user = userId ? { id: userId } : null;
+  const { pathname } = req.nextUrl;
+
   const protectedRoutes = ['/dashboard', '/program', '/write-program'];
-
-  // Define routes related to the generation API/action
   const generationActionRoutes = [
     '/api/generate-program',
     '/api/generate-workouts',
@@ -77,23 +71,19 @@ export async function middleware(req) {
     '/api/generate-program-deepseek',
   ];
 
-  // Check if this is a public sharing route
-  // Pattern: /program/{programId}/workout/{workoutId} or /program/{programId}/share
   const isPublicWorkoutRoute = /^\/program\/[^/]+\/workout\/[^/]+$/.test(pathname);
   const isPublicProgramRoute = /^\/program\/[^/]+\/share$/.test(pathname);
   const isPublicRoute = isPublicWorkoutRoute || isPublicProgramRoute;
-
   const isProtectedRoute =
-    protectedRoutes.some((route) => pathname.startsWith(route)) && !isPublicRoute; // Exclude public routes from protection
-
+    protectedRoutes.some((route) => pathname.startsWith(route)) && !isPublicRoute;
   const isGenerationRoute = generationActionRoutes.some((route) => pathname.startsWith(route));
 
-  // Allow access to public routes
   if (
     pathname.startsWith('/_next') ||
     pathname.startsWith('/assets') ||
     pathname.startsWith('/auth') ||
     pathname.startsWith('/login') ||
+    pathname.startsWith('/signup') ||
     pathname.startsWith('/api/webhooks') ||
     pathname === '/' ||
     pathname.startsWith('/pricing') ||
@@ -104,36 +94,52 @@ export async function middleware(req) {
     return res;
   }
 
-  // If trying to access a protected route without being logged in, redirect to login
   if (!user && (isProtectedRoute || isGenerationRoute)) {
     const redirectUrl = new URL('/login', req.url);
     redirectUrl.searchParams.set('redirectedFrom', pathname);
     return NextResponse.redirect(redirectUrl);
   }
 
-  // Define coach-only routes (athletes should not access these)
-  // B2C: allow athletes to access /program (self-coached writer)
   const coachOnlyRoutes = ['/dashboard', '/write-program'];
   const isCoachOnlyRoute =
     coachOnlyRoutes.some((route) => pathname.startsWith(route)) && !isPublicRoute;
-
-  // Define athlete routes that require setup to be complete
   const athleteRoutes = ['/athlete'];
   const isAthleteRoute = athleteRoutes.some((route) => pathname.startsWith(route));
-  const isAthleteSetupRoute = pathname === '/athlete'; // Main athlete page shows setup/onboarding
+  const isAthleteSetupRoute = pathname === '/athlete';
 
-  // User is logged in, check subscription status for protected/generation routes
   if (user && (isProtectedRoute || isGenerationRoute || isAthleteRoute)) {
     try {
-      const { data: profile } = await supabase
+      const supabaseToken = (await getToken()) || (await getToken({ template: 'supabase' }));
+      const supabase = createSupabaseClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+        {
+          global: { headers: supabaseToken ? { Authorization: `Bearer ${supabaseToken}` } : {} },
+          auth: { persistSession: false, autoRefreshToken: false },
+        }
+      );
+
+      const payload = decodeJwtPayload(supabaseToken || '');
+      const email = payload.email || payload.email_address || null;
+      const jwtSub = payload.sub || null;
+
+      let profileQuery = supabase
         .from('profiles')
         .select(
           'subscription_status, trial_end_date, generations_remaining, generations_today, last_generation_date, role, onboarding_completed'
-        )
-        .eq('id', user.id)
-        .maybeSingle(); // Avoid 406 when no rows
+        );
+      if (email) {
+        profileQuery = profileQuery.eq('email', email);
+      } else if (looksLikeUuid(jwtSub)) {
+        profileQuery = profileQuery.eq('id', jwtSub);
+      } else {
+        profileQuery = null;
+      }
 
-      // Treat missing profile as athlete during B2C beta
+      const { data: profile } = profileQuery
+        ? await profileQuery.maybeSingle()
+        : { data: null };
+
       const {
         subscription_status,
         trial_end_date,
@@ -146,28 +152,20 @@ export async function middleware(req) {
 
       const isAthlete = (role || 'athlete') === 'athlete';
 
-      // Role-based access control: Athletes cannot access coach-only routes
       if (isAthlete && isCoachOnlyRoute) {
-        // Redirect athletes to their dashboard
-        const redirectUrl = new URL('/athlete', req.url);
-        return NextResponse.redirect(redirectUrl);
+        return NextResponse.redirect(new URL('/athlete', req.url));
       }
 
-      // Athlete setup check: if onboarding incomplete, redirect to main athlete page
       if (isAthlete && isAthleteRoute && !isAthleteSetupRoute) {
-        const athleteNeedsSetup = !onboarding_completed;
-        if (athleteNeedsSetup) {
-          const redirectUrl = new URL('/athlete', req.url);
-          return NextResponse.redirect(redirectUrl);
+        if (!onboarding_completed) {
+          return NextResponse.redirect(new URL('/athlete', req.url));
         }
       }
 
-      // Athletes don't need subscription checks - allow access to athlete routes
       if (isAthlete && isAthleteRoute) {
         return res;
       }
 
-      // B2C beta: allow athletes to access program writer routes and generation routes without paid plan
       if (isAthlete && (isProtectedRoute || isGenerationRoute)) {
         return res;
       }
@@ -176,69 +174,70 @@ export async function middleware(req) {
       const isTrialing = subscription_status === 'trialing';
       const trialExpired = trial_end_date ? new Date(trial_end_date) < new Date() : true;
 
-      // --- Generation Route Specific Checks ---
       if (isGenerationRoute) {
-        if (isActive) {
-          return res; // Allow generation for active subscribers
-        }
-
+        if (isActive) return res;
         if (isTrialing && !trialExpired) {
-          // Check total trial generations remaining
           if (generations_remaining <= 0) {
             const redirectUrl = new URL('/pricing', req.url);
             redirectUrl.searchParams.set('reason', 'trial_limit_total');
             return NextResponse.redirect(redirectUrl);
           }
-
-          // Check daily trial generations
           let currentDailyGenerations = generations_today;
-          if (isNewDay(last_generation_date)) {
-            currentDailyGenerations = 0;
-          }
-
+          if (isNewDay(last_generation_date)) currentDailyGenerations = 0;
           if (currentDailyGenerations >= 5) {
             const redirectUrl = new URL('/pricing', req.url);
             redirectUrl.searchParams.set('reason', 'trial_limit_daily');
             return NextResponse.redirect(redirectUrl);
           }
-
-          return res; // Allow generation for valid trial
+          return res;
         }
-
-        // If not active and not on a valid trial, deny generation access
         const redirectUrl = new URL('/pricing', req.url);
         redirectUrl.searchParams.set('reason', 'subscription_required');
         return NextResponse.redirect(redirectUrl);
       }
 
-      // --- General Protected Route Checks (Non-Generation) ---
       if (isActive || (isTrialing && !trialExpired)) {
-        return res; // Allow access to general protected routes
+        return res;
       }
 
-      // If not active or on valid trial, redirect to pricing
       const redirectUrl = new URL('/pricing', req.url);
       redirectUrl.searchParams.set('reason', 'access_denied');
       return NextResponse.redirect(redirectUrl);
-    } catch (error) {
-      // Error occurred, redirect to login as fallback
-      const redirectUrl = new URL('/login', req.url);
-      return NextResponse.redirect(redirectUrl);
+    } catch (_error) {
+      return NextResponse.redirect(new URL('/login', req.url));
     }
   }
 
-  // Default fallback
   return res;
 }
 
-// Configure middleware matching
+let cachedClerkMiddleware = null;
+
+function getClerkMiddleware() {
+  if (!cachedClerkMiddleware) {
+    cachedClerkMiddleware = clerkMiddleware(clerkHandler, () => ({
+      publishableKey: readClerkPublishableKey(),
+      secretKey: readClerkSecretKey(),
+    }));
+  }
+  return cachedClerkMiddleware;
+}
+
+export default async function middleware(req, event) {
+  const archived = applyB2CArchiveRedirects(req);
+  if (archived) return archived;
+
+  const publishableKey = readClerkPublishableKey();
+  const secretKey = readClerkSecretKey();
+  if (!isValidClerkPublishableKey(publishableKey) || !secretKey) {
+    // Do not throw MIDDLEWARE_INVOCATION_FAILED when NEXT_PUBLIC was empty at build.
+    // /login can still render; ClerkProvider reads keys at request time.
+    return NextResponse.next();
+  }
+
+  return getClerkMiddleware()(req, event);
+}
+
 export const config = {
-  matcher: [
-    '/dashboard/:path*',
-    '/program/:path*',
-    '/write-program/:path*',
-    '/api/generate-program/:path*',
-    '/api/generate-workouts/:path*',
-    '/athlete/:path*',
-  ],
+  matcher: ['/((?!.*\\..*|_next).*)', '/(api|trpc)(.*)'],
 };

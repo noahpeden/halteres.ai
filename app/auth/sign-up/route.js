@@ -1,31 +1,10 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '../../utils/supabase/server';
 
 export async function POST(request) {
   const requestUrl = new URL(request.url);
-  const formData = await request.formData();
-  const email = formData.get('email');
-  const password = formData.get('password');
-  const supabase = await createClient();
+  return NextResponse.redirect(`${requestUrl.origin}/signup`, { status: 301 });
+}
 
-  const { error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: {
-      emailRedirectTo: `${requestUrl.origin}/auth/callback`,
-    },
-  });
-
-  if (error) {
-    return NextResponse.redirect(`${requestUrl.origin}/login?error=Could not authenticate user`, {
-      status: 301,
-    });
-  }
-
-  return NextResponse.redirect(
-    `${requestUrl.origin}/login?message=Check email to continue sign in process`,
-    {
-      status: 301,
-    }
-  );
+export async function GET(request) {
+  return NextResponse.redirect(new URL('/signup', request.url));
 }

@@ -1,6 +1,8 @@
 import './globals.css';
+import { ClerkProvider } from '@clerk/nextjs';
 import { Figtree, Fraunces, IBM_Plex_Mono } from 'next/font/google';
 import { AuthProvider } from '@/contexts/AuthContext';
+import { readClerkPublishableKey } from '@/utils/clerk/runtimeKeys';
 import AppChrome from './components/AppChrome';
 import TrialStatusBanner from './components/TrialStatusBanner';
 import { StripeProvider } from './contexts/StripeContext';
@@ -30,11 +32,8 @@ const plexMono = IBM_Plex_Mono({
 export { metadata };
 
 export default async function RootLayout({ children }) {
-  const { createClient } = await import('@/utils/supabase/server');
-  const supabase = await createClient();
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
+  // Request-time key. Do not rely on NEXT_PUBLIC being inlined at build.
+  const publishableKey = readClerkPublishableKey();
 
   return (
     <html
@@ -47,14 +46,22 @@ export default async function RootLayout({ children }) {
         <link rel="manifest" href="/site.webmanifest" />
       </head>
       <body className={`${figtree.className} palaestra-body`} suppressHydrationWarning={true}>
-        <StripeProvider>
-          <AuthProvider initialSession={session}>
-            <AppChrome>
-              <TrialStatusBanner />
-              {children}
-            </AppChrome>
-          </AuthProvider>
-        </StripeProvider>
+        <ClerkProvider
+          publishableKey={publishableKey || undefined}
+          signInUrl="/login"
+          signUpUrl="/signup"
+          afterSignInUrl="/athlete"
+          afterSignUpUrl="/athlete"
+        >
+          <StripeProvider>
+            <AuthProvider>
+              <AppChrome>
+                <TrialStatusBanner />
+                {children}
+              </AppChrome>
+            </AuthProvider>
+          </StripeProvider>
+        </ClerkProvider>
       </body>
     </html>
   );

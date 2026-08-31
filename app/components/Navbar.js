@@ -1,5 +1,5 @@
 'use client';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { useClerk } from '@clerk/nextjs';
 import { Calendar, Clock, LogOut, Menu, User } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -9,13 +9,13 @@ import HalteresMark from './brand/HalteresMark';
 
 export default function Navbar() {
   const { session, user, isAthlete, athleteNeedsSetup, loadingProfile } = useAuth();
-  const supabase = createClientComponentClient();
+  const { signOut } = useClerk();
   const [mobileOpen, setMobileOpen] = useState(false);
   const router = useRouter();
 
   const handleLogout = async () => {
     router.push('/');
-    await supabase.auth.signOut();
+    await signOut();
   };
 
   return (

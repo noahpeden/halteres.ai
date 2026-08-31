@@ -1,25 +1,10 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '../../utils/supabase/server';
 
 export async function POST(request) {
   const requestUrl = new URL(request.url);
-  const formData = await request.formData();
-  const email = formData.get('email');
-  const password = formData.get('password');
-  const supabase = await createClient();
+  return NextResponse.redirect(`${requestUrl.origin}/login`, { status: 301 });
+}
 
-  const { error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
-
-  if (error) {
-    return NextResponse.redirect(`${requestUrl.origin}/login?error=Could not authenticate user`, {
-      status: 301,
-    });
-  }
-
-  return NextResponse.redirect(`${requestUrl.origin}/athlete`, {
-    status: 301,
-  });
+export async function GET(request) {
+  return NextResponse.redirect(new URL('/login', request.url));
 }

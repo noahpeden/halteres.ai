@@ -4,10 +4,9 @@ import { createChatCompletion } from '@/utils/ai/provider';
 // NOTE: Feedback parsing is a lightweight call, so it uses the 'flash' tier of the
 // shared AI provider abstraction (DeepSeek V4-Flash by default).
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+function getSupabase() {
+  return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+}
 
 export async function POST(request) {
   try {
@@ -18,6 +17,7 @@ export async function POST(request) {
     }
 
     // Fetch the workout result with related data
+    const supabase = getSupabase();
     const { data: result, error: resultError } = await supabase
       .from('workout_results')
       .select(`
@@ -232,6 +232,7 @@ export async function GET(request) {
       return Response.json({ error: 'Missing workoutResultId or userId' }, { status: 400 });
     }
 
+    const supabase = getSupabase();
     const { data: feedback, error } = await supabase
       .from('ai_workout_feedback')
       .select('*')

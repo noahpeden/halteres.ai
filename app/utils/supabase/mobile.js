@@ -1,83 +1,121 @@
+import { auth as clerkAuth } from '@clerk/nextjs/server';
 import { createServerClient } from '@supabase/ssr';
-import { createClient } from '@supabase/supabase-js';
-import { cookies } from 'next/headers';
+import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 
-/**
- * Creates a Supabase client that supports both cookie and bearer token auth
- * @param {Request} request - The incoming request object
- */
+function decodeJwtPayload(jwt) {
+  try {
+    const base64Url = jwt.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const json =
+      typeof Buffer !== 'undefined'
+        ? Buffer.from(base64, 'base64').toString('utf8')
+        : atob(base64);
+    return JSON.parse(json);
+  } catch (_e) {
+    return {};
+  }
+}
+
+function looksLikeUuid(id) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    id || ''
+  );
+}
+
+async function resolveProfileIdentity(inner, payload) {
+  const email = payload?.email || payload?.email_address || null;
+  const sub = payload?.sub || null;
+  if (email) {
+    const { data } = await inner.from('profiles').select('id, email').eq('email', email).maybeSingle();
+    if (data?.id && looksLikeUuid(data.id)) {
+      return { id: data.id, email: data.email || email };
+    }
+  }
+  if (looksLikeUuid(sub)) {
+    return { id: sub, email };
+  }
+  return { id: null, email };
+}
+
+function wrapAuth(inner, identity) {
+  return {
+    ...inner,
+    auth: {
+      ...inner.auth,
+      async getUser() {
+        if (!identity?.id) return { data: { user: null }, error: { message: 'unauthenticated' } };
+        return { data: { user: { id: identity.id, email: identity.email } }, error: null };
+      },
+      async getSession() {
+        if (!identity?.id) return { data: { session: null }, error: { message: 'unauthenticated' } };
+        return {
+          data: { session: { user: { id: identity.id, email: identity.email } } },
+          error: null,
+        };
+      },
+      async signOut() {
+        return { error: null };
+      },
+    },
+  };
+}
+
 async function createMobileCompatibleClient(request) {
   const authHeader = request?.headers?.get('Authorization');
 
   if (authHeader?.startsWith('Bearer ')) {
-    // Mobile app with bearer token
     const token = authHeader.substring(7);
-    console.log('[Auth] Using bearer token authentication');
-
-    // For bearer token auth, we need to use createClient from @supabase/supabase-js
-    // because @supabase/ssr's getSession() doesn't work with bearer tokens
-    const client = createClient(
+    const inner = createSupabaseClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
       {
         global: {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { Authorization: `Bearer ${token}` },
         },
-        auth: {
-          persistSession: false,
-          autoRefreshToken: false,
+        auth: { persistSession: false, autoRefreshToken: false },
+      }
+    );
+    const payload = decodeJwtPayload(token);
+    const identity = await resolveProfileIdentity(inner, payload);
+    return wrapAuth(inner, identity);
+  }
+
+  const { userId, getToken } = await clerkAuth();
+  if (!userId) {
+    return createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+      {
+        cookies: {
+          async get() {
+            return undefined;
+          },
+          async set() {},
+          async remove() {},
         },
       }
     );
-    return client;
   }
-
-  // Web app with cookies
-  console.log('[Auth] Using cookie authentication');
-  return createServerClient(
+  const supabaseToken = (await getToken()) || (await getToken({ template: 'supabase' }));
+  const inner = createSupabaseClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     {
-      cookies: {
-        async get(name) {
-          const cookieStore = await cookies();
-          const cookie = cookieStore.get(name);
-          return cookie?.value;
-        },
-        async set(name, value, options) {
-          try {
-            const cookieStore = await cookies();
-            cookieStore.set({ name, value, ...options });
-          } catch (error) {
-            // Ignore - called from Server Component
-          }
-        },
-        async remove(name, options) {
-          try {
-            const cookieStore = await cookies();
-            cookieStore.set({ name, value: '', ...options });
-          } catch (error) {
-            // Ignore - called from Server Component
-          }
-        },
+      global: {
+        headers: supabaseToken ? { Authorization: `Bearer ${supabaseToken}` } : {},
       },
+      auth: { persistSession: false, autoRefreshToken: false },
     }
   );
+  const payload = decodeJwtPayload(supabaseToken || '');
+  const identity = await resolveProfileIdentity(inner, payload);
+  return wrapAuth(inner, identity);
 }
 
-/**
- * CORS headers for mobile app
- * React Native/Expo apps don't send an origin header, so we use '*' by default
- * This is safe because we authenticate via Bearer token, not cookies
- */
 function corsHeaders(requestOrOrigin = null) {
-  // If a request object is passed, try to get the origin
   let origin = '*';
   if (requestOrOrigin && typeof requestOrOrigin === 'object' && requestOrOrigin.headers) {
     const requestOrigin = requestOrOrigin.headers.get('origin');
-    // Allow specific known origins, otherwise use wildcard for mobile apps
     if (requestOrigin) {
       if (
         requestOrigin.includes('halteres') ||
@@ -88,7 +126,6 @@ function corsHeaders(requestOrOrigin = null) {
       }
     }
   } else if (typeof requestOrOrigin === 'string') {
-    // If a string origin is passed directly, use it
     origin = requestOrOrigin;
   }
   return {
@@ -99,9 +136,6 @@ function corsHeaders(requestOrOrigin = null) {
   };
 }
 
-/**
- * Handle CORS preflight requests
- */
 async function handleCors(request) {
   if (request.method === 'OPTIONS') {
     return new Response(null, {
