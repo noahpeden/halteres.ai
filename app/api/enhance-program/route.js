@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createChatCompletion } from '@/utils/ai/provider';
+import { resolveEquipmentLabels } from '@/utils/prompt-builder/equipmentLabels.js';
 import {
   assembleReferenceMaterial,
   buildProgrammingContract,
@@ -97,9 +98,9 @@ ${w.body || w.description || 'No content'}
       typeof recent_training_history === 'string' && recent_training_history.trim().length > 0
         ? recent_training_history
         : '';
-    const equipmentList = Array.isArray(gymEquipment)
-      ? gymEquipment
-      : [gymEquipment].filter(Boolean);
+    const equipmentList = resolveEquipmentLabels(
+      Array.isArray(gymEquipment) ? gymEquipment : [gymEquipment].filter(Boolean)
+    );
     const programmingContract = buildProgrammingContract({
       methodology,
       goal,

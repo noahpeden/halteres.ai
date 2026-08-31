@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { streamChatCompletion } from '@/utils/ai/provider';
+import { pickEquipmentLabels } from '@/utils/prompt-builder/equipmentLabels.js';
+import { assertUsableSkeletonWorkouts } from '@/utils/prompt-builder/generationGuardrails.js';
 import {
   assembleReferenceMaterial,
   buildProgrammingContract,
@@ -15,6 +17,8 @@ import {
   buildSkeletonWeekPrompt,
 } from '@/utils/prompt-builder/skeletonPrompt.js';
 import { corsHeaders, createMobileCompatibleClient } from '@/utils/supabase/mobile';
+
+const SKELETON_WEEK_TIMEOUT_MS = 120000;
 
 // NOTE: Calls through the shared AI provider abstraction (app/utils/ai/provider.js),
 // which defaults to DeepSeek and falls back to Anthropic/Claude when AI_PROVIDER=anthropic.
@@ -215,28 +219,14 @@ async function generateSkeletonProgram(requestData, supabase, controller, encode
         logWithTimestamp(`Error generating skeleton for week ${currentWeek}`, {
           error: weekError.message,
         });
-
-        // Generate placeholder skeletons for failed week
-        const placeholderWorkouts = generatePlaceholderSkeleton(currentWeek, sharedData);
-        allWorkouts.push(...placeholderWorkouts);
-
-        if (programId) {
-          await saveSkeletonWorkouts(
-            programId,
-            placeholderWorkouts,
-            currentWeek,
-            sharedData,
-            supabase
-          );
-        }
-
-        sendEvent(controller, encoder, 'warning', {
-          message: `Week ${currentWeek} skeleton failed to generate, using placeholders.`,
-          week: currentWeek,
-        });
-
-        currentWeek++;
+        throw new Error(
+          `Week ${currentWeek} of ${numberOfWeeks} failed: ${weekError.message}. Generation stopped so placeholders are not saved as a successful program.`
+        );
       }
+    }
+
+    if (allWorkouts.length === 0) {
+      throw new Error('Skeleton generation produced 0 workouts');
     }
 
     // Mark program as skeleton complete and save AI-generated description
@@ -258,16 +248,14 @@ async function generateSkeletonProgram(requestData, supabase, controller, encode
         },
       };
 
-      // Save the AI-generated program description to the database
+      // Keep the athlete's intake on programs.description. The generated blurb
+      // lives in program_overview so enhance-week can still read 5/3/1 / Mayhem / Hyrox.
       if (programDescription) {
-        // Save to programs.description (for page header)
-        updateData.description = programDescription;
-        // Also save to program_overview.generated_description (for WorkoutList component)
         updateData.program_overview = {
           ...(currentProgram?.program_overview || {}),
           generated_description: programDescription,
         };
-        logWithTimestamp('Saving AI-generated description to database', {
+        logWithTimestamp('Saving AI-generated description to program_overview', {
           descriptionLength: programDescription.length,
         });
       }
@@ -436,6 +424,7 @@ async function generateWeekSkeleton(
       userPrompt: skeletonPrompt,
       temperature: 0.7,
       maxTokens: 4000,
+      timeoutMs: SKELETON_WEEK_TIMEOUT_MS,
     });
 
     for await (const text of textStream) {
@@ -480,21 +469,22 @@ async function generateWeekSkeleton(
       workouts = [workouts];
     }
 
-    // Ensure correct number of workouts
-    while (workouts.length < daysPerWeek) {
-      const dayNumber = workouts.length + 1;
-      workouts.push({
-        title: `Week ${weekNumber}, Day ${dayNumber}: Rest or Recovery`,
-        body: '## Rest Day\nActive recovery or mobility work',
-        date: weekDates[workouts.length] || new Date().toISOString().split('T')[0],
-      });
+    if (workouts.length < daysPerWeek) {
+      throw new Error(
+        `Week ${weekNumber} returned ${workouts.length} workouts, expected ${daysPerWeek}`
+      );
     }
 
     const formattedWorkouts = workouts.slice(0, daysPerWeek).map((workout, index) => ({
       title: workout.title || `Week ${weekNumber}, Day ${index + 1}`,
-      body: workout.body || 'Skeleton workout',
+      body: workout.body || '',
       date: workout.date || weekDates[index] || new Date().toISOString().split('T')[0],
     }));
+
+    assertUsableSkeletonWorkouts(formattedWorkouts, {
+      equipmentLabels: equipment,
+      weekNumber,
+    });
 
     const result = { workouts: formattedWorkouts };
 
@@ -509,27 +499,6 @@ async function generateWeekSkeleton(
     });
     throw error;
   }
-}
-
-// Generate placeholder skeletons for failed weeks
-function generatePlaceholderSkeleton(weekNumber, sharedData) {
-  const { daysPerWeek, suggestedDates, programmingContract } = sharedData;
-  const weekStartIndex = (weekNumber - 1) * daysPerWeek;
-  const sections = programmingContract?.sections || ['Primary Work', 'Secondary Work'];
-
-  const placeholders = [];
-  for (let day = 1; day <= daysPerWeek; day++) {
-    const body = sections
-      .map((section) => `## ${section}\n- Prescription pending regenerate`)
-      .join('\n\n');
-    placeholders.push({
-      title: `Week ${weekNumber}, Day ${day}: ${programmingContract?.identity || 'Training'}`,
-      body,
-      date: suggestedDates[weekStartIndex + day - 1] || new Date().toISOString().split('T')[0],
-    });
-  }
-
-  return placeholders;
 }
 
 // Save skeleton workouts to database
@@ -584,7 +553,10 @@ async function extractSharedData(requestData, supabase) {
   let daysPerWeek = parseInt(providedDaysPerWeek ?? 3, 10);
   let programType = requestData.periodization?.program_type || requestData.programType || 'linear';
 
-  let equipment = requestData.gym_details?.equipment || requestData.equipment || [];
+  let equipment = pickEquipmentLabels({
+    requestEquipment: requestData.gym_details?.equipment || requestData.equipment || [],
+  });
+  let programName = requestData.programName || requestData.name || '';
   const startDate = requestData.calendar_data?.start_date || requestData.startDate || '';
   const useImperial = requestData.useImperial !== undefined ? requestData.useImperial : true;
   // Session duration minutes from request (may fallback to DB later)
@@ -605,7 +577,7 @@ async function extractSharedData(requestData, supabase) {
       const { data: programData } = await supabase
         .from('programs')
         .select(
-          'duration_weeks, periodization, gym_details, workout_format, calendar_data, training_methodology, description, reference_input, focus_area, difficulty, goal, session_details'
+          'name, duration_weeks, periodization, gym_details, workout_format, calendar_data, training_methodology, description, reference_input, focus_area, difficulty, goal, session_details'
         )
         .eq('id', programId)
         .single();
@@ -623,8 +595,12 @@ async function extractSharedData(requestData, supabase) {
         if (selectedDaysOfWeek.length === 0 && programData.calendar_data?.days_of_week?.length) {
           selectedDaysOfWeek = programData.calendar_data.days_of_week;
         }
-        if ((!equipment || equipment.length === 0) && programData.gym_details?.equipment) {
-          equipment = programData.gym_details.equipment;
+        equipment = pickEquipmentLabels({
+          requestEquipment: requestData.gym_details?.equipment || requestData.equipment || equipment,
+          dbEquipment: programData.gym_details?.equipment,
+        });
+        if (!programName && programData.name) {
+          programName = programData.name;
         }
         if (
           (!workoutFormats || workoutFormats.length === 0) &&
@@ -791,6 +767,7 @@ async function extractSharedData(requestData, supabase) {
   }
 
   const programmingContract = buildProgrammingContract({
+    programName,
     methodology: trainingMethodology,
     goal,
     description,
@@ -830,6 +807,7 @@ async function extractSharedData(requestData, supabase) {
 
   return {
     programId,
+    programName,
     entityId,
     gymId,
     goal,

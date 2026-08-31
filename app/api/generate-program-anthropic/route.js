@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getAIProvider, streamChatCompletion } from '@/utils/ai/provider';
 import { getFeedbackContextForGeneration } from '@/utils/feedback/feedbackUtils.js';
+import { pickEquipmentLabels } from '@/utils/prompt-builder/equipmentLabels.js';
 import {
   assembleReferenceMaterial,
   buildProgrammingContract,
@@ -1073,7 +1074,9 @@ async function extractSharedData(requestData, supabase) {
     requestData.periodization?.program_type || requestData.programType || 'linear';
 
   // Optional parameters
-  let equipment = requestData.gym_details?.equipment || requestData.equipment || [];
+  let equipment = pickEquipmentLabels({
+    requestEquipment: requestData.gym_details?.equipment || requestData.equipment || [],
+  });
   const gymType = requestData.gym_details?.gym_type || requestData.gymType || '';
   const startDate = requestData.calendar_data?.start_date || requestData.startDate || '';
   // Session duration (minutes) for context
@@ -1249,9 +1252,10 @@ async function extractSharedData(requestData, supabase) {
         if (validDaysOfWeek.length === 0 && programData.calendar_data?.days_of_week?.length) {
           validDaysOfWeek = programData.calendar_data.days_of_week;
         }
-        if ((!equipment || equipment.length === 0) && programData.gym_details?.equipment) {
-          equipment = programData.gym_details.equipment;
-        }
+        equipment = pickEquipmentLabels({
+          requestEquipment: requestData.gym_details?.equipment || requestData.equipment || equipment,
+          dbEquipment: programData.gym_details?.equipment,
+        });
         if (
           (!workoutFormats || workoutFormats.length === 0) &&
           programData.workout_format?.formats
@@ -1456,6 +1460,7 @@ Draw inspiration from these reference workouts when designing this program. Use 
   }
 
   const programmingContract = buildProgrammingContract({
+    programName: requestData.programName || requestData.name || '',
     methodology: trainingMethodology,
     goal,
     description: additionalNotes,

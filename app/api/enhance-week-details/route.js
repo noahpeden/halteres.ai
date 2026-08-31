@@ -4,6 +4,15 @@ import {
   buildEnhancementPrompt,
   buildEnhancementSystemPrompt,
 } from '@/utils/prompt-builder/enhanceWeekPrompt.js';
+import { pickEquipmentLabels } from '@/utils/prompt-builder/equipmentLabels.js';
+import {
+  enhancementPayloadIsUsable,
+  isPlaceholderTitle,
+  isPlaceholderWorkoutBody,
+  normalizeEnhancedWorkout,
+  shouldAcceptEnhancementComplete,
+  verifiedPersistIsAcceptable,
+} from '@/utils/prompt-builder/generationGuardrails.js';
 import {
   assembleReferenceMaterial,
   buildProgrammingContract,
@@ -16,11 +25,13 @@ import {
 import { getWorkoutLibraryRagContext } from '@/utils/prompt-builder/ragContext.js';
 import { corsHeaders, createMobileCompatibleClient } from '@/utils/supabase/mobile';
 
+const ENHANCE_STREAM_TIMEOUT_MS = 180000;
+
 export const maxDuration = 300; // 5 minutes should be enough for a single week
 export const dynamic = 'force-dynamic';
 
 // Handle OPTIONS for CORS preflight
-export async function OPTIONS(request) {
+export async function OPTIONS(_request) {
   return new Response(null, {
     status: 200,
     headers: corsHeaders(),
@@ -67,7 +78,7 @@ export async function POST(request) {
       stack: error.stack,
     });
     return NextResponse.json(
-      { error: 'Failed to enhance week: ' + error.message },
+      { error: `Failed to enhance week: ${error.message}` },
       { status: 500, headers: corsHeaders() }
     );
   }
@@ -105,6 +116,7 @@ async function handleWeekEnhancement(requestData, supabase) {
 // Main enhancement logic
 async function enhanceWeekWorkouts(requestData, supabase, controller, encoder) {
   const { programId, weekNumber, workoutIds, context, weekSpecificInput } = requestData;
+  let batchIds = Array.isArray(workoutIds) ? workoutIds : [];
 
   try {
     // Preload program linkage for robust backfills
@@ -138,23 +150,34 @@ async function enhanceWeekWorkouts(requestData, supabase, controller, encoder) {
       message: `Starting enhancement for Week ${weekNumber}...`,
     });
 
-    // Fetch skeleton workouts for this week
-    const { data: skeletonWorkouts, error: fetchError } = await supabase
+    // Include stuck 'enhancing' rows so a second click can finish after a silent fail
+    let { data: skeletonWorkouts, error: fetchError } = await supabase
       .from('program_workouts')
       .select('*')
       .eq('program_id', programId)
       .eq('week_number', weekNumber)
-      .eq('generation_status', 'skeleton')
+      .in('generation_status', ['skeleton', 'enhancing'])
       .order('scheduled_date', { ascending: true });
 
     if (fetchError) {
-      throw new Error('Failed to fetch skeleton workouts: ' + fetchError.message);
+      throw new Error(`Failed to fetch skeleton workouts: ${fetchError.message}`);
+    }
+
+    if ((!skeletonWorkouts || skeletonWorkouts.length === 0) && workoutIds?.length) {
+      const { data: byId } = await supabase
+        .from('program_workouts')
+        .select('*')
+        .in('id', workoutIds);
+      skeletonWorkouts = (byId || []).filter((workout) =>
+        ['skeleton', 'enhancing'].includes(workout.generation_status)
+      );
     }
 
     if (!skeletonWorkouts || skeletonWorkouts.length === 0) {
       throw new Error(`No skeleton workouts found for Week ${weekNumber}`);
     }
 
+    batchIds = skeletonWorkouts.map((workout) => workout.id);
     logWithTimestamp(`Found ${skeletonWorkouts.length} skeleton workouts to enhance`);
 
     // Mark workouts as 'enhancing'
@@ -167,7 +190,7 @@ async function enhanceWeekWorkouts(requestData, supabase, controller, encoder) {
           skeletonWorkouts.map((w) => w.id)
         );
       if (enhancingError) {
-        throw new Error('Failed to mark workouts as enhancing: ' + enhancingError.message);
+        throw new Error(`Failed to mark workouts as enhancing: ${enhancingError.message}`);
       }
     }
 
@@ -201,7 +224,7 @@ async function enhanceWeekWorkouts(requestData, supabase, controller, encoder) {
       const { data: programRow } = await supabase
         .from('programs')
         .select(
-          'duration_weeks, gym_details, workout_format, session_details, focus_area, description, training_methodology, reference_input, goal'
+          'name, duration_weeks, gym_details, workout_format, session_details, focus_area, description, training_methodology, reference_input, goal'
         )
         .eq('id', programId)
         .single();
@@ -212,10 +235,10 @@ async function enhanceWeekWorkouts(requestData, supabase, controller, encoder) {
 
     const effectiveNumberOfWeeks =
       context?.numberOfWeeks ?? null ?? programMeta?.duration_weeks ?? null ?? null;
-    const equipment =
-      (Array.isArray(context?.equipment) && context.equipment) ||
-      programMeta?.gym_details?.equipment ||
-      [];
+    const equipment = pickEquipmentLabels({
+      requestEquipment: context?.equipment,
+      dbEquipment: programMeta?.gym_details?.equipment,
+    });
     const workoutFormats =
       context?.workoutFormats ||
       context?.workout_format?.formats ||
@@ -262,6 +285,7 @@ async function enhanceWeekWorkouts(requestData, supabase, controller, encoder) {
     };
 
     const programmingContract = buildProgrammingContract({
+      programName: context?.programName || programMeta?.name || '',
       methodology: augmentedContext.trainingMethodology || programMeta?.training_methodology || '',
       goal: augmentedContext.goal || '',
       description: augmentedContext.description || programMeta?.description || '',
@@ -345,6 +369,7 @@ async function enhanceWeekWorkouts(requestData, supabase, controller, encoder) {
       userPrompt: enhancementPrompt,
       temperature: 0.7,
       maxTokens: 16000,
+      timeoutMs: ENHANCE_STREAM_TIMEOUT_MS,
     });
     for await (const text of textStream) {
       responseContent += text;
@@ -361,7 +386,7 @@ async function enhanceWeekWorkouts(requestData, supabase, controller, encoder) {
       throw new Error('No content received from enhancement response');
     }
 
-    // Parse the enhanced workouts
+    // Parse the enhanced workouts — never treat skeleton copy as a successful enhance
     let enhancedWorkouts;
     try {
       let jsonContent = responseContent;
@@ -369,7 +394,7 @@ async function enhanceWeekWorkouts(requestData, supabase, controller, encoder) {
       // Strip markdown code blocks if present
       if (jsonContent.includes('```')) {
         const jsonBlockMatch = jsonContent.match(/```(?:json)?\s*\n?([\s\S]*?)(?:\n```|$)/);
-        if (jsonBlockMatch && jsonBlockMatch[1]) {
+        if (jsonBlockMatch?.[1]) {
           jsonContent = jsonBlockMatch[1].trim();
         }
       }
@@ -380,8 +405,6 @@ async function enhanceWeekWorkouts(requestData, supabase, controller, encoder) {
       enhancedWorkouts = parsed.workouts || parsed.enhancedWorkouts || parsed;
     } catch (parseError) {
       logWithTimestamp('Enhancement parse error', { error: parseError.message });
-
-      // Fallback: try to extract individual workouts
       enhancedWorkouts = attemptWorkoutExtraction(responseContent, skeletonWorkouts);
     }
 
@@ -389,34 +412,32 @@ async function enhanceWeekWorkouts(requestData, supabase, controller, encoder) {
       enhancedWorkouts = [enhancedWorkouts];
     }
 
-    // Validate and save each enhanced workout
+    const usableEnhanced = enhancedWorkouts.filter((raw, index) =>
+      enhancementPayloadIsUsable(
+        normalizeEnhancedWorkout(raw, skeletonWorkouts[index] || {}),
+        skeletonWorkouts[index] || {}
+      )
+    );
+    if (usableEnhanced.length < skeletonWorkouts.length) {
+      throw new Error(
+        `Enhancement parse failed: ${usableEnhanced.length} of ${skeletonWorkouts.length} workouts had real details. Success toast will not fire.`
+      );
+    }
+
+    // Validate and save each enhanced workout — only count after a verified DB write
     let enhancedCount = 0;
     for (let i = 0; i < skeletonWorkouts.length; i++) {
       const skeleton = skeletonWorkouts[i];
-      // Normalize enhanced object to { title, body }
-      const raw = enhancedWorkouts[i] || {};
-      const normalized = {
-        title:
-          (typeof raw.title === 'string' && raw.title.trim()) ||
-          (typeof raw.name === 'string' && raw.name.trim()) ||
-          skeleton.title,
-        body:
-          (typeof raw.body === 'string' && raw.body.trim()) ||
-          (typeof raw.description === 'string' && raw.description.trim()) ||
-          (typeof raw.content === 'string' && raw.content.trim()) ||
-          null,
-      };
+      const normalized = normalizeEnhancedWorkout(enhancedWorkouts[i] || {}, skeleton);
 
-      if (!normalized || !normalized.body) {
-        logWithTimestamp(`No enhanced content for workout ${i + 1}, keeping skeleton`);
-        await supabase
-          .from('program_workouts')
-          .update({ generation_status: 'skeleton' }) // Revert to skeleton
-          .eq('id', skeleton.id);
-        continue;
+      if (!enhancementPayloadIsUsable(normalized, skeleton)) {
+        throw new Error(`No usable enhanced content for ${skeleton.title || `workout ${i + 1}`}`);
       }
 
-      // Validate structure is preserved (basic check)
+      if (isPlaceholderTitle(normalized.title) || isPlaceholderWorkoutBody(normalized.body)) {
+        throw new Error(`Enhanced content for ${skeleton.title} is still placeholder copy`);
+      }
+
       const isValid = validateStructurePreserved(
         skeleton.body_skeleton,
         normalized.body,
@@ -428,54 +449,44 @@ async function enhanceWeekWorkouts(requestData, supabase, controller, encoder) {
           skeletonPreview: skeleton.body_skeleton?.substring(0, 100),
           enhancedPreview: normalized.body.substring(0, 100),
         });
-        // Still save but log the issue
       }
 
-      // Update the workout with enhanced content
-      const updatePayload = {
+      const verified = await persistEnhancedWorkout({
+        supabase,
+        workout: skeleton,
+        title: normalized.title,
         body: normalized.body,
-        // Prefer AI-provided title when available; otherwise keep existing
-        title: normalized.title || skeleton.title,
-        generation_status: 'detailed',
-        updated_at: new Date().toISOString(),
-      };
-      // Backfill linkage if missing to ensure Today queries work
-      if (!skeleton.entity_id && programLinkage.entity_id) {
-        updatePayload.entity_id = programLinkage.entity_id;
-      }
-      if (!skeleton.gym_id && programLinkage.gym_id) {
-        updatePayload.gym_id = programLinkage.gym_id;
-      }
+        entityId: programLinkage.entity_id,
+        gymId: programLinkage.gym_id,
+      });
 
-      const { error: updateError } = await supabase
-        .from('program_workouts')
-        .update(updatePayload)
-        .eq('id', skeleton.id);
-
-      if (updateError) {
-        logWithTimestamp(`Failed to save enhanced workout ${i + 1}`, {
-          error: updateError.message,
-        });
-      } else {
-        enhancedCount++;
-
-        // Send individual workout update
-        sendEvent(controller, encoder, 'enhanced_workout', {
-          workout: {
-            id: skeleton.id,
-            title: updatePayload.title,
-            body: updatePayload.body,
-            generation_status: 'detailed',
-          },
-          progress: {
-            current: i + 1,
-            total: skeletonWorkouts.length,
-          },
-        });
-      }
+      enhancedCount++;
+      sendEvent(controller, encoder, 'enhanced_workout', {
+        workout: {
+          id: verified.id,
+          title: verified.title,
+          body: verified.body,
+          generation_status: 'detailed',
+          entity_id: verified.entity_id,
+        },
+        progress: {
+          current: i + 1,
+          total: skeletonWorkouts.length,
+        },
+      });
     }
 
-    // Send completion
+    if (
+      !shouldAcceptEnhancementComplete({
+        enhancedCount,
+        totalCount: skeletonWorkouts.length,
+      })
+    ) {
+      throw new Error(
+        `Week ${weekNumber} persist incomplete: ${enhancedCount} of ${skeletonWorkouts.length} workouts verified in the database.`
+      );
+    }
+
     sendEvent(controller, encoder, 'enhancement_complete', {
       message: `Week ${weekNumber} enhanced successfully`,
       weekNumber,
@@ -493,16 +504,57 @@ async function enhanceWeekWorkouts(requestData, supabase, controller, encoder) {
   } catch (error) {
     logWithTimestamp('Enhancement failed', { error: error.message });
 
-    // Revert workouts to skeleton status on error
-    if (requestData.workoutIds) {
+    if (batchIds.length > 0) {
       await supabase
         .from('program_workouts')
-        .update({ generation_status: 'skeleton' })
-        .in('id', requestData.workoutIds);
+        .update({ generation_status: 'skeleton', updated_at: new Date().toISOString() })
+        .in('id', batchIds);
     }
 
     throw error;
   }
+}
+
+async function persistEnhancedWorkout({ supabase, workout, title, body, entityId, gymId }) {
+  const updatePayload = {
+    body,
+    title,
+    generation_status: 'detailed',
+    updated_at: new Date().toISOString(),
+  };
+  if (entityId) {
+    updatePayload.entity_id = workout.entity_id || entityId;
+  }
+  if (gymId && !workout.gym_id) {
+    updatePayload.gym_id = gymId;
+  }
+
+  const { error } = await supabase
+    .from('program_workouts')
+    .update(updatePayload)
+    .eq('id', workout.id);
+  if (error) {
+    throw new Error(`Failed to persist ${title}: ${error.message}`);
+  }
+
+  const { data: verified, error: verifyError } = await supabase
+    .from('program_workouts')
+    .select('id, title, body, generation_status, entity_id')
+    .eq('id', workout.id)
+    .single();
+
+  const check = verifiedPersistIsAcceptable(verified, { entityId });
+  if (verifyError || !check.ok) {
+    await supabase
+      .from('program_workouts')
+      .update({ generation_status: 'skeleton', updated_at: new Date().toISOString() })
+      .eq('id', workout.id);
+    throw new Error(
+      `Persist verification failed for ${title}: ${verifyError?.message || check.reason}`
+    );
+  }
+
+  return verified;
 }
 
 // Detect which sections were used in skeleton workouts
@@ -541,7 +593,7 @@ function detectWorkoutSections(skeletonWorkouts) {
 }
 
 // Validate that structure is preserved
-function validateStructurePreserved(skeleton, enhanced, sections) {
+function validateStructurePreserved(skeleton, enhanced, _sections) {
   if (!skeleton || !enhanced) return false;
 
   // Basic validation: check that key exercises from skeleton appear in enhanced
@@ -575,20 +627,12 @@ function attemptWorkoutExtraction(content, skeletonWorkouts) {
 
   for (let i = 0; i < skeletonWorkouts.length && i < dayPatterns.length - 1; i++) {
     const dayContent = dayPatterns[i + 1]; // Skip first empty split
-    if (dayContent && dayContent.length > 50) {
+    if (dayContent && dayContent.length > 50 && !isPlaceholderWorkoutBody(dayContent)) {
       extractedWorkouts.push({
         title: skeletonWorkouts[i].title,
         body: dayContent.trim(),
       });
     }
-  }
-
-  // If extraction failed, return skeleton bodies as fallback
-  if (extractedWorkouts.length === 0) {
-    return skeletonWorkouts.map((w) => ({
-      title: w.title,
-      body: w.body_skeleton,
-    }));
   }
 
   return extractedWorkouts;

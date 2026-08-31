@@ -182,52 +182,70 @@ export async function* streamChatCompletion({
   userPrompt,
   temperature = 0.7,
   maxTokens = 4000,
+  timeoutMs = 120000,
 } = {}) {
   const { sdk, client, model } = getAIProvider(tier, overrideProvider);
+  const abortController = new AbortController();
+  const timer = timeoutMs > 0 ? setTimeout(() => abortController.abort(), timeoutMs) : null;
 
-  if (sdk === 'anthropic') {
-    const systemParam =
+  try {
+    if (sdk === 'anthropic') {
+      const systemParam =
+        systemBlocks && systemBlocks.length > 0
+          ? systemBlocks
+          : [{ type: 'text', text: systemPrompt }];
+
+      const response = await client.messages.create(
+        {
+          model,
+          max_tokens: maxTokens,
+          temperature,
+          system: systemParam,
+          messages: [{ role: 'user', content: userPrompt }],
+          stream: true,
+        },
+        { signal: abortController.signal }
+      );
+
+      for await (const chunk of response) {
+        if (chunk.type === 'content_block_delta') {
+          const text = chunk.delta?.text || '';
+          if (text) yield text;
+        }
+      }
+      return;
+    }
+
+    // OpenAI-compatible (DeepSeek and future providers like GLM/GPT via the same shape)
+    const flattenedSystemPrompt =
       systemBlocks && systemBlocks.length > 0
-        ? systemBlocks
-        : [{ type: 'text', text: systemPrompt }];
+        ? systemBlocks.map((block) => block.text).join('\n\n')
+        : systemPrompt;
 
-    const response = await client.messages.create({
-      model,
-      max_tokens: maxTokens,
-      temperature,
-      system: systemParam,
-      messages: [{ role: 'user', content: userPrompt }],
-      stream: true,
-    });
+    const response = await client.chat.completions.create(
+      {
+        model,
+        messages: [
+          { role: 'system', content: flattenedSystemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+        temperature,
+        max_tokens: maxTokens,
+        stream: true,
+      },
+      { signal: abortController.signal }
+    );
 
     for await (const chunk of response) {
-      if (chunk.type === 'content_block_delta') {
-        const text = chunk.delta?.text || '';
-        if (text) yield text;
-      }
+      const text = chunk.choices?.[0]?.delta?.content || '';
+      if (text) yield text;
     }
-    return;
-  }
-
-  // OpenAI-compatible (DeepSeek and future providers like GLM/GPT via the same shape)
-  const flattenedSystemPrompt =
-    systemBlocks && systemBlocks.length > 0
-      ? systemBlocks.map((block) => block.text).join('\n\n')
-      : systemPrompt;
-
-  const response = await client.chat.completions.create({
-    model,
-    messages: [
-      { role: 'system', content: flattenedSystemPrompt },
-      { role: 'user', content: userPrompt },
-    ],
-    temperature,
-    max_tokens: maxTokens,
-    stream: true,
-  });
-
-  for await (const chunk of response) {
-    const text = chunk.choices?.[0]?.delta?.content || '';
-    if (text) yield text;
+  } catch (error) {
+    if (error?.name === 'AbortError' || error?.code === 'ABORT_ERR') {
+      throw new Error(`Model stream timed out after ${Math.round((timeoutMs || 0) / 1000)}s`);
+    }
+    throw error;
+  } finally {
+    if (timer) clearTimeout(timer);
   }
 }

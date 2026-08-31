@@ -828,7 +828,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
       try {
         const weekWorkouts = workouts.filter((w) => w.week_number === weekNumber);
 
-        await approveAndEnhanceWeek({
+        const result = await approveAndEnhanceWeek({
           programId,
           weekNumber,
           workouts: weekWorkouts,
@@ -845,6 +845,10 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
             workoutFormats: formData?.workoutFormats,
             description: formData?.description || '',
             daysPerWeek: parseInt(formData?.daysPerWeek, 10) || undefined,
+            programName: formData?.name || '',
+            program_influences: formData?.program_influences || formData?.programInfluences || '',
+            recent_training_history:
+              formData?.recent_training_history || formData?.recentTrainingHistory || '',
           },
           weekSpecificInput: weekInput || weekInputs[weekNumber] || '',
           updateWorkoutStatus: (workoutId, updates) => {
@@ -854,7 +858,10 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
           supabase,
         });
 
-        // Clear the input after successful enhancement
+        if (!result?.success) {
+          return;
+        }
+
         setWeekInput(weekNumber, '');
       } catch (error) {
         showToast(`Failed to enhance Week ${weekNumber}: ${error.message}`, 'error');
