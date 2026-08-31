@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getAIProvider, streamChatCompletion } from '@/utils/ai/provider';
+import { formatProviderError, getAIProvider, streamChatCompletion } from '@/utils/ai/provider';
 import { getFeedbackContextForGeneration } from '@/utils/feedback/feedbackUtils.js';
 import { pickEquipmentLabels } from '@/utils/prompt-builder/equipmentLabels.js';
 import {
@@ -155,7 +155,9 @@ async function handleChunkedGeneration(requestData, supabase) {
       generateProgramChunked(requestData, supabase, controller, encoder).catch((error) => {
         logWithTimestamp('Chunked generation error', { error: error.message });
         try {
-          sendEvent(controller, encoder, 'error', { error: error.message });
+          sendEvent(controller, encoder, 'error', {
+            error: formatProviderError(error),
+          });
           if (controller && controller.desiredSize !== null) {
             controller.close();
           }
@@ -367,7 +369,9 @@ async function generateProgramChunked(requestData, supabase, controller, encoder
       error: error.message,
     });
     try {
-      sendEvent(controller, encoder, 'error', { error: error.message });
+      sendEvent(controller, encoder, 'error', {
+        error: formatProviderError(error),
+      });
       if (controller && controller.desiredSize !== null) {
         controller.close();
       }
@@ -707,7 +711,9 @@ Users have EXPLICITLY selected their available equipment. Including exercises re
     }
 
     if (!responseContent) {
-      throw new Error('No content received from streaming response');
+      throw new Error(
+        'No content received from streaming response. Generation stopped so placeholders are not saved as a successful program.'
+      );
     }
 
     logWithTimestamp(`Week ${weekNumber} response content extracted`, {

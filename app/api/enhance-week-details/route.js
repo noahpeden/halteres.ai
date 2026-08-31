@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { streamChatCompletion } from '@/utils/ai/provider';
+import { formatProviderError, streamChatCompletion } from '@/utils/ai/provider';
 import {
   buildEnhancementPrompt,
   buildEnhancementSystemPrompt,
@@ -102,7 +102,9 @@ async function handleWeekEnhancement(requestData, supabase) {
       enhanceWeekWorkouts(requestData, supabase, controller, encoder).catch((error) => {
         logWithTimestamp('Enhancement error', { error: error.message });
         try {
-          sendEvent(controller, encoder, 'error', { error: error.message });
+          sendEvent(controller, encoder, 'error', {
+            error: formatProviderError(error),
+          });
           if (controller && controller.desiredSize !== null) {
             controller.close();
           }
@@ -393,7 +395,9 @@ async function enhanceWeekWorkouts(requestData, supabase, controller, encoder) {
     }
 
     if (!responseContent) {
-      throw new Error('No content received from enhancement response');
+      throw new Error(
+        'No content received from enhancement response. Generation stopped so placeholders are not saved as a successful program.'
+      );
     }
 
     let enhancedWorkouts;

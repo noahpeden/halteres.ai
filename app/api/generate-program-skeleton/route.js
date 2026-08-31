@@ -1,5 +1,9 @@
 import { NextResponse } from 'next/server';
-import { streamChatCompletion } from '@/utils/ai/provider';
+import {
+  formatProviderError,
+  streamChatCompletion,
+  withPlaceholderGuard,
+} from '@/utils/ai/provider';
 import { pickEquipmentLabels } from '@/utils/prompt-builder/equipmentLabels.js';
 import { assertUsableSkeletonWorkouts } from '@/utils/prompt-builder/generationGuardrails.js';
 import { extractIntakeInjury, extractIntakeLifts } from '@/utils/prompt-builder/intakeMetrics.js';
@@ -104,7 +108,9 @@ async function handleSkeletonGeneration(requestData, supabase) {
       generateSkeletonProgram(requestData, supabase, controller, encoder).catch((error) => {
         logWithTimestamp('Skeleton generation error', { error: error.message });
         try {
-          sendEvent(controller, encoder, 'error', { error: error.message });
+          sendEvent(controller, encoder, 'error', {
+            error: formatProviderError(error, { provider: 'DeepSeek' }),
+          });
           if (controller && controller.desiredSize !== null) {
             controller.close();
           }
@@ -246,7 +252,10 @@ async function generateSkeletonProgram(requestData, supabase, controller, encode
           error: weekError.message,
         });
         throw new Error(
-          `Week ${currentWeek} of ${numberOfWeeks} failed: ${weekError.message}. Generation stopped so placeholders are not saved as a successful program.`
+          withPlaceholderGuard(formatProviderError(weekError), {
+            weekNumber: currentWeek,
+            numberOfWeeks,
+          })
         );
       }
     }
@@ -315,7 +324,9 @@ async function generateSkeletonProgram(requestData, supabase, controller, encode
     }
 
     try {
-      sendEvent(controller, encoder, 'error', { error: error.message });
+      sendEvent(controller, encoder, 'error', {
+        error: formatProviderError(error, { provider: 'DeepSeek' }),
+      });
       if (controller && controller.desiredSize !== null) {
         controller.close();
       }
@@ -408,6 +419,9 @@ async function generateWeekSkeleton(
   try {
     logWithTimestamp(`Calling AI provider for skeleton week ${weekNumber}`, {
       promptLength: skeletonPrompt.length,
+      systemPromptLength: systemPrompt.length,
+      maxTokens: 4000,
+      timeoutMs: SKELETON_WEEK_TIMEOUT_MS,
     });
 
     // Use prompt caching for system prompt and client metrics (Anthropic only;
@@ -461,7 +475,9 @@ async function generateWeekSkeleton(
     }
 
     if (!responseContent) {
-      throw new Error('No content received from streaming response');
+      throw new Error(
+        'No content received from streaming response. Generation stopped so placeholders are not saved as a successful program.'
+      );
     }
 
     let workouts;

@@ -1,5 +1,20 @@
 import Anthropic from '@anthropic-ai/sdk';
 import OpenAI from 'openai';
+import {
+  applyOpenAiStreamChunk,
+  buildDeepseekChatBody,
+  createEmptyStreamError,
+  ensureDeepseekThinkingBody,
+  resolveDeepseekThinking,
+  wrapProviderError,
+} from './providerErrors.js';
+
+export {
+  describeEmptyStream,
+  formatProviderError,
+  resolveDeepseekThinking,
+  withPlaceholderGuard,
+} from './providerErrors.js';
 
 /**
  * Single entry point for all AI text-generation calls in the app.
@@ -26,6 +41,12 @@ import OpenAI from 'openai';
  * `deepseek-reasoner` aliases on 2026-07-24. Any code still using those names will
  * error. Always go through this module (or DEEPSEEK_MODEL_PRO/FLASH env vars) so a
  * future model rename is a one-line config change, not a code hunt.
+ *
+ * DeepSeek V4 thinking is enabled by default and shares max_tokens with the
+ * visible answer. This module therefore sends thinking: { type: "disabled" }
+ * unless the caller (or DEEPSEEK_THINKING=enabled) opts in. Otherwise a 4000-token
+ * skeleton call can spend the entire budget on reasoning_content and return
+ * zero content tokens.
  */
 
 const VALID_PROVIDERS = ['deepseek', 'anthropic'];
@@ -48,12 +69,36 @@ const DEEPSEEK_MODEL_FLASH = process.env.DEEPSEEK_MODEL_FLASH || 'deepseek-v4-fl
 const ANTHROPIC_MODEL_PRO = process.env.ANTHROPIC_MODEL_PRO || 'claude-sonnet-4-5-20250929';
 const ANTHROPIC_MODEL_FLASH = process.env.ANTHROPIC_MODEL_FLASH || 'claude-haiku-4-5-20250514';
 
+function assertDeepseekConfigured() {
+  if (!process.env.DEEPSEEK_API_KEY) {
+    const error = new Error('DEEPSEEK_API_KEY is missing on this deploy.');
+    error.status = 401;
+    error.code = 'missing_api_key';
+    throw error;
+  }
+}
+
+/**
+ * OpenAI's Node SDK may drop unrecognized body fields. DeepSeek requires
+ * `thinking` on the wire, so re-attach it if the serialized body lost it.
+ * Never log the request body (it can contain athlete intake).
+ */
+function fetchWithDeepseekThinking(url, init = {}) {
+  const nextInit = { ...init };
+  if (typeof init.body === 'string') {
+    nextInit.body = ensureDeepseekThinkingBody(init.body);
+  }
+  return fetch(url, nextInit);
+}
+
 let deepseekClient = null;
 function getDeepseekClient() {
+  assertDeepseekConfigured();
   if (!deepseekClient) {
     deepseekClient = new OpenAI({
       baseURL: 'https://api.deepseek.com',
       apiKey: process.env.DEEPSEEK_API_KEY,
+      fetch: fetchWithDeepseekThinking,
     });
   }
   return deepseekClient;
@@ -117,42 +162,61 @@ export async function createChatCompletion({
   temperature = 0.7,
   maxTokens = 4000,
   jsonMode = false,
+  thinking,
 } = {}) {
   const { provider, sdk, client, model } = getAIProvider(tier, overrideProvider);
 
-  if (sdk === 'anthropic') {
-    const message = await client.messages.create({
+  try {
+    if (sdk === 'anthropic') {
+      const message = await client.messages.create({
+        model,
+        max_tokens: maxTokens,
+        temperature,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: userPrompt }],
+      });
+      return {
+        provider,
+        model,
+        content: message.content?.[0]?.text ?? '',
+        usage: message.usage,
+      };
+    }
+
+    const body = buildDeepseekChatBody({
       model,
-      max_tokens: maxTokens,
+      systemPrompt,
+      userPrompt,
       temperature,
-      system: systemPrompt,
-      messages: [{ role: 'user', content: userPrompt }],
+      maxTokens,
+      jsonMode,
+      stream: false,
+      thinking,
     });
+    const response = await client.chat.completions.create(body);
+    const content = response.choices?.[0]?.message?.content ?? '';
+    if (!content) {
+      const reasoningChars = String(response.choices?.[0]?.message?.reasoning_content || '').length;
+      throw createEmptyStreamError({
+        model,
+        finishReason: response.choices?.[0]?.finish_reason,
+        reasoningChars,
+        usage: response.usage,
+        thinking: resolveDeepseekThinking(thinking).type,
+      });
+    }
     return {
       provider,
       model,
-      content: message.content?.[0]?.text ?? '',
-      usage: message.usage,
+      content,
+      usage: response.usage,
     };
+  } catch (error) {
+    throw wrapProviderError(error, {
+      provider: provider === 'anthropic' ? 'Anthropic' : 'DeepSeek',
+      model,
+    });
   }
-
-  const response = await client.chat.completions.create({
-    model,
-    messages: [
-      { role: 'system', content: systemPrompt },
-      { role: 'user', content: userPrompt },
-    ],
-    temperature,
-    max_tokens: maxTokens,
-    ...(jsonMode ? { response_format: { type: 'json_object' } } : {}),
-  });
-
-  return {
-    provider,
-    model,
-    content: response.choices?.[0]?.message?.content ?? '',
-    usage: response.usage,
-  };
 }
 
 /**
@@ -172,6 +236,8 @@ export async function createChatCompletion({
  * @param {string} opts.userPrompt
  * @param {number} [opts.temperature]
  * @param {number} [opts.maxTokens]
+ * @param {boolean|'enabled'|'disabled'} [opts.thinking] - DeepSeek thinking toggle.
+ *   Defaults to disabled (see DEEPSEEK_THINKING).
  * @yields {string} text deltas as they arrive
  */
 export async function* streamChatCompletion({
@@ -183,10 +249,14 @@ export async function* streamChatCompletion({
   temperature = 0.7,
   maxTokens = 4000,
   timeoutMs = 120000,
+  thinking,
 } = {}) {
-  const { sdk, client, model } = getAIProvider(tier, overrideProvider);
+  const { provider, sdk, client, model } = getAIProvider(tier, overrideProvider);
   const abortController = new AbortController();
   const timer = timeoutMs > 0 ? setTimeout(() => abortController.abort(), timeoutMs) : null;
+  const thinkingMode = resolveDeepseekThinking(thinking);
+  const streamState = { finishReason: null, reasoningChars: 0, usage: null };
+  let contentChars = 0;
 
   try {
     if (sdk === 'anthropic') {
@@ -210,8 +280,14 @@ export async function* streamChatCompletion({
       for await (const chunk of response) {
         if (chunk.type === 'content_block_delta') {
           const text = chunk.delta?.text || '';
-          if (text) yield text;
+          if (text) {
+            contentChars += text.length;
+            yield text;
+          }
         }
+      }
+      if (!contentChars) {
+        throw createEmptyStreamError({ model, thinking: 'n/a' });
       }
       return;
     }
@@ -222,29 +298,57 @@ export async function* streamChatCompletion({
         ? systemBlocks.map((block) => block.text).join('\n\n')
         : systemPrompt;
 
-    const response = await client.chat.completions.create(
-      {
-        model,
-        messages: [
-          { role: 'system', content: flattenedSystemPrompt },
-          { role: 'user', content: userPrompt },
-        ],
-        temperature,
-        max_tokens: maxTokens,
-        stream: true,
-      },
-      { signal: abortController.signal }
-    );
+    const body = buildDeepseekChatBody({
+      model,
+      systemPrompt: flattenedSystemPrompt,
+      userPrompt,
+      temperature,
+      maxTokens,
+      stream: true,
+      thinking,
+    });
+
+    console.log('[ai-provider] stream start', {
+      provider,
+      model,
+      thinking: thinkingMode.type,
+      maxTokens: body.max_tokens,
+      timeoutMs,
+      systemChars: (flattenedSystemPrompt || '').length,
+      userChars: (userPrompt || '').length,
+    });
+
+    const response = await client.chat.completions.create(body, {
+      signal: abortController.signal,
+    });
 
     for await (const chunk of response) {
-      const text = chunk.choices?.[0]?.delta?.content || '';
-      if (text) yield text;
+      const text = applyOpenAiStreamChunk(streamState, chunk);
+      if (text) {
+        contentChars += text.length;
+        yield text;
+      }
+    }
+
+    if (!contentChars) {
+      throw createEmptyStreamError({
+        model,
+        finishReason: streamState.finishReason,
+        reasoningChars: streamState.reasoningChars,
+        usage: streamState.usage,
+        thinking: thinkingMode.type,
+      });
     }
   } catch (error) {
     if (error?.name === 'AbortError' || error?.code === 'ABORT_ERR') {
-      throw new Error(`Model stream timed out after ${Math.round((timeoutMs || 0) / 1000)}s`);
+      throw new Error(
+        `Model stream timed out after ${Math.round((timeoutMs || 0) / 1000)}s (model=${model}, thinking=${thinkingMode.type})`
+      );
     }
-    throw error;
+    throw wrapProviderError(error, {
+      provider: provider === 'anthropic' ? 'Anthropic' : 'DeepSeek',
+      model,
+    });
   } finally {
     if (timer) clearTimeout(timer);
   }
