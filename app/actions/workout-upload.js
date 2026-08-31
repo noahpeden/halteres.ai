@@ -9,10 +9,12 @@ import pdf from 'pdf-parse/lib/pdf-parse';
 import { createWorker } from 'tesseract.js';
 import * as XLSX from 'xlsx';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-  dangerouslyAllowBrowser: true,
-});
+function getOpenAI() {
+  return new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+    dangerouslyAllowBrowser: true,
+  });
+}
 
 async function createSupabaseClient() {
   const cookieStore = await cookies();
@@ -76,6 +78,7 @@ const parseFile = async (file) => {
 };
 
 async function createEmbeddings(embeddingPrompt) {
+  const openai = getOpenAI();
   const openaiResponse = await openai.embeddings.create({
     model: 'text-embedding-3-small',
     input: embeddingPrompt,

@@ -4,15 +4,16 @@ import OpenAI from 'openai';
  * Feedback utility functions for RAG integration with program generation
  */
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+function getOpenAI() {
+  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+}
 
 /**
  * Generate embedding for a text query
  */
 export async function generateEmbedding(text) {
   try {
+    const openai = getOpenAI();
     const response = await openai.embeddings.create({
       model: 'text-embedding-3-small',
       input: text,

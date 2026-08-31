@@ -1,10 +1,10 @@
 'use client';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 
-export default function ResetPasswordPage() {
+function ResetPasswordInner() {
   const { session, supabase } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -130,5 +130,19 @@ export default function ResetPasswordPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex justify-center items-center min-h-[70vh]">
+          <p className="athlete-body">Loading…</p>
+        </div>
+      }
+    >
+      <ResetPasswordInner />
+    </Suspense>
   );
 }

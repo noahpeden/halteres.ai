@@ -1,11 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 
-// Use service role key to bypass RLS for public gym lookup
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+function getSupabase() {
+  return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+}
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
@@ -16,6 +14,7 @@ export async function GET(request) {
   }
 
   try {
+    const supabase = getSupabase();
     const { data, error } = await supabase
       .from('gyms')
       .select('id, name, description, logo_url')

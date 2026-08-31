@@ -20,10 +20,9 @@ const relevantEvents = new Set([
 
 // Helper function to update Supabase profile
 // Use Supabase Admin client for elevated privileges
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+function getSupabaseAdmin() {
+  return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+}
 
 async function updateSubscriptionStatus(
   stripeCustomerId,
@@ -36,6 +35,7 @@ async function updateSubscriptionStatus(
   cancelAtPeriodEnd = false,
   retryCount = 0
 ) {
+  const supabaseAdmin = getSupabaseAdmin();
   const maxRetries = 3;
   console.log(
     `Webhook: Updating subscription for Stripe Customer ${stripeCustomerId}, Subscription ${subscriptionId}, Status: ${status}, Plan: ${plan}${retryCount > 0 ? ` (Retry ${retryCount}/${maxRetries})` : ''}`
@@ -127,6 +127,7 @@ async function updateSubscriptionStatus(
 }
 
 export async function POST(req) {
+  const supabaseAdmin = getSupabaseAdmin();
   const body = await req.text();
   const signature = (await headers()).get('Stripe-Signature');
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;

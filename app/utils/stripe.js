@@ -1,9 +1,25 @@
 import Stripe from 'stripe';
 
-// Initialize Stripe client
-// The STRIPE_SECRET_KEY environment variable is required.
-// Use the latest API version recommended by Stripe.
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  // apiVersion: '2024-06-20', // Optional: Default is latest
-  // typescript: true, // Not needed for JS
-});
+let cachedStripe = null;
+
+export function getStripe() {
+  if (cachedStripe) return cachedStripe;
+  const key = process.env.STRIPE_SECRET_KEY;
+  if (!key) {
+    throw new Error('Stripe secret key not configured');
+  }
+  cachedStripe = new Stripe(key);
+  return cachedStripe;
+}
+
+// Lazy proxy so `import { stripe }` does not construct at build time.
+export const stripe = new Proxy(
+  {},
+  {
+    get(_target, prop) {
+      const client = getStripe();
+      const value = client[prop];
+      return typeof value === 'function' ? value.bind(client) : value;
+    },
+  }
+);

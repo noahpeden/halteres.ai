@@ -2,15 +2,13 @@ import { createClient } from '@supabase/supabase-js';
 import OpenAI from 'openai';
 import { corsHeaders, createMobileCompatibleClient } from '@/utils/supabase/mobile';
 
-// Service role client for RPC calls
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+function getSupabaseAdmin() {
+  return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+}
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+function getOpenAI() {
+  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+}
 
 // Handle OPTIONS for CORS preflight
 export async function OPTIONS() {
@@ -25,6 +23,7 @@ export async function OPTIONS() {
  */
 async function generateQueryEmbedding(queryText) {
   try {
+    const openai = getOpenAI();
     const response = await openai.embeddings.create({
       model: 'text-embedding-3-small',
       input: queryText,
@@ -53,6 +52,7 @@ async function generateQueryEmbedding(queryText) {
  */
 export async function POST(request) {
   try {
+    const supabaseAdmin = getSupabaseAdmin();
     const body = await request.json();
     const {
       queryText,
@@ -132,6 +132,7 @@ export async function POST(request) {
  */
 export async function GET(request) {
   try {
+    const supabaseAdmin = getSupabaseAdmin();
     const { searchParams } = new URL(request.url);
     const gymId = searchParams.get('gymId');
     const methodology = searchParams.get('methodology');

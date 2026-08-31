@@ -1,17 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 
-// Create a Supabase client with the service role key to bypass RLS
-const supabaseServiceRole = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
-  }
-);
+function getSupabaseServiceRole() {
+  return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+}
 
 export async function GET(request) {
   try {
@@ -23,6 +17,7 @@ export async function GET(request) {
     }
 
     // Fetch program data using service role to bypass RLS
+    const supabaseServiceRole = getSupabaseServiceRole();
     const { data: program, error: programError } = await supabaseServiceRole
       .from('programs')
       .select(
