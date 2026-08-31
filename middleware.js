@@ -44,6 +44,26 @@ export async function middleware(req) {
   const user = session?.user;
   const { pathname } = req.nextUrl;
 
+  // Global B2C archiving redirects for legacy/coach/B2B routes
+  // Redirect program-specific archived pages to writer
+  const programMatch = pathname.match(/^\/program\/([^/]+)\/(workouts|metrics|share)(?:\/.*)?$/);
+  if (programMatch) {
+    const programId = programMatch[1];
+    const targetUrl = new URL(`/program/${programId}/writer`, req.url);
+    return NextResponse.redirect(targetUrl);
+  }
+  // Redirect wizard and marketing leftovers to athlete
+  if (
+    /^\/program-wizard(\/.*)?$/.test(pathname) ||
+    /^\/(help|tutorials|updates|_team)$/.test(pathname)
+  ) {
+    return NextResponse.redirect(new URL('/athlete', req.url));
+  }
+  // Redirect old root profile to athlete profile
+  if (pathname === '/profile') {
+    return NextResponse.redirect(new URL('/athlete/profile', req.url));
+  }
+
   // Define protected routes that require an active subscription or valid trial
   const protectedRoutes = ['/dashboard', '/program', '/write-program'];
 
@@ -92,7 +112,8 @@ export async function middleware(req) {
   }
 
   // Define coach-only routes (athletes should not access these)
-  const coachOnlyRoutes = ['/dashboard', '/program', '/write-program'];
+  // B2C: allow athletes to access /program (self-coached writer)
+  const coachOnlyRoutes = ['/dashboard', '/write-program'];
   const isCoachOnlyRoute =
     coachOnlyRoutes.some((route) => pathname.startsWith(route)) && !isPublicRoute;
 
@@ -110,15 +131,9 @@ export async function middleware(req) {
           'subscription_status, trial_end_date, generations_remaining, generations_today, last_generation_date, role, onboarding_completed'
         )
         .eq('id', user.id)
-        .single();
+        .maybeSingle(); // Avoid 406 when no rows
 
-      if (!profile) {
-        // Profile not found - for athletes, redirect to login; for coaches, to pricing
-        const redirectUrl = new URL('/login', req.url);
-        redirectUrl.searchParams.set('error', 'profile_not_found');
-        return NextResponse.redirect(redirectUrl);
-      }
-
+      // Treat missing profile as athlete during B2C beta
       const {
         subscription_status,
         trial_end_date,
@@ -127,31 +142,21 @@ export async function middleware(req) {
         last_generation_date,
         role,
         onboarding_completed,
-      } = profile;
+      } = profile || {};
+
+      const isAthlete = (role || 'athlete') === 'athlete';
 
       // Role-based access control: Athletes cannot access coach-only routes
-      const isAthlete = role === 'athlete';
       if (isAthlete && isCoachOnlyRoute) {
         // Redirect athletes to their dashboard
         const redirectUrl = new URL('/athlete', req.url);
         return NextResponse.redirect(redirectUrl);
       }
 
-      // Athlete setup check: if athlete needs setup, redirect to main athlete page
+      // Athlete setup check: if onboarding incomplete, redirect to main athlete page
       if (isAthlete && isAthleteRoute && !isAthleteSetupRoute) {
-        // Check if athlete has active gym membership
-        const { data: memberships } = await supabase
-          .from('gym_memberships')
-          .select('id, status')
-          .eq('user_id', user.id)
-          .eq('status', 'active')
-          .limit(1);
-
-        const hasActiveGym = memberships && memberships.length > 0;
-        const athleteNeedsSetup = !hasActiveGym || !onboarding_completed;
-
+        const athleteNeedsSetup = !onboarding_completed;
         if (athleteNeedsSetup) {
-          // Redirect to main athlete page for setup/onboarding
           const redirectUrl = new URL('/athlete', req.url);
           return NextResponse.redirect(redirectUrl);
         }
@@ -159,6 +164,11 @@ export async function middleware(req) {
 
       // Athletes don't need subscription checks - allow access to athlete routes
       if (isAthlete && isAthleteRoute) {
+        return res;
+      }
+
+      // B2C beta: allow athletes to access program writer routes and generation routes without paid plan
+      if (isAthlete && (isProtectedRoute || isGenerationRoute)) {
         return res;
       }
 

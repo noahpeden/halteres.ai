@@ -20,12 +20,12 @@ export default function EntitySelectionModal({
       />
       <div className="modal">
         <div className="modal-box">
-          <h3 className="font-bold text-lg mb-4">Select Client/Class</h3>
+          <h3 className="font-bold text-lg mb-4">Select Profile/Class</h3>
 
           {entities.length > 0 ? (
             <div className="w-full mb-6">
               <label className="label">
-                <span className="text-sm">Choose a Client or Class</span>
+                <span className="text-sm">Choose a Profile or Class</span>
               </label>
               <select
                 className="select select-bordered w-full"
@@ -33,9 +33,9 @@ export default function EntitySelectionModal({
                 onChange={(e) => onEntitySelect(e.target.value)}
               >
                 <option value="" disabled>
-                  Select a client or class
+                  Select a profile or class
                 </option>
-                <optgroup label="Clients">
+                <optgroup label="Profiles">
                   {entities
                     .filter((entity) => entity.type === 'CLIENT')
                     .map((entity) => (
@@ -57,12 +57,12 @@ export default function EntitySelectionModal({
             </div>
           ) : (
             <p className="text-center py-4 mb-4">
-              No clients or classes yet. Create your first one below.
+              No profiles or classes yet. Create your first one below.
             </p>
           )}
 
           <div className="flex justify-between items-center mb-2">
-            <span className="text-sm font-medium">Or create a new client/class:</span>
+            <span className="text-sm font-medium">Or create a new profile/class:</span>
             <button onClick={onCreateNew} className="btn btn-sm btn-outline">
               Create New
             </button>

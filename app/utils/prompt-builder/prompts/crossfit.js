@@ -4,7 +4,6 @@
  * @returns {string} The assembled prompt string
  */
 import {
-  formatClientRequirements,
   formatEquipmentRestrictions,
   formatFinalPriorityCheck,
   formatSchedulingRequirements,
@@ -77,7 +76,7 @@ IMPORTANT: Please structure your workout to precisely follow this format with th
 Periodization Guidelines:
 ${periodization.approach}
 
-Why it's appropriate for the client requirements:
+Why it's appropriate for your requirements:
 ${periodization.why_appropriate}
 `
       : '';
@@ -100,7 +99,15 @@ ${focus_area ? `Focus Area: ${focus_area}` : ''}
 Periodization: ${programType}
 </program_parameters>
 
-${formatClientRequirements(description)}
+${
+  description
+    ? `<your_requirements priority="high">
+${description}
+These requirements take precedence over general guidelines below.
+</your_requirements>
+`
+    : ''
+}
 ${formatEquipmentRestrictions(equipment)}
 
 <workout_formats required="${formattedWorkoutFormats}">
@@ -148,7 +155,7 @@ Include in the program description:
 </description_requirements>
 
 <crossfit_guidelines>
-Apply these CrossFit principles where they don't conflict with client requirements:
+Apply these CrossFit principles where they don't conflict with your requirements:
 - Varied functional movements at appropriate intensity
 - Mix of gymnastics, weightlifting, and metabolic conditioning
 - Benchmark and Hero WODs where appropriate
@@ -217,7 +224,7 @@ Target time domain or goal times
 ## Cool-down
 Specific movements and durations for recovery
 
-## Coaching Cues
+## Technique Tips
 3-5 technical cues for key movements, form tips, common errors to avoid`
 }
 </workout_body_structure>

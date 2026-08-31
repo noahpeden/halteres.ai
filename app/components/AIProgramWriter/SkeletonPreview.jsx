@@ -13,6 +13,8 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import TemplateFeedbackButton from '@/components/feedback/TemplateFeedbackButton';
+import { weekDisplayStatus } from '@/utils/prompt-builder/generationGuardrails';
+import { extractDayNumber, sortWorkoutsForDisplay } from '@/utils/prompt-builder/modelOutput';
 
 // Simple markdown parser for workout content (same as WorkoutList)
 const parseMarkdownToHTML = (markdown) => {
@@ -96,7 +98,8 @@ export default function SkeletonPreview({
   const groupedWeeks = groupWorkoutsByWeek(workouts);
 
   // Calculate stats
-  const totalWeeks = groupedWeeks.length;
+  const requestedWeeks = Number(programContext?.numberOfWeeks) || groupedWeeks.length;
+  const totalWeeks = requestedWeeks;
   const detailedWeeks = groupedWeeks.filter((w) => w.status === 'detailed').length;
   const skeletonWeeks = groupedWeeks.filter((w) => w.status === 'skeleton').length;
 
@@ -141,16 +144,20 @@ export default function SkeletonPreview({
   return (
     <div className="space-y-6">
       {/* Success Header */}
-      <div className="text-center py-8 bg-gradient-to-r from-primary/10 to-secondary/10 rounded-2xl">
-        <div className="text-5xl mb-4">{isFullyEnhanced ? '✅' : '🎉'}</div>
-        <h2 className="text-2xl font-bold text-base-content">
-          {isFullyEnhanced ? 'Program Ready!' : 'Program Structure Ready!'}
-        </h2>
-        <p className="text-base-content/60 mt-2">
-          {workouts.length} workouts across {totalWeeks} weeks.{' '}
+      <div className="py-6 border-b border-[var(--paper-rule)]">
+        <p className="athlete-label mb-2">
+          {isFullyEnhanced ? 'Ready to train' : 'Skeleton in ink'}
+        </p>
+        <h2 className="athlete-heading-xl">
           {isFullyEnhanced
-            ? 'Click on any workout to view details or make changes.'
-            : 'Review and add details below.'}
+            ? 'The block is written.'
+            : 'Structure first. Details when you want them.'}
+        </h2>
+        <p className="athlete-body mt-2">
+          {workouts.length} workouts across {requestedWeeks} weeks.{' '}
+          {isFullyEnhanced
+            ? 'Open any day to edit, enhance, or log.'
+            : 'Enhance a week when you want full notes — or leave it lean.'}
         </p>
       </div>
 
@@ -189,7 +196,7 @@ export default function SkeletonPreview({
             <div className="collapse-title font-medium">Program Description</div>
             <div className="collapse-content">
               <div
-                className="p-2 bg-white rounded-md text-sm"
+                className="p-2 bg-[var(--chalk)] rounded-sm text-sm"
                 dangerouslySetInnerHTML={{
                   __html: parseMarkdownToHTML(generatedDescription),
                 }}
@@ -266,7 +273,7 @@ export default function SkeletonPreview({
       {/* Enhance All Confirmation Modal */}
       {showEnhanceAllConfirm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-base-100 rounded-xl p-6 max-w-md m-4 shadow-2xl">
+          <div className="athlete-card-static p-6 max-w-md m-4">
             <h3 className="font-bold text-lg mb-2">Enhance Remaining Weeks?</h3>
             <p className="text-base-content/70 mb-4">
               {detailedWeeks} week{detailedWeeks > 1 ? 's have' : ' has'} already been enhanced and
@@ -325,15 +332,15 @@ function WeekCard({
   gymId,
 }) {
   const statusColors = {
-    detailed: 'border-primary bg-primary/5',
-    enhancing: 'border-info bg-info/5',
-    skeleton: 'border-base-300 bg-base-100',
+    detailed: 'border-[var(--olive)] bg-[color-mix(in_srgb,var(--olive)_8%,var(--chalk))]',
+    enhancing: 'border-[var(--sea)] bg-[color-mix(in_srgb,var(--sea)_8%,var(--chalk))]',
+    skeleton: 'border-[var(--paper-rule)] bg-[var(--chalk)]',
   };
 
   const statusBadgeColors = {
-    detailed: 'bg-primary/20 text-primary',
-    enhancing: 'bg-info/20 text-info',
-    skeleton: 'bg-warning/20 text-warning-content',
+    detailed: 'bg-[var(--olive)] text-[var(--chalk)]',
+    enhancing: 'bg-[var(--sea)] text-[var(--chalk)]',
+    skeleton: 'bg-[var(--gold)] text-[var(--ink)]',
   };
 
   const statusLabels = {
@@ -345,7 +352,7 @@ function WeekCard({
   return (
     <div
       className={`
-        p-6 rounded-xl border-2 transition-all
+        p-6 rounded-sm border transition-all
         ${statusColors[week.status]}
         ${week.status === 'enhancing' ? 'animate-pulse' : ''}
       `}
@@ -357,7 +364,7 @@ function WeekCard({
             className={`
             w-8 h-8 rounded-full flex items-center justify-center font-bold
             ${
-              week.status === 'detailed' ? 'bg-primary text-white' : 'bg-base-200 text-base-content'
+              week.status === 'detailed' ? 'bg-[var(--olive)] text-[var(--chalk)]' : 'bg-[var(--paper-deep)] text-[var(--ink)]'
             }
           `}
           >
@@ -389,9 +396,11 @@ function WeekCard({
 
       {/* Workout Previews */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 mb-4">
-        {week.workouts.map((workout, i) => (
+        {sortWorkoutsForDisplay(week.workouts).map((workout, i) => (
           <div key={workout.id || i} className="p-3 bg-base-200/50 rounded-lg text-center">
-            <div className="text-xs text-base-content/60">Day {i + 1}</div>
+            <div className="text-xs text-base-content/60">
+              Day {extractDayNumber(workout.title, i)}
+            </div>
             <div className="font-medium text-sm truncate">{extractFocus(workout.title)}</div>
           </div>
         ))}
@@ -401,11 +410,11 @@ function WeekCard({
       {isExpanded && (
         <div className="border-t border-base-300 pt-4 mt-4">
           <div className="space-y-4">
-            {week.workouts.map((workout, i) => (
+            {sortWorkoutsForDisplay(week.workouts).map((workout, i) => (
               <DetailedWorkoutCard
                 key={workout.id || i}
                 workout={workout}
-                dayIndex={i}
+                dayIndex={extractDayNumber(workout.title, i) - 1}
                 weekStatus={week.status}
                 onViewDetails={onViewDetails}
                 onEditWorkout={onEditWorkout}
@@ -497,7 +506,9 @@ function DetailedWorkoutCard({
   return (
     <div
       className={`border rounded-md p-3 sm:p-4 flex flex-col w-full ${
-        workout.completed ? 'bg-green-50 border-green-200' : 'bg-white border-base-300'
+        workout.completed
+          ? 'bg-[color-mix(in_srgb,var(--olive)_10%,var(--chalk))] border-[var(--olive)]'
+          : 'bg-[var(--chalk)] border-[var(--paper-rule)]'
       }`}
     >
       <div className="flex justify-between items-center mb-1 w-full">
@@ -613,26 +624,27 @@ function DetailedWorkoutCard({
   );
 }
 
-// Helper function to extract focus from workout title
 function extractFocus(title) {
-  // Try to extract the focus area from titles like "Week 1, Day 1: Lower Body Strength"
-  const match = title?.match(/:\s*(.+)$/);
-  return match ? match[1] : 'Workout';
+  const cleaned = String(title || '')
+    .replace(/["']?\s*,\s*"body"[\s\S]*$/i, '')
+    .replace(/\\n/g, ' ')
+    .replace(/"+/g, '')
+    .trim();
+  const match = cleaned.match(/:\s*(.+)$/);
+  return match ? match[1].trim() : 'Workout';
 }
 
-// Helper function to group workouts by week
 function groupWorkoutsByWeek(workouts) {
   if (!workouts || workouts.length === 0) return [];
 
   const grouped = {};
 
   workouts.forEach((workout) => {
-    // Try to get week number from workout data or parse from title
-    let weekNumber = workout.week_number;
-
+    const rawWeek = Number(workout.week_number);
+    let weekNumber = Number.isFinite(rawWeek) && rawWeek > 0 ? rawWeek : 0;
     if (!weekNumber) {
       const match = workout.title?.match(/Week\s+(\d+)/i);
-      weekNumber = match ? parseInt(match[1]) : 1;
+      weekNumber = match ? parseInt(match[1], 10) : 1;
     }
 
     if (!grouped[weekNumber]) {
@@ -645,18 +657,8 @@ function groupWorkoutsByWeek(workouts) {
     grouped[weekNumber].workouts.push(workout);
   });
 
-  // Determine week status based on workout statuses
   Object.values(grouped).forEach((week) => {
-    const statuses = week.workouts.map((w) => w.generation_status || 'detailed');
-    if (statuses.every((s) => s === 'detailed')) {
-      week.status = 'detailed';
-    } else if (statuses.some((s) => s === 'enhancing')) {
-      week.status = 'enhancing';
-    } else if (statuses.some((s) => s === 'skeleton')) {
-      week.status = 'skeleton';
-    } else {
-      week.status = 'detailed'; // Default for legacy workouts
-    }
+    week.status = weekDisplayStatus(week.workouts);
   });
 
   return Object.values(grouped).sort((a, b) => a.weekNumber - b.weekNumber);

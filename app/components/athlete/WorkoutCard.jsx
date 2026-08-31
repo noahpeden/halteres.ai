@@ -44,7 +44,7 @@ export default function WorkoutCard({
 
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-1">
-          <h3 className="athlete-heading-md text-white truncate">{displayTitle}</h3>
+          <h3 className="athlete-heading-md truncate">{displayTitle}</h3>
           {status === 'today' && <StatusBadge variant="today" />}
           {result?.is_pr && <StatusBadge variant="pr" />}
         </div>

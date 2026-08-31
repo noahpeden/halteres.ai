@@ -19,7 +19,7 @@ export async function POST(request) {
     });
   }
 
-  return NextResponse.redirect(`${requestUrl.origin}/dashboard`, {
+  return NextResponse.redirect(`${requestUrl.origin}/athlete`, {
     status: 301,
   });
 }

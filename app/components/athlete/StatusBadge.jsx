@@ -30,7 +30,8 @@ const variants = {
     label: 'Upcoming',
   },
   live: {
-    className: 'bg-[var(--athlete-accent-primary)] text-white animate-athlete-pulse',
+    className:
+      'bg-[var(--athlete-accent-primary)] text-[var(--athlete-on-accent)] animate-athlete-pulse',
     icon: Flame,
     label: 'Live',
   },

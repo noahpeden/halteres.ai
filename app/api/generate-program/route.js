@@ -36,9 +36,9 @@ async function updateProfileAfterGeneration(supabase, userId, isPaidSubscriber) 
       .from('profiles')
       .select('generations_remaining, free_generations_used')
       .eq('id', userId)
-      .single();
+      .maybeSingle();
 
-    if (fetchError) {
+    if (fetchError && fetchError.code !== 'PGRST116') {
       logWithTimestamp('[UpdateProfile] Error fetching current profile', {
         error: fetchError,
         userId,
@@ -160,9 +160,9 @@ export async function POST(request) {
         sendEvent('status', { message: 'Checking subscription status...' });
         const { data: profile, error: profileError } = await supabase
           .from('profiles')
-          .select('subscription_status, generations_remaining, subscription_plan, trial_end_date')
+          .select('subscription_status, generations_remaining, trial_end_date')
           .eq('id', userId)
-          .single();
+          .maybeSingle();
 
         if (profileError) {
           logWithTimestamp('Error fetching user profile', {
@@ -176,46 +176,8 @@ export async function POST(request) {
           return;
         }
 
-        // Skip generation limit check for paid subscribers
-        const isPaidSubscriber =
-          profile.subscription_status === 'active' &&
-          profile.subscription_plan !== null &&
-          ['monthly', 'quarterly', 'annual', 'daily'].includes(profile.subscription_plan);
-
-        // Check if trial has expired for trialing users
-        if (profile.subscription_status === 'trialing') {
-          const trialEndDate = profile.trial_end_date ? new Date(profile.trial_end_date) : null;
-
-          if (trialEndDate && trialEndDate < new Date()) {
-            logWithTimestamp('Trial expired', {
-              userId,
-              trialEndDate: profile.trial_end_date,
-            });
-
-            sendEvent('error', {
-              error: 'Trial expired',
-              details: 'Your free trial has expired. Please upgrade to a paid plan to continue.',
-            });
-            controller.close();
-            return;
-          }
-        }
-
-        // If user is not a paid subscriber and has no generations left, block the request
-        if (!isPaidSubscriber && profile.generations_remaining <= 0) {
-          logWithTimestamp('Generation limit reached', {
-            userId,
-            generationsRemaining: profile.generations_remaining,
-          });
-
-          sendEvent('error', {
-            error: 'Generation limit reached',
-            details:
-              'You have used all your available generations. Please upgrade to a paid plan to continue.',
-          });
-          controller.close();
-          return;
-        }
+        // Skip hard-blocks during B2C beta: allow generation for non-active users too.
+        const isPaidSubscriber = profile?.subscription_status === 'active';
 
         // Extract parameters with defaults
         sendEvent('status', { message: 'Processing program parameters...' });
@@ -1578,7 +1540,7 @@ async function preparePromptElements(programId, supabase, params, openai) {
 
   // System prompt
   const systemPrompt =
-    "You are an expert strength and conditioning coach who specializes in creating effective, periodized training programs. Create professional, functional fitness-style workouts with precise stimulus explanations, detailed scaling options, and specific coaching cues. Each workout should include clear RX weights, proper warm-up and cool-down protocols, and actionable strategy recommendations. Follow sound exercise science principles with appropriate progression, variation, and specificity. CRITICAL EQUIPMENT CONSTRAINT: You MUST ONLY include exercises that use the EXACT equipment specified in the prompt. Do NOT recommend or include ANY exercises that require equipment not explicitly listed as available. CRITICAL SCHEDULING CONSTRAINT: You MUST assign each workout EXACTLY to the dates provided in the suggestedDates list, which are aligned with the user's selected days of the week. VERY IMPORTANT: Always prioritize the client's specific requirements from their description field above all other considerations - these are their must-have elements and should be incorporated throughout the program. CRITICAL: When a periodization model (linear, undulating, block, conjugate, etc.) is specified, you MUST strictly follow that model's principles throughout the entire program, clearly labeling each workout with its specific phase/block/day type according to the model. Each workout should explicitly state which phase/cycle/block it belongs to in the periodization structure. Provide responses EXACTLY in the JSON format specified in the prompt.";
+    "You are an expert strength and conditioning coach who specializes in creating effective, periodized training programs. Create professional, functional fitness-style workouts with precise stimulus explanations, detailed scaling options, and specific technique tips. Each workout should include clear RX weights, proper warm-up and cool-down protocols, and actionable strategy recommendations. Follow sound exercise science principles with appropriate progression, variation, and specificity. CRITICAL EQUIPMENT CONSTRAINT: You MUST ONLY include exercises that use the EXACT equipment specified in the prompt. Do NOT recommend or include ANY exercises that require equipment not explicitly listed as available. CRITICAL SCHEDULING CONSTRAINT: You MUST assign each workout EXACTLY to the dates provided in the suggestedDates list, which are aligned with the user's selected days of the week. VERY IMPORTANT: Always prioritize the user's specific requirements from their description field above all other considerations — these are must-have elements and should be incorporated throughout the program. CRITICAL: When a periodization model (linear, undulating, block, conjugate, etc.) is specified, you MUST strictly follow that model's principles throughout the entire program, clearly labeling each workout with its specific phase/block/day type according to the model. Each workout should explicitly state which phase/cycle/block it belongs to in the periodization structure. Provide responses EXACTLY in the JSON format specified in the prompt.";
 
   return {
     systemPrompt,
@@ -1662,21 +1624,17 @@ async function isPaidSubscriberCheck(supabase, userId) {
   try {
     const { data: profile, error } = await supabase
       .from('profiles')
-      .select('subscription_status, subscription_plan')
+      .select('subscription_status')
       .eq('id', userId)
-      .single();
+      .maybeSingle();
 
-    if (error) {
+    if (error && error.code !== 'PGRST116') {
       logWithTimestamp('Error checking subscription status', { error, userId });
       return false;
     }
 
     // Check if user has an active subscription with any paid plan (monthly, quarterly, annual, or daily)
-    return (
-      profile.subscription_status === 'active' &&
-      profile.subscription_plan !== null &&
-      ['monthly', 'quarterly', 'annual', 'daily'].includes(profile.subscription_plan)
-    );
+    return profile?.subscription_status === 'active';
   } catch (error) {
     logWithTimestamp('Exception checking subscription status', {
       error: error.message,

@@ -6,24 +6,29 @@ export const generateMetadata = () => {
     ...metadata,
     title: 'Privacy Policy | HalteresAI',
     description:
-      'HalteresAI Privacy Policy - Learn how we collect, use, and protect your personal information.',
+      'HalteresAI Privacy Policy for athletes using the app to generate and log training.',
   };
 };
 
 export default function PrivacyPolicyPage() {
-  const lastUpdated = 'February 5, 2026';
+  const lastUpdated = 'August 30, 2026';
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen">
       <main>
         {/* Header */}
-        <div className="bg-blue-600 py-24 sm:py-32">
+        <div className="bg-[var(--sea)] py-20 sm:py-24">
           <div className="mx-auto max-w-7xl px-6 lg:px-8">
             <div className="mx-auto max-w-2xl text-center">
-              <h1 className="text-4xl font-bold tracking-tight text-white sm:text-6xl">
+              <h1
+                className="text-4xl tracking-tight text-[var(--chalk)] sm:text-6xl"
+                style={{ fontFamily: 'var(--halt-display)', fontWeight: 600 }}
+              >
                 Privacy Policy
               </h1>
-              <p className="mt-6 text-lg leading-8 text-blue-100">Last updated: {lastUpdated}</p>
+              <p className="mt-6 text-lg leading-8 text-[color-mix(in_srgb,var(--chalk)_75%,transparent)]">
+                Last updated: {lastUpdated}
+              </p>
             </div>
           </div>
         </div>
@@ -59,8 +64,7 @@ export default function PrivacyPolicyPage() {
                 </li>
                 <li>
                   <strong>Profile Information:</strong> You may provide additional information such
-                  as your gym name, profile picture, and fitness metrics (weight, height, 1RM lifts,
-                  mile time).
+                  as a profile picture and fitness metrics (weight, height, 1RM lifts, mile time).
                 </li>
                 <li>
                   <strong>Workout Data:</strong> We collect information about workouts you log,
@@ -99,11 +103,10 @@ export default function PrivacyPolicyPage() {
               <ul className="list-disc pl-6 text-gray-600 space-y-2">
                 <li>Provide, maintain, and improve our Service</li>
                 <li>
-                  Generate personalized workout programming using AI based on your gym&apos;s
+                  Generate personalized workout programming using AI based on your available
                   equipment and preferences
                 </li>
                 <li>Provide AI-powered feedback and analysis on your workout performance</li>
-                <li>Display leaderboards and enable competition features within your gym</li>
                 <li>Send you technical notices, updates, and support messages</li>
                 <li>Respond to your comments, questions, and requests</li>
                 <li>
@@ -122,11 +125,6 @@ export default function PrivacyPolicyPage() {
                 We may share your information in the following situations:
               </p>
               <ul className="list-disc pl-6 text-gray-600 space-y-2">
-                <li>
-                  <strong>With Your Gym:</strong> If you join a gym on HalteresAI, your workout
-                  data, scores, and profile information may be visible to your gym&apos;s coaches
-                  and other members (for leaderboard features).
-                </li>
                 <li>
                   <strong>Service Providers:</strong> We share information with third-party vendors
                   who perform services on our behalf, such as hosting, analytics, and AI processing.
@@ -171,7 +169,11 @@ export default function PrivacyPolicyPage() {
                 </li>
                 <li>
                   <strong>Delete Account:</strong> You may request deletion of your account by
-                  contacting us at support@halteres.ai.
+                  contacting us at noah@halteres.ai or by following the steps at{' '}
+                  <Link href="/account-deletion" className="text-[var(--clay-deep)] underline underline-offset-4">
+                    /account-deletion
+                  </Link>
+                  .
                 </li>
                 <li>
                   <strong>Marketing Communications:</strong> You can opt out of marketing emails by
@@ -234,13 +236,13 @@ export default function PrivacyPolicyPage() {
               </p>
               <div className="bg-gray-50 p-6 rounded-lg">
                 <p className="text-gray-900 font-semibold">HalteresAI</p>
-                <p className="text-gray-600">Email: support@halteres.ai</p>
+                <p className="text-gray-600">Email: noah@halteres.ai</p>
               </div>
             </section>
           </div>
 
-          <div className="mt-16 pt-8 border-t border-gray-200">
-            <Link href="/contact" className="text-blue-600 hover:text-blue-500 font-semibold">
+          <div className="mt-16 pt-8 border-t border-[var(--paper-rule)]">
+            <Link href="/contact" className="text-[var(--clay-deep)] underline underline-offset-4 font-semibold">
               ← Back to Contact
             </Link>
           </div>

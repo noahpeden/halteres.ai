@@ -38,19 +38,19 @@ export default function EditWorkoutModal({ isOpen, workout, onClose, onSave, isL
 
   return (
     <div
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-[9999] p-4 pt-20"
+      className="fixed inset-0 bg-[var(--ink)]/50 flex items-start justify-center z-[9999] p-4 pt-16"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
     >
       <div
-        className="bg-white backdrop-blur-sm rounded-lg shadow-2xl max-w-3xl w-full max-h-[85vh] overflow-y-auto"
+        className="bg-[var(--chalk)] border border-[var(--paper-rule)] rounded-sm shadow-2xl max-w-3xl w-full max-h-[85vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <form onSubmit={handleSubmit}>
           <div className="p-6">
             <div className="flex justify-between items-start mb-4">
-              <h3 className="text-xl font-bold">Edit Workout</h3>
+              <h3 className="athlete-heading-lg">Edit this day</h3>
               <button type="button" onClick={onClose} className="btn btn-sm btn-circle btn-ghost">
                 ✕
               </button>

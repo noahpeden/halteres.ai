@@ -4,7 +4,6 @@
  * @returns {string} The assembled prompt string
  */
 import {
-  formatClientRequirements,
   formatEquipmentRestrictions,
   formatFinalPriorityCheck,
   formatSchedulingRequirements,
@@ -79,7 +78,7 @@ IMPORTANT: Please structure your workout to precisely follow this format with th
 Periodization Guidelines:
 ${periodization.approach}
 
-Why it's appropriate for the client requirements:
+Why it's appropriate for your requirements:
 ${periodization.why_appropriate}
 `
       : '';
@@ -102,7 +101,15 @@ ${focus_area ? `Focus Area: ${focus_area}` : ''}
 Periodization: ${programType}
 </program_parameters>
 
-${formatClientRequirements(description)}
+${
+  description
+    ? `<your_requirements priority="high">
+${description}
+These requirements take precedence over general guidelines below.
+</your_requirements>
+`
+    : ''
+}
 ${formatEquipmentRestrictions(equipment)}
 
 <workout_formats required="${formattedWorkoutFormats}">

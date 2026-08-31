@@ -3,7 +3,7 @@
 import { Calendar, CalendarDays, Clock } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
-const weekOptions = [4, 6, 8, 12];
+const weekOptions = [4, 6, 8, 12, 16, 20];
 const dayLabels = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
@@ -60,17 +60,17 @@ export default function ProgramScheduleStep({
             Program Length
           </span>
         </label>
-        <div className="flex gap-2 flex-wrap">
+        <div className="flex gap-2 flex-wrap items-center">
           {weekOptions.map((weeks) => (
             <button
               key={weeks}
               type="button"
               onClick={() => onFieldChange('numberOfWeeks', weeks)}
               className={`
-                px-6 py-3 rounded-full font-medium transition-all
+                px-6 py-3 rounded-sm font-medium transition-all
                 ${
                   selectedWeeks === weeks
-                    ? 'bg-primary text-white shadow-lg shadow-primary/30'
+                    ? 'bg-primary text-primary-content'
                     : 'bg-base-200 hover:bg-base-300 text-base-content'
                 }
               `}
@@ -78,6 +78,15 @@ export default function ProgramScheduleStep({
               {weeks} weeks
             </button>
           ))}
+          <input
+            type="number"
+            min={1}
+            max={52}
+            className="input input-bordered w-28"
+            value={formData?.numberOfWeeks || ''}
+            onChange={(e) => onFieldChange('numberOfWeeks', e.target.value)}
+            aria-label="Custom week count"
+          />
         </div>
         <p className="text-sm text-base-content/60 mt-2">
           Longer programs allow for better periodization and progression.

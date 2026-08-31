@@ -113,13 +113,14 @@ export default function ProgramCalendarPage(props) {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-primary">{program?.name || 'Program Calendar'}</h1>
-        <p className="text-practical-gray">
-          {program?.description || "Schedule and manage your program's workouts"}
+        <p className="athlete-label mb-1">Calendar</p>
+        <h1 className="athlete-heading-xl">{program?.name || 'Program calendar'}</h1>
+        <p className="athlete-body mt-1">
+          {program?.description || 'Drop sessions onto days. The ledger follows.'}
         </p>
       </div>
 
-      <div className="bg-white rounded-lg shadow p-4">
+      <div className="writer-surface p-4">
         <ProgramCalendar
           programId={programId}
           initialDragWorkout={selectedWorkout} // Pass the workout selected from the writer page

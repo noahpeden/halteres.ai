@@ -109,7 +109,7 @@ export default function HomeClient() {
                 </div>
                 <div className="badge badge-lg badge-outline gap-2 py-4 px-4">
                   <Trophy className="w-4 h-4 text-warning" />
-                  <span>Live leaderboards</span>
+                  <span>Personalized plans</span>
                 </div>
               </div>
 
@@ -185,8 +185,8 @@ export default function HomeClient() {
                       <Users className="w-6 h-6 text-accent" />
                     </div>
                     <div>
-                      <p className="text-2xl font-black text-base-content">2-in-1</p>
-                      <p className="text-xs text-neutral">coaches + athletes</p>
+                      <p className="text-2xl font-black text-base-content">Self-coached</p>
+                      <p className="text-xs text-neutral">no coach required</p>
                     </div>
                   </div>
                 </div>
@@ -196,8 +196,8 @@ export default function HomeClient() {
                   style={{ animationDelay: '0.5s' }}
                 >
                   <div className="flex items-center gap-2">
-                    <Trophy className="w-5 h-5" />
-                    <span className="text-sm font-semibold">Leaderboards Live</span>
+                    <Sparkles className="w-5 h-5" />
+                    <span className="text-sm font-semibold">Plan Ready</span>
                   </div>
                 </div>
               </div>
@@ -215,8 +215,8 @@ export default function HomeClient() {
               You're using two tools when you need one.
             </h2>
             <p className="text-lg text-neutral max-w-2xl mx-auto">
-              Gym owners pay for programming services that don't fit their equipment. Then pay again
-              for athlete tracking that doesn't connect. We built the bridge.
+              Athletes juggle programming tools that don't fit their equipment and separate apps for
+              logging. We built the bridge.
             </p>
           </div>
 
@@ -292,7 +292,7 @@ export default function HomeClient() {
           </div>
 
           <div className="grid lg:grid-cols-2 gap-8 lg:gap-16">
-            {/* Coach Side */}
+            {/* Reframed for athletes */}
             <div className="card bg-gradient-to-br from-primary/5 to-primary/10 border border-primary/20">
               <div className="card-body p-8">
                 <div className="flex items-center gap-4 mb-6">
@@ -300,8 +300,8 @@ export default function HomeClient() {
                     <Users className="w-7 h-7 text-white" />
                   </div>
                   <div>
-                    <h3 className="text-2xl font-bold text-base-content">For Coaches</h3>
-                    <p className="text-primary font-medium">$99/month • 14-day free trial</p>
+                    <h3 className="text-2xl font-bold text-base-content">For Athletes</h3>
+                    <p className="text-primary font-medium">Free during beta</p>
                   </div>
                 </div>
 
@@ -323,7 +323,7 @@ export default function HomeClient() {
                 </div>
 
                 <button onClick={() => push()} className="btn btn-primary btn-block gap-2">
-                  Start Coaching Smarter
+                  Start Training Smarter
                   <ArrowRight className="w-4 h-4" />
                 </button>
               </div>
@@ -338,7 +338,7 @@ export default function HomeClient() {
                   </div>
                   <div>
                     <h3 className="text-2xl font-bold text-base-content">For Athletes</h3>
-                    <p className="text-accent font-medium">Always free • Join with gym code</p>
+                    <p className="text-accent font-medium">Free during beta</p>
                   </div>
                 </div>
 
@@ -390,12 +390,11 @@ export default function HomeClient() {
                 tag: 'Core',
               },
               {
-                icon: Trophy,
-                title: 'Gym Leaderboards',
-                description:
-                  'Weekly & monthly rankings. Points for logging, PRs, RX, and podium finishes.',
+                icon: TrendingUp,
+                title: 'Adaptive Programming',
+                description: 'Evolves with your feedback and results to keep you progressing.',
                 color: 'warning',
-                tag: 'Engagement',
+                tag: 'Progress',
               },
               {
                 icon: MessageSquare,
@@ -414,12 +413,12 @@ export default function HomeClient() {
                 tag: 'Flexible',
               },
               {
-                icon: Users,
-                title: 'Gym Invite Codes',
+                icon: Dumbbell,
+                title: 'Equipment Constraints',
                 description:
-                  'Share a code. Athletes join and instantly see workouts, leaderboards, everything.',
+                  'Every workout respects exactly what you have—never program the impossible.',
                 color: 'primary',
-                tag: 'Simple',
+                tag: 'Constraint',
               },
               {
                 icon: TrendingUp,
@@ -494,7 +493,7 @@ export default function HomeClient() {
         <div className="container mx-auto px-4 relative">
           <div className="max-w-3xl mx-auto text-center">
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-base-content mb-6">
-              Ready to run a smarter gym?
+              Ready to train smarter?
             </h2>
             <p className="text-lg text-neutral mb-10 max-w-xl mx-auto">
               Join gyms already using HalteresAI to generate intelligent programming and keep
@@ -502,22 +501,16 @@ export default function HomeClient() {
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
-              <button
-                onClick={() => push()}
+              <Link
+                href="/login"
                 className="btn btn-primary btn-lg gap-2 shadow-lg shadow-primary/25"
               >
-                <Users className="w-5 h-5" />
-                I'm a Coach
-              </button>
-              <Link href="/login?role=athlete" className="btn btn-accent btn-lg gap-2">
                 <Dumbbell className="w-5 h-5" />
-                I'm an Athlete
+                Get Started
               </Link>
             </div>
 
-            <p className="text-sm text-neutral">
-              Coaches: 14-day free trial, no credit card required. Athletes: Always free!
-            </p>
+            <p className="text-sm text-neutral">Free during beta. No credit card required.</p>
           </div>
         </div>
       </section>
@@ -532,25 +525,15 @@ export default function HomeClient() {
                 <span className="font-bold text-base-content">HalteresAI</span>
               </div>
               <p className="text-sm text-neutral">
-                The complete AI platform for CrossFit boxes and functional fitness gyms.
+                The AI training platform for self-coached athletes.
               </p>
             </div>
             <div>
               <h4 className="font-semibold text-base-content mb-3">Product</h4>
               <ul className="space-y-2 text-sm text-neutral">
                 <li>
-                  <Link href="/features" className="hover:text-primary transition-colors">
-                    Features
-                  </Link>
-                </li>
-                <li>
                   <Link href="/pricing" className="hover:text-primary transition-colors">
                     Pricing
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/tutorials" className="hover:text-primary transition-colors">
-                    Tutorials
                   </Link>
                 </li>
               </ul>
@@ -559,26 +542,30 @@ export default function HomeClient() {
               <h4 className="font-semibold text-base-content mb-3">Resources</h4>
               <ul className="space-y-2 text-sm text-neutral">
                 <li>
-                  <Link href="/help" className="hover:text-primary transition-colors">
-                    Help Center
+                  <Link href="/contact" className="hover:text-primary transition-colors">
+                    Contact
                   </Link>
                 </li>
                 <li>
-                  <Link href="/contact" className="hover:text-primary transition-colors">
-                    Contact
+                  <Link href="/privacy-policy" className="hover:text-primary transition-colors">
+                    Privacy Policy
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/terms" className="hover:text-primary transition-colors">
+                    Terms of Use
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/account-deletion" className="hover:text-primary transition-colors">
+                    Account Deletion
                   </Link>
                 </li>
               </ul>
             </div>
             <div>
               <h4 className="font-semibold text-base-content mb-3">Company</h4>
-              <ul className="space-y-2 text-sm text-neutral">
-                <li>
-                  <Link href="/company" className="hover:text-primary transition-colors">
-                    About
-                  </Link>
-                </li>
-              </ul>
+              <ul className="space-y-2 text-sm text-neutral"></ul>
             </div>
           </div>
           <div className="border-t border-base-300 pt-8 flex flex-col sm:flex-row justify-between items-center gap-4">

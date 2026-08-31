@@ -1,11 +1,18 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
+import { createChatCompletion } from '@/utils/ai/provider';
 import { createClient } from '@/utils/supabase/server';
+
+// NOTE: superseded by the shared provider abstraction in generate-program-anthropic
+// (which now defaults to DeepSeek); kept for backward compatibility with any
+// direct callers of this specific endpoint. The embeddings-based workout matching
+// below still requires an OpenAI-compatible client directly since it isn't part of
+// the shared chat-completion abstraction.
 
 export async function POST(req) {
   try {
     const body = await req.json();
-    const { programId, programDetails, clientMetrics, preferences, office, whiteboard } = body;
+    const { programId, programDetails, preferences, office, whiteboard } = body;
     const supabase = await createClient();
 
     // Fetch program details if not provided
@@ -27,16 +34,10 @@ export async function POST(req) {
       gymId = program?.gym_id;
     }
 
-    // Initialize Deepseek client (using OpenAI compatibility)
-    const deepseek = new OpenAI({
-      baseURL: 'https://api.deepseek.com',
-      apiKey: process.env.DEEPSEEK_API_KEY,
-    });
-
     // Get matched workouts if available
     let matchedWorkouts = [];
     if (whiteboard?.focus) {
-      const focusEmbedding = await createEmbeddings(deepseek, whiteboard.focus);
+      const focusEmbedding = await createEmbeddings(whiteboard.focus);
       matchedWorkouts = await matchWorkouts(supabase, focusEmbedding);
     }
 
@@ -122,18 +123,14 @@ export async function POST(req) {
     Your goal is to create a high-quality, personalized workout program that matches or exceeds the detail and specificity of professionally curated fitness workouts.
     `;
 
-    // Generate workouts using Deepseek
-    const response = await deepseek.chat.completions.create({
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt },
-      ],
-      model: 'deepseek-chat',
+    // Generate workouts via the shared AI provider abstraction
+    const { content: generatedContent, provider } = await createChatCompletion({
+      tier: 'pro',
+      systemPrompt,
+      userPrompt,
       temperature: 0.7,
-      max_tokens: 4000,
+      maxTokens: 4000,
     });
-
-    const generatedContent = response.choices[0].message.content;
 
     // Parse the generated content into workout objects
     const workouts = parseWorkoutsFromContent(generatedContent, preferences);
@@ -152,24 +149,27 @@ export async function POST(req) {
           type: workout.type,
           focus: workout.focus || preferences.focusArea,
           generated: true,
-          model: 'deepseek',
+          model: provider,
         },
         scheduled_date: workout.date || workout.scheduled_date,
-        notes: 'AI-generated workout (Deepseek)',
+        notes: 'AI-generated workout',
       });
     }
 
-    return NextResponse.json({ workouts, rawContent: generatedContent }, { status: 200 });
+    return NextResponse.json({ workouts, rawContent: generatedContent, provider }, { status: 200 });
   } catch (error) {
-    console.error('Error generating workouts with Deepseek:', error);
+    console.error('Error generating workouts:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
 
-// Helper function to create embeddings
-async function createEmbeddings(deepseek, text) {
-  const response = await deepseek.embeddings.create({
-    model: 'text-embedding-3-large', // Using OpenAI model since Deepseek supports OpenAI API
+// Helper function to create embeddings. Uses OpenAI directly (not DeepSeek, which
+// does not offer an embeddings endpoint) since this is unrelated to chat/completion
+// provider selection.
+async function createEmbeddings(text) {
+  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  const response = await openai.embeddings.create({
+    model: 'text-embedding-3-large',
     input: text,
   });
 

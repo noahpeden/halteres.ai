@@ -33,7 +33,7 @@ export function AuthProvider({ children, initialSession }) {
            gender, recovery_score, injury_history, onboarding_completed`
         )
         .eq('id', userId)
-        .single();
+        .maybeSingle();
 
       if (error) {
         if (error.code === 'PGRST116') {
@@ -157,11 +157,10 @@ export function AuthProvider({ children, initialSession }) {
   const isAthlete = profile?.role === 'athlete';
   const isGymOwner = gymMemberships.some((m) => m.role === 'owner');
 
-  // Check if athlete needs to complete setup (no gym membership or onboarding not complete)
+  // Check if athlete needs to complete setup (B2C: ignore gym membership requirement)
   const hasActiveGymMembership =
     gymMemberships.length > 0 && gymMemberships.some((m) => m.status === 'active');
-  const athleteNeedsSetup =
-    isAthlete && (!hasActiveGymMembership || !profile?.onboarding_completed);
+  const athleteNeedsSetup = isAthlete && !profile?.onboarding_completed;
   const onboardingCompleted = profile?.onboarding_completed ?? false;
 
   const contextValue = useMemo(

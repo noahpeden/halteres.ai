@@ -5,11 +5,14 @@
  * Easily extensible for new training styles.
  */
 
+import { resolveEquipmentLabels } from './equipmentLabels.js';
 import {
   formatSubstitutionSuggestions,
   getSubstitutionSuggestions,
 } from './equipmentSubstitutions.js';
+import { formatInjuryHistory } from './intakeMetrics.js';
 import { formatPeriodizationGuidelines } from './periodizationUtils.js';
+import { buildGarageEquipmentRules } from './programQuality.js';
 import { balancedFitnessPrompt } from './prompts/balanced-fitness.js';
 import { bodybuildingPrompt } from './prompts/bodybuilding.js';
 import { calisthenicsPrompt } from './prompts/calisthenics.js';
@@ -60,6 +63,18 @@ const COMMON_GYM_EQUIPMENT = [
   'Stationary Bike',
   'Elliptical',
   'Pull-up Bar',
+  'Cable Machine',
+  'Cable Crossover',
+  'Functional Trainer',
+  'Lat Pulldown',
+  'Seated Row Machine',
+  'Chest Press Machine',
+  'Shoulder Press Machine',
+  'Leg Curl Machine',
+  'Leg Extension Machine',
+  'Pec Deck',
+  'Hack Squat Machine',
+  'Hip Abductor Machine',
 ];
 
 /**
@@ -141,14 +156,19 @@ If any answer is "no", revise the workout. The user's description is the highest
  * @returns {string} Formatted string with equipment restrictions
  */
 export function formatEquipmentRestrictions(equipment) {
-  const availableEquipment = Array.isArray(equipment) && equipment.length > 0 ? equipment : [];
+  const availableEquipment = resolveEquipmentLabels(equipment);
   const equipmentListStr =
     availableEquipment.length > 0 ? availableEquipment.join(', ') : 'Bodyweight only';
 
-  // Calculate what equipment is NOT available
+  // Calculate what equipment is NOT available. Lead with commercial machines/cables
+  // so garage gyms see those hard bans even when the list is truncated.
   const unavailableEquipment = COMMON_GYM_EQUIPMENT.filter(
     (item) => !availableEquipment.includes(item)
-  );
+  ).sort((a, b) => {
+    const commercial = (item) =>
+      /cable|machine|trainer|smith|lat pulldown|pec deck|hack squat/i.test(item);
+    return Number(commercial(b)) - Number(commercial(a));
+  });
 
   // Get substitution suggestions for common missing equipment
   const substitutions = getSubstitutionSuggestions(availableEquipment, COMMON_GYM_EQUIPMENT);
@@ -170,7 +190,9 @@ DO NOT program any exercises requiring: ${unavailableEquipment.slice(0, 15).join
 3. If a standard exercise requires unavailable equipment, you MUST substitute it
 4. Never assume equipment exists - if it's not listed above, the user does not have it
 5. Double-check every exercise before including it - does it require equipment not on the available list?
+6. Never invent cable machines, functional trainers, or selectorized stacks unless they are listed
 </strict_rules>
+${buildGarageEquipmentRules(availableEquipment)}
 ${
   substitutionText
     ? `
@@ -392,28 +414,24 @@ export function formatClientMetrics(clientMetricsData, useImperial = false) {
       `Deadlift 1RM: ${formatWeight(clientMetricsData.deadlift_1rm)}`,
     clientMetricsData.mile_time && `Mile Time: ${clientMetricsData.mile_time}`,
     clientMetricsData.recovery_score && `Recovery Score: ${clientMetricsData.recovery_score}/10`,
-    clientMetricsData.injury_history &&
-      `Injury History: ${
-        typeof clientMetricsData.injury_history === 'object'
-          ? JSON.stringify(clientMetricsData.injury_history)
-          : clientMetricsData.injury_history
-      }`,
+    formatInjuryHistory(clientMetricsData.injury_history) &&
+      `Injury History: ${formatInjuryHistory(clientMetricsData.injury_history)}`,
   ]
     .filter(Boolean)
     .join('\n');
 
   return `
-<client_metrics unit_preference="${weightUnit}">
+<athlete_metrics unit_preference="${weightUnit}">
 ${metrics}
-</client_metrics>
+</athlete_metrics>
 
 <weight_programming_guidance>
 Express all weights in ${weightUnit} (${useImperial ? 'pounds' : 'kilograms'}) throughout the program.
-Scale RX weights based on the client's strength metrics (bench, squat, deadlift) when available.
+Scale RX weights based on your strength metrics (bench, squat, deadlift) when available.
 Consider training experience (${clientMetricsData.years_of_experience || 'unspecified'} years) when programming intensity.
-${clientMetricsData.injury_history ? 'Provide modifications that accommodate the noted injury history.' : ''}
+${formatInjuryHistory(clientMetricsData.injury_history) ? 'Provide modifications that accommodate the noted injury history.' : ''}
 
-Context: Using the client's preferred units and appropriate loading based on their metrics ensures the program is immediately actionable without conversions.
+Context: Using your preferred units and appropriate loading based on your metrics ensures the program is immediately actionable without conversions.
 </weight_programming_guidance>`;
 }
 

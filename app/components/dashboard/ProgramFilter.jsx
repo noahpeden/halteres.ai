@@ -8,7 +8,7 @@ export default function ProgramFilter({ entities, filterEntityId, onFilterChange
         <div className="flex items-center gap-4">
           <div className="w-full">
             <label className="label">
-              <span className="text-sm">Filter by Class or Client</span>
+              <span className="text-sm">Filter by Class or Profile</span>
             </label>
             <select
               className="select select-bordered select-sm"
@@ -16,7 +16,7 @@ export default function ProgramFilter({ entities, filterEntityId, onFilterChange
               onChange={(e) => onFilterChange(e.target.value)}
             >
               <option value="all">All Programs</option>
-              <optgroup label="Clients">
+              <optgroup label="Profiles">
                 {entities
                   .filter((entity) => entity.type === 'CLIENT')
                   .map((entity) => (

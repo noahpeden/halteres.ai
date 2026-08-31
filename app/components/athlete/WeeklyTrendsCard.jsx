@@ -57,7 +57,7 @@ export default function WeeklyTrendsCard() {
             <TrendingUp className="w-5 h-5 text-[var(--athlete-accent-primary)]" />
           </div>
           <div>
-            <h3 className="athlete-heading-md text-white">Weekly Insights</h3>
+            <h3 className="athlete-heading-md">Weekly insights</h3>
             <p className="athlete-body text-[var(--athlete-text-secondary)]">{trends.message}</p>
           </div>
         </div>
@@ -77,12 +77,12 @@ export default function WeeklyTrendsCard() {
             <TrendingUp className="w-5 h-5 text-[var(--athlete-accent-primary)]" />
           </div>
           <div>
-            <h3 className="athlete-heading-md text-white">This Week's Insights</h3>
+            <h3 className="athlete-heading-md">This week's notes</h3>
           </div>
         </div>
         <div className="flex items-center gap-2">
           <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-[var(--athlete-accent-primary)] text-black">
-            {trends.workouts_completed} workouts
+            {trends.workouts_completed} sessions
           </span>
           <ChevronDown
             className={`w-5 h-5 text-[var(--athlete-text-muted)] transition-transform ${expanded ? 'rotate-180' : ''}`}
@@ -173,7 +173,7 @@ export default function WeeklyTrendsCard() {
           {trends.prs_achieved > 0 && (
             <div className="athlete-card-static border-l-4 border-l-[var(--athlete-accent-secondary)] p-3 flex items-center gap-3">
               <Trophy className="w-5 h-5 text-[var(--athlete-accent-secondary)]" />
-              <span className="athlete-body text-white font-medium">
+              <span className="athlete-body font-medium text-[var(--ink)]">
                 {trends.prs_achieved} PR{trends.prs_achieved > 1 ? 's' : ''} achieved this week!
               </span>
             </div>

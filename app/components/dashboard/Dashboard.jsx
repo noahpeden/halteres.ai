@@ -178,12 +178,10 @@ export default function Dashboard() {
                 <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center shadow-lg">
                   <LayoutGrid className="w-5 h-5 text-primary-content" />
                 </div>
-                <h1 className="text-2xl sm:text-3xl font-bold text-base-content">
-                  Coach Dashboard
-                </h1>
+                <h1 className="text-2xl sm:text-3xl font-bold text-base-content">Dashboard</h1>
               </div>
               <p className="text-base-content/60 mt-1 text-sm sm:text-base ml-13">
-                Your command center for gym management
+                Manage your programs and training
               </p>
             </div>
 
@@ -252,7 +250,7 @@ export default function Dashboard() {
                 </div>
                 <span className="badge badge-accent badge-outline">Program Targets</span>
               </div>
-              <h2 className="card-title text-xl">Clients & Classes</h2>
+              <h2 className="card-title text-xl">Profiles & Classes</h2>
               <p className="text-base-content/60 text-sm mb-4">
                 Training targets for program generation
               </p>
@@ -260,7 +258,7 @@ export default function Dashboard() {
               {/* Quick Stats */}
               <div className="stats stats-vertical bg-base-200 rounded-lg mb-4">
                 <div className="stat py-2 px-3">
-                  <div className="stat-title text-xs">Individual Clients</div>
+                  <div className="stat-title text-xs">Individual Profiles</div>
                   <div className="stat-value text-2xl text-accent">{dashboardStats.clients}</div>
                 </div>
                 <div className="stat py-2 px-3">
@@ -275,7 +273,7 @@ export default function Dashboard() {
                   className="btn btn-accent text-accent-content btn-block gap-2"
                 >
                   <Target className="w-4 h-4" />
-                  Manage Clients & Classes
+                  Manage Profiles & Classes
                   <ChevronRight className="w-4 h-4 ml-auto" />
                 </Link>
               </div>
@@ -387,7 +385,7 @@ export default function Dashboard() {
                       className="select select-bordered pl-10"
                     >
                       <option value="all">All Programs</option>
-                      <optgroup label="Clients">
+                      <optgroup label="Profiles">
                         {entities
                           .filter((entity) => entity.type === 'CLIENT')
                           .map((entity) => (

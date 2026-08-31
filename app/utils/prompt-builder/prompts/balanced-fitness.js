@@ -5,7 +5,6 @@
  * @returns {string} The assembled prompt string
  */
 import {
-  formatClientRequirements,
   formatEquipmentRestrictions,
   formatFinalPriorityCheck,
   formatSchedulingRequirements,
@@ -81,7 +80,15 @@ ${focus_area ? `Focus Area: ${focus_area}` : ''}
 Periodization: ${programType}
 </program_parameters>
 
-${formatClientRequirements(description)}
+${
+  description
+    ? `<your_requirements priority="high">
+${description}
+These requirements take precedence over general guidelines below.
+</your_requirements>
+`
+    : ''
+}
 ${formatEquipmentRestrictions(equipment)}
 
 <workout_formats required="${formattedWorkoutFormats}">
@@ -130,7 +137,7 @@ Include in the program description:
 </description_requirements>
 
 <balanced_fitness_guidelines>
-Apply these principles where they don't conflict with client requirements:
+Apply these principles where they don't conflict with your requirements:
 - Integrate strength training (2-3x/week) using compound and isolation exercises
 - Include cardiovascular sessions (2-3x/week): running, cycling, or cardio machines
 - Incorporate flexibility and mobility work regularly
@@ -190,7 +197,7 @@ Targeted stretches and mobility drills with durations
 ## Cool-down
 Recovery movements and durations
 
-## Coaching Cues
+## Technique Tips
 3-5 technical cues for key movements, form tips, common errors
 </workout_body_structure>
 

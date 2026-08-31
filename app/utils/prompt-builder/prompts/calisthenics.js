@@ -4,7 +4,6 @@
  * @returns {string} The assembled prompt string
  */
 import {
-  formatClientRequirements,
   formatEquipmentRestrictions,
   formatFinalPriorityCheck,
   formatSchedulingRequirements,
@@ -76,7 +75,15 @@ ${focus_area ? `Focus Area/Skills: ${focus_area}` : ''}
 Periodization: ${programType}
 </program_parameters>
 
-${formatClientRequirements(description)}
+${
+  description
+    ? `<your_requirements priority="high">
+${description}
+These requirements take precedence over general guidelines below.
+</your_requirements>
+`
+    : ''
+}
 ${formatEquipmentRestrictions(equipment)}
 
 <workout_formats required="${formattedWorkoutFormats}">
@@ -120,7 +127,7 @@ Include in the program description:
 </description_requirements>
 
 <methodology_guidelines>
-Apply these calisthenics principles where they don't conflict with client requirements:
+Apply these calisthenics principles where they don't conflict with your requirements:
 - Master fundamental bodyweight movements (push-ups, pull-ups, squats, lunges, planks)
 - Use progressions and regressions to adjust difficulty appropriately
 - Incorporate skill practice for target movements (handstands, levers, muscle-ups) where relevant
@@ -196,7 +203,7 @@ Targeted core stability and strength exercises
 Static stretching for major muscle groups
 - Focus on shoulders, hips, wrists
 
-## Coaching Cues
+## Technique Tips
 3-5 technical cues for key movements: body alignment, muscle engagement, common errors to avoid
 </workout_body_structure>
 

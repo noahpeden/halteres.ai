@@ -1,10 +1,9 @@
 'use client';
 
-import { Check, ChevronLeft, Dumbbell, Edit3, ListOrdered, Trophy } from 'lucide-react';
+import { Check, ChevronLeft, Dumbbell, Edit3, ListOrdered } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import AIFeedbackCard from '@/components/athlete/AIFeedbackCard';
-import LeaderboardView from '@/components/athlete/LeaderboardView';
 import PRCelebration from '@/components/athlete/PRCelebration';
 import ResultEntryForm from '@/components/athlete/ResultEntryForm';
 import SegmentedControl from '@/components/athlete/SegmentedControl';
@@ -67,7 +66,9 @@ export default function WorkoutDetailPage() {
   };
 
   const handleResultSuccess = async (result, isPR, prInfo) => {
-    setUserResult(result);
+    // Compute display value immediately to avoid brief blank state
+    const displayValue = formatResult(result);
+    setUserResult({ ...result, displayValue });
 
     // Clear form state after successful submission
     const defaultType = getDefaultResultType(workout?.workout_type);
@@ -90,14 +91,13 @@ export default function WorkoutDetailPage() {
       console.error('Failed to generate AI feedback:', err);
     });
 
-    // Show leaderboard after logging
-    setActiveTab('leaderboard');
+    // Return to workout tab after logging
+    setActiveTab('workout');
   };
 
   const tabs = [
     { value: 'workout', label: 'Workout', icon: Dumbbell },
     { value: 'log', label: userResult ? 'Edit' : 'Log', icon: Edit3 },
-    { value: 'leaderboard', label: 'Board', icon: Trophy },
   ];
 
   if (loading) {
@@ -133,11 +133,11 @@ export default function WorkoutDetailPage() {
 
       {/* Hero Header */}
       <div className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-[var(--athlete-accent-primary)]/20 via-transparent to-[var(--athlete-accent-secondary)]/10" />
-        <div className="relative px-4 pt-4 pb-6">
+        <div className="absolute inset-0 bg-[var(--paper)]" />
+        <div className="relative px-4 pt-4 pb-6 max-w-2xl mx-auto">
           <button
             onClick={() => router.back()}
-            className="w-8 h-8 rounded-lg bg-[var(--athlete-bg-card)] flex items-center justify-center mb-4"
+            className="w-10 h-10 rounded-sm bg-[var(--athlete-bg-card)] flex items-center justify-center mb-4"
           >
             <ChevronLeft className="w-5 h-5 text-[var(--athlete-text-primary)]" />
           </button>
@@ -145,7 +145,7 @@ export default function WorkoutDetailPage() {
           <div className="flex items-start justify-between">
             <div className="flex-1">
               {workout.workout_type && (
-                <span className="inline-block px-3 py-1 rounded-full text-xs font-medium bg-[var(--athlete-accent-primary)]/20 text-[var(--athlete-accent-primary)] mb-2">
+                <span className="athlete-badge athlete-badge-today mb-2">
                   {workout.workout_type}
                 </span>
               )}
@@ -165,11 +165,13 @@ export default function WorkoutDetailPage() {
       </div>
 
       {/* Segmented Tab Control */}
-      <div className="sticky top-0 z-40 bg-[var(--athlete-bg-card)] border-b border-[var(--athlete-border)] px-4 py-3">
-        <SegmentedControl options={tabs} value={activeTab} onChange={setActiveTab} />
+      <div className="sticky top-0 z-40 athlete-glass px-4 py-3">
+        <div className="max-w-2xl mx-auto">
+          <SegmentedControl options={tabs} value={activeTab} onChange={setActiveTab} />
+        </div>
       </div>
 
-      <div className="px-4 py-6 space-y-4">
+      <div className="px-4 py-6 space-y-4 max-w-2xl mx-auto">
         {/* Workout Details Tab */}
         {activeTab === 'workout' && (
           <div className="space-y-4 animate-athlete-slide-up">
@@ -256,27 +258,9 @@ export default function WorkoutDetailPage() {
                 className="athlete-btn-primary w-full py-4 text-lg"
                 onClick={() => setActiveTab('log')}
               >
-                Log Your Result
+                Log result
               </button>
             )}
-
-            {/* Leaderboard Preview */}
-            <div className="athlete-card p-4" onClick={() => setActiveTab('leaderboard')}>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-[var(--athlete-bg-secondary)] flex items-center justify-center">
-                    <Trophy className="w-5 h-5 text-[var(--athlete-accent-secondary)]" />
-                  </div>
-                  <div>
-                    <p className="athlete-body text-[var(--athlete-text-primary)] font-medium">
-                      View Leaderboard
-                    </p>
-                    <p className="text-xs text-[var(--athlete-text-muted)]">See how you compare</p>
-                  </div>
-                </div>
-                <ChevronLeft className="w-5 h-5 text-[var(--athlete-text-muted)] rotate-180" />
-              </div>
-            </div>
           </div>
         )}
 
@@ -293,13 +277,6 @@ export default function WorkoutDetailPage() {
               formState={formState}
               onFormChange={setFormState}
             />
-          </div>
-        )}
-
-        {/* Leaderboard Tab */}
-        {activeTab === 'leaderboard' && (
-          <div className="animate-athlete-slide-up">
-            <LeaderboardView workoutId={id} gymId={currentGym?.id} workoutTitle={workout.name} />
           </div>
         )}
       </div>

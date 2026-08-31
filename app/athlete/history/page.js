@@ -4,7 +4,6 @@ import {
   Calendar,
   ChevronLeft,
   ChevronRight,
-  Clock,
   Dumbbell,
   Timer,
   Trophy,
@@ -108,7 +107,7 @@ export default function AthleteHistoryPage() {
             <ChevronLeft className="w-5 h-5 text-[var(--athlete-text-primary)]" />
           </button>
           <div className="flex-1">
-            <h1 className="athlete-heading-lg text-white">History</h1>
+            <h1 className="athlete-heading-lg">History</h1>
             <p className="athlete-label">
               {results.length} workouts • {prCount} PRs
             </p>
@@ -116,11 +115,11 @@ export default function AthleteHistoryPage() {
         </div>
       </div>
 
-      <div className="px-4 space-y-4 pb-8">
+      <div className="px-4 space-y-4 pb-8 max-w-2xl mx-auto">
         {/* Stats Summary */}
         <div className="grid grid-cols-3 gap-3 py-2">
           <div className="athlete-card-static p-3 text-center">
-            <p className="athlete-heading-lg text-white">{results.length}</p>
+            <p className="athlete-heading-lg">{results.length}</p>
             <p className="text-[10px] text-[var(--athlete-text-muted)] uppercase tracking-wider">
               Workouts
             </p>
@@ -132,7 +131,7 @@ export default function AthleteHistoryPage() {
             </p>
           </div>
           <div className="athlete-card-static p-3 text-center">
-            <p className="athlete-heading-lg text-white">{Object.keys(groupedResults).length}</p>
+            <p className="athlete-heading-lg">{Object.keys(groupedResults).length}</p>
             <p className="text-[10px] text-[var(--athlete-text-muted)] uppercase tracking-wider">
               Months
             </p>
@@ -156,7 +155,7 @@ export default function AthleteHistoryPage() {
                 onClick={() => setFilter(opt.value)}
                 className={`flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${
                   filter === opt.value
-                    ? 'bg-[var(--athlete-accent-primary)] text-black'
+                    ? 'bg-[var(--athlete-accent-primary)] text-[var(--athlete-on-accent)]'
                     : 'bg-[var(--athlete-bg-card)] text-[var(--athlete-text-secondary)] border border-[var(--athlete-border)]'
                 }`}
               >
@@ -176,13 +175,13 @@ export default function AthleteHistoryPage() {
             icon={Calendar}
             title={
               filter === 'all'
-                ? 'No workouts yet'
-                : `No ${filter === 'prs' ? 'PRs' : filter} results`
+                ? 'No marks yet'
+                : `No ${filter === 'prs' ? 'PRs' : filter} in the book`
             }
             message={
               filter === 'all'
-                ? 'Start logging workouts to build your history!'
-                : `No ${filter === 'prs' ? 'PRs' : filter} results found. Try a different filter.`
+                ? 'Log a session from Today. The ledger fills itself after that.'
+                : `Nothing matches this filter. Try All.`
             }
             action={filter !== 'all' ? () => setFilter('all') : undefined}
             actionLabel={filter !== 'all' ? 'View All' : undefined}
@@ -197,7 +196,7 @@ export default function AthleteHistoryPage() {
                   className={`animate-athlete-stagger stagger-${Math.min(monthIndex + 1, 5)}`}
                 >
                   <div className="flex items-center gap-2 mb-3">
-                    <h2 className="athlete-heading-md text-white">{label}</h2>
+                    <h2 className="athlete-heading-md">{label}</h2>
                     <span className="text-xs text-[var(--athlete-text-muted)] bg-[var(--athlete-bg-secondary)] px-2 py-0.5 rounded-full">
                       {monthResults.length}
                     </span>
@@ -216,8 +215,8 @@ export default function AthleteHistoryPage() {
                           <div className="flex items-start justify-between gap-3">
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2">
-                                <h3 className="athlete-body text-white font-medium truncate">
-                                  {result.workout?.name || 'Workout'}
+                                <h3 className="athlete-body font-medium truncate text-[var(--ink)]">
+                                  {result.workout?.title || 'Workout'}
                                 </h3>
                                 {result.is_pr && <StatusBadge variant="pr" />}
                               </div>
@@ -237,9 +236,7 @@ export default function AthleteHistoryPage() {
 
                             <div className="flex items-center gap-3 flex-shrink-0">
                               <div className="text-right">
-                                <p className="athlete-heading-md text-white">
-                                  {result.displayValue}
-                                </p>
+                                <p className="athlete-heading-md">{result.displayValue}</p>
                                 <span className="text-[10px] font-medium text-[var(--athlete-text-muted)] uppercase">
                                   {result.scale}
                                 </span>

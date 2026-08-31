@@ -43,26 +43,26 @@ export default function GenerationProgress({
     switch (stage) {
       case 'skeleton_generating':
         return {
-          title: 'Creating Program Structure',
-          subtitle: 'Generating workout skeletons...',
+          title: 'Ruling the pages',
+          subtitle: 'Drafting the skeleton…',
           icon: <Sparkles className="w-12 h-12 text-white" />,
         };
       case 'skeleton_streaming':
         return {
-          title: 'Building Workouts',
-          subtitle: 'Streaming workout data...',
+          title: 'Writing sessions',
+          subtitle: 'Days arriving as they are written…',
           icon: <Sparkles className="w-12 h-12 text-white animate-pulse" />,
         };
       case 'enhancing':
         return {
-          title: 'Adding Full Details',
-          subtitle: `Enhancing Week ${currentWeek} with coaching cues and scaling...`,
+          title: 'Filling in the notes',
+          subtitle: `Enhancing week ${currentWeek} — cues, scaling, the full day.`,
           icon: <Sparkles className="w-12 h-12 text-white" />,
         };
       case 'skeleton_complete':
         return {
-          title: 'Structure Complete!',
-          subtitle: 'Your program skeleton is ready for review',
+          title: 'Skeleton is in the book',
+          subtitle: 'Review it. Enhance a week when you want more ink.',
           icon: <CheckCircle2 className="w-12 h-12 text-white" />,
         };
       case 'error':

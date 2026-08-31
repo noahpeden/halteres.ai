@@ -16,6 +16,11 @@ import {
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { formatInjuryHistory } from '@/utils/prompt-builder/intakeMetrics';
+
+function formatInjuryHistoryDisplay(value) {
+  return formatInjuryHistory(value) || 'None reported';
+}
 
 // Conversion helpers
 const kgToLbs = (kg) => (kg ? kg * 2.20462 : 0);
@@ -417,7 +422,7 @@ export default function ClientMetricsTab({
               <h2 className="text-base font-semibold text-slate-800 truncate">
                 {clientData?.metrics?.name && viewMode === 'fullPage'
                   ? clientData.metrics.name
-                  : 'Client Metrics'}
+                  : 'Your Metrics'}
               </h2>
               {viewMode === 'sidebar' && (
                 <p className="text-xs text-slate-500">Track progress & stats</p>
@@ -489,7 +494,7 @@ export default function ClientMetricsTab({
             <div className="flex items-center gap-3 p-3 bg-blue-50 border border-blue-100 rounded-xl mb-4">
               <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0" />
               <p className="text-sm text-blue-700">
-                No client metrics found. Please add information below.
+                No metrics found. Please add information below.
               </p>
             </div>
           )}
@@ -871,11 +876,7 @@ export default function ClientMetricsTab({
                     </label>
                     <textarea
                       className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm h-20 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
-                      value={
-                        typeof editedData.metrics.injury_history === 'object'
-                          ? JSON.stringify(editedData.metrics.injury_history)
-                          : editedData.metrics.injury_history || ''
-                      }
+                      value={formatInjuryHistory(editedData.metrics.injury_history)}
                       onChange={(e) => {
                         try {
                           const value = JSON.parse(e.target.value);
@@ -914,11 +915,7 @@ export default function ClientMetricsTab({
                   <div>
                     <p className="text-xs text-slate-500 mb-1">Injury History</p>
                     <p className="text-sm text-slate-700 bg-white rounded-lg p-2 border border-slate-200">
-                      {clientData?.metrics?.injury_history
-                        ? typeof clientData.metrics.injury_history === 'object'
-                          ? JSON.stringify(clientData.metrics.injury_history, null, 2)
-                          : clientData.metrics.injury_history
-                        : 'None reported'}
+                      {formatInjuryHistoryDisplay(clientData?.metrics?.injury_history)}
                     </p>
                   </div>
                 </div>

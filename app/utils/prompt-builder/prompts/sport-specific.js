@@ -4,7 +4,6 @@
  * @returns {string} The assembled prompt string
  */
 import {
-  formatClientRequirements,
   formatEquipmentRestrictions,
   formatFinalPriorityCheck,
   formatSchedulingRequirements,
@@ -75,7 +74,15 @@ ${focus_area ? `Focus Area: ${focus_area}` : ''}
 Periodization: ${programType}
 </program_parameters>
 
-${formatClientRequirements(description)}
+${
+  description
+    ? `<your_requirements priority="high">
+${description}
+These requirements take precedence over general guidelines below.
+</your_requirements>
+`
+    : ''
+}
 ${formatEquipmentRestrictions(equipment)}
 
 <workout_formats required="${formattedWorkoutFormats}">
@@ -124,7 +131,7 @@ Include in the program description:
 </description_requirements>
 
 <methodology_guidelines>
-Apply these sport-specific principles where they don't conflict with client requirements:
+Apply these sport-specific principles where they don't conflict with your requirements:
 - Exercise selection that transfers to sport movements and demands
 - Development of relevant physical qualities (strength, power, speed, agility, endurance, mobility)
 - Plyometrics, change-of-direction drills, and speed work as applicable
@@ -202,7 +209,7 @@ Muscle balance and injury prevention:
 Recovery protocol:
 - Static stretching or mobility for key muscle groups
 
-## Coaching Cues
+## Technique Tips
 3-5 technical cues for key movements:
 - Focus on transfer to sport performance
 - Posture, force production, movement efficiency

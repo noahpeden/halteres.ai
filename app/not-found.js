@@ -1,6 +1,6 @@
 'use client';
 
-import { FileX, Home, Loader, LogIn, Mail } from 'lucide-react';
+import { Home, Loader, LogIn, Mail } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -22,7 +22,7 @@ export default function NotFound() {
 
       if (session) {
         // User is authenticated, redirect to dashboard
-        router.push('/dashboard');
+        router.push('/athlete');
       } else {
         // User is not authenticated, redirect to login
         router.push('/login');
@@ -38,47 +38,37 @@ export default function NotFound() {
   }, [router, user]);
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen px-4 bg-gray-50">
-      <div className="bg-white p-8 rounded-lg shadow-md max-w-md w-full text-center">
-        <div className="w-20 h-20 mx-auto mb-4">
-          <FileX className="w-full h-full text-red-500" />
-        </div>
-        <h1 className="text-6xl font-bold text-red-500 mb-4">404</h1>
-        <h2 className="text-2xl font-semibold mb-4">Page Not Found</h2>
-        <p className="text-gray-600 mb-6">
-          The page you're looking for doesn't exist or has been moved.
+    <div className="flex flex-col items-center justify-center min-h-[70vh] px-4">
+      <div className="athlete-card-static p-8 max-w-md w-full text-center">
+        <p className="athlete-label mb-2">Missing page</p>
+        <h1 className="athlete-heading-xl mb-3">This folio is empty.</h1>
+        <p className="athlete-body mb-6">
+          The page does not exist. Sending you somewhere that does.
         </p>
         <div className="mb-6">
-          <Loader className="animate-spin w-8 h-8 mx-auto text-blue-500" />
-          <p className="text-sm text-gray-500 mt-2">Redirecting you to the appropriate page...</p>
+          <Loader className="animate-spin w-8 h-8 mx-auto text-[var(--clay-deep)]" />
         </div>
         <div className="flex flex-col space-y-2 mb-6">
-          <button
-            onClick={() => router.push('/')}
-            className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors flex items-center justify-center gap-2"
-          >
-            <Home className="w-4 h-4" /> Go to Homepage
+          <button onClick={() => router.push('/')} className="athlete-btn-primary w-full">
+            <Home className="w-4 h-4 inline mr-2" /> Home
           </button>
-          <button
-            onClick={() => router.push('/login')}
-            className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors flex items-center justify-center gap-2"
-          >
-            <LogIn className="w-4 h-4" /> Go to Login
+          <button onClick={() => router.push('/login')} className="athlete-btn-secondary w-full">
+            <LogIn className="w-4 h-4 inline mr-2" /> Log in
           </button>
         </div>
 
-        <div className="mt-6 pt-6 border-t border-gray-200">
-          <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
-            <Mail className="w-4 h-4 text-gray-500" />
+        <div className="mt-6 pt-6 border-t border-[var(--paper-rule)]">
+          <div className="flex items-center justify-center gap-2 text-sm text-[var(--ink-soft)]">
+            <Mail className="w-4 h-4" />
             <p>
               Found a bug? Email{' '}
               <a
                 href="mailto:noah@halteres.ai"
-                className="text-blue-600 font-medium hover:underline"
+                className="text-[var(--clay-deep)] font-medium underline underline-offset-4"
               >
                 noah@halteres.ai
               </a>{' '}
-              with a screenshot and description and we'll fix it ASAP!
+              with a screenshot.
             </p>
           </div>
         </div>
