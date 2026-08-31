@@ -10,8 +10,10 @@ import {
   normalizeEnhancedWorkout,
   parseSseEventData,
   shouldAcceptEnhancementComplete,
+  shouldStartWeekEnhance,
   verifiedPersistIsAcceptable,
   workoutIgnoresLoadedEquipment,
+  workoutsForWeek,
 } from './generationGuardrails.js';
 import { formatEquipmentRestrictions } from './promptBuilder.js';
 
@@ -216,6 +218,49 @@ describe('placeholder and persist guardrails (QA A / B / C)', () => {
         ],
         { equipmentLabels: ['Barbell'], weekNumber: 1 }
       )
+    );
+  });
+
+  it('starts enhance on the first click and only blocks after it is in flight', () => {
+    assert.deepEqual(
+      shouldStartWeekEnhance({ programId: 'p1', inFlightWeeks: new Set(), weekNumber: 1 }),
+      {
+        start: true,
+        reason: null,
+        week: 1,
+      }
+    );
+    assert.equal(
+      shouldStartWeekEnhance({ programId: '', inFlightWeeks: new Set(), weekNumber: 1 }).reason,
+      'missing_program'
+    );
+    assert.equal(
+      shouldStartWeekEnhance({ programId: 'p1', inFlightWeeks: new Set([1]), weekNumber: 1 })
+        .reason,
+      'already_in_flight'
+    );
+    assert.equal(
+      shouldStartWeekEnhance({ programId: 'p1', inFlightWeeks: new Set(['1']), weekNumber: 1 })
+        .reason,
+      'already_in_flight'
+    );
+    assert.equal(
+      shouldStartWeekEnhance({ programId: 'p1', inFlightWeeks: new Set([1]), weekNumber: '1' })
+        .reason,
+      'already_in_flight'
+    );
+
+    const mixed = workoutsForWeek(
+      [
+        { id: 'a', week_number: '1', title: 'Week 1, Day 1: Squat' },
+        { id: 'b', week_number: 2, title: 'Week 2, Day 1: Bench' },
+        { id: 'c', title: 'Week 1, Day 2: Deadlift' },
+      ],
+      1
+    );
+    assert.deepEqual(
+      mixed.map((workout) => workout.id),
+      ['a', 'c']
     );
   });
 

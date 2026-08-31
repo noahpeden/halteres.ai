@@ -111,9 +111,8 @@ export default function SkeletonPreview({
   };
 
   const handleEnhanceWeek = (weekNumber) => {
-    if (onEnhanceWeek) {
-      onEnhanceWeek(weekNumber, weekNotes[weekNumber] || '');
-    }
+    if (!onEnhanceWeek) return;
+    onEnhanceWeek(weekNumber, weekNotes[weekNumber] || '');
   };
 
   const setWeekNote = (weekNumber, note) => {
@@ -439,7 +438,22 @@ function WeekCard({
             className="textarea textarea-bordered w-full text-sm"
             rows={2}
           />
-          <button onClick={onEnhance} disabled={isEnhancing} className="btn btn-primary w-full">
+          <button
+            type="button"
+            onPointerDown={(event) => {
+              if (event.pointerType === 'mouse' && event.button !== 0) return;
+              if (isEnhancing) return;
+              onEnhance();
+            }}
+            onClick={(event) => {
+              event.preventDefault();
+              if (isEnhancing) return;
+              onEnhance();
+            }}
+            disabled={isEnhancing}
+            aria-busy={isEnhancing}
+            className="btn btn-primary w-full"
+          >
             {isEnhancing ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -449,7 +463,7 @@ function WeekCard({
               <>
                 <Sparkles className="w-4 h-4 mr-2" />
                 Add Full Details to Week {week.weekNumber}
-                <span className="badge badge-ghost ml-2">~2-3 min</span>
+                <span className="badge badge-ghost ml-2 pointer-events-none">~2-3 min</span>
               </>
             )}
           </button>

@@ -5,6 +5,10 @@ import { useRouter } from 'next/navigation';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProgram } from '@/contexts/ProgramContext';
+import {
+  shouldStartWeekEnhance,
+  workoutsForWeek,
+} from '@/utils/prompt-builder/generationGuardrails';
 import Toast from '../Toast';
 import { difficulties, focusAreas, gymTypes, programTypes } from '../utils';
 import DatePickerModalComponent from './DatePickerModal';
@@ -119,6 +123,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
   // Two-phase generation state
   const [weekInputs, setWeekInputs] = useState({});
   const [enhancingWeeks, setEnhancingWeeks] = useState(new Set());
+  const enhancingWeeksRef = useRef(new Set());
   const [showGenerationProgress, setShowGenerationProgress] = useState(false);
   const [skeletonProgress, setSkeletonProgress] = useState(null);
 
@@ -820,23 +825,30 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
   // Handle week enhancement (Phase 2) - supports concurrent enhancement of multiple weeks
   const handleEnhanceWeek = useCallback(
     async (weekNumber, weekInput) => {
-      if (!programId) return;
-
-      // Check if this week is already being enhanced
-      if (enhancingWeeks.has(weekNumber)) {
-        showToast(`Week ${weekNumber} is already being enhanced`, 'info');
-        return;
+      const decision = shouldStartWeekEnhance({
+        programId,
+        inFlightWeeks: enhancingWeeksRef.current,
+        weekNumber,
+      });
+      if (!decision.start) {
+        if (decision.reason === 'missing_program') {
+          showToast('Program is still saving. Click Add Full Details again in a moment.', 'error');
+        }
+        return false;
       }
 
-      // Add this week to the enhancing set
-      setEnhancingWeeks((prev) => new Set([...prev, weekNumber]));
+      const week = decision.week;
+      enhancingWeeksRef.current.add(week);
+      setEnhancingWeeks(new Set(enhancingWeeksRef.current));
 
       try {
-        const weekWorkouts = workouts.filter((w) => w.week_number === weekNumber);
+        const fromDb = workoutsForWeek(workouts, week);
+        const weekWorkouts =
+          fromDb.length > 0 ? fromDb : workoutsForWeek(displayWorkouts, week);
 
         const result = await approveAndEnhanceWeek({
           programId,
-          weekNumber,
+          weekNumber: week,
           workouts: weekWorkouts,
           context: {
             goal: formData?.goal,
@@ -856,7 +868,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
             recent_training_history:
               formData?.recent_training_history || formData?.recentTrainingHistory || '',
           },
-          weekSpecificInput: weekInput || weekInputs[weekNumber] || '',
+          weekSpecificInput: weekInput || weekInputs[week] || weekInputs[weekNumber] || '',
           updateWorkoutStatus: (workoutId, updates) => {
             updateWorkout(workoutId, updates);
           },
@@ -865,24 +877,23 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
         });
 
         if (!result?.success) {
-          return;
+          return false;
         }
 
-        setWeekInput(weekNumber, '');
+        setWeekInput(week, '');
+        return true;
       } catch (error) {
-        showToast(`Failed to enhance Week ${weekNumber}: ${error.message}`, 'error');
+        showToast(`Failed to enhance Week ${week}: ${error.message}`, 'error');
+        return false;
       } finally {
-        // Remove this week from the enhancing set
-        setEnhancingWeeks((prev) => {
-          const next = new Set(prev);
-          next.delete(weekNumber);
-          return next;
-        });
+        enhancingWeeksRef.current.delete(week);
+        setEnhancingWeeks(new Set(enhancingWeeksRef.current));
       }
     },
     [
       programId,
       workouts,
+      displayWorkouts,
       formData,
       selectedEquipment,
       weekInputs,
@@ -890,7 +901,6 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
       showToast,
       supabase,
       setWeekInput,
-      enhancingWeeks,
     ]
   );
 
@@ -899,7 +909,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
   const handleEnhanceAllWeeks = useCallback(
     async (options = {}) => {
       const { includeEnhanced = false } = options;
-      const groupedWeeks = groupWorkoutsByWeek(workouts);
+      const groupedWeeks = groupWorkoutsByWeek(workouts?.length ? workouts : displayWorkouts);
 
       // Filter based on options - either all weeks or just skeleton weeks
       const weeksToEnhance = includeEnhanced
@@ -914,7 +924,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
       // Wait for all to complete (each handles its own errors)
       await Promise.allSettled(enhancePromises);
     },
-    [workouts, weekInputs, handleEnhanceWeek]
+    [workouts, displayWorkouts, weekInputs, handleEnhanceWeek]
   );
 
   // Two-phase skeleton generation

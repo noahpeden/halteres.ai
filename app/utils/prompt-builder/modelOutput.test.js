@@ -189,6 +189,12 @@ describe('placeholders, 12 weeks, equipment IDs', () => {
     assert.equal(lifts.bench_lb, 225);
     assert.equal(lifts.squat_lb, 315);
     assert.equal(lifts.deadlift_lb, 405);
+    const altPhrasing = extractIntakeLifts(
+      'Mayhem grinders. squat of 315, bench is 225, 405 lb deadlift.'
+    );
+    assert.equal(altPhrasing.squat_lb, 315);
+    assert.equal(altPhrasing.bench_lb, 225);
+    assert.equal(altPhrasing.deadlift_lb, 405);
     assert.equal(formatInjuryHistory({}), '');
     assert.equal(formatInjuryHistory([]), '');
     const block = formatAthleteIntakeBlock({

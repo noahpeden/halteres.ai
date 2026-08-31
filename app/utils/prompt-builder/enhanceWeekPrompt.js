@@ -1,4 +1,4 @@
-import { formatAthleteIntakeBlock } from './intakeMetrics.js';
+import { formatAthleteIntakeBlock, formatStatedMaxLoadingRules } from './intakeMetrics.js';
 import { formatProgrammingContract, formatRecentTrainingRules } from './programQuality.js';
 import { formatEquipmentRestrictions } from './promptBuilder.js';
 
@@ -23,7 +23,7 @@ Your role is to ADD these sections while preserving the core exercises (do not c
 5. **Scaling Options** - Useful backups, not beginner lectures.
 6. **Cool-down** - ${cooldown} minutes, equipment-legal.
 
-CRITICAL: Do NOT modify the ${sections.join(' or ')} sections from the skeleton. Preserve exercises, sets, reps, weights, and percentages. Only ADD the enhancement sections around them. All additions must obey available equipment.
+CRITICAL: Do NOT change exercises, sets, or reps in the ${sections.join(' or ')} sections. Preserve the training structure. When the athlete stated maxes, convert generic %1RM into concrete loads from those maxes (e.g. 80% of a 315 squat → 250 lb). Only ADD the enhancement sections around them. All additions must obey available equipment.
 
 ${programmingContract ? formatProgrammingContract(programmingContract) : ''}
 ${buildAthleteVoiceInline()}
@@ -138,6 +138,7 @@ ${formatAthleteIntakeBlock({
   lifts: context?.intakeLifts || {},
   injuryText: context?.intakeInjury || '',
 })}
+${formatStatedMaxLoadingRules(context?.intakeLifts || {})}
 ${formatProgrammingContract(programmingContract, { weekNumber })}
 ${formatRecentTrainingRules(recentHistory)}
 ${
@@ -197,9 +198,10 @@ YOU MUST ADD THESE SECTIONS TO EACH WORKOUT:
 6. **Cool-down** (${cooldownMinutes} minutes, equipment-legal)
 
 CRITICAL RULES:
-- DO NOT change exercises, sets, reps, weights, or percentages in the ${sections.join('/')} sections
+- DO NOT change exercises, sets, or reps in the ${sections.join('/')} sections
 - ADD the enhancement sections around the existing workout structure
-- Preserve the exact exercises and prescriptions from the skeleton
+- Preserve the exact exercises and set/rep scheme from the skeleton
+- If stated 1RMs exist, you MUST replace generic "% of 1RM" / "%1RM" with concrete ${useImperial ? 'lb' : 'kg'} loads from those maxes (keep the % in parentheses). This is a translation, not a structure change.
 - Express weights in ${useImperial ? 'lbs' : 'kg'}
 - Sound like a real coach, not a template
 
