@@ -154,8 +154,23 @@ async function handleChunkedGeneration(requestData, supabase) {
     start(controller) {
       generateProgramChunked(requestData, supabase, controller, encoder).catch((error) => {
         logWithTimestamp('Chunked generation error', { error: error.message });
+        // Map provider errors to friendly messages
+        const status =
+          (typeof error?.status === 'number' && error.status) ||
+          (typeof error?.response?.status === 'number' && error.response.status) ||
+          null;
+        let friendly =
+          (error && error.message) || 'AI provider error while generating the program.';
+        if (status === 401) {
+          friendly =
+            'AI provider authentication failed (401). The model API key is invalid or missing.';
+        } else if (status === 403) {
+          friendly = 'AI provider access forbidden (403). Check model access or account status.';
+        } else if (status && status >= 500) {
+          friendly = 'AI provider is unavailable right now. Please try again later.';
+        }
         try {
-          sendEvent(controller, encoder, 'error', { error: error.message });
+          sendEvent(controller, encoder, 'error', { error: friendly });
           if (controller && controller.desiredSize !== null) {
             controller.close();
           }
