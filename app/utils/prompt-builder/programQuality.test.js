@@ -340,9 +340,50 @@ describe('equipment, duration, density, voice, RAG', () => {
     });
     assert.match(enhance, /athlete_intake/);
     assert.match(enhance, /Bench 1RM: 225 lb/);
+    assert.match(enhance, /80% = 180 lb/);
     assert.match(enhance, /5\/3\/1/);
     assert.match(enhance, /Barbell/);
     assert.doesNotMatch(enhance, /Bodyweight only/);
+    assert.match(enhance, /convert every %1RM into these loads/i);
+    assert.match(enhance, /MUST replace generic "% of 1RM"/);
+    assert.doesNotMatch(enhance, /DO NOT change exercises, sets, reps, weights, or percentages/);
+  });
+
+  it('Mayhem enhance with stated maxes requires concrete loads, not generic %1RM only', () => {
+    const description =
+      'CrossFit box. Mayhem + classic CF + EMOM pump. Intermediate: squat 315, bench 225, deadlift 405.';
+    const enhance = buildEnhancementPrompt({
+      skeletonWorkouts: [
+        {
+          title: 'Week 1, Day 1: Heavy deadlift + grinder',
+          body_skeleton: '## Strength\n- Deadlift 5x3 @ 80%\n## Metcon\n- For time: bike, lunges, pull-ups',
+        },
+      ],
+      weekNumber: 1,
+      context: {
+        numberOfWeeks: 8,
+        difficulty: 'Intermediate',
+        goal: 'Stay competitive and look athletic',
+        description,
+        equipment: MAYHEM_CF_PUMP.equipment,
+        intakeLifts: extractIntakeLifts(description),
+      },
+      weekSpecificInput: '',
+      workoutSections: ['Strength', 'Metcon', 'Accessory EMOM'],
+      clientMetricsContent: '',
+      useImperial: true,
+      programmingContract: buildProgrammingContract({
+        ...MAYHEM_CF_PUMP,
+        description,
+      }),
+    });
+    assert.match(enhance, /stated_max_loading/);
+    assert.match(enhance, /Squat 1RM: 315 lb/);
+    assert.match(enhance, /80% = 250 lb/);
+    assert.match(enhance, /325 lb \(80% of 405\)/);
+    assert.match(enhance, /Mayhem/);
+    assert.match(enhance, /you MUST replace generic "% of 1RM"/);
+    assert.doesNotMatch(enhance, /DO NOT change exercises, sets, reps, weights, or percentages/);
   });
 
   it('formats workout-library RAG so retrieved research is actually injected', () => {

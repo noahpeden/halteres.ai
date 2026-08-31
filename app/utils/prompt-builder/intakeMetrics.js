@@ -23,13 +23,33 @@ export function formatInjuryHistory(value) {
   return text;
 }
 
+const LOAD_PERCENTS = [65, 70, 75, 80, 85];
+
+export function roundToNearestPlate(lbs) {
+  return Math.round(Number(lbs) / 5) * 5;
+}
+
+export function formatPercentLoadTable(maxLb) {
+  const max = Number(maxLb);
+  if (!Number.isFinite(max) || max <= 0) return '';
+  return LOAD_PERCENTS.map(
+    (pct) => `${pct}% = ${roundToNearestPlate((max * pct) / 100)} lb`
+  ).join(', ');
+}
+
 function matchLift(text, names) {
-  const pattern = new RegExp(
-    `(?:${names})(?:\\s*1\\s*rm)?(?:\\s*(?:press|lift))?\\s*[:=]?\\s*(\\d{2,4})(?:\\s*(?:lb|lbs|pounds?))?`,
-    'i'
+  const source = String(text || '');
+  const afterName = source.match(
+    new RegExp(
+      `(?:${names})(?:\\s*1\\s*rm)?(?:\\s*(?:press|lift))?\\s*(?:of|is|at|:|=)?\\s*(\\d{2,4})(?:\\s*(?:lb|lbs|pounds?))?`,
+      'i'
+    )
   );
-  const match = String(text || '').match(pattern);
-  return match ? Number(match[1]) : null;
+  if (afterName) return Number(afterName[1]);
+  const beforeName = source.match(
+    new RegExp(`(\\d{2,4})(?:\\s*(?:lb|lbs|pounds?))?\\s+(?:${names})`, 'i')
+  );
+  return beforeName ? Number(beforeName[1]) : null;
 }
 
 export function extractIntakeLifts(text = '') {
@@ -47,12 +67,36 @@ export function extractIntakeInjury(text = '') {
   return match ? match[0].trim() : '';
 }
 
+function formatLiftLine(label, maxLb) {
+  if (!maxLb) return '';
+  const table = formatPercentLoadTable(maxLb);
+  return table ? `${label} 1RM: ${maxLb} lb (${table})` : `${label} 1RM: ${maxLb} lb`;
+}
+
+export function formatStatedMaxLoadingRules(lifts = {}) {
+  const rows = [
+    formatLiftLine('Squat', lifts.squat_lb),
+    formatLiftLine('Bench', lifts.bench_lb),
+    formatLiftLine('Deadlift', lifts.deadlift_lb),
+  ].filter(Boolean);
+  if (!rows.length) return '';
+  return `
+<stated_max_loading priority="critical">
+The athlete stated working maxes. Write concrete loads, not generic "% of 1RM" alone.
+Convert every percentage using these maxes (nearest 5 lb). Keep the % in parentheses if useful.
+${rows.join('\n')}
+Example: "Deadlift 5x3 @ 80%" becomes "Deadlift 5x3 @ 325 lb (80% of 405)".
+This applies to Mayhem/CF strength and metcons the same way it applies to 5/3/1 waves.
+Do not invent a different max. If a lift has no stated max, keep the percentage.
+</stated_max_loading>`;
+}
+
 export function formatAthleteIntakeBlock({ description = '', lifts = {}, injuryText = '' } = {}) {
   const trimmed = String(description || '').trim();
   const liftLines = [
-    lifts.bench_lb && `Bench 1RM: ${lifts.bench_lb} lb`,
-    lifts.squat_lb && `Squat 1RM: ${lifts.squat_lb} lb`,
-    lifts.deadlift_lb && `Deadlift 1RM: ${lifts.deadlift_lb} lb`,
+    formatLiftLine('Bench', lifts.bench_lb),
+    formatLiftLine('Squat', lifts.squat_lb),
+    formatLiftLine('Deadlift', lifts.deadlift_lb),
   ].filter(Boolean);
   const injury = formatInjuryHistory(injuryText);
 
@@ -63,7 +107,7 @@ export function formatAthleteIntakeBlock({ description = '', lifts = {}, injuryT
 ${trimmed ? `Athlete notes / influences / recent training (honor this; it is not optional flavor text):\n${trimmed}` : ''}
 ${
   liftLines.length
-    ? `\nWorking 1RMs from intake (pounds — use these for percentages; do not leave loading blank or bodyweight-only):\n${liftLines.join('\n')}`
+    ? `\nWorking 1RMs from intake (pounds — convert every %1RM into these loads; do not leave generic "% of 1RM" only or bodyweight-only):\n${liftLines.join('\n')}`
     : ''
 }
 ${injury ? `\nInjury / joint notes:\n${injury}` : ''}
