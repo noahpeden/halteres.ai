@@ -261,7 +261,34 @@ export async function generateProgram({
             continue; // Skip to next retry iteration
           }
 
-          throw new Error(`Server returned error: ${statusCode}`);
+          // Try to surface a human-readable error from the response body
+          let friendlyMsg = `Server returned error: ${statusCode}`;
+          try {
+            const errBody = await response.json();
+            if (errBody && typeof errBody.error === 'string' && errBody.error.trim()) {
+              friendlyMsg = errBody.error.trim();
+            } else if (errBody && typeof errBody.message === 'string' && errBody.message.trim()) {
+              friendlyMsg = errBody.message.trim();
+            }
+          } catch {
+            // ignore body parse errors
+          }
+
+          // Map common provider failures to clearer messages
+          if (statusCode === 401) {
+            friendlyMsg =
+              friendlyMsg ||
+              'AI provider rejected the request (401 Unauthorized). The API key is invalid or missing.';
+          } else if (statusCode === 403) {
+            friendlyMsg =
+              friendlyMsg ||
+              'AI provider blocked access (403 Forbidden). Check model access and billing status.';
+          } else if (statusCode >= 500) {
+            friendlyMsg =
+              friendlyMsg || 'AI provider is unavailable right now. Please try again later.';
+          }
+
+          throw new Error(friendlyMsg);
         }
 
         // Check if we got an event stream response
@@ -1966,7 +1993,31 @@ export async function approveAndEnhanceWeek({
     });
 
     if (!response.ok) {
-      throw new Error(`Enhancement failed: ${response.status}`);
+      // Attempt to parse server-provided error for clearer messaging
+      let friendly = `Enhancement failed: ${response.status}`;
+      try {
+        const err = await response.json();
+        if (err && typeof err.error === 'string' && err.error.trim()) {
+          friendly = err.error.trim();
+        } else if (err && typeof err.message === 'string' && err.message.trim()) {
+          friendly = err.message.trim();
+        }
+      } catch {
+        // ignore
+      }
+      // Map common auth/errors
+      if (response.status === 401) {
+        friendly =
+          friendly ||
+          'Enhancement failed: AI provider rejected the request (401 Unauthorized). The API key is invalid or missing.';
+      } else if (response.status === 403) {
+        friendly =
+          friendly ||
+          'Enhancement failed: AI provider blocked access (403 Forbidden). Check model access.';
+      } else if (response.status >= 500) {
+        friendly = friendly || 'Enhancement failed: AI provider is currently unavailable.';
+      }
+      throw new Error(friendly);
     }
 
     const reader = response.body.getReader();
