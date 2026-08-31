@@ -219,6 +219,20 @@ export function ensureDeepseekThinkingBody(bodyString, thinking) {
   return bodyString;
 }
 
+export function withPlaceholderGuard(message, { weekNumber, numberOfWeeks } = {}) {
+  const inner = String(message || 'unknown error').trim();
+  const prefix =
+    weekNumber != null && numberOfWeeks != null
+      ? `Week ${weekNumber} of ${numberOfWeeks} failed: `
+      : '';
+  const guard = 'Generation stopped so placeholders are not saved as a successful program.';
+  if (inner.includes('placeholders are not saved')) {
+    return `${prefix}${inner}`;
+  }
+  const spacer = /[.!?]$/.test(inner) ? ' ' : '. ';
+  return `${prefix}${inner}${spacer}${guard}`;
+}
+
 export function wrapProviderError(error, context = {}) {
   if (error?.code === 'empty_stream') return error;
   const wrapped = new Error(formatProviderError(error, context));

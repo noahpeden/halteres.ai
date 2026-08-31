@@ -1,5 +1,9 @@
 import { NextResponse } from 'next/server';
-import { formatProviderError, streamChatCompletion } from '@/utils/ai/provider';
+import {
+  formatProviderError,
+  streamChatCompletion,
+  withPlaceholderGuard,
+} from '@/utils/ai/provider';
 import { pickEquipmentLabels } from '@/utils/prompt-builder/equipmentLabels.js';
 import { assertUsableSkeletonWorkouts } from '@/utils/prompt-builder/generationGuardrails.js';
 import { extractIntakeInjury, extractIntakeLifts } from '@/utils/prompt-builder/intakeMetrics.js';
@@ -248,7 +252,10 @@ async function generateSkeletonProgram(requestData, supabase, controller, encode
           error: weekError.message,
         });
         throw new Error(
-          `Week ${currentWeek} of ${numberOfWeeks} failed: ${formatProviderError(weekError)}. Generation stopped so placeholders are not saved as a successful program.`
+          withPlaceholderGuard(formatProviderError(weekError), {
+            weekNumber: currentWeek,
+            numberOfWeeks,
+          })
         );
       }
     }

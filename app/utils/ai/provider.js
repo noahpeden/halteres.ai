@@ -13,6 +13,7 @@ export {
   describeEmptyStream,
   formatProviderError,
   resolveDeepseekThinking,
+  withPlaceholderGuard,
 } from './providerErrors.js';
 
 /**

@@ -10,6 +10,7 @@ import {
   formatProviderError,
   resolveDeepseekThinking,
   sanitizeProviderText,
+  withPlaceholderGuard,
 } from './providerErrors.js';
 
 describe('sanitizeProviderText', () => {
@@ -153,5 +154,17 @@ describe('formatProviderError', () => {
       'Week 1 of 8 failed: DeepSeek 401: authentication failed model=deepseek-v4-pro. DEEPSEEK_API_KEY is missing or invalid on this deploy. Generation stopped so placeholders are not saved as a successful program.'
     );
     assert.equal(formatProviderError(weekError), weekError.message);
+  });
+});
+
+describe('withPlaceholderGuard', () => {
+  it('keeps a single period before the no-placeholder sentence', () => {
+    const message = withPlaceholderGuard(
+      'No content received from streaming response; finish_reason=length. DeepSeek thinking consumed the output budget before any content tokens. Disable thinking or raise max_tokens.',
+      { weekNumber: 1, numberOfWeeks: 8 }
+    );
+    assert.match(message, /Week 1 of 8 failed:/);
+    assert.match(message, /placeholders are not saved as a successful program/);
+    assert.doesNotMatch(message, /\.\. /);
   });
 });
