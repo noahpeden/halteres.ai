@@ -10,6 +10,7 @@ import {
   getSubstitutionSuggestions,
 } from './equipmentSubstitutions.js';
 import { formatPeriodizationGuidelines } from './periodizationUtils.js';
+import { buildGarageEquipmentRules } from './programQuality.js';
 import { balancedFitnessPrompt } from './prompts/balanced-fitness.js';
 import { bodybuildingPrompt } from './prompts/bodybuilding.js';
 import { calisthenicsPrompt } from './prompts/calisthenics.js';
@@ -60,6 +61,18 @@ const COMMON_GYM_EQUIPMENT = [
   'Stationary Bike',
   'Elliptical',
   'Pull-up Bar',
+  'Cable Machine',
+  'Cable Crossover',
+  'Functional Trainer',
+  'Lat Pulldown',
+  'Seated Row Machine',
+  'Chest Press Machine',
+  'Shoulder Press Machine',
+  'Leg Curl Machine',
+  'Leg Extension Machine',
+  'Pec Deck',
+  'Hack Squat Machine',
+  'Hip Abductor Machine',
 ];
 
 /**
@@ -72,10 +85,15 @@ export function formatEquipmentRestrictions(equipment) {
   const equipmentListStr =
     availableEquipment.length > 0 ? availableEquipment.join(', ') : 'Bodyweight only';
 
-  // Calculate what equipment is NOT available
+  // Calculate what equipment is NOT available. Lead with commercial machines/cables
+  // so garage gyms see those hard bans even when the list is truncated.
   const unavailableEquipment = COMMON_GYM_EQUIPMENT.filter(
     (item) => !availableEquipment.includes(item)
-  );
+  ).sort((a, b) => {
+    const commercial = (item) =>
+      /cable|machine|trainer|smith|lat pulldown|pec deck|hack squat/i.test(item);
+    return Number(commercial(b)) - Number(commercial(a));
+  });
 
   // Get substitution suggestions for common missing equipment
   const substitutions = getSubstitutionSuggestions(availableEquipment, COMMON_GYM_EQUIPMENT);
@@ -97,7 +115,9 @@ DO NOT program any exercises requiring: ${unavailableEquipment.slice(0, 15).join
 3. If a standard exercise requires unavailable equipment, you MUST substitute it
 4. Never assume equipment exists - if it's not listed above, the user does not have it
 5. Double-check every exercise before including it - does it require equipment not on the available list?
+6. Never invent cable machines, functional trainers, or selectorized stacks unless they are listed
 </strict_rules>
+${buildGarageEquipmentRules(availableEquipment)}
 ${
   substitutionText
     ? `

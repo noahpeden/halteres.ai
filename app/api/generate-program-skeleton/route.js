@@ -1,12 +1,19 @@
 import { NextResponse } from 'next/server';
 import { streamChatCompletion } from '@/utils/ai/provider';
 import {
+  assembleReferenceMaterial,
+  buildProgrammingContract,
+} from '@/utils/prompt-builder/programQuality.js';
+import {
   formatClassMetrics,
   formatClientMetrics,
-  formatEquipmentRestrictions,
-  formatPeriodizationSection,
   isClassMetrics,
 } from '@/utils/prompt-builder/promptBuilder.js';
+import { getWorkoutLibraryRagContext } from '@/utils/prompt-builder/ragContext.js';
+import {
+  buildSkeletonSystemPrompt,
+  buildSkeletonWeekPrompt,
+} from '@/utils/prompt-builder/skeletonPrompt.js';
 import { corsHeaders, createMobileCompatibleClient } from '@/utils/supabase/mobile';
 
 // NOTE: Calls through the shared AI provider abstraction (app/utils/ai/provider.js),
@@ -337,134 +344,57 @@ async function generateWeekSkeleton(
     equipment,
     sessionDuration,
     referenceMaterial,
-    selectedDaysOfWeek,
     clientMetricsContent,
     suggestedDates,
     useImperial,
     trainingMethodology,
-    clientGender,
     description,
+    programmingContract,
+    ragContext,
+    recentHistory,
   } = sharedData;
 
   // Calculate dates for this week
   const weekStartIndex = (weekNumber - 1) * daysPerWeek;
   const weekDates = suggestedDates.slice(weekStartIndex, weekStartIndex + daysPerWeek);
 
-  // Build minimal context from previous weeks for progression
-  const previousWeeksContext =
-    existingWorkouts.length > 0
-      ? `\n\nPrevious week focus areas:\n${existingWorkouts
-          .slice(-3)
-          .map((w) => w.title)
-          .join(', ')}`
-      : '';
+  const weekContract = programmingContract
+    ? { ...programmingContract, weekNumber }
+    : programmingContract;
+  const workoutSections = weekContract?.sections || ['Primary Work', 'Secondary Work'];
 
-  // Determine workout sections based on training methodology
-  const workoutSections = getWorkoutSections(trainingMethodology, workoutFormats);
+  const skeletonPrompt = buildSkeletonWeekPrompt({
+    weekNumber,
+    includeDescription,
+    goal,
+    difficulty,
+    focusArea,
+    workoutFormats,
+    numberOfWeeks,
+    daysPerWeek,
+    programType,
+    equipment,
+    sessionDuration,
+    referenceMaterial,
+    clientMetricsContent,
+    existingWorkouts,
+    useImperial,
+    trainingMethodology,
+    description,
+    weekDates,
+    programmingContract: weekContract,
+    ragContext,
+    recentHistory,
+  });
 
-  // SKELETON PROMPT - Minimal, structure-only
-  const skeletonPrompt = `Generate MINIMAL workout structures for WEEK ${weekNumber} of a ${numberOfWeeks}-week program.
-${
-  includeDescription
-    ? `
-Since this is Week 1, include a brief programDescription (2-3 sentences max) about the program approach.
-`
-    : ''
-}
-
-Program Details:
-Goal: ${goal}
-Difficulty: ${difficulty}
-Methodology: ${trainingMethodology || 'General Fitness'}
-Periodization: ${programType || 'Linear'}
-Days/Week: ${daysPerWeek}
-Session Duration: ${sessionDuration || 60} minutes
-Week: ${weekNumber} of ${numberOfWeeks}
-${focusArea ? `Focus: ${focusArea}` : ''}
-${workoutFormats?.length > 0 ? `Workout Types: ${workoutFormats.join(', ')}` : ''}
-${equipment?.length > 0 ? `Equipment: ${equipment.join(', ')}` : 'Equipment: Bodyweight only'}
-${clientMetricsContent ? `\n${clientMetricsContent}` : ''}${previousWeeksContext}
-${
-  equipment
-    ? `
-${formatEquipmentRestrictions(equipment)}
-`
-    : formatEquipmentRestrictions([])
-}
-${
-  referenceMaterial
-    ? `
-REFERENCE MATERIAL:
-${referenceMaterial}
-`
-    : ''
-}
-${
-  description
-    ? `
-CRITICAL CLIENT REQUIREMENTS (these take precedence over all other guidelines):
-${description}
-`
-    : ''
-}
-SKELETON REQUIREMENTS - Include ONLY:
-${workoutSections.map((s) => `- ${s}`).join('\n')}
-
-DO NOT include:
-- Warm-up section
-- Cool-down section
-- Coaching cues
-- Scaling options
-- Detailed explanations
-- Stimulus and strategy
-
-FORMAT: Concise exercise prescriptions only.
-Choose sets/reps based on workout types selected:
-- Hypertrophy: 3-4 sets of 8-15 reps @ 65-75% 1RM
-- Strength: 4-6 sets of 3-6 reps @ 80-90% 1RM
-- Power: 3-5 sets of 1-3 reps @ 85-95% 1RM
-- Endurance: 2-3 sets of 15-20+ reps @ 50-65% 1RM
-- General Fitness: 3 sets of 8-12 reps @ 70-80% 1RM
-
-Example output format:
-## Strength
-- Back Squat: [sets]x[reps] @ [%] 1RM
-- ${useImperial ? '♀ 135 lbs / ♂ 185 lbs' : '♀ 60 kg / ♂ 85 kg'}
-
-## Conditioning
-- 21-15-9:
-  - Thrusters (${useImperial ? '95/65 lbs' : '43/30 kg'})
-  - Pull-ups
-- Time cap: 12 min
-
-Dates for week ${weekNumber}:
-${weekDates.map((date, i) => `Day ${i + 1}: ${date}`).join('\n')}
-
-Output JSON:
-{${
-    includeDescription
-      ? `
-  "programDescription": "Brief 2-3 sentence program overview",`
-      : ''
-  }
-  "workouts": [
-    {
-      "title": "Week ${weekNumber}, Day 1: [Focus]",
-      "body": "[Skeleton workout with only ${workoutSections.join(' + ')} sections]",
-      "date": "${weekDates[0] || new Date().toISOString().split('T')[0]}"
-    }
-  ]
-}`;
-
-  const systemPrompt = `You generate MINIMAL workout skeletons for a self-coached athlete. Write directly for the athlete (not a class).
-Generate exactly ${daysPerWeek} workout structures for week ${weekNumber}.
-Output ONLY the core sections: ${workoutSections.join(', ')}.
-NO warm-up, NO cool-down, NO coaching cues, NO detailed explanations.
-Be extremely concise - just exercise names, sets/reps, and weights.
-Express weights in ${useImperial ? 'lbs' : 'kg'}.
-Respect equipment restrictions strictly (applies to all content).
-${formatPeriodizationSection(programType)}
-Output valid JSON only.`;
+  const systemPrompt = buildSkeletonSystemPrompt({
+    daysPerWeek,
+    weekNumber,
+    sections: workoutSections,
+    useImperial,
+    programType,
+    programmingContract: weekContract,
+  });
 
   try {
     logWithTimestamp(`Calling AI provider for skeleton week ${weekNumber}`, {
@@ -504,8 +434,8 @@ Output valid JSON only.`;
       systemPrompt,
       systemBlocks,
       userPrompt: skeletonPrompt,
-      temperature: 0.5, // Less creativity needed for structure
-      maxTokens: 4000, // Reduced from 16000 for skeleton
+      temperature: 0.7,
+      maxTokens: 4000,
     });
 
     for await (const text of textStream) {
@@ -581,34 +511,20 @@ Output valid JSON only.`;
   }
 }
 
-// Get workout sections based on training methodology
-function getWorkoutSections(methodology, _workoutFormats) {
-  const defaultSections = ['Strength', 'Conditioning'];
-
-  const methodologySections = {
-    crossfit: ['Strength', 'Conditioning'],
-    powerlifting: ['Main Lift', 'Accessory Work'],
-    bodybuilding: ['Primary Exercises', 'Accessory Exercises'],
-    'functional fitness': ['Strength', 'Conditioning'],
-    hiit: ['Intervals'],
-    calisthenics: ['Skill Work', 'Strength'],
-    'sport-specific': ['Strength', 'Sport Conditioning'],
-  };
-
-  const normalizedMethodology = (methodology || '').toLowerCase();
-  return methodologySections[normalizedMethodology] || defaultSections;
-}
-
 // Generate placeholder skeletons for failed weeks
 function generatePlaceholderSkeleton(weekNumber, sharedData) {
-  const { daysPerWeek, suggestedDates } = sharedData;
+  const { daysPerWeek, suggestedDates, programmingContract } = sharedData;
   const weekStartIndex = (weekNumber - 1) * daysPerWeek;
+  const sections = programmingContract?.sections || ['Primary Work', 'Secondary Work'];
 
   const placeholders = [];
   for (let day = 1; day <= daysPerWeek; day++) {
+    const body = sections
+      .map((section) => `## ${section}\n- Prescription pending regenerate`)
+      .join('\n\n');
     placeholders.push({
-      title: `Week ${weekNumber}, Day ${day}: Placeholder`,
-      body: `## Strength\n- Exercise: Sets x Reps\n\n## Conditioning\n- Workout format`,
+      title: `Week ${weekNumber}, Day ${day}: ${programmingContract?.identity || 'Training'}`,
+      body,
       date: suggestedDates[weekStartIndex + day - 1] || new Date().toISOString().split('T')[0],
     });
   }
@@ -683,6 +599,7 @@ async function extractSharedData(requestData, supabase) {
   );
 
   // If programId present, fetch program for DB fallbacks when request omits fields
+  let dbReference = '';
   if (programId) {
     try {
       const { data: programData } = await supabase
@@ -693,6 +610,7 @@ async function extractSharedData(requestData, supabase) {
         .eq('id', programId)
         .single();
       if (programData) {
+        dbReference = programData.reference_input || '';
         if (providedDuration == null && programData.duration_weeks) {
           numberOfWeeks = parseInt(programData.duration_weeks, 10);
         }
@@ -757,7 +675,7 @@ async function extractSharedData(requestData, supabase) {
   // Calculate total workouts AFTER final numberOfWeeks/daysPerWeek are resolved
   const totalWorkouts = parseInt(numberOfWeeks, 10) * parseInt(daysPerWeek, 10);
 
-  // Merge reference material: request referenceInput + influences + history + DB reference_input
+  // Merge reference material: request + influences + history + ALWAYS merge DB reference_input
   const influenceText =
     Array.isArray(requestData.program_influences) && requestData.program_influences.length > 0
       ? requestData.program_influences.join(', ')
@@ -767,33 +685,16 @@ async function extractSharedData(requestData, supabase) {
   const historyText =
     typeof requestData.recent_training_history === 'string'
       ? requestData.recent_training_history
-      : '';
-  let referenceMaterial = '';
+      : typeof requestData.recentTrainingHistory === 'string'
+        ? requestData.recentTrainingHistory
+        : '';
   const requestReference = requestData.referenceInput || requestData.reference_input || '';
-  if (requestReference && requestReference.trim() !== '') {
-    referenceMaterial += `User-Provided Reference Material:\n---\n${requestReference.trim()}\n---`;
-  }
-  if (influenceText) {
-    referenceMaterial += `${referenceMaterial ? '\n\n' : ''}Program Influences / Styles:\n---\n${influenceText}\n---`;
-  }
-  if (historyText) {
-    referenceMaterial += `${referenceMaterial ? '\n\n' : ''}Recent Training History (last 2-3 months):\n---\n${historyText}\n---`;
-  }
-  // If still empty, try DB reference_input
-  if (!referenceMaterial && programId) {
-    try {
-      const { data: refRow } = await supabase
-        .from('programs')
-        .select('reference_input')
-        .eq('id', programId)
-        .single();
-      if (refRow?.reference_input) {
-        referenceMaterial = refRow.reference_input;
-      }
-    } catch (_e) {
-      // ignore
-    }
-  }
+  const referenceMaterial = assembleReferenceMaterial({
+    requestReference,
+    influenceText,
+    historyText,
+    dbReference,
+  });
 
   // Generate suggested dates
   const suggestedDates = [];
@@ -889,6 +790,44 @@ async function extractSharedData(requestData, supabase) {
     }
   }
 
+  const programmingContract = buildProgrammingContract({
+    methodology: trainingMethodology,
+    goal,
+    description,
+    focusArea,
+    referenceMaterial,
+    influences: influenceText,
+    recentHistory: historyText,
+    workoutFormats,
+    sessionMinutes: sessionDuration,
+    daysPerWeek,
+    numberOfWeeks,
+    equipment,
+  });
+
+  let ragContext = '';
+  try {
+    const rag = await getWorkoutLibraryRagContext(supabase, {
+      methodology: trainingMethodology,
+      goal,
+      focusArea,
+      description,
+      referenceMaterial,
+      influences: influenceText,
+      recentHistory: historyText,
+      equipment,
+    });
+    ragContext = rag.formatted || '';
+    logWithTimestamp('Workout library RAG', {
+      matchCount: rag.workouts?.length || 0,
+      skippedReason: rag.skippedReason,
+    });
+  } catch (ragError) {
+    logWithTimestamp('Workout library RAG failed (continuing without it)', {
+      error: ragError.message,
+    });
+  }
+
   return {
     programId,
     entityId,
@@ -912,5 +851,8 @@ async function extractSharedData(requestData, supabase) {
     description,
     sessionDuration,
     referenceMaterial,
+    recentHistory: historyText,
+    programmingContract,
+    ragContext,
   };
 }

@@ -839,6 +839,12 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
             useImperial: true,
             numberOfWeeks: parseInt(formData?.numberOfWeeks, 10) || 1,
             trainingMethodology: formData?.trainingMethodology,
+            referenceInput: formData?.referenceInput || '',
+            sessionMinutes: formData?.sessionDetails?.duration_minutes,
+            focusArea: formData?.focusArea,
+            workoutFormats: formData?.workoutFormats,
+            description: formData?.description || '',
+            daysPerWeek: parseInt(formData?.daysPerWeek, 10) || undefined,
           },
           weekSpecificInput: weekInput || weekInputs[weekNumber] || '',
           updateWorkoutStatus: (workoutId, updates) => {

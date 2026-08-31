@@ -1,7 +1,14 @@
 import { NextResponse } from 'next/server';
 import { getAIProvider, streamChatCompletion } from '@/utils/ai/provider';
 import { getFeedbackContextForGeneration } from '@/utils/feedback/feedbackUtils.js';
+import {
+  assembleReferenceMaterial,
+  buildProgrammingContract,
+  formatProgrammingContract,
+  formatRecentTrainingRules,
+} from '@/utils/prompt-builder/programQuality.js';
 import { formatClientMetrics } from '@/utils/prompt-builder/promptBuilder.js';
+import { getWorkoutLibraryRagContext } from '@/utils/prompt-builder/ragContext.js';
 import { corsHeaders, createMobileCompatibleClient } from '@/utils/supabase/mobile';
 
 // NOTE: This route is the primary program-generation endpoint (despite the
@@ -32,9 +39,9 @@ function getGenderWeightInstructions(clientGender) {
   const normalizedGender = clientGender?.toLowerCase();
 
   if (normalizedGender === 'male' || normalizedGender === 'm') {
-    return '♂ [RX weights for this client]';
+    return '♂ [RX weights for you]';
   } else if (normalizedGender === 'female' || normalizedGender === 'f') {
-    return '♀ [RX weights for this client]';
+    return '♀ [RX weights for you]';
   } else {
     // If gender is unknown, other, or not specified, show both
     return `♀ [Women's RX weights] 
@@ -399,13 +406,21 @@ async function generateWeekWorkouts(
     referenceWorkoutsContent,
     feedbackPatternsContent,
     ragFeedbackWorkoutsContent,
+    ragLibraryContent,
     hasInjuryHistory,
     suggestedDates,
     useImperial,
     trainingMethodology,
     clientGender,
     sessionDuration,
+    programmingContract,
+    recentHistory,
   } = sharedData;
+
+  const weekContract = programmingContract
+    ? { ...programmingContract, weekNumber }
+    : programmingContract;
+  const identitySections = weekContract?.sections || ['Strength Work', 'Conditioning Work'];
 
   // Calculate dates for this week
   const weekStartIndex = (weekNumber - 1) * daysPerWeek;
@@ -426,7 +441,7 @@ async function generateWeekWorkouts(
       ? `
 
 <program_description_requirement>
-Since this is Week 1, include a programDescription field (500-700 words) that is highly personalized to this specific client.
+Since this is Week 1, include a programDescription field (500-700 words) that is highly personalized to this athlete.
 
 FORMAT: Use markdown with **bold section headers** followed by detailed paragraphs. Structure like this:
 
@@ -448,7 +463,7 @@ FORMAT: Use markdown with **bold section headers** followed by detailed paragrap
 **Medical & Injury Considerations**
 [If injury history exists, explain how the program accounts for it. If post-surgical or special conditions, address directly.]
 
-Write in an engaging, expert trainer tone speaking directly to the athlete. Each section should be a substantial paragraph, not bullet points.
+Write as a coach speaking directly to the athlete. No client, class, or gym-owner language. Each section should be a substantial paragraph, not bullet points.
 </program_description_requirement>`
       : ''
   }
@@ -486,7 +501,11 @@ ${personalization ? `Personalization: ${personalization}` : ''}
 ${clientMetricsContent ? `${clientMetricsContent}` : ''}
 ${referenceWorkoutsContent ? `${referenceWorkoutsContent}` : ''}${
   feedbackPatternsContent ? `${feedbackPatternsContent}` : ''
-}${ragFeedbackWorkoutsContent ? `${ragFeedbackWorkoutsContent}` : ''}${previousWeeksContext}
+}${ragFeedbackWorkoutsContent ? `${ragFeedbackWorkoutsContent}` : ''}${
+  ragLibraryContent ? `${ragLibraryContent}` : ''
+}${formatProgrammingContract(weekContract, { weekNumber })}${formatRecentTrainingRules(
+  recentHistory
+)}${previousWeeksContext}
 
 <periodization_principles type="${programType}">
 Apply ${programType} periodization principles for week ${weekNumber}:
@@ -522,13 +541,12 @@ Use these exact dates for week ${weekNumber}:
 ${weekDates.map((date, index) => `Day ${index + 1}: ${date}`).join('\n')}
 
 Each workout should include: 
-- Warm-up (specific movements, sets, reps, durations)
-- Strength Work (clear format, exact weights for RX men/women, loading percentages)
-- Conditioning Work (clear format, exact weights, target time domains)
+- Warm-up scaled to the ${sessionDuration || 60}-minute session (equipment-legal)
+- These identity sections: ${identitySections.join(', ')}
 - Detailed Stimulus and Strategy section with primary focus statement, progression context, and bulleted tactical guidance
 - Scaling options${hasInjuryHistory ? ', injury considerations' : ''}
 - Technique tips (3-5 specific technical cues)
-- Cool-down (specific movements and durations)
+- Cool-down scaled to session duration
 
 <weight_units>
 Express all weights in ${useImperial ? 'pounds (lbs)' : 'kilograms (kg)'} throughout all workouts.
@@ -547,15 +565,12 @@ Format each workout body with this structure:
 ## Warm-up
 [Detailed warm-up with specific movements, sets, reps, durations]
 
-## Strength Work
-[Exercise]: [Sets] x [Reps] @ [percentage/weight]
-${getGenderWeightInstructions(clientGender)}
-- Rest [X-Y] minutes between sets
-
-## Conditioning Work
-[Format: AMRAP, For Time, etc.]
-[Complete workout with movements, reps, weights]
-${getGenderWeightInstructions(clientGender)}
+${identitySections
+  .map(
+    (section) => `## ${section}
+[Exact prescriptions for ${section}. Honor the programming identity. ${getGenderWeightInstructions(clientGender)}]`
+  )
+  .join('\n\n')}
 
 ## Technique Tips
 [3-5 specific technical cues for key movements]
@@ -575,7 +590,7 @@ ${getGenderWeightInstructions(clientGender)}
 Generate exactly ${daysPerWeek} professional workouts for week ${weekNumber} in valid JSON format.
 Include detailed technique tips, scaling options, and progression guidance.
 Follow sound exercise science principles with appropriate weekly progression.
-${weekNumber === 1 ? `For Week 1, include a personalized programDescription field (400-600 words) that references the client's specific metrics, explains the periodization approach with intensity percentages, describes session structure, provides specific adaptation timelines, and includes tailored nutrition/recovery guidance.` : ''}
+${weekNumber === 1 ? `For Week 1, include a personalized programDescription field (400-600 words) that references this athlete's metrics, names the programming identity, explains periodization with intensity percentages, describes session structure, and includes recovery guidance. Speak to the athlete — never say client, class, or gym owner.` : ''}
 </output_requirements>
 
 <equipment_validation priority="critical">
@@ -1345,31 +1360,12 @@ async function extractSharedData(requestData, supabase) {
         : '';
   const historyText = typeof recentTrainingHistory === 'string' ? recentTrainingHistory : '';
 
-  // Build a combined referenceInput string with clear sections
-  let combinedReference = '';
-  if (referenceInput && referenceInput.trim() !== '') {
-    combinedReference += `
-User-Provided Reference Material:
----
-${referenceInput.trim()}
----`;
-  }
-  if (influenceText) {
-    combinedReference += `
-
-Program Influences / Styles:
----
-${influenceText}
----`;
-  }
-  if (historyText) {
-    combinedReference += `
-
-Recent Training History (last 2-3 months):
----
-${historyText}
----`;
-  }
+  const combinedReference = assembleReferenceMaterial({
+    requestReference: referenceInput,
+    influenceText,
+    historyText,
+    dbReference: '',
+  });
 
   // Add combined reference material to referenceWorkoutsContent seed
   if (combinedReference.trim() !== '') {
@@ -1459,6 +1455,44 @@ Draw inspiration from these reference workouts when designing this program. Use 
     // Continue without feedback context - not critical
   }
 
+  const programmingContract = buildProgrammingContract({
+    methodology: trainingMethodology,
+    goal,
+    description: additionalNotes,
+    focusArea,
+    referenceMaterial: combinedReference,
+    influences: influenceText,
+    recentHistory: historyText,
+    workoutFormats,
+    sessionMinutes: sessionDuration,
+    daysPerWeek,
+    numberOfWeeks,
+    equipment,
+  });
+
+  let ragLibraryContent = '';
+  try {
+    const rag = await getWorkoutLibraryRagContext(supabase, {
+      methodology: trainingMethodology,
+      goal,
+      focusArea,
+      description: additionalNotes,
+      referenceMaterial: combinedReference,
+      influences: influenceText,
+      recentHistory: historyText,
+      equipment,
+    });
+    ragLibraryContent = rag.formatted || '';
+    logWithTimestamp('Workout library RAG', {
+      matchCount: rag.workouts?.length || 0,
+      skippedReason: rag.skippedReason,
+    });
+  } catch (ragError) {
+    logWithTimestamp('Workout library RAG failed (continuing without it)', {
+      error: ragError.message,
+    });
+  }
+
   return {
     programId,
     gymId,
@@ -1480,11 +1514,14 @@ Draw inspiration from these reference workouts when designing this program. Use 
     referenceWorkoutsContent,
     feedbackPatternsContent,
     ragFeedbackWorkoutsContent,
+    ragLibraryContent,
     hasInjuryHistory,
     totalWorkouts,
     useImperial,
     trainingMethodology,
     clientGender,
     sessionDuration,
+    programmingContract,
+    recentHistory: historyText,
   };
 }

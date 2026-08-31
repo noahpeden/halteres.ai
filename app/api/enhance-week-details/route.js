@@ -1,11 +1,19 @@
 import { NextResponse } from 'next/server';
 import { streamChatCompletion } from '@/utils/ai/provider';
 import {
+  buildEnhancementPrompt,
+  buildEnhancementSystemPrompt,
+} from '@/utils/prompt-builder/enhanceWeekPrompt.js';
+import {
+  assembleReferenceMaterial,
+  buildProgrammingContract,
+} from '@/utils/prompt-builder/programQuality.js';
+import {
   formatClassMetrics,
   formatClientMetrics,
-  formatEquipmentRestrictions,
   isClassMetrics,
 } from '@/utils/prompt-builder/promptBuilder.js';
+import { getWorkoutLibraryRagContext } from '@/utils/prompt-builder/ragContext.js';
 import { corsHeaders, createMobileCompatibleClient } from '@/utils/supabase/mobile';
 
 export const maxDuration = 300; // 5 minutes should be enough for a single week
@@ -193,7 +201,7 @@ async function enhanceWeekWorkouts(requestData, supabase, controller, encoder) {
       const { data: programRow } = await supabase
         .from('programs')
         .select(
-          'duration_weeks, gym_details, workout_format, session_details, focus_area, description, training_methodology, reference_input'
+          'duration_weeks, gym_details, workout_format, session_details, focus_area, description, training_methodology, reference_input, goal'
         )
         .eq('id', programId)
         .single();
@@ -221,8 +229,7 @@ async function enhanceWeekWorkouts(requestData, supabase, controller, encoder) {
       null ??
       programMeta?.session_details?.duration_minutes ??
       null;
-    // Build reference material: context.referenceInput/influences/history + DB reference_input
-    let referenceMaterial = '';
+    // Build reference material: context.referenceInput/influences/history + ALWAYS merge DB
     const ctxRef = context?.referenceInput || context?.reference_input || '';
     const ctxInfluences =
       Array.isArray(context?.program_influences) && context.program_influences.length > 0
@@ -232,18 +239,12 @@ async function enhanceWeekWorkouts(requestData, supabase, controller, encoder) {
           : '';
     const ctxHistory =
       typeof context?.recent_training_history === 'string' ? context.recent_training_history : '';
-    if (ctxRef && ctxRef.trim() !== '') {
-      referenceMaterial += `User-Provided Reference Material:\n---\n${ctxRef.trim()}\n---`;
-    }
-    if (ctxInfluences) {
-      referenceMaterial += `${referenceMaterial ? '\n\n' : ''}Program Influences / Styles:\n---\n${ctxInfluences}\n---`;
-    }
-    if (ctxHistory) {
-      referenceMaterial += `${referenceMaterial ? '\n\n' : ''}Recent Training History (last 2-3 months):\n---\n${ctxHistory}\n---`;
-    }
-    if (!referenceMaterial && programMeta?.reference_input) {
-      referenceMaterial = programMeta.reference_input;
-    }
+    const referenceMaterial = assembleReferenceMaterial({
+      requestReference: ctxRef,
+      influenceText: ctxInfluences,
+      historyText: ctxHistory,
+      dbReference: programMeta?.reference_input || '',
+    });
 
     // Augment context passed to prompt builder
     const augmentedContext = {
@@ -255,23 +256,77 @@ async function enhanceWeekWorkouts(requestData, supabase, controller, encoder) {
       sessionMinutes,
       referenceMaterial,
       useImperial,
+      trainingMethodology: context?.trainingMethodology || programMeta?.training_methodology || '',
+      goal: context?.goal || programMeta?.goal || '',
+      description: context?.description || programMeta?.description || '',
     };
 
-    // Get the workout sections that were used in skeletons
-    const workoutSections = detectWorkoutSections(skeletonWorkouts);
+    const programmingContract = buildProgrammingContract({
+      methodology: augmentedContext.trainingMethodology || programMeta?.training_methodology || '',
+      goal: augmentedContext.goal || '',
+      description: augmentedContext.description || programMeta?.description || '',
+      focusArea,
+      referenceMaterial,
+      influences: ctxInfluences,
+      recentHistory: ctxHistory,
+      workoutFormats,
+      sessionMinutes,
+      daysPerWeek:
+        augmentedContext.daysPerWeek ||
+        augmentedContext.days_per_week ||
+        skeletonWorkouts.length ||
+        3,
+      numberOfWeeks: effectiveNumberOfWeeks,
+      weekNumber,
+      equipment,
+    });
 
-    // Build the enhancement prompt
-    const enhancementPrompt = buildEnhancementPrompt(
+    let ragContext = '';
+    try {
+      const rag = await getWorkoutLibraryRagContext(supabase, {
+        methodology: programmingContract.identity,
+        goal: augmentedContext.goal || '',
+        focusArea,
+        description: augmentedContext.description || programMeta?.description || '',
+        referenceMaterial,
+        influences: ctxInfluences,
+        recentHistory: ctxHistory,
+        equipment,
+      });
+      ragContext = rag.formatted || '';
+      logWithTimestamp('Workout library RAG (enhance)', {
+        matchCount: rag.workouts?.length || 0,
+        skippedReason: rag.skippedReason,
+      });
+    } catch (ragError) {
+      logWithTimestamp('Workout library RAG failed (continuing without it)', {
+        error: ragError.message,
+      });
+    }
+
+    // Prefer influence-derived sections; fall back to headers detected in the skeleton
+    const detectedSections = detectWorkoutSections(skeletonWorkouts);
+    const workoutSections =
+      programmingContract.sections?.length > 0 ? programmingContract.sections : detectedSections;
+
+    const enhancementPrompt = buildEnhancementPrompt({
       skeletonWorkouts,
       weekNumber,
-      augmentedContext,
+      context: augmentedContext,
       weekSpecificInput,
       workoutSections,
       clientMetricsContent,
-      useImperial
-    );
+      useImperial,
+      programmingContract,
+      ragContext,
+      recentHistory: ctxHistory,
+    });
 
-    const systemPrompt = buildEnhancementSystemPrompt(workoutSections, useImperial);
+    const systemPrompt = buildEnhancementSystemPrompt({
+      workoutSections,
+      useImperial,
+      programmingContract,
+    });
 
     sendEvent(controller, encoder, 'status', {
       message: `Enhancing ${skeletonWorkouts.length} workouts with full details...`,
@@ -465,6 +520,12 @@ function detectWorkoutSections(skeletonWorkouts) {
     /## Skill Work/i,
     /## Intervals/i,
     /## Sport Conditioning/i,
+    /## Engine/i,
+    /## Station Work/i,
+    /## Metcon/i,
+    /## Supplemental/i,
+    /## Assistance/i,
+    /## Accessory EMOM/i,
   ];
 
   for (const pattern of sectionPatterns) {
@@ -476,215 +537,7 @@ function detectWorkoutSections(skeletonWorkouts) {
     }
   }
 
-  return sections.length > 0 ? sections : ['Strength', 'Conditioning'];
-}
-
-// Build the enhancement prompt
-function buildEnhancementPrompt(
-  skeletonWorkouts,
-  weekNumber,
-  context,
-  weekSpecificInput,
-  workoutSections,
-  clientMetricsContent,
-  useImperial
-) {
-  const skeletonContent = skeletonWorkouts
-    .map((w, i) => `### Day ${i + 1}: ${w.title}\n${w.body_skeleton || ''}`)
-    .join('\n\n---\n\n');
-
-  // Extract context values
-  const numberOfWeeks = context?.numberOfWeeks ?? 4;
-  const difficulty = context?.difficulty || 'Intermediate';
-  const goal = context?.goal || '';
-  const trainingMethodology = context?.trainingMethodology || '';
-  const equipment = Array.isArray(context?.equipment) ? context.equipment : [];
-  const sessionMinutes =
-    context?.sessionMinutes ??
-    context?.session_details?.duration_minutes ??
-    context?.workout_duration ??
-    60;
-  const workoutFormats = context?.workoutFormats || context?.workout_format?.formats || [];
-  const focusArea = context?.focusArea || context?.focus || '';
-  const referenceMaterial = context?.referenceMaterial || '';
-  const equipmentRestrictions = formatEquipmentRestrictions(equipment);
-
-  // Check if athlete appears experienced based on client metrics
-  const hasExperiencedAthlete =
-    clientMetricsContent &&
-    (/\b[3-9]\s*(yrs?|years?)\b/i.test(clientMetricsContent) ||
-      /\b[1-9]\d+\s*(yrs?|years?)\b/i.test(clientMetricsContent) ||
-      /experience.*[3-9]/i.test(clientMetricsContent) ||
-      /advanced|elite|competitive|crossfit|olympic/i.test(clientMetricsContent));
-
-  const isShortProgram = numberOfWeeks <= 2;
-
-  // Default instruction when no user input provided - ensures rich content generation
-  const defaultInstruction = `Generate comprehensive workout details with full coaching context. Include strategic intent for each session, detailed coaching cues for all main movements, and complete warm-up/cool-down protocols.`;
-
-  const effectiveInput = weekSpecificInput?.trim() || defaultInstruction;
-
-  // Build program context section
-  const programContextSection = `
-PROGRAM CONTEXT:
-- Total Program Length: ${numberOfWeeks} week(s)
-- Week Number: ${weekNumber} of ${numberOfWeeks}
-- Difficulty Level: ${difficulty}
-- Session Duration: ${sessionMinutes} minutes
-${goal ? `- Goal: ${goal}` : ''}
-${focusArea ? `- Focus Area: ${focusArea}` : ''}
-${trainingMethodology ? `- Training Style: ${trainingMethodology.replace(/_/g, ' ')}` : ''}
-${workoutFormats && workoutFormats.length > 0 ? `- Workout Formats: ${workoutFormats.join(', ')}` : ''}
-`;
-
-  // Build guidance for short programs
-  const shortProgramGuidance = isShortProgram
-    ? `
-CRITICAL - SHORT PROGRAM RULES:
-This is a ${numberOfWeeks}-week program. DO NOT:
-- Refer to Week 1 as "orientation", "introduction", "foundation phase", or "ramp-up"
-- Mention "preparing for subsequent weeks" or "building up to later phases"
-- Use language suggesting this is preparation for something else
-- Treat early sessions as reduced-intensity "intro" sessions
-Instead, treat EVERY session as a full training session with appropriate intensity for the stated difficulty level (${difficulty}).
-`
-    : '';
-
-  // Build guidance for experienced athletes
-  const experiencedAthleteGuidance = hasExperiencedAthlete
-    ? `
-EXPERIENCED ATHLETE NOTICE:
-Your profile indicates significant training experience. DO NOT:
-- Include basic technique explanations for standard movements
-- Use reduced "beginner" or "intro" weights
-- Over-explain fundamental concepts they already know
-- Frame sessions as "teaching" or "learning" phases
-Instead, assume competency with standard movements and use appropriate intensity.
-`
-    : '';
-
-  const prompt = `Enhance these skeleton workouts for Week ${weekNumber} with FULL professional-grade details.
-
-SKELETON WORKOUTS:
-${skeletonContent}
-
----
-
-SKELETON CONTAINS: ${workoutSections.join(', ')} sections
-${programContextSection}
-${equipmentRestrictions}
-${
-  referenceMaterial
-    ? `
-REFERENCE MATERIAL:
-${referenceMaterial}
-`
-    : ''
-}
-${shortProgramGuidance}${experiencedAthleteGuidance}
-ENHANCEMENT INSTRUCTIONS:
-"${effectiveInput}"
-${
-  weekSpecificInput
-    ? `
-IMPORTANT: Incorporate these specific adjustments into your enhancements.`
-    : ''
-}
-
-${
-  clientMetricsContent
-    ? `
-YOUR CONTEXT:
-${clientMetricsContent}
-`
-    : ''
-}
-
-YOU MUST ADD THESE SECTIONS TO EACH WORKOUT:
-
-1. **Stimulus and Strategy** (at the TOP of each workout):
-   - Primary Focus: 1-2 sentences on the main training goal
-   - Session Context: ${
-     isShortProgram
-       ? 'Brief note on how this session contributes to the program goal (do NOT use intro/orientation framing)'
-       : 'How this fits into the weekly/program progression'
-   }
-   - Bullet points explaining the intent behind each major component (strength, conditioning, etc.)
-   - Rest periods and pacing guidance
-
-2. **Warm-up** (12 minutes total, equipment-legal):
-   - General Preparation (5 min): Light bodyweight movement (e.g., brisk walk, marching in place)
-   - Specific Mobility (4 min): Targeted joint prep and dynamic stretches that require no unlisted tools
-   - Movement Preparation (3 min): Build-up sets and activation drills using only available equipment
-
-3. **Coaching Cues** (2-3 per main exercise):
-   - Technical focus points for each major lift/movement
-   - Common faults to avoid
-   - Breathing and bracing cues where relevant
-
-4. **Pacing Strategy** (for conditioning work):
-   - Target effort percentage (e.g., "70-75% effort")
-   - Expected rounds or time targets
-   - When to push vs. maintain steady pace
-
-5. **Scaling Options**:
-   - Weight modifications for different levels
-   - Movement substitutions
-   - Rep/round adjustments
-
-6. **Cool-down** (10 minutes, equipment-legal):
-   - Easy movement (3-4 min)
-   - Static stretching for worked areas
-   - Breathing/recovery notes
-
-CRITICAL RULES:
-- DO NOT change exercises, sets, reps, weights, or percentages in the ${workoutSections.join('/')} sections
-- ADD the enhancement sections around the existing workout structure
-- Preserve the exact exercises and prescriptions from the skeleton
-- Express weights in ${useImperial ? 'lbs' : 'kg'}
-- Make each workout feel like it was written by an expert coach
-
-OUTPUT FORMAT (JSON):
-{
-  "workouts": [
-    {
-      "title": "Week ${weekNumber}, Day 1: [Focus]",
-      "body": "[Complete enhanced workout with ALL sections listed above]"
-    }
-  ]
-}`;
-
-  return prompt;
-}
-
-// Build the system prompt for enhancement
-function buildEnhancementSystemPrompt(workoutSections, useImperial) {
-  return `You write comprehensive training sessions for a self-coached athlete. Speak directly to the athlete. Preserve the core structure from the skeleton and add the missing context and guidance to make each session actionable.
-
-Your role is to ADD these sections to each workout while preserving the core exercises (do not change the ${workoutSections.join(' or ')} sections):
-
-1. **Stimulus and Strategy** - At the TOP of each workout. Explain the WHY behind the session: primary focus, how it fits the program, intent behind each component, rest/pacing guidance.
-
-2. **Warm-up** - 12 minutes total, equipment-legal:
-   - General Preparation (5 min): Simple bodyweight movement to raise heart rate
-   - Specific Mobility (4 min): Targeted joint prep and dynamic stretches with only available equipment
-   - Movement Preparation (3 min): Build-up sets and activation drills using the same implements as the session (or bodyweight)
-
-3. **Coaching Cues** - 2-3 specific cues per main exercise. Include technical focus points, common faults, breathing cues.
-
-4. **Pacing Strategy** - For conditioning: target effort %, expected rounds, when to push vs. maintain pace.
-
-5. **Scaling Options** - Weight modifications, movement substitutions, rep adjustments for different fitness levels.
-
-6. **Cool-down** - 10 minutes: easy movement, static stretching, recovery notes (no unlisted tools).
-
-CRITICAL: You must NOT modify the ${workoutSections.join(' or ')} sections from the skeleton. Preserve all exercises, sets, reps, weights, and percentages exactly. Only ADD the enhancement sections around them. All additions must obey the available-equipment constraint.
-
-Express all weights in ${useImperial ? 'pounds (lbs)' : 'kilograms (kg)'}.
-
-Write like an expert coach speaking to a committed individual athlete. Make each workout feel complete and thoughtfully programmed for solo training.
-
-Output valid JSON with enhanced workouts.`;
+  return sections.length > 0 ? sections : ['Primary Work', 'Secondary Work'];
 }
 
 // Validate that structure is preserved

@@ -1762,6 +1762,12 @@ export async function generateSkeletonProgram({
           days_of_week: daysOfWeekNumbers,
         },
         workout_format: formData.workoutFormats,
+        referenceInput: formData.referenceInput || formData.personalization || '',
+        personalization: formData.personalization || '',
+        session_details: formData.sessionDetails || formData.session_details || {},
+        program_influences: formData.program_influences || formData.programInfluences || '',
+        recent_training_history:
+          formData.recent_training_history || formData.recentTrainingHistory || '',
         forceRegenerate: true,
       };
 
