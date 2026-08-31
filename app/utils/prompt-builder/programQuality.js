@@ -311,9 +311,11 @@ export function isGarageLikeEquipment(equipment = []) {
     (Array.isArray(equipment) ? equipment : []).map((item) => String(item))
   );
   const hasCommercial = COMMERCIAL_ONLY_EQUIPMENT.some((item) => available.has(item));
-  const hasBarbellOrRack =
-    available.has('Barbell') || available.has('Power Rack') || available.has('Dumbbell');
-  return hasBarbellOrRack && !hasCommercial;
+  const hasBarbellOrRack = available.has('Barbell') || available.has('Power Rack');
+  const looksLikeRaceOrBoxKit =
+    ['SkiErg', 'Sled', 'Rower', 'Air Bike', 'Wall Ball'].filter((item) => available.has(item))
+      .length >= 3;
+  return hasBarbellOrRack && !hasCommercial && !looksLikeRaceOrBoxKit;
 }
 
 export function buildGarageEquipmentRules(equipment = []) {

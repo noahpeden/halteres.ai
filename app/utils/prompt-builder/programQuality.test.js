@@ -152,6 +152,7 @@ describe('influence signatures diverge', () => {
 describe('equipment, duration, density, voice, RAG', () => {
   it('treats garage equipment as a hard no-cables constraint', () => {
     assert.equal(isGarageLikeEquipment(GARAGE_EQUIPMENT), true);
+    assert.equal(isGarageLikeEquipment(HYROX_ENGINE.equipment), false);
     const restrictions = formatEquipmentRestrictions(GARAGE_EQUIPMENT);
     assert.match(restrictions, /Cable Machine|cable machines/i);
     assert.match(restrictions, /garage/i);
