@@ -479,6 +479,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          athlete_file: Json | null
           avatar_url: string | null
           bench_1rm: number | null
           current_period_end: string | null
@@ -517,6 +518,7 @@ export type Database = {
           weight_kg: number | null
         }
         Insert: {
+          athlete_file?: Json | null
           avatar_url?: string | null
           bench_1rm?: number | null
           current_period_end?: string | null
@@ -555,6 +557,7 @@ export type Database = {
           weight_kg?: number | null
         }
         Update: {
+          athlete_file?: Json | null
           avatar_url?: string | null
           bench_1rm?: number | null
           current_period_end?: string | null

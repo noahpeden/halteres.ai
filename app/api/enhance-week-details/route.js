@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { formatProviderError, streamChatCompletion } from '@/utils/ai/provider';
+import { resolveAthleteIntakeForUser } from '@/utils/prompt-builder/athleteFile.js';
 import {
   buildEnhancementPrompt,
   buildEnhancementSystemPrompt,
@@ -13,11 +14,7 @@ import {
   shouldAcceptEnhancementComplete,
   verifiedPersistIsAcceptable,
 } from '@/utils/prompt-builder/generationGuardrails.js';
-import {
-  extractIntakeInjury,
-  extractIntakeLifts,
-  formatInjuryHistory,
-} from '@/utils/prompt-builder/intakeMetrics.js';
+import { formatInjuryHistory } from '@/utils/prompt-builder/intakeMetrics.js';
 import {
   assertUniqueDayNumbers,
   canonicalizeDayTitle,
@@ -34,6 +31,7 @@ import {
 } from '@/utils/prompt-builder/promptBuilder.js';
 import { getWorkoutLibraryRagContext } from '@/utils/prompt-builder/ragContext.js';
 import { corsHeaders, createMobileCompatibleClient } from '@/utils/supabase/mobile';
+import { loadAthleteFileForUser } from '@/utils/supabase/ownProfile.js';
 
 const ENHANCE_STREAM_TIMEOUT_MS = 180000;
 
@@ -281,20 +279,37 @@ async function enhanceWeekWorkouts(requestData, supabase, controller, encoder) {
       goal: context?.goal || programMeta?.goal || '',
       description: context?.description || programMeta?.description || '',
     };
-    const intakeSource = [
-      augmentedContext.description,
-      referenceMaterial,
-      ctxInfluences,
-      ctxHistory,
-    ]
-      .filter(Boolean)
-      .join('\n');
-    const intakeLifts = extractIntakeLifts(intakeSource);
+    // Newest wins: description/notes override profiles.athlete_file when they
+    // contain a parseable max. The file is the baseline so enhance still gets
+    // concrete pounds (squat 315 → 80% = 250 lb) when notes omit maxes.
+    const resolvedIntake = await resolveAthleteIntakeForUser({
+      supabase,
+      user,
+      requestAthleteFile: context?.athleteFile || context?.athlete_file,
+      description: augmentedContext.description,
+      extraTexts: [referenceMaterial, ctxInfluences, ctxHistory],
+      loadAthleteFile: () => loadAthleteFileForUser(supabase, user),
+    });
+    const intakeLifts = resolvedIntake.intakeLifts;
     const intakeInjury =
-      extractIntakeInjury(intakeSource) ||
+      resolvedIntake.intakeInjury ||
       formatInjuryHistory(context?.injury_history || context?.injuryHistory || '');
     augmentedContext.intakeLifts = intakeLifts;
     augmentedContext.intakeInjury = intakeInjury;
+    augmentedContext.athleteFile = resolvedIntake.athleteFile;
+    if (
+      (sessionMinutes == null || Number.isNaN(Number(sessionMinutes))) &&
+      resolvedIntake.athleteFile.session_minutes
+    ) {
+      augmentedContext.sessionMinutes = resolvedIntake.athleteFile.session_minutes;
+    }
+    if (
+      !augmentedContext.daysPerWeek &&
+      !augmentedContext.days_per_week &&
+      resolvedIntake.athleteFile.days_per_week
+    ) {
+      augmentedContext.daysPerWeek = resolvedIntake.athleteFile.days_per_week;
+    }
 
     const programmingContract = buildProgrammingContract({
       programName: context?.programName || programMeta?.name || '',
@@ -306,7 +321,7 @@ async function enhanceWeekWorkouts(requestData, supabase, controller, encoder) {
       influences: ctxInfluences,
       recentHistory: ctxHistory,
       workoutFormats,
-      sessionMinutes,
+      sessionMinutes: augmentedContext.sessionMinutes,
       daysPerWeek:
         augmentedContext.daysPerWeek ||
         augmentedContext.days_per_week ||

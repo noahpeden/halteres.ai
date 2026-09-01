@@ -6,11 +6,19 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProgram } from '@/contexts/ProgramContext';
 import {
+  defaultDayNames,
+  hydrateAthleteFileFromProfile,
+  isAthleteFileFilled,
+  looksLikeCreateProgramDefaults,
+  normalizeAthleteFile,
+} from '@/utils/prompt-builder/athleteFile.js';
+import {
   shouldStartWeekEnhance,
   workoutsForWeek,
 } from '@/utils/prompt-builder/generationGuardrails';
 import Toast from '../Toast';
 import { difficulties, focusAreas, gymTypes, programTypes } from '../utils';
+import AthleteFileCard from './AthleteFileCard';
 import DatePickerModalComponent from './DatePickerModal';
 import { calculateEndDate } from './dateHandlers';
 import EditWorkoutModalComponent from './EditWorkoutModal';
@@ -57,6 +65,8 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
     lastGenerationDate,
     refetchProfile,
     currentGym,
+    user,
+    profile,
   } = useAuth();
 
   const {
@@ -126,6 +136,11 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
   const enhancingWeeksRef = useRef(new Set());
   const [showGenerationProgress, setShowGenerationProgress] = useState(false);
   const [skeletonProgress, setSkeletonProgress] = useState(null);
+  const [athleteFile, setAthleteFile] = useState(() => hydrateAthleteFileFromProfile(profile));
+  const [athleteFileEditing, setAthleteFileEditing] = useState(false);
+  const [athleteFileSkipped, setAthleteFileSkipped] = useState(false);
+  const [athleteFileSaving, setAthleteFileSaving] = useState(false);
+  const didPrefillFromFileRef = useRef(false);
 
   useEffect(() => {
     if (generationStage === 'skeleton_complete') {
@@ -212,6 +227,127 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
       if (descriptionTimeoutRef.current) clearTimeout(descriptionTimeoutRef.current);
       if (referenceTimeoutRef.current) clearTimeout(referenceTimeoutRef.current);
     };
+  }, []);
+
+  useEffect(() => {
+    setAthleteFile(hydrateAthleteFileFromProfile(profile));
+  }, [profile]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const response = await fetch('/api/athlete/athlete-file');
+        const data = await response.json();
+        if (!cancelled && data.success && data.athleteFile) {
+          setAthleteFile(normalizeAthleteFile(data.athleteFile));
+        }
+      } catch {
+        // Empty file is allowed — generate still works.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id, user?.email]);
+
+  useEffect(() => {
+    if (didPrefillFromFileRef.current || !formData || !updateFormFields) return;
+    if (workouts?.length) return;
+    if (!isAthleteFileFilled(athleteFile)) return;
+    const looksDefault = looksLikeCreateProgramDefaults({
+      daysPerWeek: formData.daysPerWeek,
+      daysOfWeek: formData.daysOfWeek,
+      sessionMinutes: formData.sessionDetails?.duration_minutes,
+    });
+    if (!looksDefault) return;
+    didPrefillFromFileRef.current = true;
+    const updates = {};
+    if (athleteFile.days_per_week) {
+      updates.calendar_data = {
+        ...(formData.calendar_data || {}),
+        start_date: formData.startDate || '',
+        days_per_week: athleteFile.days_per_week,
+        days_of_week: defaultDayNames(athleteFile.days_per_week),
+      };
+    }
+    if (athleteFile.session_minutes) {
+      updates.session_details = {
+        ...(formData.sessionDetails || formData.session_details || {}),
+        duration_minutes: athleteFile.session_minutes,
+      };
+    }
+    if (Object.keys(updates).length) {
+      updateFormFields(updates);
+    }
+  }, [athleteFile, formData, workouts, updateFormFields]);
+
+  const applyAthleteFileToSchedule = useCallback(
+    (file) => {
+      const updates = {};
+      if (file?.days_per_week) {
+        updates.calendar_data = {
+          ...(formData?.calendar_data || {}),
+          start_date: formData?.startDate || '',
+          days_per_week: file.days_per_week,
+          days_of_week: defaultDayNames(file.days_per_week),
+        };
+      }
+      if (file?.session_minutes) {
+        updates.session_details = {
+          ...(formData?.sessionDetails || formData?.session_details || {}),
+          duration_minutes: file.session_minutes,
+        };
+      }
+      if (Object.keys(updates).length) {
+        return updateFormFields(updates);
+      }
+      return Promise.resolve();
+    },
+    [formData, updateFormFields]
+  );
+
+  const handleSaveAthleteFile = useCallback(
+    async (nextFile) => {
+      setAthleteFileSaving(true);
+      try {
+        const normalized = normalizeAthleteFile({
+          ...nextFile,
+          skipped: false,
+          updated_at: new Date().toISOString(),
+        });
+        const response = await fetch('/api/athlete/athlete-file', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(normalized),
+        });
+        const data = await response.json();
+        if (!data.success) {
+          throw new Error(data.error || 'Could not save your numbers');
+        }
+        const saved = normalizeAthleteFile(data.athleteFile || normalized);
+        setAthleteFile(saved);
+        setAthleteFileEditing(false);
+        setAthleteFileSkipped(false);
+        await applyAthleteFileToSchedule(saved);
+        if (refetchProfile) {
+          await refetchProfile();
+        }
+        showToast('Your numbers are saved.', 'success');
+        return true;
+      } catch (error) {
+        showToast(error.message || 'Could not save your numbers', 'error');
+        return false;
+      } finally {
+        setAthleteFileSaving(false);
+      }
+    },
+    [applyAthleteFileToSchedule, refetchProfile, showToast]
+  );
+
+  const handleSkipAthleteFile = useCallback(() => {
+    setAthleteFileSkipped(true);
+    setAthleteFileEditing(false);
   }, []);
 
   // Validation helper
@@ -347,6 +483,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
           ...formData,
           equipment: selectedEquipment,
           gymId: currentGym?.id || formData.gymId,
+          athleteFile,
         },
         setIsLoading: () => {},
         setSuggestions: saveGeneratedWorkouts,
@@ -378,6 +515,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
     programId,
     formData,
     selectedEquipment,
+    athleteFile,
     showToast,
     workouts,
     startGeneration,
@@ -843,8 +981,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
 
       try {
         const fromDb = workoutsForWeek(workouts, week);
-        const weekWorkouts =
-          fromDb.length > 0 ? fromDb : workoutsForWeek(displayWorkouts, week);
+        const weekWorkouts = fromDb.length > 0 ? fromDb : workoutsForWeek(displayWorkouts, week);
 
         const result = await approveAndEnhanceWeek({
           programId,
@@ -867,6 +1004,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
             program_influences: formData?.program_influences || formData?.programInfluences || '',
             recent_training_history:
               formData?.recent_training_history || formData?.recentTrainingHistory || '',
+            athleteFile,
           },
           weekSpecificInput: weekInput || weekInputs[week] || weekInputs[weekNumber] || '',
           updateWorkoutStatus: (workoutId, updates) => {
@@ -896,6 +1034,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
       displayWorkouts,
       formData,
       selectedEquipment,
+      athleteFile,
       weekInputs,
       updateWorkout,
       showToast,
@@ -944,6 +1083,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
           ...formData,
           equipment: selectedEquipment,
           gymId: currentGym?.id || formData.gymId,
+          athleteFile,
         },
         setIsLoading: () => {},
         setSuggestions: saveGeneratedWorkouts,
@@ -969,6 +1109,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
     programId,
     formData,
     selectedEquipment,
+    athleteFile,
     saveGeneratedWorkouts,
     showToast,
     startGeneration,
@@ -1067,6 +1208,19 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
 
         {/* Collapsible Sections */}
         <div className="p-4 space-y-1 flex-1 overflow-y-auto min-h-0">
+          <div className="pb-3 mb-2 border-b border-[var(--paper-rule)]">
+            <AthleteFileCard
+              athleteFile={athleteFile}
+              compact={!athleteFileEditing}
+              editing={athleteFileEditing}
+              saving={athleteFileSaving}
+              showSkip={false}
+              onEdit={() => setAthleteFileEditing(true)}
+              onCancelEdit={() => setAthleteFileEditing(false)}
+              onSave={handleSaveAthleteFile}
+            />
+          </div>
+
           {/* Methodology Section */}
           <details className="group" open>
             <summary className="writer-summary">
@@ -1111,9 +1265,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
             </summary>
             <div className="px-3 pb-3 pt-1 space-y-3">
               <div>
-                <label className="writer-field-label">
-                  Days of Week
-                </label>
+                <label className="writer-field-label">Days of Week</label>
                 <div className="flex flex-wrap gap-1.5">
                   {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, i) => {
                     const fullDay = [
@@ -1146,9 +1298,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="writer-field-label">
-                    Weeks (1–52)
-                  </label>
+                  <label className="writer-field-label">Weeks (1–52)</label>
                   <input
                     type="number"
                     min={1}
@@ -1159,9 +1309,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
                   />
                 </div>
                 <div>
-                  <label className="writer-field-label">
-                    Duration (min)
-                  </label>
+                  <label className="writer-field-label">Duration (min)</label>
                   <input
                     type="number"
                     className="writer-field"
@@ -1177,9 +1325,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
                 </div>
               </div>
               <div>
-                <label className="writer-field-label">
-                  Start Date
-                </label>
+                <label className="writer-field-label">Start Date</label>
                 <input
                   type="date"
                   className="writer-field"
@@ -1221,9 +1367,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
                 </select>
               </div>
               <div>
-                <label className="writer-field-label">
-                  Difficulty
-                </label>
+                <label className="writer-field-label">Difficulty</label>
                 <select
                   className="writer-field"
                   value={formData?.difficulty || 'intermediate'}
@@ -1251,9 +1395,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
             </summary>
             <div className="px-3 pb-3 pt-1 space-y-3">
               <div>
-                <label className="writer-field-label">
-                  Focus Area
-                </label>
+                <label className="writer-field-label">Focus Area</label>
                 <select
                   className="writer-field"
                   value={formData?.focusArea || ''}
@@ -1268,9 +1410,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
                 </select>
               </div>
               <div>
-                <label className="writer-field-label">
-                  Workout Types
-                </label>
+                <label className="writer-field-label">Workout Types</label>
                 <div className="flex flex-wrap gap-1.5">
                   {[
                     { id: 'strength', label: 'Strength' },
@@ -1381,6 +1521,20 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
 
       {/* RIGHT: Main Content Area - Workouts */}
       <div className="flex-1 min-w-0 p-4 lg:p-6 overflow-y-auto">
+        {isAthleteFileFilled(athleteFile) && displayWorkouts.length > 0 ? (
+          <div className="mb-4">
+            <AthleteFileCard
+              athleteFile={athleteFile}
+              compact={!athleteFileEditing}
+              editing={athleteFileEditing}
+              saving={athleteFileSaving}
+              onEdit={() => setAthleteFileEditing(true)}
+              onCancelEdit={() => setAthleteFileEditing(false)}
+              onSave={handleSaveAthleteFile}
+            />
+          </div>
+        ) : null}
+
         {/* Workouts Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 lg:mb-6 pb-4 border-b border-[var(--paper-rule)] gap-3">
           <div>
@@ -1453,15 +1607,49 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
           </div>
         )}
 
-        {/* Empty State */}
+        {/* Empty State — athlete file is first when it is unfinished */}
         {displayWorkouts.length === 0 && !isGenerating && (
-          <div className="flex flex-col items-center justify-center min-h-80 text-center border border-dashed border-[var(--paper-rule)] bg-[var(--paper)] px-6 py-12">
-            <p className="athlete-label mb-3">Blank page</p>
-            <h3 className="athlete-heading-xl mb-3">The ledger is waiting.</h3>
-            <p className="athlete-body max-w-sm">
-              Write the notes on the left — equipment, days, how long this block should last — then
-              generate. Every day stays editable.
-            </p>
+          <div className="space-y-6">
+            {!isAthleteFileFilled(athleteFile) && !athleteFileSkipped ? (
+              <AthleteFileCard
+                athleteFile={athleteFile}
+                compact={false}
+                editing
+                saving={athleteFileSaving}
+                showSkip
+                onSave={handleSaveAthleteFile}
+                onSkip={handleSkipAthleteFile}
+              />
+            ) : !isAthleteFileFilled(athleteFile) ? (
+              <AthleteFileCard
+                athleteFile={athleteFile}
+                compact={!athleteFileEditing}
+                editing={athleteFileEditing}
+                saving={athleteFileSaving}
+                showSkip={false}
+                onEdit={() => setAthleteFileEditing(true)}
+                onCancelEdit={() => setAthleteFileEditing(false)}
+                onSave={handleSaveAthleteFile}
+              />
+            ) : (
+              <AthleteFileCard
+                athleteFile={athleteFile}
+                compact={!athleteFileEditing}
+                editing={athleteFileEditing}
+                saving={athleteFileSaving}
+                onEdit={() => setAthleteFileEditing(true)}
+                onCancelEdit={() => setAthleteFileEditing(false)}
+                onSave={handleSaveAthleteFile}
+              />
+            )}
+            <div className="flex flex-col items-center justify-center min-h-48 text-center border border-dashed border-[var(--paper-rule)] bg-[var(--paper)] px-6 py-10">
+              <p className="athlete-label mb-3">Blank page</p>
+              <h3 className="athlete-heading-xl mb-3">The ledger is waiting.</h3>
+              <p className="athlete-body max-w-sm">
+                Your numbers stay on you. Equipment and notes stay on the left. Generate when you
+                are ready — every day stays editable.
+              </p>
+            </div>
           </div>
         )}
       </div>
