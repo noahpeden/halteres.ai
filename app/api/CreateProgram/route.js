@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
+import { defaultDaysOfWeek } from '@/utils/prompt-builder/athleteFile.js';
 import { corsHeaders, createMobileCompatibleClient } from '@/utils/supabase/mobile';
+import { loadAthleteFileForUser } from '@/utils/supabase/ownProfile.js';
 
 // Handle OPTIONS for CORS preflight
 export async function OPTIONS(request) {
@@ -67,28 +69,7 @@ export async function POST(req) {
       );
     }
     const userId = user.id;
-
-    // Helper to compute default training days based on days_per_week
-    function defaultDaysOfWeek(count) {
-      const c = Math.max(1, Math.min(7, Number.isFinite(count) ? count : 3));
-      switch (c) {
-        case 1:
-          return [1]; // Mon
-        case 2:
-          return [1, 4]; // Mon, Thu
-        case 3:
-          return [1, 3, 5]; // Mon, Wed, Fri
-        case 4:
-          return [1, 2, 4, 5]; // Mon, Tue, Thu, Fri
-        case 5:
-          return [1, 2, 3, 4, 5]; // Mon-Fri
-        case 6:
-          return [1, 2, 3, 4, 5, 6]; // Mon-Sat
-        case 7:
-        default:
-          return [0, 1, 2, 3, 4, 5, 6]; // Every day
-      }
-    }
+    const athleteFile = await loadAthleteFileForUser(supabase, user);
 
     // Compute start_date (default today, YYYY-MM-DD)
     const startDate = start_date || new Date().toISOString().split('T')[0];
@@ -97,10 +78,18 @@ export async function POST(req) {
     const durationWeeks = parseInt(duration_weeks || 8, 10);
 
     // Determine days_of_week; fallback from days_per_week if not provided
+    const thinCreateDefaults =
+      !days_of_week && (days_per_week == null || Number(days_per_week) === 3);
+    const daysCount = parseInt(
+      thinCreateDefaults && athleteFile.days_per_week
+        ? athleteFile.days_per_week
+        : days_per_week || athleteFile.days_per_week || 3,
+      10
+    );
     const normalizedDaysOfWeek =
       (Array.isArray(days_of_week) && days_of_week.filter((d) => d >= 0 && d <= 6))?.length > 0
         ? days_of_week
-        : defaultDaysOfWeek(parseInt(days_per_week || 3, 10));
+        : defaultDaysOfWeek(daysCount);
 
     // Compute end_date based on schedule (last scheduled workout date)
     function computeEndDate(startISO, dayNumbers, totalWorkouts) {
@@ -272,7 +261,7 @@ export async function POST(req) {
         },
         // Save session details
         session_details: {
-          duration_minutes: workout_duration || 60,
+          duration_minutes: workout_duration || athleteFile.session_minutes || 60,
           useImperial: useImperial !== undefined ? !!useImperial : true,
         },
       })

@@ -91,7 +91,14 @@ Do not invent a different max. If a lift has no stated max, keep the percentage.
 </stated_max_loading>`;
 }
 
-export function formatAthleteIntakeBlock({ description = '', lifts = {}, injuryText = '' } = {}) {
+export function formatAthleteIntakeBlock({
+  description = '',
+  lifts = {},
+  injuryText = '',
+  bodyweightLb = null,
+  daysPerWeek = null,
+  sessionMinutes = null,
+} = {}) {
   const trimmed = String(description || '').trim();
   const liftLines = [
     formatLiftLine('Bench', lifts.bench_lb),
@@ -99,8 +106,16 @@ export function formatAthleteIntakeBlock({ description = '', lifts = {}, injuryT
     formatLiftLine('Deadlift', lifts.deadlift_lb),
   ].filter(Boolean);
   const injury = formatInjuryHistory(injuryText);
+  const bodyweight = Number(bodyweightLb);
+  const days = Number(daysPerWeek);
+  const minutes = Number(sessionMinutes);
+  const fileLines = [
+    Number.isFinite(bodyweight) && bodyweight > 0 ? `Bodyweight: ${Math.round(bodyweight)} lb` : '',
+    Number.isFinite(days) && days > 0 ? `Training days / week: ${Math.round(days)}` : '',
+    Number.isFinite(minutes) && minutes > 0 ? `Session length: ${Math.round(minutes)} minutes` : '',
+  ].filter(Boolean);
 
-  if (!trimmed && liftLines.length === 0 && !injury) return '';
+  if (!trimmed && liftLines.length === 0 && !injury && fileLines.length === 0) return '';
 
   return `
 <athlete_intake priority="critical">
@@ -110,6 +125,7 @@ ${
     ? `\nWorking 1RMs from intake (pounds — convert every %1RM into these loads; do not leave generic "% of 1RM" only or bodyweight-only):\n${liftLines.join('\n')}`
     : ''
 }
+${fileLines.length ? `\nAthlete file (person-level — honor these unless notes above override a number):\n${fileLines.join('\n')}` : ''}
 ${injury ? `\nInjury / joint notes:\n${injury}` : ''}
 If barbell, dumbbell, kettlebell, rower, bike, or wall ball is listed, do NOT write "All loading is bodyweight; no external equipment required."
 </athlete_intake>`;

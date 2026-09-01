@@ -137,6 +137,9 @@ ${formatAthleteIntakeBlock({
   description: context?.description || '',
   lifts: context?.intakeLifts || {},
   injuryText: context?.intakeInjury || '',
+  bodyweightLb: context?.athleteFile?.bodyweight_lb,
+  daysPerWeek: context?.athleteFile?.days_per_week,
+  sessionMinutes: context?.athleteFile?.session_minutes,
 })}
 ${formatStatedMaxLoadingRules(context?.intakeLifts || {})}
 ${formatProgrammingContract(programmingContract, { weekNumber })}

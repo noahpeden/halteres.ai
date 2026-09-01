@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
+import { mergeIntakeFromAthleteFileAndText, normalizeAthleteFile } from './athleteFile.js';
 import { buildEnhancementPrompt } from './enhanceWeekPrompt.js';
 import { resolveEquipmentLabels } from './equipmentLabels.js';
 import { extractIntakeLifts } from './intakeMetrics.js';
@@ -385,6 +386,54 @@ describe('equipment, duration, density, voice, RAG', () => {
     assert.match(enhance, /Mayhem/);
     assert.match(enhance, /you MUST replace generic "% of 1RM"/);
     assert.doesNotMatch(enhance, /DO NOT change exercises, sets, reps, weights, or percentages/);
+  });
+
+  it('enhance and skeleton use a saved athlete file when the description has no maxes', () => {
+    const athleteFile = normalizeAthleteFile({
+      squat_lb: 315,
+      bench_lb: 225,
+      deadlift_lb: 405,
+      bodyweight_lb: 185,
+      days_per_week: 4,
+      session_minutes: 60,
+    });
+    const description = 'Garage gym. Wendler 5/3/1. No maxes written here.';
+    const merged = mergeIntakeFromAthleteFileAndText({ athleteFile, text: description });
+    const enhance = buildEnhancementPrompt({
+      skeletonWorkouts: [
+        { title: 'Week 1, Day 1: Bench 5s', body_skeleton: '## Main Lift (5/3/1)\n- Bench 65%x5' },
+      ],
+      weekNumber: 1,
+      context: {
+        numberOfWeeks: 8,
+        difficulty: 'Intermediate',
+        goal: 'bench +20',
+        description,
+        equipment: resolveEquipmentLabels([1, 2, 3, 5]),
+        intakeLifts: merged.lifts,
+        athleteFile,
+      },
+      weekSpecificInput: '',
+      workoutSections: ['Main Lift (5/3/1)'],
+      clientMetricsContent: '',
+      useImperial: true,
+      programmingContract: buildProgrammingContract({
+        ...GARAGE_531,
+        description,
+        equipment: resolveEquipmentLabels([1, 2, 3, 5]),
+      }),
+    });
+    const skeleton = skeletonFor({
+      ...GARAGE_531,
+      description,
+      intakeLifts: merged.lifts,
+      athleteFile,
+    });
+    assert.match(enhance, /Squat 1RM: 315 lb/);
+    assert.match(enhance, /80% = 250 lb/);
+    assert.match(enhance, /Bodyweight: 185 lb/);
+    assert.match(skeleton, /Squat 1RM: 315 lb/);
+    assert.match(skeleton, /stated_max_loading/);
   });
 
   it('formats workout-library RAG so retrieved research is actually injected', () => {

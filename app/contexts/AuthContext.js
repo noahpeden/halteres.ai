@@ -24,16 +24,27 @@ export function AuthProvider({ children, initialSession }) {
     }
     setLoadingProfile(true);
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select(
-          `subscription_status, trial_end_date, generations_remaining, last_generation_date,
+      const profileColumns = `subscription_status, trial_end_date, generations_remaining, last_generation_date,
            role, display_name, profile_photo_url, notification_preferences,
            bench_1rm, squat_1rm, deadlift_1rm, weight_kg, height_cm, mile_time,
-           gender, recovery_score, injury_history, onboarding_completed`
-        )
+           gender, recovery_score, injury_history, onboarding_completed, email, athlete_file`;
+      let { data, error } = await supabase
+        .from('profiles')
+        .select(profileColumns)
         .eq('id', userId)
         .maybeSingle();
+      if (error && /athlete_file/.test(error.message || '')) {
+        ({ data, error } = await supabase
+          .from('profiles')
+          .select(
+            `subscription_status, trial_end_date, generations_remaining, last_generation_date,
+             role, display_name, profile_photo_url, notification_preferences,
+             bench_1rm, squat_1rm, deadlift_1rm, weight_kg, height_cm, mile_time,
+             gender, recovery_score, injury_history, onboarding_completed, email`
+          )
+          .eq('id', userId)
+          .maybeSingle());
+      }
 
       if (error) {
         if (error.code === 'PGRST116') {
@@ -202,6 +213,7 @@ export function AuthProvider({ children, initialSession }) {
             gender: profile?.gender,
             recovery_score: profile?.recovery_score,
             injury_history: profile?.injury_history,
+            athlete_file: profile?.athlete_file,
           }
         : null,
     }),

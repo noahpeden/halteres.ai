@@ -191,6 +191,7 @@ export async function generateProgram({
           },
           session_details: formData.sessionDetails,
           program_overview: programOverviewData,
+          athleteFile: formData.athleteFile || null,
           forceRegenerate: isReGenerating, // Add the force regenerate flag
         });
 
@@ -1752,6 +1753,7 @@ export async function generateSkeletonProgram({
         program_influences: formData.program_influences || formData.programInfluences || '',
         recent_training_history:
           formData.recent_training_history || formData.recentTrainingHistory || '',
+        athleteFile: formData.athleteFile || null,
         forceRegenerate: true,
       };
 

@@ -4,9 +4,12 @@ import {
   streamChatCompletion,
   withPlaceholderGuard,
 } from '@/utils/ai/provider';
+import {
+  defaultDaysOfWeek,
+  resolveAthleteIntakeForUser,
+} from '@/utils/prompt-builder/athleteFile.js';
 import { pickEquipmentLabels } from '@/utils/prompt-builder/equipmentLabels.js';
 import { assertUsableSkeletonWorkouts } from '@/utils/prompt-builder/generationGuardrails.js';
-import { extractIntakeInjury, extractIntakeLifts } from '@/utils/prompt-builder/intakeMetrics.js';
 import {
   assertFullProgramLength,
   assertUniqueDayNumbers,
@@ -29,6 +32,7 @@ import {
   buildSkeletonWeekPrompt,
 } from '@/utils/prompt-builder/skeletonPrompt.js';
 import { corsHeaders, createMobileCompatibleClient } from '@/utils/supabase/mobile';
+import { loadAthleteFileForUser } from '@/utils/supabase/ownProfile.js';
 
 const SKELETON_WEEK_TIMEOUT_MS = 120000;
 
@@ -370,6 +374,7 @@ async function generateWeekSkeleton(
     recentHistory,
     intakeLifts,
     intakeInjury,
+    athleteFile,
   } = sharedData;
 
   // Calculate dates for this week
@@ -405,6 +410,7 @@ async function generateWeekSkeleton(
     recentHistory,
     intakeLifts,
     intakeInjury,
+    athleteFile,
   });
 
   const systemPrompt = buildSkeletonSystemPrompt({
@@ -674,9 +680,6 @@ async function extractSharedData(requestData, supabase) {
     daysPerWeek = selectedDaysOfWeek.length || daysPerWeek;
   }
 
-  // Calculate total workouts AFTER final numberOfWeeks/daysPerWeek are resolved
-  const totalWorkouts = parseInt(numberOfWeeks, 10) * parseInt(daysPerWeek, 10);
-
   // Merge reference material: request + influences + history + ALWAYS merge DB reference_input
   const influenceText =
     Array.isArray(requestData.program_influences) && requestData.program_influences.length > 0
@@ -697,11 +700,46 @@ async function extractSharedData(requestData, supabase) {
     historyText,
     dbReference,
   });
-  const intakeSource = [description, referenceMaterial, influenceText, historyText]
-    .filter(Boolean)
-    .join('\n');
-  const intakeLifts = extractIntakeLifts(intakeSource);
-  const intakeInjury = extractIntakeInjury(intakeSource);
+  // Verify authentication before loading the person-level athlete file.
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+  if (authError || !user) {
+    throw new Error('Authentication required');
+  }
+
+  // Newest wins: description/notes override profiles.athlete_file when they
+  // contain a parseable max. The file is the baseline so generate still gets
+  // concrete pounds when notes omit squat/bench/deadlift.
+  const resolvedIntake = await resolveAthleteIntakeForUser({
+    supabase,
+    user,
+    requestAthleteFile: requestData.athleteFile || requestData.athlete_file,
+    description,
+    extraTexts: [referenceMaterial, influenceText, historyText],
+    loadAthleteFile: () => loadAthleteFileForUser(supabase, user),
+  });
+  const intakeLifts = resolvedIntake.intakeLifts;
+  const intakeInjury = resolvedIntake.intakeInjury;
+  const athleteFile = resolvedIntake.athleteFile;
+  if (
+    (!providedDaysPerWeek || Number.isNaN(Number(providedDaysPerWeek))) &&
+    athleteFile.days_per_week
+  ) {
+    daysPerWeek = athleteFile.days_per_week;
+    if (selectedDaysOfWeek.length === 0 || selectedDaysOfWeek.join(',') === '1,3,5') {
+      selectedDaysOfWeek = defaultDaysOfWeek(athleteFile.days_per_week);
+    }
+  }
+  if (
+    (providedSessionDuration == null || Number.isNaN(Number(providedSessionDuration))) &&
+    athleteFile.session_minutes
+  ) {
+    sessionDuration = athleteFile.session_minutes;
+  }
+
+  const totalWorkouts = parseInt(numberOfWeeks, 10) * parseInt(daysPerWeek, 10);
 
   // Generate suggested dates
   const suggestedDates = [];
@@ -719,15 +757,6 @@ async function extractSharedData(requestData, supabase) {
     }
     currentDate.setDate(currentDate.getDate() + 1);
     daysChecked++;
-  }
-
-  // Verify authentication
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
-  if (authError || !user) {
-    throw new Error('Authentication required');
   }
 
   // Handle force regeneration
@@ -865,5 +894,6 @@ async function extractSharedData(requestData, supabase) {
     ragContext,
     intakeLifts,
     intakeInjury,
+    athleteFile,
   };
 }
