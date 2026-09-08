@@ -14,6 +14,7 @@ import {
   assertFullProgramLength,
   assertUniqueDayNumbers,
   canonicalizeDayTitle,
+  extractProgramDescription,
   normalizeRequestedWeeks,
   parseModelWorkouts,
 } from '@/utils/prompt-builder/modelOutput.js';
@@ -420,13 +421,15 @@ async function generateWeekSkeleton(
     useImperial,
     programType,
     programmingContract: weekContract,
+    includeDescription,
   });
+  const maxTokens = includeDescription ? 6000 : 4000;
 
   try {
     logWithTimestamp(`Calling AI provider for skeleton week ${weekNumber}`, {
       promptLength: skeletonPrompt.length,
       systemPromptLength: systemPrompt.length,
-      maxTokens: 4000,
+      maxTokens,
       timeoutMs: SKELETON_WEEK_TIMEOUT_MS,
     });
 
@@ -464,7 +467,7 @@ async function generateWeekSkeleton(
       systemBlocks,
       userPrompt: skeletonPrompt,
       temperature: 0.7,
-      maxTokens: 4000,
+      maxTokens,
       timeoutMs: SKELETON_WEEK_TIMEOUT_MS,
     });
 
@@ -514,13 +517,11 @@ async function generateWeekSkeleton(
 
     const result = { workouts: formattedWorkouts };
 
-    try {
-      const overview = JSON.parse(responseContent.match(/\{[\s\S]*\}/)?.[0] || '{}');
-      if (includeDescription && overview.programDescription) {
-        result.programDescription = overview.programDescription;
+    if (includeDescription) {
+      const programDescription = extractProgramDescription(responseContent);
+      if (programDescription) {
+        result.programDescription = programDescription;
       }
-    } catch (_e) {
-      // programDescription is optional
     }
 
     return result;

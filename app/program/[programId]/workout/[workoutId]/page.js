@@ -14,6 +14,7 @@ import {
 import { useRouter } from 'next/navigation';
 import { use, useEffect, useMemo, useRef, useState } from 'react';
 import TemplateFeedbackButton from '@/components/feedback/TemplateFeedbackButton';
+import PalaestraMarkdown from '@/components/PalaestraMarkdown';
 import { SectionButtons, TVDisplayMode, useTVDisplay } from '@/components/TVDisplayMode';
 import { useAuth } from '@/contexts/AuthContext';
 import { parseWorkoutSections } from '@/utils/workoutParser';
@@ -416,7 +417,10 @@ export default function WorkoutDetailsPage(props) {
             <>
               <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6 mb-6">
                 <div className="flex-1">
-                  <h1 className="athlete-heading-xl mb-4" style={{ fontSize: 'clamp(2rem, 6vw, 3.2rem)' }}>
+                  <h1
+                    className="athlete-heading-xl mb-4"
+                    style={{ fontSize: 'clamp(2rem, 6vw, 3.2rem)' }}
+                  >
                     {pendingEnhancement?.title || workout.title || 'Session'}
                   </h1>
 
@@ -617,9 +621,7 @@ export default function WorkoutDetailsPage(props) {
                           {Array.isArray(pendingEnhancement.fitFeedback.whatChanged) &&
                             pendingEnhancement.fitFeedback.whatChanged.length > 0 && (
                               <div>
-                                <div className="writer-field-label mb-1">
-                                  What changed
-                                </div>
+                                <div className="writer-field-label mb-1">What changed</div>
                                 <ul className="list-disc pl-5 text-[var(--ink)]">
                                   {pendingEnhancement.fitFeedback.whatChanged.map((item, idx) => (
                                     <li key={idx}>{item}</li>
@@ -629,9 +631,7 @@ export default function WorkoutDetailsPage(props) {
                             )}
                           {pendingEnhancement.fitFeedback.whyItFits && (
                             <div>
-                                <div className="writer-field-label mb-1">
-                                Why it fits
-                              </div>
+                              <div className="writer-field-label mb-1">Why it fits</div>
                               <div className="text-[var(--ink)]">
                                 {pendingEnhancement.fitFeedback.whyItFits}
                               </div>
@@ -640,9 +640,7 @@ export default function WorkoutDetailsPage(props) {
                           {Array.isArray(pendingEnhancement.fitFeedback.refusedOrAdapted) &&
                             pendingEnhancement.fitFeedback.refusedOrAdapted.length > 0 && (
                               <div>
-                                <div className="writer-field-label mb-1">
-                                  Refused or adapted
-                                </div>
+                                <div className="writer-field-label mb-1">Refused or adapted</div>
                                 <ul className="list-disc pl-5 text-[var(--ink)]">
                                   {pendingEnhancement.fitFeedback.refusedOrAdapted.map(
                                     (item, idx) => (
@@ -655,7 +653,9 @@ export default function WorkoutDetailsPage(props) {
                         </div>
                       )}
                       {pendingEnhancement?.notes && (
-                        <div className="mt-3 text-[var(--ink-soft)]">{pendingEnhancement.notes}</div>
+                        <div className="mt-3 text-[var(--ink-soft)]">
+                          {pendingEnhancement.notes}
+                        </div>
                       )}
                     </div>
                   </div>
@@ -721,12 +721,10 @@ export default function WorkoutDetailsPage(props) {
               )}
 
               <div className="max-w-none">
-                <div className="whitespace-pre-line text-[var(--ink)] leading-relaxed">
-                  {pendingEnhancement?.body ||
-                    workout.body ||
-                    workout.description ||
-                    'Nothing written for this day yet.'}
-                </div>
+                <PalaestraMarkdown
+                  content={pendingEnhancement?.body || workout.body || workout.description}
+                  emptyLabel="Nothing written for this day yet."
+                />
               </div>
             </div>
           )}
@@ -737,10 +735,7 @@ export default function WorkoutDetailsPage(props) {
               <h3 className="athlete-heading-md mb-3">Tags</h3>
               <div className="flex flex-wrap gap-2">
                 {Object.entries(workout.tags).map(([key, value]) => (
-                  <span
-                    key={key}
-                    className="athlete-badge athlete-badge-upcoming"
-                  >
+                  <span key={key} className="athlete-badge athlete-badge-upcoming">
                     {key}: {String(value)}
                   </span>
                 ))}

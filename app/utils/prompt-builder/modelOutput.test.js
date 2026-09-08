@@ -18,6 +18,7 @@ import {
   assertFullProgramLength,
   canonicalizeDayTitle,
   extractDayNumber,
+  extractProgramDescription,
   looksLikeRawJsonBlob,
   normalizeRequestedWeeks,
   parseModelWorkouts,
@@ -110,6 +111,19 @@ describe('model JSON must become title/body fields', () => {
 
   it('unescapes markdown headers so users do not see literal \\n##', () => {
     assert.equal(unescapeWorkoutText('## Engine\\n- row'), '## Engine\n- row');
+  });
+
+  it('extracts and unescapes a markdown programDescription from week-1 JSON', () => {
+    const payload = JSON.stringify({
+      programDescription:
+        '## What this cycle is\\nA concurrent 8-week block.\\n## How the block progresses\\nEarly weeks stay honest.',
+      workouts: [{ title: 'Week 1, Day 1: Squat', body: '## Strength\\n- Squat 5x3' }],
+    });
+    const description = extractProgramDescription(payload);
+    assert.match(description, /^## What this cycle is\n/);
+    assert.match(description, /## How the block progresses/);
+    assert.equal(description.includes('\\n'), false);
+    assert.equal(extractProgramDescription('{"workouts":[]}'), '');
   });
 });
 

@@ -11,7 +11,7 @@
     "format": "biome format --write .",
     "test:prompts": "node --experimental-default-type=module --test app/utils/prompt-builder/*.test.js",
     "test:ai": "node --experimental-default-type=module --test app/utils/ai/*.test.js",
-    "test:unit": "node --experimental-default-type=module --test app/utils/prompt-builder/*.test.js app/utils/ai/*.test.js"
+    "test:unit": "node --experimental-default-type=module --test app/utils/prompt-builder/*.test.js app/utils/ai/*.test.js app/utils/workoutMarkdown.test.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.51.0",

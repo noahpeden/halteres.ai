@@ -15,7 +15,12 @@ import {
 } from './programQuality.js';
 import { formatEquipmentRestrictions } from './promptBuilder.js';
 import { buildRagQueryText, formatWorkoutLibraryRag } from './ragContext.js';
-import { buildSkeletonWeekPrompt } from './skeletonPrompt.js';
+import {
+  PROGRAM_OVERVIEW_SECTION_HEADINGS,
+  buildSkeletonSystemPrompt,
+  buildSkeletonWeekPrompt,
+  formatProgramOverviewRequirement,
+} from './skeletonPrompt.js';
 
 const GARAGE_EQUIPMENT = ['Barbell', 'Bumper Plates', 'Power Rack', 'Dumbbell', 'Kettlebell'];
 
@@ -453,5 +458,54 @@ describe('equipment, duration, density, voice, RAG', () => {
     });
     assert.match(query, /5\/3\/1/);
     assert.match(query, /Barbell/);
+  });
+});
+
+describe('program overview cover-page contract', () => {
+  it('requires the seven ## headings, 400-800 words, and Halteres usage notes', () => {
+    const prompt = skeletonFor(MAYHEM_CF_PUMP);
+    for (const heading of PROGRAM_OVERVIEW_SECTION_HEADINGS) {
+      assert.match(prompt, new RegExp(`## ${heading.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`));
+    }
+    assert.match(prompt, /400-800 words/);
+    assert.match(prompt, /program_overview_requirement/);
+    assert.match(prompt, /Add Full Details/);
+    assert.match(prompt, /Your numbers/);
+    assert.match(prompt, /Not medical advice/);
+    assert.match(prompt, /you\/your only/);
+    assert.doesNotMatch(prompt, /brief programDescription \(2-3 sentences\)/);
+
+    const requirement = formatProgramOverviewRequirement({
+      identity: 'Mayhem + classic CrossFit + EMOM pump aesthetic',
+      numberOfWeeks: 8,
+      daysPerWeek: 3,
+      sessionMinutes: 60,
+    });
+    assert.match(requirement, /3 x 60 min/);
+    assert.match(requirement, /8 weeks/);
+  });
+
+  it('week 1 system prompt allows a long programDescription; later weeks do not', () => {
+    const week1 = buildSkeletonSystemPrompt({
+      daysPerWeek: 3,
+      weekNumber: 1,
+      includeDescription: true,
+      programmingContract: buildProgrammingContract(MAYHEM_CF_PUMP),
+    });
+    assert.match(week1, /programDescription/);
+    assert.match(week1, /400-800 word/);
+    assert.match(week1, /How to use Halteres/);
+
+    const week2 = buildSkeletonWeekPrompt({
+      ...MAYHEM_CF_PUMP,
+      weekNumber: 2,
+      includeDescription: false,
+      trainingMethodology: MAYHEM_CF_PUMP.methodology,
+      programmingContract: buildProgrammingContract({ ...MAYHEM_CF_PUMP, weekNumber: 2 }),
+      weekDates: ['2026-09-14', '2026-09-16', '2026-09-18'],
+    });
+    assert.doesNotMatch(week2, /program_overview_requirement/);
+    assert.doesNotMatch(week2, /## How to use Halteres/);
+    assert.doesNotMatch(week2, /400-800 words/);
   });
 });

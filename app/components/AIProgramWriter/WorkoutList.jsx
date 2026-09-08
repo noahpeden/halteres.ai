@@ -2,57 +2,7 @@
 import { CheckCircle, ChevronLeft, ChevronRight, MoreVertical, Pencil, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import TemplateFeedbackButton from '@/components/feedback/TemplateFeedbackButton';
-
-// Simple markdown parser for workout content
-const parseMarkdownToHTML = (markdown) => {
-  if (!markdown) return '';
-
-  let html = markdown
-    // Headers (## Header -> <h3>, ### Header -> <h4>)
-    .replace(/^### (.*$)/gim, '<h4 class="text-base font-semibold mt-4 mb-2 text-gray-800">$1</h4>')
-    .replace(
-      /^## (.*$)/gim,
-      '<h3 class="text-lg font-semibold mt-5 mb-3 text-gray-900 border-b border-gray-200 pb-1">$1</h3>'
-    )
-    // Bold text (**text** or __text__)
-    .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-gray-900">$1</strong>')
-    .replace(/__(.*?)__/g, '<strong class="font-semibold text-gray-900">$1</strong>')
-    // Italic text (*text* or _text_)
-    .replace(/\*(.*?)\*/g, '<em class="italic">$1</em>')
-    .replace(/_(.*?)_/g, '<em class="italic">$1</em>')
-    // Bullet points (- item or * item)
-    .replace(/^[\s]*[-*+]\s+(.*$)/gim, '<li class="ml-4 mb-1">$1</li>')
-    // Numbered lists (1. item, 2. item, etc.)
-    .replace(/^[\s]*\d+\.\s+(.*$)/gim, '<li class="ml-4 mb-1 list-decimal">$1</li>')
-    // Gender symbols with better styling
-    .replace(
-      /♀/g,
-      '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-pink-100 text-pink-800">♀</span>'
-    )
-    .replace(
-      /♂/g,
-      '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">♂</span>'
-    )
-    // Convert line breaks to <br> but preserve structure
-    .replace(/\n/g, '<br>');
-
-  // Wrap consecutive <li> elements in <ul> tags
-  html = html.replace(/(<li[^>]*>.*?<\/li>)(\s*<br>\s*<li[^>]*>.*?<\/li>)*/g, (match) => {
-    const listItems = match.replace(/<br>\s*/g, '');
-    return `<ul class="list-disc ml-4 space-y-1 my-2">${listItems}</ul>`;
-  });
-
-  // Clean up excessive <br> tags around headers and lists
-  html = html
-    .replace(/<br>\s*(<h[234][^>]*>)/g, '$1')
-    .replace(/(<\/h[234]>)\s*<br>/g, '$1')
-    .replace(/<br>\s*(<ul[^>]*>)/g, '$1')
-    .replace(/(<\/ul>)\s*<br>/g, '$1')
-    // Clean up multiple consecutive <br> tags
-    .replace(/(<br>\s*){3,}/g, '<br><br>');
-
-  return html;
-};
+import PalaestraMarkdown from '@/components/PalaestraMarkdown';
 export default function WorkoutList({
   workouts,
   daysPerWeek,
@@ -220,16 +170,14 @@ export default function WorkoutList({
       </div>
       {generatedDescription && (
         <div className="mb-4">
-          <div className="collapse collapse-arrow bg-base-200">
-            <input type="checkbox" defaultChecked={true} />
-            <div className="collapse-title font-medium">Program Description</div>
+          <div className="collapse collapse-arrow bg-[var(--chalk)] border border-[var(--paper-rule)] rounded-sm">
+            <input type="checkbox" />
+            <div className="collapse-title min-h-0 py-4">
+              <p className="athlete-label mb-1">Program overview</p>
+              <p className="athlete-heading-md">How this cycle works</p>
+            </div>
             <div className="collapse-content">
-              <div
-                className="p-2 bg-white rounded-md text-sm"
-                dangerouslySetInnerHTML={{
-                  __html: parseMarkdownToHTML(generatedDescription),
-                }}
-              />
+              <PalaestraMarkdown content={generatedDescription} />
             </div>
           </div>
         </div>
@@ -527,14 +475,12 @@ export default function WorkoutList({
                             : 'Not scheduled'}
                   </button>
                 </div>
-                <div
-                  className="overflow-auto max-h-60 sm:max-h-80 text-sm mb-3 flex-grow"
-                  dangerouslySetInnerHTML={{
-                    __html: parseMarkdownToHTML(
-                      workout.body || workout.description || 'No description available'
-                    ),
-                  }}
-                />
+                <div className="overflow-auto max-h-60 sm:max-h-80 text-sm mb-3 flex-grow">
+                  <PalaestraMarkdown
+                    content={workout.body || workout.description}
+                    emptyLabel="No description available"
+                  />
+                </div>
                 <div className="flex justify-between items-center mt-auto gap-2">
                   {/* Feedback Button */}
                   {workout.id && (
