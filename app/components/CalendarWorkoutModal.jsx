@@ -1,6 +1,7 @@
 'use client';
 import { Pencil, Trash2 } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect } from 'react';
+import PalaestraMarkdown from '@/components/PalaestraMarkdown';
 
 export default function CalendarWorkoutModal({
   isOpen,
@@ -27,24 +28,6 @@ export default function CalendarWorkoutModal({
   }, [isOpen, onClose]);
 
   if (!isOpen || !workout) return null;
-
-  const renderWorkoutContent = (description) => {
-    if (!description) return <p>No description available</p>;
-
-    // Simply split by newlines and render each line with appropriate spacing
-    return description.split('\n').map((line, i) => {
-      // Handle empty lines
-      if (line.trim() === '') {
-        return <br key={i} />;
-      }
-      // Handle all other lines as paragraphs with proper spacing
-      return (
-        <p key={i} className="mb-2">
-          {line}
-        </p>
-      );
-    });
-  };
 
   const titleId = `workout-modal-title-${workout.id}`;
 
@@ -114,15 +97,16 @@ export default function CalendarWorkoutModal({
 
           {/* Workout Content */}
           <h4 className="font-medium text-gray-500 mb-2">Workout</h4>
-          <div className="prose prose-sm max-w-none">
-            {renderWorkoutContent(workout.body || workout.description)}
-          </div>
+          <PalaestraMarkdown
+            content={workout.body || workout.description}
+            emptyLabel="No description available"
+          />
 
           {/* Workout Notes - if they exist */}
           {workout.notes && (
             <div className="mt-4">
               <h4 className="font-medium text-gray-500 mb-2">Notes</h4>
-              <div className="prose prose-sm max-w-none">{renderWorkoutContent(workout.notes)}</div>
+              <PalaestraMarkdown content={workout.notes} />
             </div>
           )}
         </div>

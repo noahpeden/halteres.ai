@@ -13,59 +13,9 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import TemplateFeedbackButton from '@/components/feedback/TemplateFeedbackButton';
+import PalaestraMarkdown from '@/components/PalaestraMarkdown';
 import { weekDisplayStatus } from '@/utils/prompt-builder/generationGuardrails';
 import { extractDayNumber, sortWorkoutsForDisplay } from '@/utils/prompt-builder/modelOutput';
-
-// Simple markdown parser for workout content (same as WorkoutList)
-const parseMarkdownToHTML = (markdown) => {
-  if (!markdown) return '';
-
-  let html = markdown
-    // Headers (## Header -> <h3>, ### Header -> <h4>)
-    .replace(/^### (.*$)/gim, '<h4 class="text-base font-semibold mt-4 mb-2 text-gray-800">$1</h4>')
-    .replace(
-      /^## (.*$)/gim,
-      '<h3 class="text-lg font-semibold mt-5 mb-3 text-gray-900 border-b border-gray-200 pb-1">$1</h3>'
-    )
-    // Bold text (**text** or __text__)
-    .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-gray-900">$1</strong>')
-    .replace(/__(.*?)__/g, '<strong class="font-semibold text-gray-900">$1</strong>')
-    // Italic text (*text* or _text_)
-    .replace(/\*(.*?)\*/g, '<em class="italic">$1</em>')
-    .replace(/_(.*?)_/g, '<em class="italic">$1</em>')
-    // Bullet points (- item or * item)
-    .replace(/^[\s]*[-*+]\s+(.*$)/gim, '<li class="ml-4 mb-1">$1</li>')
-    // Numbered lists (1. item, 2. item, etc.)
-    .replace(/^[\s]*\d+\.\s+(.*$)/gim, '<li class="ml-4 mb-1 list-decimal">$1</li>')
-    // Gender symbols with better styling
-    .replace(
-      /♀/g,
-      '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-pink-100 text-pink-800">♀</span>'
-    )
-    .replace(
-      /♂/g,
-      '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">♂</span>'
-    )
-    // Convert line breaks to <br> but preserve structure
-    .replace(/\n/g, '<br>');
-
-  // Wrap consecutive <li> elements in <ul> tags
-  html = html.replace(/(<li[^>]*>.*?<\/li>)(\s*<br>\s*<li[^>]*>.*?<\/li>)*/g, (match) => {
-    const listItems = match.replace(/<br>\s*/g, '');
-    return `<ul class="list-disc ml-4 space-y-1 my-2">${listItems}</ul>`;
-  });
-
-  // Clean up excessive <br> tags around headers and lists
-  html = html
-    .replace(/<br>\s*(<h[234][^>]*>)/g, '$1')
-    .replace(/(<\/h[234]>)\s*<br>/g, '$1')
-    .replace(/<br>\s*(<ul[^>]*>)/g, '$1')
-    .replace(/(<\/ul>)\s*<br>/g, '$1')
-    // Clean up multiple consecutive <br> tags
-    .replace(/(<br>\s*){3,}/g, '<br><br>');
-
-  return html;
-};
 
 /**
  * SkeletonPreview - Displays workouts grouped by week with enhancement controls
@@ -187,19 +137,17 @@ export default function SkeletonPreview({
         </div>
       </div>
 
-      {/* Program Description */}
+      {/* Program overview — generated cover page, collapsed so it stays scannable */}
       {generatedDescription && (
         <div className="mb-4">
-          <div className="collapse collapse-arrow bg-base-200">
-            <input type="checkbox" defaultChecked={true} />
-            <div className="collapse-title font-medium">Program Description</div>
+          <div className="collapse collapse-arrow bg-[var(--chalk)] border border-[var(--paper-rule)] rounded-sm">
+            <input type="checkbox" />
+            <div className="collapse-title min-h-0 py-4">
+              <p className="athlete-label mb-1">Program overview</p>
+              <p className="athlete-heading-md">How this cycle works</p>
+            </div>
             <div className="collapse-content">
-              <div
-                className="p-2 bg-[var(--chalk)] rounded-sm text-sm"
-                dangerouslySetInnerHTML={{
-                  __html: parseMarkdownToHTML(generatedDescription),
-                }}
-              />
+              <PalaestraMarkdown content={generatedDescription} />
             </div>
           </div>
         </div>
@@ -363,7 +311,9 @@ function WeekCard({
             className={`
             w-8 h-8 rounded-full flex items-center justify-center font-bold
             ${
-              week.status === 'detailed' ? 'bg-[var(--olive)] text-[var(--chalk)]' : 'bg-[var(--paper-deep)] text-[var(--ink)]'
+              week.status === 'detailed'
+                ? 'bg-[var(--olive)] text-[var(--chalk)]'
+                : 'bg-[var(--paper-deep)] text-[var(--ink)]'
             }
           `}
           >
@@ -487,7 +437,6 @@ function DetailedWorkoutCard({
   gymId,
 }) {
   const isSkeleton = workout.generation_status === 'skeleton';
-  const isDetailed = workout.generation_status === 'detailed';
   const displayBody = workout.body || workout.body_skeleton;
 
   const getDisplayDate = () => {
@@ -505,9 +454,10 @@ function DetailedWorkoutCard({
     return (
       <div className="bg-base-200/30 p-4 rounded-lg">
         <h4 className="font-semibold mb-2">{workout.title}</h4>
-        <div className="text-sm text-base-content/80 whitespace-pre-wrap">
-          {workout.body_skeleton || workout.body}
-        </div>
+        <PalaestraMarkdown
+          content={workout.body_skeleton || workout.body}
+          emptyLabel="No description available"
+        />
         <div className="mt-2 p-2 bg-warning/10 rounded text-xs text-warning-content">
           Skeleton version - Click "Add Full Details" to add strategy, coaching cues, warm-up,
           cool-down, and scaling options.
@@ -612,12 +562,9 @@ function DetailedWorkoutCard({
           {getDisplayDate() || 'Not scheduled'}
         </button>
       </div>
-      <div
-        className="overflow-auto max-h-60 sm:max-h-80 text-sm mb-3 flex-grow"
-        dangerouslySetInnerHTML={{
-          __html: parseMarkdownToHTML(displayBody || 'No description available'),
-        }}
-      />
+      <div className="overflow-auto max-h-60 sm:max-h-80 text-sm mb-3 flex-grow">
+        <PalaestraMarkdown content={displayBody} emptyLabel="No description available" />
+      </div>
       <div className="flex justify-between items-center mt-auto gap-2">
         {/* Feedback Button */}
         {workout.id && gymId && (

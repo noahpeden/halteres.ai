@@ -13,6 +13,43 @@ export function unescapeWorkoutText(text = '') {
     .replace(/\\\\/g, '\\');
 }
 
+export function extractProgramDescription(content = '') {
+  const raw = String(content || '').trim();
+  if (!raw) return '';
+
+  const fenced = stripMarkdownFence(raw);
+
+  const fromParsed = (parsed) => {
+    if (typeof parsed?.programDescription === 'string' && parsed.programDescription.trim()) {
+      return unescapeWorkoutText(parsed.programDescription).trim();
+    }
+    return '';
+  };
+
+  try {
+    const parsed = JSON.parse(fenced);
+    const found = fromParsed(parsed);
+    if (found) return found;
+  } catch {
+    const firstBrace = fenced.indexOf('{');
+    const lastBrace = fenced.lastIndexOf('}');
+    if (firstBrace !== -1 && lastBrace > firstBrace) {
+      try {
+        const found = fromParsed(JSON.parse(fenced.slice(firstBrace, lastBrace + 1)));
+        if (found) return found;
+      } catch {
+        // fall through to regex
+      }
+    }
+  }
+
+  const match = fenced.match(/"programDescription"\s*:\s*"((?:\\.|[^"\\])*)"/);
+  if (match?.[1]) {
+    return unescapeWorkoutText(match[1]).trim();
+  }
+  return '';
+}
+
 export function looksLikeRawJsonBlob(text = '') {
   const value = String(text || '').trim();
   if (!value) return false;

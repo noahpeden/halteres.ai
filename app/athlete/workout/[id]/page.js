@@ -8,6 +8,7 @@ import PRCelebration from '@/components/athlete/PRCelebration';
 import ResultEntryForm from '@/components/athlete/ResultEntryForm';
 import SegmentedControl from '@/components/athlete/SegmentedControl';
 import StatusBadge from '@/components/athlete/StatusBadge';
+import PalaestraMarkdown from '@/components/PalaestraMarkdown';
 import { useAuth } from '@/contexts/AuthContext';
 
 // Default form state for result entry
@@ -206,9 +207,10 @@ export default function WorkoutDetailPage() {
               <h2 className="athlete-heading-md text-[var(--athlete-text-primary)] mb-3">
                 Workout
               </h2>
-              <div className="athlete-body text-[var(--athlete-text-secondary)] whitespace-pre-wrap">
-                {workout.description || 'No description provided.'}
-              </div>
+              <PalaestraMarkdown
+                content={workout.description || workout.body}
+                emptyLabel="No description provided."
+              />
             </div>
 
             {/* Exercises */}

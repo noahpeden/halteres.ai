@@ -1,6 +1,7 @@
 'use client';
 import { Pencil, Sparkles, Trash2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import PalaestraMarkdown from '@/components/PalaestraMarkdown';
 import { useProgram } from '@/contexts/ProgramContext';
 
 export default function WorkoutModal({
@@ -168,24 +169,6 @@ export default function WorkoutModal({
       document.removeEventListener('mousedown', handleClick);
     };
   }, [showEnhancePopover]);
-
-  const renderWorkoutContent = (description) => {
-    if (!description) return <p>No description available</p>;
-
-    // Simply split by newlines and render each line with appropriate spacing
-    return description.split('\n').map((line, i) => {
-      // Handle empty lines
-      if (line.trim() === '') {
-        return <br key={i} />;
-      }
-      // Handle all other lines as paragraphs with proper spacing
-      return (
-        <p key={i} className="mb-2">
-          {line}
-        </p>
-      );
-    });
-  };
 
   const titleId = `workout-modal-title-${workout.id}`;
   const displayWorkout = localWorkout || pendingWorkout || workout;
@@ -417,8 +400,11 @@ export default function WorkoutModal({
               </div>
             </div>
           )}
-          <div className="mt-4 prose max-w-none">
-            {renderWorkoutContent(displayWorkout.body || displayWorkout.description)}
+          <div className="mt-4">
+            <PalaestraMarkdown
+              content={displayWorkout.body || displayWorkout.description}
+              emptyLabel="No description available"
+            />
           </div>
         </div>
       </div>
