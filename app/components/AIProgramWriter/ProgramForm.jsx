@@ -1,10 +1,7 @@
 'use client';
 import { Sparkles } from 'lucide-react';
 import { useCallback, useMemo } from 'react';
-import equipmentList from '@/utils/equipmentList';
-import { gymEquipmentPresets } from '../utils';
-import CustomWorkoutFormat from './CustomWorkoutFormat';
-import { handleFormChange as handleFormChangeUtil } from './formHandlers';
+import { canGenerateWithoutSubscription } from '@/utils/billing';
 import LoadingButton from './LoadingButton';
 import ProgramDetails from './ProgramDetails';
 import ProgramEssentials from './ProgramEssentials';
@@ -51,6 +48,11 @@ const ProgramForm = ({
 
   // --- Eligibility Logic ---
   const { isEligibleToGenerate, disabledReason } = useMemo(() => {
+    // B2C beta: generate without an active Stripe subscription.
+    if (canGenerateWithoutSubscription()) {
+      return { isEligibleToGenerate: true, disabledReason: null };
+    }
+
     const isActive = subscriptionStatus === 'active';
     const isTrialing = subscriptionStatus === 'trialing';
     const now = new Date(); // Use a single consistent 'now' timestamp
@@ -100,7 +102,7 @@ const ProgramForm = ({
       isEligibleToGenerate: false,
       disabledReason: 'Please start a trial or subscribe to generate programs.',
     };
-  }, [subscriptionStatus, trialEndDate, generationsRemaining, lastGenerationDate]);
+  }, [subscriptionStatus, trialEndDate, generationsRemaining]);
 
   const isButtonDisabled = isLoading || generationStage === 'complete' || !isEligibleToGenerate;
   const buttonText = () => {

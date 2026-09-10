@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
+import { canGenerateWithoutSubscription } from '@/utils/billing';
 import promptBuilder from '@/utils/prompt-builder/promptBuilder';
 import { createClient } from '@/utils/supabase/server';
 
@@ -177,7 +178,8 @@ export async function POST(request) {
         }
 
         // Skip hard-blocks during B2C beta: allow generation for non-active users too.
-        const isPaidSubscriber = profile?.subscription_status === 'active';
+        const isPaidSubscriber =
+          canGenerateWithoutSubscription() || profile?.subscription_status === 'active';
 
         // Extract parameters with defaults
         sendEvent('status', { message: 'Processing program parameters...' });
@@ -1630,7 +1632,12 @@ async function isPaidSubscriberCheck(supabase, userId) {
 
     if (error && error.code !== 'PGRST116') {
       logWithTimestamp('Error checking subscription status', { error, userId });
-      return false;
+      return canGenerateWithoutSubscription();
+    }
+
+    // B2C beta: do not treat users as unpaid (avoids decrementing trial counters).
+    if (canGenerateWithoutSubscription()) {
+      return true;
     }
 
     // Check if user has an active subscription with any paid plan (monthly, quarterly, annual, or daily)

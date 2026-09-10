@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse } from 'next/server';
+import { canGenerateWithoutSubscription } from './app/utils/billing.js';
 
 // Helper function to check if today is a new day compared to the last generation date
 function isNewDay(lastGenerationDateStr) {
@@ -169,6 +170,12 @@ export async function middleware(req) {
 
       // B2C beta: allow athletes to access program writer routes and generation routes without paid plan
       if (isAthlete && (isProtectedRoute || isGenerationRoute)) {
+        return res;
+      }
+
+      // B2C beta: do not send anyone to /pricing to pay — generation and app
+      // access stay open without an active Stripe subscription.
+      if (canGenerateWithoutSubscription()) {
         return res;
       }
 

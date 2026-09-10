@@ -1,7 +1,6 @@
 'use client';
 
-import { AlertTriangle, ArrowUpRight, Crown } from 'lucide-react';
-import Link from 'next/link';
+import { AlertTriangle, Crown } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { createClient } from '@/utils/supabase/client';
@@ -342,9 +341,7 @@ export default function ProfilePage() {
                 </div>
               </div>
               {profile?.subscription_status !== 'active' && (
-                <Link href="/pricing" className="btn btn-primary btn-sm">
-                  Upgrade <ArrowUpRight className="h-4 w-4 ml-1" />
-                </Link>
+                <span className="badge badge-ghost">Free during beta</span>
               )}
             </div>
           </div>
@@ -431,9 +428,6 @@ export default function ProfilePage() {
                     Cancel Subscription
                   </button>
                 )}
-                <Link href="/pricing" className="btn btn-ghost btn-sm">
-                  Change Plan
-                </Link>
               </div>
             </div>
           </div>
