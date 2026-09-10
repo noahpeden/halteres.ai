@@ -3,7 +3,6 @@ import { Figtree, Fraunces, IBM_Plex_Mono } from 'next/font/google';
 import { AuthProvider } from '@/contexts/AuthContext';
 import AppChrome from './components/AppChrome';
 import TrialStatusBanner from './components/TrialStatusBanner';
-import { StripeProvider } from './contexts/StripeContext';
 import { metadata } from './simple-metadata';
 
 const fraunces = Fraunces({
@@ -47,14 +46,12 @@ export default async function RootLayout({ children }) {
         <link rel="manifest" href="/site.webmanifest" />
       </head>
       <body className={`${figtree.className} palaestra-body`} suppressHydrationWarning={true}>
-        <StripeProvider>
-          <AuthProvider initialSession={session}>
-            <AppChrome>
-              <TrialStatusBanner />
-              {children}
-            </AppChrome>
-          </AuthProvider>
-        </StripeProvider>
+        <AuthProvider initialSession={session}>
+          <AppChrome>
+            <TrialStatusBanner />
+            {children}
+          </AppChrome>
+        </AuthProvider>
       </body>
     </html>
   );

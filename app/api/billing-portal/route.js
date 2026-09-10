@@ -39,7 +39,7 @@ export async function POST(request) {
     // Create a Stripe billing portal session
     const { url } = await stripe.billingPortal.sessions.create({
       customer: profile.stripe_customer_id,
-      return_url: `${process.env.NEXT_PUBLIC_SITE_URL}/pricing`,
+      return_url: `${process.env.NEXT_PUBLIC_SITE_URL}/athlete`,
     });
 
     return NextResponse.json({ url }, { headers: corsHeaders() });

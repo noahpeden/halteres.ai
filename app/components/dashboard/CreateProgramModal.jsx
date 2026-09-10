@@ -11,7 +11,6 @@ export default function CreateProgramModal({
   startDate,
   programDuration,
   daysOfWeek,
-  subscriptionStatus,
   onProgramNameChange,
   onStartDateChange,
   onProgramDurationChange,
@@ -26,11 +25,8 @@ export default function CreateProgramModal({
   // State for dropdown visibility
   const [isDurationDropdownOpen, setIsDurationDropdownOpen] = useState(false);
 
-  // Duration options based on subscription status
-  const freeWeekOptions = [1, 2];
-  const premiumWeekOptions = [1, 2, 3, 4, 5, 6, 7, 8];
-  const isPremium = subscriptionStatus === 'active';
-  const weekOptions = isPremium ? premiumWeekOptions : freeWeekOptions;
+  // B2C beta: duration is not gated on a paid Stripe plan.
+  const weekOptions = [1, 2, 3, 4, 5, 6, 7, 8];
 
   // Calculate end date based on start date and duration
   const calculateEndDate = () => {
@@ -126,15 +122,6 @@ export default function CreateProgramModal({
                       </option>
                     ))}
                   </select>
-                  {!isPremium && (
-                    <div className="text-xs text-gray-500 mt-1">
-                      Free trial limited to 2 weeks.{' '}
-                      <a href="/pricing" className="text-primary hover:underline">
-                        Upgrade
-                      </a>{' '}
-                      for longer programs.
-                    </div>
-                  )}
                 </div>
 
                 <div className="w-full mb-4">
