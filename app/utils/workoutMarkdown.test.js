@@ -1,6 +1,12 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { escapeHtml, normalizeWorkoutMarkdown, renderWorkoutMarkdown } from './workoutMarkdown.js';
+import {
+  escapeHtml,
+  getWorkoutDisplayBody,
+  normalizeWorkoutMarkdown,
+  renderWorkoutMarkdown,
+  withDisplayBody,
+} from './workoutMarkdown.js';
 
 const LEAKED = `Week 1, Day 1: Squat + Upper",
 "body": "### Strength\\n- Back Squat 5x3 @ **275 lb**\\n### Metcon\\n- 12 min AMRAP: 10 pull-ups, 15 wall-balls"`;
@@ -32,6 +38,42 @@ describe('workout markdown normalize + render', () => {
     assert.doesNotMatch(html, /<script>/);
     assert.match(html, /&lt;script&gt;/);
     assert.match(html, /<strong>275<\/strong>/);
+  });
+
+  it('prefers body_skeleton when body is null so skeleton-only days render', () => {
+    const samWeek1Day1 =
+      '**Primary Work**\n\nBack Squat: 4 x 5 @ 75% 1RM\n\n**Secondary Work**\n\nRow Intervals: 6 x 500m @ moderate pace, rest 1:30 between efforts';
+    assert.equal(
+      getWorkoutDisplayBody({
+        title: 'Week 1, Day 1: Lower Body Strength + Short Intervals',
+        body: null,
+        description: null,
+        body_skeleton: samWeek1Day1,
+        generation_status: 'skeleton',
+      }),
+      samWeek1Day1
+    );
+    const html = renderWorkoutMarkdown(samWeek1Day1);
+    assert.match(html, /Back Squat: 4 x 5 @ 75% 1RM/);
+    assert.match(html, /Row Intervals/);
+    const skeleton = '## Strength\n- Back Squat 5x3 @ **275 lb**';
+    assert.equal(
+      getWorkoutDisplayBody({
+        title: 'Week 1, Day 1: Lower Body Strength + Short Intervals',
+        body: null,
+        description: null,
+        body_skeleton: skeleton,
+      }),
+      skeleton
+    );
+    assert.equal(getWorkoutDisplayBody({ body: '', description: 'No description provided.' }), '');
+    const mapped = withDisplayBody({
+      title: 'Week 1, Day 1',
+      body: null,
+      body_skeleton: skeleton,
+    });
+    assert.equal(mapped.description, skeleton);
+    assert.equal(mapped.body, skeleton);
   });
 
   it('renders numbered lists and leaves empty input blank', () => {

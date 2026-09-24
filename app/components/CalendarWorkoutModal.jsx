@@ -2,6 +2,7 @@
 import { Pencil, Trash2 } from 'lucide-react';
 import { useEffect } from 'react';
 import PalaestraMarkdown from '@/components/PalaestraMarkdown';
+import { getWorkoutDisplayBody } from '@/utils/workoutMarkdown';
 
 export default function CalendarWorkoutModal({
   isOpen,
@@ -98,7 +99,7 @@ export default function CalendarWorkoutModal({
           {/* Workout Content */}
           <h4 className="font-medium text-gray-500 mb-2">Workout</h4>
           <PalaestraMarkdown
-            content={workout.body || workout.description}
+            content={getWorkoutDisplayBody(workout)}
             emptyLabel="No description available"
           />
 

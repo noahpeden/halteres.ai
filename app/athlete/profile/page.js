@@ -11,10 +11,11 @@ import { useAuth } from '@/contexts/AuthContext';
 import {
   hydrateAthleteFileFromProfile,
   normalizeAthleteFile,
+  preferFilledAthleteFile,
 } from '@/utils/prompt-builder/athleteFile.js';
 
 export default function AthleteProfilePage() {
-  const { user, profile, refetchProfile } = useAuth();
+  const { user, profile, refetchProfile, patchProfileAthleteFile } = useAuth();
   const router = useRouter();
   const [prs, setPrs] = useState([]);
   const [stats, setStats] = useState(null);
@@ -29,7 +30,7 @@ export default function AthleteProfilePage() {
   }, [user?.id]);
 
   useEffect(() => {
-    setAthleteFile(hydrateAthleteFileFromProfile(profile));
+    setAthleteFile((prev) => preferFilledAthleteFile(prev, hydrateAthleteFileFromProfile(profile)));
   }, [profile]);
 
   useEffect(() => {
@@ -39,7 +40,7 @@ export default function AthleteProfilePage() {
         const response = await fetch('/api/athlete/athlete-file');
         const data = await response.json();
         if (!cancelled && data.success && data.athleteFile) {
-          setAthleteFile(normalizeAthleteFile(data.athleteFile));
+          setAthleteFile((prev) => preferFilledAthleteFile(prev, data.athleteFile));
         }
       } catch {
         // Keep hydrated profile values if the file has not been saved yet.
@@ -62,8 +63,10 @@ export default function AthleteProfilePage() {
       if (!data.success) {
         throw new Error(data.error || 'Could not save your numbers');
       }
-      setAthleteFile(normalizeAthleteFile(data.athleteFile || nextFile));
+      const saved = normalizeAthleteFile(data.athleteFile || nextFile);
+      setAthleteFile(saved);
       setAthleteFileEditing(false);
+      patchProfileAthleteFile?.(saved);
       if (refetchProfile) {
         await refetchProfile();
       }

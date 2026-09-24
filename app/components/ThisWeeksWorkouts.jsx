@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { getWorkoutDisplayBody } from '@/utils/workoutMarkdown';
 
 export default function ThisWeeksWorkouts() {
   const { supabase, user } = useAuth();
@@ -65,6 +66,7 @@ export default function ThisWeeksWorkouts() {
             entity_id,
             title,
             body,
+            body_skeleton,
             workout_type,
             difficulty,
             tags,
@@ -203,7 +205,7 @@ export default function ThisWeeksWorkouts() {
               entityName: workout.entities?.name || 'Unknown Client/Class',
               entityType: workout.entities?.type || 'CLIENT',
               title: workout.title || 'Untitled Workout',
-              body: workout.body || '',
+              body: getWorkoutDisplayBody(workout),
               type: workout.workout_type || 'custom',
               difficulty: workout.difficulty || 'intermediate',
               tags: workout.tags || {},

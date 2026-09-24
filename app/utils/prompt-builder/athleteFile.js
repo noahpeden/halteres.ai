@@ -93,6 +93,19 @@ export function isAthleteFileEmpty(file) {
   return !isAthleteFileFilled(file);
 }
 
+/**
+ * GET / profile hydration often returns an empty file while the athlete is
+ * still typing, or after a successful PUT before AuthContext refetches.
+ * Never replace a filled file with an empty one.
+ */
+export function preferFilledAthleteFile(current, incoming) {
+  const next = normalizeAthleteFile(incoming);
+  const prev = normalizeAthleteFile(current);
+  if (isAthleteFileFilled(next)) return next;
+  if (isAthleteFileFilled(prev)) return prev;
+  return next;
+}
+
 export function hydrateAthleteFileFromProfile(profile) {
   if (!profile) return emptyAthleteFile();
   const fromJson = normalizeAthleteFile(profile.athlete_file);

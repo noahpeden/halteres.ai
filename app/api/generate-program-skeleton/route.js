@@ -15,8 +15,8 @@ import {
   assertUniqueDayNumbers,
   canonicalizeDayTitle,
   extractProgramDescription,
-  normalizeRequestedWeeks,
   parseModelWorkouts,
+  resolveProgramWeeks,
 } from '@/utils/prompt-builder/modelOutput.js';
 import {
   assembleReferenceMaterial,
@@ -538,23 +538,28 @@ async function saveSkeletonWorkouts(programId, workouts, weekNumber, sharedData,
   if (!programId || !workouts || workouts.length === 0) return;
 
   try {
-    const workoutsToInsert = workouts.map((workout) => ({
-      program_id: programId,
-      gym_id: sharedData.gymId || null,
-      entity_id: sharedData.entityId || null,
-      title: workout.title || 'Untitled Workout',
-      body_skeleton: workout.body, // Store in body_skeleton column
-      body: null, // Body is null until enhancement
-      generation_status: 'skeleton',
-      week_number: weekNumber,
-      scheduled_date: workout.date || new Date().toISOString().split('T')[0],
-      is_reference: false,
-      tags: {
-        suggestedDate: workout.date,
-        generatedBy: 'ai-provider-skeleton',
-        weekNumber: weekNumber,
-      },
-    }));
+    const workoutsToInsert = workouts.map((workout) => {
+      const skeletonBody = workout.body || workout.description || '';
+      return {
+        program_id: programId,
+        gym_id: sharedData.gymId || null,
+        entity_id: sharedData.entityId || null,
+        title: workout.title || 'Untitled Workout',
+        body_skeleton: skeletonBody,
+        // Mirror skeleton into body so Today / calendar / athlete detail can
+        // render before Phase 2 enhance overwrites this with full details.
+        body: skeletonBody || null,
+        generation_status: 'skeleton',
+        week_number: weekNumber,
+        scheduled_date: workout.date || new Date().toISOString().split('T')[0],
+        is_reference: false,
+        tags: {
+          suggestedDate: workout.date,
+          generatedBy: 'ai-provider-skeleton',
+          weekNumber: weekNumber,
+        },
+      };
+    });
 
     const { error } = await supabase.from('program_workouts').insert(workoutsToInsert);
 
@@ -580,7 +585,13 @@ async function extractSharedData(requestData, supabase) {
   let description = requestData.description || '';
 
   const providedDuration = requestData.duration_weeks ?? requestData.numberOfWeeks;
-  let numberOfWeeks = normalizeRequestedWeeks(providedDuration, 8);
+  let numberOfWeeks = resolveProgramWeeks({
+    requestWeeks: providedDuration,
+    text: [requestData.programName, requestData.name, requestData.description]
+      .filter(Boolean)
+      .join('\n'),
+    fallback: 4,
+  });
   const providedDaysPerWeek = requestData.days_per_week ?? requestData.daysPerWeek;
   let daysPerWeek = parseInt(providedDaysPerWeek ?? 3, 10);
   let programType = requestData.periodization?.program_type || requestData.programType || 'linear';
@@ -615,9 +626,20 @@ async function extractSharedData(requestData, supabase) {
         .single();
       if (programData) {
         dbReference = programData.reference_input || '';
-        if (providedDuration == null && programData.duration_weeks) {
-          numberOfWeeks = normalizeRequestedWeeks(programData.duration_weeks, numberOfWeeks);
-        }
+        numberOfWeeks = resolveProgramWeeks({
+          requestWeeks: providedDuration,
+          dbWeeks: programData.duration_weeks,
+          text: [
+            requestData.programName,
+            requestData.name,
+            programData.name,
+            requestData.description,
+            programData.description,
+          ]
+            .filter(Boolean)
+            .join('\n'),
+          fallback: numberOfWeeks,
+        });
         if (
           (!providedDaysPerWeek || isNaN(Number(providedDaysPerWeek))) &&
           programData.calendar_data?.days_of_week?.length

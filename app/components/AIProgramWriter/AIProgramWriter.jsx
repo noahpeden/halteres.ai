@@ -11,7 +11,12 @@ import {
   isAthleteFileFilled,
   looksLikeCreateProgramDefaults,
   normalizeAthleteFile,
+  preferFilledAthleteFile,
 } from '@/utils/prompt-builder/athleteFile.js';
+import {
+  normalizeRequestedWeeks,
+  resolveProgramWeeks,
+} from '@/utils/prompt-builder/modelOutput.js';
 import {
   shouldStartWeekEnhance,
   workoutsForWeek,
@@ -64,6 +69,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
     generationsRemaining,
     lastGenerationDate,
     refetchProfile,
+    patchProfileAthleteFile,
     currentGym,
     user,
     profile,
@@ -141,6 +147,8 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
   const [athleteFileSkipped, setAthleteFileSkipped] = useState(false);
   const [athleteFileSaving, setAthleteFileSaving] = useState(false);
   const didPrefillFromFileRef = useRef(false);
+  const [localNumberOfWeeks, setLocalNumberOfWeeks] = useState(formData?.numberOfWeeks || '4');
+  const isEditingWeeksRef = useRef(false);
 
   useEffect(() => {
     if (generationStage === 'skeleton_complete') {
@@ -230,7 +238,13 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
   }, []);
 
   useEffect(() => {
-    setAthleteFile(hydrateAthleteFileFromProfile(profile));
+    if (!isEditingWeeksRef.current) {
+      setLocalNumberOfWeeks(formData?.numberOfWeeks || '4');
+    }
+  }, [formData?.numberOfWeeks]);
+
+  useEffect(() => {
+    setAthleteFile((prev) => preferFilledAthleteFile(prev, hydrateAthleteFileFromProfile(profile)));
   }, [profile]);
 
   useEffect(() => {
@@ -240,7 +254,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
         const response = await fetch('/api/athlete/athlete-file');
         const data = await response.json();
         if (!cancelled && data.success && data.athleteFile) {
-          setAthleteFile(normalizeAthleteFile(data.athleteFile));
+          setAthleteFile((prev) => preferFilledAthleteFile(prev, data.athleteFile));
         }
       } catch {
         // Empty file is allowed — generate still works.
@@ -329,6 +343,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
         setAthleteFile(saved);
         setAthleteFileEditing(false);
         setAthleteFileSkipped(false);
+        patchProfileAthleteFile?.(saved);
         await applyAthleteFileToSchedule(saved);
         if (refetchProfile) {
           await refetchProfile();
@@ -342,7 +357,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
         setAthleteFileSaving(false);
       }
     },
-    [applyAthleteFileToSchedule, refetchProfile, showToast]
+    [applyAthleteFileToSchedule, patchProfileAthleteFile, refetchProfile, showToast]
   );
 
   const handleSkipAthleteFile = useCallback(() => {
@@ -405,14 +420,15 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
 
   // Calculate end date for display
   const calculatedEndDate = useMemo(() => {
-    if (formData?.startDate && formData?.numberOfWeeks && formData?.daysOfWeek?.length > 0) {
+    const weeks = localNumberOfWeeks || formData?.numberOfWeeks;
+    if (formData?.startDate && weeks && formData?.daysOfWeek?.length > 0) {
       const testDate = new Date(formData.startDate);
-      if (!isNaN(testDate.getTime()) && parseInt(formData.numberOfWeeks) > 0) {
-        return calculateEndDate(formData.startDate, formData.numberOfWeeks, formData.daysOfWeek);
+      if (!isNaN(testDate.getTime()) && parseInt(weeks) > 0) {
+        return calculateEndDate(formData.startDate, weeks, formData.daysOfWeek);
       }
     }
     return null;
-  }, [formData?.startDate, formData?.numberOfWeeks, formData?.daysOfWeek]);
+  }, [formData?.startDate, formData?.numberOfWeeks, formData?.daysOfWeek, localNumberOfWeeks]);
 
   // Event Handlers
   const handleGenerateClick = useCallback(() => {
@@ -453,6 +469,23 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
     setLocalGeneratedDescription(null); // Clear description when starting new generation
   }, []);
 
+  const resolveWeeksForGenerate = useCallback(async () => {
+    const requestedWeeks = resolveProgramWeeks({
+      requestWeeks: localNumberOfWeeks,
+      dbWeeks: formData?.numberOfWeeks,
+      text: [formData?.name, formData?.description].filter(Boolean).join('\n'),
+    });
+    await updateFormFields({ duration_weeks: requestedWeeks });
+    setLocalNumberOfWeeks(String(requestedWeeks));
+    return requestedWeeks;
+  }, [
+    localNumberOfWeeks,
+    formData?.numberOfWeeks,
+    formData?.name,
+    formData?.description,
+    updateFormFields,
+  ]);
+
   const handleConfirmGenerate = useCallback(async () => {
     closeModal('confirmationModal');
     if (!programId) {
@@ -477,10 +510,12 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
     startGeneration();
 
     try {
+      const requestedWeeks = await resolveWeeksForGenerate();
       await generateSkeletonProgram({
         programId,
         formData: {
           ...formData,
+          numberOfWeeks: requestedWeeks,
           equipment: selectedEquipment,
           gymId: currentGym?.id || formData.gymId,
           athleteFile,
@@ -524,6 +559,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
     closeModal,
     clearNonReferenceWorkouts,
     refetchWorkouts,
+    resolveWeeksForGenerate,
   ]);
 
   const handleSaveProgram = useCallback(async () => {
@@ -691,9 +727,14 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
           });
         },
         numberOfWeeks: async (val) => {
+          setLocalNumberOfWeeks(val === '' || val == null ? '' : String(val));
+          isEditingWeeksRef.current = true;
+          const weeks = normalizeRequestedWeeks(val, null);
+          if (weeks == null) return;
           await updateFormFields({
-            duration_weeks: parseInt(val) || 4,
+            duration_weeks: weeks,
           });
+          isEditingWeeksRef.current = false;
         },
         startDate: async (val) => {
           await updateFormFields({
@@ -1077,10 +1118,12 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
     startGeneration();
 
     try {
+      const requestedWeeks = await resolveWeeksForGenerate();
       await generateSkeletonProgram({
         programId,
         formData: {
           ...formData,
+          numberOfWeeks: requestedWeeks,
           equipment: selectedEquipment,
           gymId: currentGym?.id || formData.gymId,
           athleteFile,
@@ -1115,6 +1158,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
     startGeneration,
     updateGenerationStage,
     refetchWorkouts,
+    resolveWeeksForGenerate,
   ]);
 
   // Check for skeletons to show SkeletonPreview
@@ -1304,7 +1348,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
                     min={1}
                     max={52}
                     className="writer-field"
-                    value={formData?.numberOfWeeks || ''}
+                    value={localNumberOfWeeks}
                     onChange={(e) => handleFieldChange('numberOfWeeks', e.target.value)}
                   />
                 </div>
@@ -1544,7 +1588,7 @@ export default function AIProgramWriter({ programId, wizardComplete }) {
                 {displayWorkouts.length} workouts
               </span>
               <span className="athlete-badge athlete-badge-upcoming">
-                {formData?.numberOfWeeks || 0} weeks
+                {localNumberOfWeeks || formData?.numberOfWeeks || 0} weeks
               </span>
               <span className="athlete-badge athlete-badge-upcoming">
                 {formData?.daysOfWeek?.length || 0} days/week

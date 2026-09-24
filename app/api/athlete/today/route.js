@@ -1,6 +1,6 @@
 import { createServerClient } from '@supabase/ssr';
-import { createClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
+import { withDisplayBody } from '@/utils/workoutMarkdown';
 
 async function getSupabaseClient() {
   const cookieStore = await cookies();
@@ -49,6 +49,8 @@ export async function GET(request) {
         title,
         workout_type,
         body,
+        body_skeleton,
+        generation_status,
         scheduled_date,
         program:programs (id, name)
       `
@@ -78,6 +80,8 @@ export async function GET(request) {
           title,
           workout_type,
           body,
+          body_skeleton,
+          generation_status,
           scheduled_date,
           program:programs (id, name)
         `
@@ -104,6 +108,8 @@ export async function GET(request) {
               title,
               workout_type,
               body,
+              body_skeleton,
+              generation_status,
               scheduled_date,
               program:programs (id, name)
             `
@@ -138,7 +144,7 @@ export async function GET(request) {
 
     // Add hasLogged flag to workouts
     const workoutsWithStatus = (workouts || []).map((w) => ({
-      ...w,
+      ...withDisplayBody(w),
       hasLogged: loggedWorkoutIds.has(w.id),
     }));
 

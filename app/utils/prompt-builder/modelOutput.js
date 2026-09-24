@@ -248,6 +248,59 @@ export function normalizeRequestedWeeks(value, fallback = null) {
   return parsed;
 }
 
+const CREATE_PROGRAM_DEFAULT_WEEKS = 4;
+
+/**
+ * Pull an explicit program length out of the writer title / notes.
+ * Matches "8-week", "8 weeks", and "8w" — not "4–5 days/week".
+ */
+export function extractRequestedWeeksFromText(text = '') {
+  const source = String(text || '');
+  if (!source.trim()) return null;
+
+  const patterns = [/\b(\d{1,2})\s*-\s*weeks?\b/i, /\b(\d{1,2})\s+weeks?\b/i, /\b(\d{1,2})w\b/i];
+
+  for (const pattern of patterns) {
+    const match = source.match(pattern);
+    if (!match) continue;
+    const weeks = normalizeRequestedWeeks(match[1], null);
+    if (weeks != null) return weeks;
+  }
+  return null;
+}
+
+/**
+ * Decide how many weeks skeleton generation should run.
+ * Requested field wins when it is a real choice. The CreateProgram default of 4
+ * must not beat a saved duration or writer notes that asked for 6 / 8 / custom.
+ */
+export function resolveProgramWeeks({
+  requestWeeks,
+  dbWeeks,
+  text = '',
+  fallback = CREATE_PROGRAM_DEFAULT_WEEKS,
+} = {}) {
+  const fromRequest = normalizeRequestedWeeks(requestWeeks, null);
+  const fromDb = normalizeRequestedWeeks(dbWeeks, null);
+  const fromText = extractRequestedWeeksFromText(text);
+
+  if (fromRequest != null && fromRequest !== CREATE_PROGRAM_DEFAULT_WEEKS) {
+    return fromRequest;
+  }
+
+  if (fromRequest === CREATE_PROGRAM_DEFAULT_WEEKS) {
+    if (fromText != null && fromText !== CREATE_PROGRAM_DEFAULT_WEEKS) return fromText;
+    if (fromDb != null && fromDb !== CREATE_PROGRAM_DEFAULT_WEEKS) return fromDb;
+    return CREATE_PROGRAM_DEFAULT_WEEKS;
+  }
+
+  if (fromDb != null) return fromDb;
+  if (fromText != null) return fromText;
+  return (
+    normalizeRequestedWeeks(fallback, CREATE_PROGRAM_DEFAULT_WEEKS) ?? CREATE_PROGRAM_DEFAULT_WEEKS
+  );
+}
+
 export function assertFullProgramLength({ requestedWeeks, daysPerWeek, savedCount } = {}) {
   const weeks = Number(requestedWeeks);
   const days = Number(daysPerWeek);

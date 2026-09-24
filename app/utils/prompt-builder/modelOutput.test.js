@@ -19,9 +19,11 @@ import {
   canonicalizeDayTitle,
   extractDayNumber,
   extractProgramDescription,
+  extractRequestedWeeksFromText,
   looksLikeRawJsonBlob,
   normalizeRequestedWeeks,
   parseModelWorkouts,
+  resolveProgramWeeks,
   unescapeWorkoutText,
 } from './modelOutput.js';
 import { formatEquipmentRestrictions } from './promptBuilder.js';
@@ -147,6 +149,29 @@ describe('placeholders, 12 weeks, equipment IDs', () => {
     assert.throws(() =>
       assertFullProgramLength({ requestedWeeks: 12, daysPerWeek: 5, savedCount: 55 })
     );
+  });
+
+  it('lets writer notes / title drive 8 weeks when the field is still the create default of 4', () => {
+    const mayaNotes =
+      'Build an 8-week strength + engine program for an intermediate CrossFit box athlete training 4–5 days/week.';
+    assert.equal(extractRequestedWeeksFromText(mayaNotes), 8);
+    assert.equal(extractRequestedWeeksFromText('Maya Mayhem Strength 8w'), 8);
+    assert.equal(extractRequestedWeeksFromText('training 4–5 days/week'), null);
+    assert.equal(
+      resolveProgramWeeks({
+        requestWeeks: 4,
+        dbWeeks: 4,
+        text: `Maya Mayhem Strength 8w\n${mayaNotes}`,
+      }),
+      8
+    );
+    assert.equal(resolveProgramWeeks({ requestWeeks: 6, dbWeeks: 4, text: mayaNotes }), 6);
+    assert.equal(resolveProgramWeeks({ requestWeeks: 4, dbWeeks: 6, text: '' }), 6);
+    assert.equal(
+      resolveProgramWeeks({ requestWeeks: 4, dbWeeks: 4, text: '4-week hypertrophy' }),
+      4
+    );
+    assert.equal(resolveProgramWeeks({ requestWeeks: 1, dbWeeks: 4, text: '' }), 1);
   });
 
   it('resolves equipment IDs to barbell, not bodyweight-only', () => {

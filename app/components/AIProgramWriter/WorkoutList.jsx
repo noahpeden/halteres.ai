@@ -3,6 +3,7 @@ import { CheckCircle, ChevronLeft, ChevronRight, MoreVertical, Pencil, Trash2 } 
 import { useEffect, useState } from 'react';
 import TemplateFeedbackButton from '@/components/feedback/TemplateFeedbackButton';
 import PalaestraMarkdown from '@/components/PalaestraMarkdown';
+import { getWorkoutDisplayBody } from '@/utils/workoutMarkdown';
 export default function WorkoutList({
   workouts,
   daysPerWeek,
@@ -477,7 +478,7 @@ export default function WorkoutList({
                 </div>
                 <div className="overflow-auto max-h-60 sm:max-h-80 text-sm mb-3 flex-grow">
                   <PalaestraMarkdown
-                    content={workout.body || workout.description}
+                    content={getWorkoutDisplayBody(workout)}
                     emptyLabel="No description available"
                   />
                 </div>

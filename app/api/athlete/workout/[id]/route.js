@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
+import { withDisplayBody } from '@/utils/workoutMarkdown';
 
 async function getSupabaseClient() {
   const cookieStore = await cookies();
@@ -32,6 +33,8 @@ export async function GET(request, { params }) {
         title,
         workout_type,
         body,
+        body_skeleton,
+        generation_status,
         scheduled_date,
         gym_id,
         program:programs (id, name)
@@ -51,11 +54,11 @@ export async function GET(request, { params }) {
       return Response.json({ error: 'Workout not found' }, { status: 404 });
     }
 
-    // Map fields for compatibility with the frontend
+    const displayWorkout = withDisplayBody(workout);
     const workoutResponse = {
-      ...workout,
+      ...displayWorkout,
       name: workout.title,
-      description: workout.body,
+      description: displayWorkout.description,
     };
 
     // Fetch user's result if they have one

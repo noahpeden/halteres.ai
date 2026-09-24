@@ -1,7 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { isAthleteFileFilled, normalizeAthleteFile } from '@/utils/prompt-builder/athleteFile.js';
+import {
+  isAthleteFileFilled,
+  normalizeAthleteFile,
+  preferFilledAthleteFile,
+} from '@/utils/prompt-builder/athleteFile.js';
 
 const FIELDS = [
   { name: 'squat_lb', label: 'Squat', suffix: 'lb', min: 1, max: 2000 },
@@ -44,7 +48,11 @@ export default function AthleteFileCard({
   const [draft, setDraft] = useState(() => normalizeAthleteFile(athleteFile));
 
   useEffect(() => {
-    setDraft(normalizeAthleteFile(athleteFile));
+    setDraft((prev) => {
+      const incoming = normalizeAthleteFile(athleteFile);
+      if (editing && isAthleteFileFilled(prev)) return prev;
+      return preferFilledAthleteFile(prev, incoming);
+    });
   }, [athleteFile, editing]);
 
   const handleChange = (name, value) => {
