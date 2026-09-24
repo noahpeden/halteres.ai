@@ -3,6 +3,7 @@ import { Pencil, Sparkles, Trash2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import PalaestraMarkdown from '@/components/PalaestraMarkdown';
 import { useProgram } from '@/contexts/ProgramContext';
+import { getWorkoutDisplayBody } from '@/utils/workoutMarkdown';
 
 export default function WorkoutModal({
   isOpen,
@@ -53,7 +54,7 @@ export default function WorkoutModal({
       // Robust fallbacks for required fields
       const safeWorkout = {
         title: workout?.title || 'Untitled Workout',
-        description: workout?.body || workout?.description || 'No description provided.',
+        description: getWorkoutDisplayBody(workout) || 'No description provided.',
       };
       const safeInstructions = enhancement || 'No specific instructions.';
       const safeMethodology =
@@ -402,7 +403,7 @@ export default function WorkoutModal({
           )}
           <div className="mt-4">
             <PalaestraMarkdown
-              content={displayWorkout.body || displayWorkout.description}
+              content={getWorkoutDisplayBody(displayWorkout)}
               emptyLabel="No description available"
             />
           </div>

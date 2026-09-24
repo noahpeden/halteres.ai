@@ -2,6 +2,7 @@
 import { useRouter } from 'next/navigation';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { createClient } from '@/utils/supabase/client';
+import { loadOwnProfile } from '@/utils/supabase/ownProfile.js';
 
 const AuthContext = createContext();
 const supabase = createClient();
@@ -16,61 +17,50 @@ export function AuthProvider({ children, initialSession }) {
   const [currentGym, setCurrentGym] = useState(null);
   const [loadingGym, setLoadingGym] = useState(true);
 
-  const fetchProfile = useCallback(async (userId) => {
-    if (!userId) {
-      setProfile(null);
-      setLoadingProfile(false);
-      return;
-    }
-    setLoadingProfile(true);
-    try {
-      const profileColumns = `subscription_status, trial_end_date, generations_remaining, last_generation_date,
+  const fetchProfile = useCallback(
+    async (authUser) => {
+      const resolvedUser =
+        authUser && typeof authUser === 'object' ? authUser : { id: authUser, email: user?.email };
+      if (!resolvedUser?.id) {
+        setProfile(null);
+        setLoadingProfile(false);
+        return;
+      }
+      setLoadingProfile(true);
+      try {
+        const profileColumns = `id, subscription_status, trial_end_date, generations_remaining, last_generation_date,
            role, display_name, profile_photo_url, notification_preferences,
            bench_1rm, squat_1rm, deadlift_1rm, weight_kg, height_cm, mile_time,
            gender, recovery_score, injury_history, onboarding_completed, email, athlete_file`;
-      let { data, error } = await supabase
-        .from('profiles')
-        .select(profileColumns)
-        .eq('id', userId)
-        .maybeSingle();
-      if (error && /athlete_file/.test(error.message || '')) {
-        ({ data, error } = await supabase
-          .from('profiles')
-          .select(
-            `subscription_status, trial_end_date, generations_remaining, last_generation_date,
-             role, display_name, profile_photo_url, notification_preferences,
-             bench_1rm, squat_1rm, deadlift_1rm, weight_kg, height_cm, mile_time,
-             gender, recovery_score, injury_history, onboarding_completed, email`
-          )
-          .eq('id', userId)
-          .maybeSingle());
-      }
+        const { data, error } = await loadOwnProfile(supabase, resolvedUser, profileColumns);
 
-      if (error) {
-        if (error.code === 'PGRST116') {
-          // No rows returned - user has no profile yet
-          console.log('No profile found for user, this is normal for new users');
-          setProfile(null);
+        if (error) {
+          if (error.code === 'PGRST116') {
+            // No rows returned - user has no profile yet
+            console.log('No profile found for user, this is normal for new users');
+            setProfile(null);
+          } else {
+            console.error('Error fetching profile:', {
+              message: error.message,
+              details: error.details,
+              hint: error.hint,
+              code: error.code,
+              full_error: error,
+            });
+            setProfile(null);
+          }
         } else {
-          console.error('Error fetching profile:', {
-            message: error.message,
-            details: error.details,
-            hint: error.hint,
-            code: error.code,
-            full_error: error,
-          });
-          setProfile(null);
+          setProfile(data);
         }
-      } else {
-        setProfile(data);
+      } catch (error) {
+        console.error('Unexpected error fetching profile:', error);
+        setProfile(null);
+      } finally {
+        setLoadingProfile(false);
       }
-    } catch (error) {
-      console.error('Unexpected error fetching profile:', error);
-      setProfile(null);
-    } finally {
-      setLoadingProfile(false);
-    }
-  }, []);
+    },
+    [user?.email]
+  );
 
   // Fetch gym memberships for the user
   const fetchGymMemberships = useCallback(
@@ -125,7 +115,7 @@ export function AuthProvider({ children, initialSession }) {
 
   useEffect(() => {
     if (user?.id) {
-      fetchProfile(user.id);
+      fetchProfile(user);
       fetchGymMemberships(user.id);
     } else {
       setProfile(null);
@@ -147,7 +137,7 @@ export function AuthProvider({ children, initialSession }) {
       }
 
       if (currentUser?.id) {
-        fetchProfile(currentUser.id);
+        fetchProfile(currentUser);
         fetchGymMemberships(currentUser.id);
       } else {
         setProfile(null);
@@ -174,6 +164,10 @@ export function AuthProvider({ children, initialSession }) {
   const athleteNeedsSetup = isAthlete && !profile?.onboarding_completed;
   const onboardingCompleted = profile?.onboarding_completed ?? false;
 
+  const patchProfileAthleteFile = useCallback((athleteFile) => {
+    setProfile((prev) => (prev ? { ...prev, athlete_file: athleteFile } : prev));
+  }, []);
+
   const contextValue = useMemo(
     () => ({
       session,
@@ -185,7 +179,8 @@ export function AuthProvider({ children, initialSession }) {
       trialEndDate: profile?.trial_end_date,
       generationsRemaining: profile?.generations_remaining,
       lastGenerationDate: profile?.last_generation_date,
-      refetchProfile: () => (user?.id ? fetchProfile(user.id) : Promise.resolve()),
+      refetchProfile: () => (user ? fetchProfile(user) : Promise.resolve()),
+      patchProfileAthleteFile,
       // Role-related
       role: profile?.role || 'coach',
       isCoach,
@@ -223,6 +218,7 @@ export function AuthProvider({ children, initialSession }) {
       profile,
       loadingProfile,
       fetchProfile,
+      patchProfileAthleteFile,
       isCoach,
       isAthlete,
       athleteNeedsSetup,

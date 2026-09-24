@@ -9,6 +9,7 @@ import {
   mergeIntakeFromAthleteFileAndText,
   normalizeAthleteFile,
   overlayAthleteFile,
+  preferFilledAthleteFile,
   resolveAthleteIntakeForUser,
 } from './athleteFile.js';
 import { buildEnhancementPrompt } from './enhanceWeekPrompt.js';
@@ -210,6 +211,22 @@ describe('resolveAthleteIntakeForUser overlay + newest wins', () => {
     });
     assert.equal(resolved.intakeLifts.squat_lb, 315);
     assert.equal(isAthleteFileEmpty(resolved.athleteFile), true);
+  });
+});
+
+describe('preferFilledAthleteFile', () => {
+  it('keeps typed/saved numbers when profile or GET returns an empty file', () => {
+    const kept = preferFilledAthleteFile(FILE_315, emptyAthleteFile());
+    assert.equal(kept.squat_lb, 315);
+    assert.equal(kept.bench_lb, 225);
+    const incoming = preferFilledAthleteFile(emptyAthleteFile(), {
+      squat_lb: 225,
+      bench_lb: 135,
+      deadlift_lb: 275,
+      bodyweight_lb: 145,
+    });
+    assert.equal(incoming.squat_lb, 225);
+    assert.equal(preferFilledAthleteFile(null, null).squat_lb, null);
   });
 });
 

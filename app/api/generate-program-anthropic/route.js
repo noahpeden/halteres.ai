@@ -8,6 +8,7 @@ import {
   formatProgrammingContract,
   formatRecentTrainingRules,
 } from '@/utils/prompt-builder/programQuality.js';
+import { resolveProgramWeeks } from '@/utils/prompt-builder/modelOutput.js';
 import { formatClientMetrics } from '@/utils/prompt-builder/promptBuilder.js';
 import { getWorkoutLibraryRagContext } from '@/utils/prompt-builder/ragContext.js';
 import { corsHeaders, createMobileCompatibleClient } from '@/utils/supabase/mobile';
@@ -1073,7 +1074,13 @@ async function extractSharedData(requestData, supabase) {
 
   // Critical parameters (defaults adjusted using DB if present)
   const providedDuration = requestData.duration_weeks ?? requestData.numberOfWeeks;
-  let numberOfWeeks = parseInt(providedDuration ?? 8, 10);
+  let numberOfWeeks = resolveProgramWeeks({
+    requestWeeks: providedDuration,
+    text: [requestData.programName, requestData.name, requestData.description]
+      .filter(Boolean)
+      .join('\n'),
+    fallback: 4,
+  });
   const providedDaysPerWeek = requestData.days_per_week ?? requestData.daysPerWeek;
   let daysPerWeek = parseInt(providedDaysPerWeek ?? 3, 10);
   const programType =
@@ -1235,7 +1242,7 @@ async function extractSharedData(requestData, supabase) {
       const { data: programData, error: programError } = await supabase
         .from('programs')
         .select(
-          'entity_id, gym_id, duration_weeks, periodization, gym_details, workout_format, calendar_data, training_methodology, description, reference_input, focus_area, difficulty, goal, session_details'
+          'name, entity_id, gym_id, duration_weeks, periodization, gym_details, workout_format, calendar_data, training_methodology, description, reference_input, focus_area, difficulty, goal, session_details'
         )
         .eq('id', programId)
         .single();
@@ -1246,9 +1253,20 @@ async function extractSharedData(requestData, supabase) {
         });
       } else if (programData) {
         // Apply DB fallbacks ONLY when request didn't specify
-        if (providedDuration == null && programData.duration_weeks) {
-          numberOfWeeks = parseInt(programData.duration_weeks, 10);
-        }
+        numberOfWeeks = resolveProgramWeeks({
+          requestWeeks: providedDuration,
+          dbWeeks: programData.duration_weeks,
+          text: [
+            requestData.programName,
+            requestData.name,
+            programData.name,
+            requestData.description,
+            programData.description,
+          ]
+            .filter(Boolean)
+            .join('\n'),
+          fallback: numberOfWeeks,
+        });
         if (
           (!providedDaysPerWeek || isNaN(Number(providedDaysPerWeek))) &&
           programData.calendar_data?.days_of_week?.length
@@ -1259,7 +1277,8 @@ async function extractSharedData(requestData, supabase) {
           validDaysOfWeek = programData.calendar_data.days_of_week;
         }
         equipment = pickEquipmentLabels({
-          requestEquipment: requestData.gym_details?.equipment || requestData.equipment || equipment,
+          requestEquipment:
+            requestData.gym_details?.equipment || requestData.equipment || equipment,
           dbEquipment: programData.gym_details?.equipment,
         });
         if (

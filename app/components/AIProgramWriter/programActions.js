@@ -2,6 +2,7 @@
 import { startTransition } from 'react';
 import { flushSync } from 'react-dom';
 import { resolveEquipmentLabels } from '@/utils/prompt-builder/equipmentLabels';
+import { resolveProgramWeeks } from '@/utils/prompt-builder/modelOutput.js';
 import {
   isFatalSseParseError,
   parseSseEventData,
@@ -177,7 +178,10 @@ export async function generateProgram({
           personalization: formData.personalization,
           referenceInput: formData.referenceInput || '', // Add referenceInput field
           trainingMethodology: formData.trainingMethodology,
-          duration_weeks: parseInt(formData.numberOfWeeks, 10),
+          duration_weeks: resolveProgramWeeks({
+            requestWeeks: formData.numberOfWeeks,
+            text: [formData.name, formData.description].filter(Boolean).join('\n'),
+          }),
           days_per_week: parseInt(formData.daysPerWeek, 10),
           entityId: formData.entityId,
           gymId: formData.gymId || null, // Include gym_id for proper analytics filtering
@@ -1735,7 +1739,10 @@ export async function generateSkeletonProgram({
         difficulty: formData.difficulty,
         focus_area: formData.focusArea,
         trainingMethodology: formData.trainingMethodology,
-        duration_weeks: parseInt(formData.numberOfWeeks, 10),
+        duration_weeks: resolveProgramWeeks({
+          requestWeeks: formData.numberOfWeeks,
+          text: [formData.name, formData.description].filter(Boolean).join('\n'),
+        }),
         days_per_week: parseInt(formData.daysPerWeek, 10),
         periodization: { program_type: formData.programType },
         gym_details: {

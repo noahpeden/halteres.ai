@@ -18,6 +18,43 @@ export function escapeHtml(value = '') {
     .replace(/"/g, '&quot;');
 }
 
+const EMPTY_BODY_LABELS = new Set([
+  'no description provided',
+  'no description provided.',
+  'no description available',
+  'no description available.',
+  'workout details not available',
+  'nothing written for this day yet.',
+]);
+
+/**
+ * Athlete/calendar readers historically selected `body` only.
+ * Skeleton generation writes markdown to `body_skeleton` and left `body` null,
+ * so Today / History / day detail rendered the empty-state label.
+ */
+export function getWorkoutDisplayBody(workout = {}) {
+  if (workout == null || typeof workout !== 'object') return '';
+  const candidates = [workout.body, workout.description, workout.body_skeleton, workout.content];
+  for (const value of candidates) {
+    if (typeof value !== 'string') continue;
+    const trimmed = value.trim();
+    if (!trimmed) continue;
+    if (EMPTY_BODY_LABELS.has(trimmed.toLowerCase())) continue;
+    return value;
+  }
+  return '';
+}
+
+export function withDisplayBody(workout) {
+  if (!workout || typeof workout !== 'object') return workout;
+  const displayBody = getWorkoutDisplayBody(workout);
+  return {
+    ...workout,
+    body: displayBody || workout.body || '',
+    description: displayBody || workout.description || workout.body || '',
+  };
+}
+
 export function normalizeWorkoutMarkdown(text = '') {
   let value = String(text || '');
   if (!value.trim()) return '';

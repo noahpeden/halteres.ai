@@ -10,6 +10,7 @@ import SegmentedControl from '@/components/athlete/SegmentedControl';
 import StatusBadge from '@/components/athlete/StatusBadge';
 import PalaestraMarkdown from '@/components/PalaestraMarkdown';
 import { useAuth } from '@/contexts/AuthContext';
+import { getWorkoutDisplayBody } from '@/utils/workoutMarkdown';
 
 // Default form state for result entry
 const getInitialFormState = (defaultResultType = 'time') => ({
@@ -208,7 +209,7 @@ export default function WorkoutDetailPage() {
                 Workout
               </h2>
               <PalaestraMarkdown
-                content={workout.description || workout.body}
+                content={getWorkoutDisplayBody(workout)}
                 emptyLabel="No description provided."
               />
             </div>

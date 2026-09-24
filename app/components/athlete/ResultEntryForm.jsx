@@ -107,6 +107,7 @@ export default function ResultEntryForm({
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (loading) return;
     setLoading(true);
     setError(null);
 

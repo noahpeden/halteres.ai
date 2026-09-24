@@ -17,6 +17,7 @@ import TemplateFeedbackButton from '@/components/feedback/TemplateFeedbackButton
 import PalaestraMarkdown from '@/components/PalaestraMarkdown';
 import { SectionButtons, TVDisplayMode, useTVDisplay } from '@/components/TVDisplayMode';
 import { useAuth } from '@/contexts/AuthContext';
+import { getWorkoutDisplayBody } from '@/utils/workoutMarkdown';
 import { parseWorkoutSections } from '@/utils/workoutParser';
 
 export default function WorkoutDetailsPage(props) {
@@ -65,7 +66,7 @@ export default function WorkoutDetailsPage(props) {
 
         setWorkout(workoutData);
         setEditedTitle(workoutData.title || '');
-        setEditedBody(workoutData.body || '');
+        setEditedBody(getWorkoutDisplayBody(workoutData));
 
         // Fetch program form data for enhance functionality
         const { data: programData, error: programError } = await supabase
@@ -124,7 +125,7 @@ export default function WorkoutDetailsPage(props) {
   const handleStartEdit = () => {
     setIsEditing(true);
     setEditedTitle(workout.title || '');
-    setEditedBody(workout.body || '');
+    setEditedBody(getWorkoutDisplayBody(workout));
   };
 
   const handleSaveEdit = async () => {
@@ -157,7 +158,7 @@ export default function WorkoutDetailsPage(props) {
   const handleCancelEdit = () => {
     setIsEditing(false);
     setEditedTitle(workout.title || '');
-    setEditedBody(workout.body || '');
+    setEditedBody(getWorkoutDisplayBody(workout));
   };
 
   const handleEnhanceWorkout = async () => {
@@ -167,7 +168,7 @@ export default function WorkoutDetailsPage(props) {
     try {
       const safeWorkout = {
         title: workout.title || 'Untitled Workout',
-        description: workout.body || 'No description provided.',
+        description: getWorkoutDisplayBody(workout) || 'No description provided.',
       };
       const safeInstructions = enhanceText.trim() || 'No specific instructions.';
       const safeMethodology = formData.training_methodology || 'General fitness';
@@ -722,7 +723,7 @@ export default function WorkoutDetailsPage(props) {
 
               <div className="max-w-none">
                 <PalaestraMarkdown
-                  content={pendingEnhancement?.body || workout.body || workout.description}
+                  content={pendingEnhancement?.body || getWorkoutDisplayBody(workout)}
                   emptyLabel="Nothing written for this day yet."
                 />
               </div>

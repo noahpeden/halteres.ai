@@ -3,6 +3,7 @@ import { Calendar, ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react'
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { MarkdownContent } from '@/utils/markdownParser';
+import { getWorkoutDisplayBody } from '@/utils/workoutMarkdown';
 
 export default function PublicWorkoutList({ workouts, daysPerWeek, programName, programId }) {
   const [currentWeek, setCurrentWeek] = useState(1);
@@ -262,7 +263,7 @@ export default function PublicWorkoutList({ workouts, daysPerWeek, programName, 
                 <div className="px-6 py-4">
                   <div className="prose prose-sm max-w-none">
                     <MarkdownContent
-                      content={workout.body || workout.description || 'No description available'}
+                      content={getWorkoutDisplayBody(workout) || 'No description available'}
                       className="text-gray-700"
                     />
                   </div>

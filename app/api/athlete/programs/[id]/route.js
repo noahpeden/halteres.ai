@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
+import { withDisplayBody } from '@/utils/workoutMarkdown';
 
 async function getSupabaseClient() {
   const cookieStore = await cookies();
@@ -70,6 +71,8 @@ export async function GET(request, { params }) {
         title,
         workout_type,
         body,
+        body_skeleton,
+        generation_status,
         scheduled_date,
         week_number
       `)
@@ -112,7 +115,7 @@ export async function GET(request, { params }) {
       const workoutDate = workout.scheduled_date?.split('T')[0];
 
       return {
-        ...workout,
+        ...withDisplayBody(workout),
         userResult: result || null,
         hasLogged: !!result,
         isToday: workoutDate === today,
