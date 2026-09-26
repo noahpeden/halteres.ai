@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
+import { formatWorkoutResultDisplay } from '@/utils/liftLog.js';
 import { withDisplayBody } from '@/utils/workoutMarkdown';
 
 async function getSupabaseClient() {
@@ -89,9 +90,7 @@ export async function GET(request, { params }) {
       const workoutIds = workouts.map((w) => w.id);
       const { data: results } = await supabase
         .from('workout_results')
-        .select(
-          'id, workout_id, result_type, time_seconds, rounds, reps, weight_kg, count, scale, is_pr, created_at'
-        )
+        .select('*')
         .eq('user_id', userId)
         .in('workout_id', workoutIds)
         .is('deleted_at', null);
@@ -121,7 +120,7 @@ export async function GET(request, { params }) {
         isToday: workoutDate === today,
         isPast: workoutDate < today,
         isFuture: workoutDate > today,
-        displayValue: result ? formatResult(result) : null,
+        displayValue: result ? formatWorkoutResultDisplay(result) : null,
       };
     });
 
@@ -161,22 +160,5 @@ export async function GET(request, { params }) {
   } catch (error) {
     console.error('Error fetching program:', error);
     return Response.json({ error: 'Failed to fetch program' }, { status: 500 });
-  }
-}
-
-function formatResult(result) {
-  switch (result.result_type) {
-    case 'time': {
-      if (!result.time_seconds) return '-';
-      const mins = Math.floor(result.time_seconds / 60);
-      const secs = result.time_seconds % 60;
-      return `${mins}:${secs.toString().padStart(2, '0')}`;
-    }
-    case 'rounds_reps':
-      return `${result.rounds || 0} + ${result.reps || 0}`;
-    case 'weight':
-      return `${result.weight_kg || 0} kg`;
-    default:
-      return `${result.count || 0}`;
   }
 }

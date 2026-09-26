@@ -250,7 +250,7 @@ export default function AthleteDashboard() {
                   <StatusBadge variant="completed" />
                 ) : (
                   <span className="athlete-btn-primary text-sm py-2 px-4 pointer-events-none">
-                    Log the set
+                    Complete
                   </span>
                 )}
                 {activeProgram && <span className="athlete-label">{activeProgram.name}</span>}

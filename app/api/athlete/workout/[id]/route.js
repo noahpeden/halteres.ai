@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
+import { formatWorkoutResultDisplay } from '@/utils/liftLog.js';
 import { withDisplayBody } from '@/utils/workoutMarkdown';
 
 async function getSupabaseClient() {
@@ -77,7 +78,7 @@ export async function GET(request, { params }) {
       if (result) {
         userResult = {
           ...result,
-          displayValue: formatResult(result),
+          displayValue: formatWorkoutResultDisplay(result),
         };
       }
     }
@@ -90,22 +91,5 @@ export async function GET(request, { params }) {
   } catch (error) {
     console.error('Error fetching workout:', error);
     return Response.json({ error: 'Failed to fetch workout' }, { status: 500 });
-  }
-}
-
-function formatResult(result) {
-  switch (result.result_type) {
-    case 'time': {
-      if (!result.time_seconds) return '-';
-      const mins = Math.floor(result.time_seconds / 60);
-      const secs = result.time_seconds % 60;
-      return `${mins}:${secs.toString().padStart(2, '0')}`;
-    }
-    case 'rounds_reps':
-      return `${result.rounds || 0} + ${result.reps || 0}`;
-    case 'weight':
-      return `${result.weight_kg || 0} kg`;
-    default:
-      return `${result.count || 0}`;
   }
 }
