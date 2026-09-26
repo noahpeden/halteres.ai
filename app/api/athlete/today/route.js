@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
+import { formatWorkoutResultDisplay } from '@/utils/liftLog.js';
 import { withDisplayBody } from '@/utils/workoutMarkdown';
 
 async function getSupabaseClient() {
@@ -152,16 +153,7 @@ export async function GET(request) {
     const { data: recentResults } = await supabase
       .from('workout_results')
       .select(`
-        id,
-        result_type,
-        time_seconds,
-        rounds,
-        reps,
-        weight_kg,
-        count,
-        scale,
-        is_pr,
-        created_at,
+        *,
         workout:program_workouts (id, title)
       `)
       .eq('user_id', user.id)
@@ -172,7 +164,7 @@ export async function GET(request) {
     // Format results with display values
     const formattedResults = (recentResults || []).map((r) => ({
       ...r,
-      displayValue: formatResult(r),
+      displayValue: formatWorkoutResultDisplay(r),
     }));
 
     // Get stats
@@ -207,22 +199,5 @@ export async function GET(request) {
   } catch (error) {
     console.error('Error fetching athlete dashboard:', error);
     return Response.json({ error: 'Failed to fetch data' }, { status: 500 });
-  }
-}
-
-function formatResult(result) {
-  switch (result.result_type) {
-    case 'time': {
-      if (!result.time_seconds) return '-';
-      const mins = Math.floor(result.time_seconds / 60);
-      const secs = result.time_seconds % 60;
-      return `${mins}:${secs.toString().padStart(2, '0')}`;
-    }
-    case 'rounds_reps':
-      return `${result.rounds || 0} + ${result.reps || 0}`;
-    case 'weight':
-      return `${result.weight_kg || 0} kg`;
-    default:
-      return `${result.count || 0}`;
   }
 }

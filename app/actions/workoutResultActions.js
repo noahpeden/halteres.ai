@@ -2,6 +2,14 @@
 
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
+import {
+  buildCompleteResultPayload,
+  detectAthleteFileOffers,
+  EXERCISE_LOGS_MIGRATION_ERROR,
+  isMissingExerciseLogsColumn,
+  isUniqueViolation,
+  pickExistingWorkoutResult,
+} from '@/utils/liftLog.js';
 
 async function createSupabaseClient() {
   const cookieStore = await cookies();
@@ -27,6 +35,104 @@ async function createSupabaseClient() {
 // ============================================
 // WORKOUT RESULT OPERATIONS
 // ============================================
+
+async function upsertWorkoutResult(supabase, payload) {
+  const { data: existingRows, error: findError } = await supabase
+    .from('workout_results')
+    .select('id, created_at, deleted_at')
+    .eq('user_id', payload.user_id)
+    .eq('workout_id', payload.workout_id);
+
+  if (findError) throw findError;
+
+  const existing = pickExistingWorkoutResult(existingRows);
+  const write = existing
+    ? supabase
+        .from('workout_results')
+        .update({ ...payload, updated_at: new Date().toISOString() })
+        .eq('id', existing.id)
+        .eq('user_id', payload.user_id)
+    : supabase.from('workout_results').insert([payload]);
+
+  const { data, error } = await write.select().single();
+
+  if (!error) return { success: true, data };
+
+  if (isMissingExerciseLogsColumn(error)) {
+    return { success: false, error: EXERCISE_LOGS_MIGRATION_ERROR, needsMigration: true };
+  }
+
+  if (!existing && isUniqueViolation(error)) {
+    const { data: racedRows, error: racedError } = await supabase
+      .from('workout_results')
+      .select('id, created_at, deleted_at')
+      .eq('user_id', payload.user_id)
+      .eq('workout_id', payload.workout_id);
+    if (racedError) throw racedError;
+    const raced = pickExistingWorkoutResult(racedRows);
+    if (!raced) throw error;
+    const { data: updated, error: updateError } = await supabase
+      .from('workout_results')
+      .update({ ...payload, updated_at: new Date().toISOString() })
+      .eq('id', raced.id)
+      .eq('user_id', payload.user_id)
+      .select()
+      .single();
+    if (updateError) {
+      if (isMissingExerciseLogsColumn(updateError)) {
+        return { success: false, error: EXERCISE_LOGS_MIGRATION_ERROR, needsMigration: true };
+      }
+      throw updateError;
+    }
+    return { success: true, data: updated };
+  }
+
+  throw error;
+}
+
+export async function completeWorkoutAction(formData) {
+  const supabase = await createSupabaseClient();
+
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    return { success: false, error: 'User not authenticated.' };
+  }
+
+  if (!formData?.workout_id) {
+    return { success: false, error: 'Missing workout.' };
+  }
+
+  try {
+    const payload = buildCompleteResultPayload({
+      userId: user.id,
+      workoutId: formData.workout_id,
+      gymId: formData.gym_id,
+      logs: formData.exercise_logs,
+      notes: formData.notes,
+      perceivedEffort: formData.perceived_effort,
+      skipped: Boolean(formData.skipped),
+    });
+
+    const result = await upsertWorkoutResult(supabase, payload);
+    if (!result.success) return result;
+
+    return {
+      success: true,
+      data: result.data,
+      athleteFileOffers: detectAthleteFileOffers(payload.exercise_logs, formData.athlete_file),
+    };
+  } catch (error) {
+    console.error('Complete Workout Error:', error);
+    return {
+      success: false,
+      error: `Failed to complete workout: ${error.message}`,
+    };
+  }
+}
 
 export async function logWorkoutResultAction(formData) {
   const supabase = await createSupabaseClient();
@@ -57,22 +163,17 @@ export async function logWorkoutResultAction(formData) {
       photos: formData.photos || [],
       perceived_effort: formData.perceived_effort || null,
       include_in_leaderboard: formData.include_in_leaderboard ?? true,
+      deleted_at: null,
     };
 
-    const { data: result, error: resultError } = await supabase
-      .from('workout_results')
-      .insert([resultData])
-      .select()
-      .single();
+    const result = await upsertWorkoutResult(supabase, resultData);
+    if (!result.success) return result;
 
-    if (resultError) throw resultError;
-
-    // Check for PR
-    const prCheck = await checkForPR(supabase, user.id, result);
+    const prCheck = await checkForPR(supabase, user.id, result.data);
 
     return {
       success: true,
-      data: result,
+      data: result.data,
       isPR: prCheck.isPR,
       prData: prCheck.prData,
     };
@@ -111,13 +212,13 @@ export async function updateWorkoutResultAction(resultId, formData) {
       photos: formData.photos,
       perceived_effort: formData.perceived_effort,
       include_in_leaderboard: formData.include_in_leaderboard,
+      exercise_logs: formData.exercise_logs,
       updated_at: new Date().toISOString(),
     };
 
-    // Remove undefined values
-    Object.keys(updateData).forEach(
-      (key) => updateData[key] === undefined && delete updateData[key]
-    );
+    for (const key of Object.keys(updateData)) {
+      if (updateData[key] === undefined) delete updateData[key];
+    }
 
     const { data, error } = await supabase
       .from('workout_results')

@@ -189,7 +189,9 @@ export default function ProgramDetailPage() {
                     </div>
                   </div>
                 ) : (
-                  <button className="athlete-btn-primary text-sm py-2 px-4">Log Result</button>
+                  <button type="button" className="athlete-btn-primary text-sm py-2 px-4">
+                    Complete
+                  </button>
                 )}
               </div>
             </div>
