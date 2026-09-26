@@ -88,6 +88,7 @@ function parseLiftLine(rawLine, section) {
   const loadText = (match[4] || '').trim();
 
   if (/^\d+(?:m|km|min|minutes|sec|seconds|s)$/i.test(repsToken)) return null;
+  if (/^(sec|seconds|s|min|minutes)\b/i.test(loadText)) return null;
   if (/\b\d+\s*(m|km|min|minutes)\b/i.test(loadText) && !/\blb\b|\bkg\b|%|1rm/i.test(loadText)) {
     return null;
   }

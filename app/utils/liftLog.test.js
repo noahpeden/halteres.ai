@@ -102,6 +102,37 @@ describe('parseWorkoutLifts', () => {
     assert.deepEqual(parseWorkoutLifts(''), []);
     assert.deepEqual(parseWorkoutLifts('## Stimulus and Strategy\nStay smooth.'), []);
   });
+
+  it('parses a live strength day and skips holds / metcons', () => {
+    const lifts = parseWorkoutLifts(`## Strength
+- Squat 5x3 @ 155 lb (80% of 195)
+
+## Metcon
+- EMOM 12: min 1 — 10 jump squats, min 2 — 10 lunges/leg, min 3 — 20-sec wall sit
+
+## Primary Exercises
+- Goblet squat 4x10 @ 55 lb
+- Romanian deadlift 4x10 @ 135 lb
+
+## Accessory Exercises
+- Bulgarian split squat 3x10/leg @ bodyweight
+- Single-leg calf raise 3x15/leg
+- Hollow body hold 3x30 sec`);
+    assert.deepEqual(
+      lifts.map((lift) => lift.name),
+      [
+        'Squat',
+        'Goblet squat',
+        'Romanian deadlift',
+        'Bulgarian split squat',
+        'Single-leg calf raise',
+      ]
+    );
+    assert.equal(
+      lifts.some((lift) => /hold|emom|wall sit/i.test(lift.name)),
+      false
+    );
+  });
 });
 
 describe('exercise log normalize + display', () => {
