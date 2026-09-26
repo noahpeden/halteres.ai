@@ -14,7 +14,7 @@
     "format": "biome format --write .",
     "test:prompts": "node --test app/utils/prompt-builder/*.test.js",
     "test:ai": "node --test app/utils/ai/*.test.js",
-    "test:unit": "node --test app/utils/prompt-builder/*.test.js app/utils/ai/*.test.js app/utils/workoutMarkdown.test.js app/utils/billing.test.js"
+    "test:unit": "node --test app/utils/prompt-builder/*.test.js app/utils/ai/*.test.js app/utils/workoutMarkdown.test.js app/utils/billing.test.js app/utils/liftLog.test.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.51.0",
