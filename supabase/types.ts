@@ -847,6 +847,7 @@ export type Database = {
           count: number | null
           created_at: string
           deleted_at: string | null
+          exercise_logs: Json | null
           gym_id: string | null
           id: string
           include_in_leaderboard: boolean | null
@@ -870,6 +871,7 @@ export type Database = {
           count?: number | null
           created_at?: string
           deleted_at?: string | null
+          exercise_logs?: Json | null
           gym_id?: string | null
           id?: string
           include_in_leaderboard?: boolean | null
@@ -893,6 +895,7 @@ export type Database = {
           count?: number | null
           created_at?: string
           deleted_at?: string | null
+          exercise_logs?: Json | null
           gym_id?: string | null
           id?: string
           include_in_leaderboard?: boolean | null
