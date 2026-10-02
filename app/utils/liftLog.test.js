@@ -5,11 +5,14 @@ import {
   classifyCompetitionLift,
   detectAthleteFileOffers,
   emptyExerciseLogs,
+  extractAbsoluteLoad,
+  formatLoadTextWithWeight,
   formatPrescribed,
   formatWorkoutResultDisplay,
   hasLoggedSets,
   isMissingExerciseLogsColumn,
   isUniqueViolation,
+  nudgeParsedExercisesFromLogs,
   normalizeExerciseLogs,
   parseWorkoutLifts,
   persistableExerciseLogs,
@@ -170,6 +173,52 @@ describe('exercise log normalize + display', () => {
 
   it('formats prescribed snapshot for History comparison', () => {
     assert.equal(formatPrescribed({ sets: 5, reps: 3, load_text: '85% 1RM' }), '5×3 @ 85% 1RM');
+  });
+});
+
+describe('next-day load nudge utilities', () => {
+  it('extracts and formats absolute loads in prescribed text', () => {
+    const abs = extractAbsoluteLoad('80% 1RM (155 lb)');
+    assert.equal(abs.weight, 155);
+    assert.equal(abs.unit, 'lb');
+    const withReplace = formatLoadTextWithWeight('80% 1RM (155 lb)', 'lb', 160);
+    assert.equal(withReplace, '80% 1RM (160 lb)');
+    const withAppend = formatLoadTextWithWeight('75% 1RM', 'kg', 70);
+    assert.equal(withAppend, '75% 1RM (70 kg)');
+  });
+
+  it('nudges next loads up when target reps were met last time', () => {
+    const parsed = parseWorkoutLifts('Primary Work:\nBack Squat: 3x5 @ 80% (155 lb)');
+    const recent = [
+      {
+        unit: 'lb',
+        exercises: [{ name: 'Back Squat', sets: [{ weight: 155, reps: 5 }] }],
+      },
+    ];
+    const nudged = nudgeParsedExercisesFromLogs(parsed, recent);
+    assert.equal(nudged[0].prescribed.load_text.includes('(160 lb)'), true);
+  });
+
+  it('does not nudge when reps were not met; appends absolute if missing', () => {
+    const parsed = parseWorkoutLifts('Primary Work:\nDB Row: 3x10');
+    const recent = [
+      {
+        unit: 'lb',
+        exercises: [{ name: 'DB Row', sets: [{ weight: 35, reps: 8 }] }],
+      },
+    ];
+    const nudged = nudgeParsedExercisesFromLogs(parsed, recent);
+    // Target reps 10 not met → no nudge, still no absolute load added
+    assert.equal(nudged[0].prescribed.load_text || '', '');
+    // If reps met, it appends a new absolute
+    const recent2 = [
+      {
+        unit: 'lb',
+        exercises: [{ name: 'DB Row', sets: [{ weight: 35, reps: 10 }] }],
+      },
+    ];
+    const nudged2 = nudgeParsedExercisesFromLogs(parsed, recent2);
+    assert.equal(nudged2[0].prescribed.load_text.includes('(37.5 lb)'), true);
   });
 });
 
