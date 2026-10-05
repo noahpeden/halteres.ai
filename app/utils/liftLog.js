@@ -185,6 +185,54 @@ export function formatLoggedSets(sets = [], unit = 'lb') {
     .join(', ');
 }
 
+/**
+ * Extract an absolute load (weight + unit) from a prescribed load text.
+ * Examples:
+ *  - "80% 1RM (155 lb)" -> { weight: 155, unit: 'lb' }
+ *  - "75% (70 kg)" -> { weight: 70, unit: 'kg' }
+ *  - "85% 1RM" -> null
+ */
+export function extractAbsoluteLoad(loadText = '') {
+  const text = String(loadText || '');
+  const matchParen = text.match(/\(([-+]?\d+(?:\.\d+)?)\s*(lb|lbs|kg)\)/i);
+  if (matchParen) {
+    const unit = /kg/i.test(matchParen[2]) ? 'kg' : 'lb';
+    const weight = parsePositiveLogNumber(matchParen[1], {
+      min: 0,
+      max: 2000,
+    });
+    if (weight != null) return { weight, unit };
+  }
+  const matchBare = text.match(/(^|\s)([-+]?\d+(?:\.\d+)?)\s*(lb|lbs|kg)(\s|$)/i);
+  if (matchBare) {
+    const unit = /kg/i.test(matchBare[3]) ? 'kg' : 'lb';
+    const weight = parsePositiveLogNumber(matchBare[2], {
+      min: 0,
+      max: 2000,
+    });
+    if (weight != null) return { weight, unit };
+  }
+  return null;
+}
+
+/**
+ * Return a load text with the absolute load updated/inserted.
+ * - If loadText already contains "(XYZ lb/kg)", replace the numeric value and unit.
+ * - Otherwise, append " (XYZ lb/kg)" after any existing content.
+ */
+export function formatLoadTextWithWeight(loadText = '', unit = 'lb', weight) {
+  const cleanUnit = unit === 'kg' ? 'kg' : 'lb';
+  const numeric =
+    typeof weight === 'number' ? weight : parsePositiveLogNumber(weight, { min: 0, max: 2000 });
+  const base = String(loadText || '').trim();
+  if (numeric == null) return base || '';
+  if (/\(([-+]?\d+(?:\.\d+)?)\s*(lb|lbs|kg)\)/i.test(base)) {
+    return base.replace(/\(([-+]?\d+(?:\.\d+)?)\s*(lb|lbs|kg)\)/i, `(${numeric} ${cleanUnit})`);
+  }
+  if (!base) return `(${numeric} ${cleanUnit})`;
+  return `${base} (${numeric} ${cleanUnit})`;
+}
+
 function normalizeSet(set, index) {
   const source = set && typeof set === 'object' ? set : {};
   const weight = parsePositiveLogNumber(source.weight, { min: 0, max: 2000 });
@@ -479,6 +527,81 @@ function cleanLiftName(name) {
     .replace(/[^a-z\s-]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
+}
+
+/**
+ * Build a lookup of the newest logged top set per exercise name from a list of logs.
+ * Newest-first precedence: the first time we see a cleaned lift name, we keep it.
+ */
+export function buildLatestTopSetByExercise(logsList = []) {
+  const byName = new Map();
+  for (const raw of logsList) {
+    const logs = normalizeExerciseLogs(raw);
+    const unit = logs.unit === 'kg' ? 'kg' : 'lb';
+    for (const exercise of logs.exercises) {
+      const key = cleanLiftName(exercise.name);
+      if (!key || byName.has(key)) continue;
+      if (!Array.isArray(exercise.sets) || exercise.sets.length === 0) continue;
+      const heaviest = [...exercise.sets]
+        .filter((s) => s.weight != null)
+        .sort((a, b) => (b.weight || 0) - (a.weight || 0))[0];
+      if (!heaviest || heaviest.weight == null) continue;
+      byName.set(key, { weight: heaviest.weight, reps: heaviest.reps ?? null, unit });
+    }
+  }
+  return byName;
+}
+
+/**
+ * Phase 2 (next-day load nudge):
+ * - If the athlete hit the prescribed reps on their heaviest set last time,
+ *   suggest a small increase for the next occurrence of that lift.
+ * - Heuristic increments: +5 lb (>= 100 lb), else +2.5 lb. For kg: +2.5 kg.
+ * - Only modifies the absolute load in prescribed.load_text (adds or replaces "(XYZ lb/kg)").
+ *
+ * Returns a NEW array of parsed exercises with nudged prescribed.load_text where applicable.
+ */
+export function nudgeParsedExercisesFromLogs(parsedExercises = [], recentLogsList = []) {
+  const latestByName = buildLatestTopSetByExercise(recentLogsList);
+  if (latestByName.size === 0) return parsedExercises || [];
+
+  const next = (parsedExercises || []).map((ex) => {
+    const key = cleanLiftName(ex.name);
+    if (!key) return ex;
+    const last = latestByName.get(key);
+    if (!last) return ex;
+
+    const targetReps =
+      ex?.prescribed?.reps != null && ex.prescribed.reps !== '' && Number.isFinite(Number(ex.prescribed.reps))
+        ? Number(ex.prescribed.reps)
+        : null;
+
+    if (targetReps == null) return ex; // Only nudge when reps are numeric
+    const lastReps = Number.isFinite(Number(last.reps)) ? Number(last.reps) : null;
+    if (lastReps == null || lastReps < targetReps) return ex; // Did not meet reps → hold
+
+    // Determine increment
+    const inc =
+      last.unit === 'kg'
+        ? 2.5
+        : last.weight >= 100
+          ? 5
+          : 2.5;
+    const suggested = Math.round((last.weight + inc) * 100) / 100;
+
+    const currentLoadText = ex?.prescribed?.load_text || '';
+    const updatedLoadText = formatLoadTextWithWeight(currentLoadText, last.unit, suggested);
+
+    return {
+      ...ex,
+      prescribed: {
+        ...(ex.prescribed || {}),
+        load_text: updatedLoadText,
+      },
+    };
+  });
+
+  return next;
 }
 
 export function classifyCompetitionLift(name) {

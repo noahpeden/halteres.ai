@@ -33,9 +33,10 @@ export default function WorkoutDetailPage() {
   const [athleteFile, setAthleteFile] = useState(() => hydrateAthleteFileFromProfile(profile));
   const [fileOffers, setFileOffers] = useState([]);
 
-  const seedDraft = useCallback((nextWorkout, nextResult) => {
+  const seedDraft = useCallback((nextWorkout, nextResult, nextNudgedLifts) => {
     const parsed = parseLiftsFromWorkout(nextWorkout);
-    setLogDraft(seedLogDraftFromParsed(parsed, nextResult?.exercise_logs));
+    const lifts = Array.isArray(nextNudgedLifts) && nextNudgedLifts.length > 0 ? nextNudgedLifts : parsed;
+    setLogDraft(seedLogDraftFromParsed(lifts, nextResult?.exercise_logs));
   }, []);
 
   const fetchWorkoutData = useCallback(async () => {
@@ -46,7 +47,7 @@ export default function WorkoutDetailPage() {
       if (data.success) {
         setWorkout(data.workout);
         setUserResult(data.userResult);
-        seedDraft(data.workout, data.userResult);
+        seedDraft(data.workout, data.userResult, data.nudgedLifts);
       }
     } catch (err) {
       console.error('Error fetching workout:', err);

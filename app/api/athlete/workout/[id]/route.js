@@ -1,6 +1,6 @@
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
-import { formatWorkoutResultDisplay } from '@/utils/liftLog.js';
+import { formatWorkoutResultDisplay, nudgeParsedExercisesFromLogs, parseWorkoutLifts } from '@/utils/liftLog.js';
 import { withDisplayBody } from '@/utils/workoutMarkdown';
 
 async function getSupabaseClient() {
@@ -64,6 +64,7 @@ export async function GET(request, { params }) {
 
     // Fetch user's result if they have one
     let userResult = null;
+    let nudgedLifts = null;
     if (userId) {
       const { data: result } = await supabase
         .from('workout_results')
@@ -81,12 +82,30 @@ export async function GET(request, { params }) {
           displayValue: formatWorkoutResultDisplay(result),
         };
       }
+
+      // Only build next-day nudges when the athlete has not yet logged this workout.
+      if (!userResult) {
+        const { data: recentRows } = await supabase
+          .from('workout_results')
+          .select('exercise_logs, created_at, workout_id')
+          .eq('user_id', userId)
+          .neq('workout_id', id)
+          .is('deleted_at', null)
+          .order('created_at', { ascending: false })
+          .limit(30);
+        const lifts = parseWorkoutLifts(displayWorkout.body || displayWorkout.description || '');
+        nudgedLifts = nudgeParsedExercisesFromLogs(
+          lifts,
+          (recentRows || []).map((r) => r.exercise_logs).filter(Boolean)
+        );
+      }
     }
 
     return Response.json({
       success: true,
       workout: workoutResponse,
       userResult,
+      nudgedLifts,
     });
   } catch (error) {
     console.error('Error fetching workout:', error);
