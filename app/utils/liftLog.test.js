@@ -220,6 +220,18 @@ describe('next-day load nudge utilities', () => {
     const nudged2 = nudgeParsedExercisesFromLogs(parsed, recent2);
     assert.equal(nudged2[0].prescribed.load_text.includes('(37.5 lb)'), true);
   });
+
+  it('reopening an already-logged workout shows the prescription as written', () => {
+    const parsed = parseWorkoutLifts('Primary Work:\nBack Squat: 3x5 @ 80% (155 lb)');
+    // Existing result includes the same top set (would normally nudge to 160 if applied)
+    const existingLogs = {
+      unit: 'lb',
+      exercises: [{ name: 'Back Squat', sets: [{ weight: 155, reps: 5 }] }],
+    };
+    const draft = seedLogDraftFromParsed(parsed, existingLogs);
+    // seedLogDraftFromParsed uses parsed.prescribed as the snapshot "as written"
+    assert.equal(draft.exercises[0].prescribed.load_text, '80% (155 lb)');
+  });
 });
 
 describe('seed + persist draft', () => {
